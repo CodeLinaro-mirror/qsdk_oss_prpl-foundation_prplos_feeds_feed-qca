@@ -1,0 +1,91 @@
+Index: hostapd-2022-09-19-01944c09/hostapd/main.c
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/hostapd/main.c
++++ hostapd-2022-09-19-01944c09/hostapd/main.c
+@@ -754,7 +754,7 @@ int main(int argc, char *argv[])
+ #endif /* CONFIG_DPP */
+ 
+ 	for (;;) {
+-		c = getopt(argc, argv, "b:Bde:f:hi:KP:STtu:g:G:v::");
++		c = getopt(argc, argv, "b:Bde:f:hi:KP:sSTtu:g:G:qv::");
+ 		if (c < 0)
+ 			break;
+ 		switch (c) {
+Index: hostapd-2022-09-19-01944c09/src/utils/build_features.h
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/src/utils/build_features.h
++++ hostapd-2022-09-19-01944c09/src/utils/build_features.h
+@@ -3,14 +3,58 @@
+ 
+ static inline int has_feature(const char *feat)
+ {
+-#ifdef IEEE8021X_EAPOL
++#if defined(IEEE8021X_EAPOL) || (defined(HOSTAPD) && !defined(CONFIG_NO_RADIUS))
+ 	if (!strcmp(feat, "eap"))
+ 		return 1;
+ #endif
+-#ifdef IEEE80211N
++#ifdef CONFIG_IEEE80211N
+ 	if (!strcmp(feat, "11n"))
+ 		return 1;
+ #endif
++#ifdef CONFIG_IEEE80211AC
++	if (!strcmp(feat, "11ac"))
++		return 1;
++#endif
++#ifdef CONFIG_IEEE80211AX
++	if (!strcmp(feat, "11ax"))
++		return 1;
++#endif
++#ifdef CONFIG_IEEE80211R
++	if (!strcmp(feat, "11r"))
++		return 1;
++#endif
++#ifdef CONFIG_ACS
++	if (!strcmp(feat, "acs"))
++		return 1;
++#endif
++#ifdef CONFIG_SAE
++	if (!strcmp(feat, "sae"))
++		return 1;
++#endif
++#ifdef CONFIG_OWE
++	if (!strcmp(feat, "owe"))
++		return 1;
++#endif
++#ifdef CONFIG_SUITEB192
++	if (!strcmp(feat, "suiteb192"))
++		return 1;
++#endif
++#ifdef CONFIG_WEP
++	if (!strcmp(feat, "wep"))
++		return 1;
++#endif
++#ifdef CONFIG_HS20
++	if (!strcmp(feat, "hs20"))
++		return 1;
++#endif
++#ifdef CONFIG_WPS
++	if (!strcmp(feat, "wps"))
++		return 1;
++#endif
++#ifdef CONFIG_FILS
++	if (!strcmp(feat, "fils"))
++		return 1;
++#endif
+ 	return 0;
+ }
+ 
+Index: hostapd-2022-09-19-01944c09/wpa_supplicant/main.c
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/wpa_supplicant/main.c
++++ hostapd-2022-09-19-01944c09/wpa_supplicant/main.c
+@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
+ 
+ 	for (;;) {
+ 		c = getopt(argc, argv,
+-			   "b:Bc:C:D:de:f:g:G:hH:i:I:KLMm:No:O:p:P:qsTtuvW");
++			   "b:Bc:C:D:de:f:g:G:hH:i:I:KLMm:No:O:p:P:qsTtuv::W");
+ 		if (c < 0)
+ 			break;
+ 		switch (c) {

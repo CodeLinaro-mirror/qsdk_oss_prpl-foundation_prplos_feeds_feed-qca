@@ -1,0 +1,32 @@
+Index: hostapd-2022-09-19-01944c09/src/ap/acs.c
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/src/ap/acs.c
++++ hostapd-2022-09-19-01944c09/src/ap/acs.c
+@@ -434,17 +434,17 @@ static int acs_usable_bw320_chan(const s
+ static int acs_survey_is_sufficient(struct freq_survey *survey)
+ {
+ 	if (!(survey->filled & SURVEY_HAS_NF)) {
++		survey->nf = -95;
+ 		wpa_printf(MSG_INFO,
+ 			   "ACS: Survey for freq %d is missing noise floor",
+ 			   survey->freq);
+-		return 0;
+ 	}
+ 
+ 	if (!(survey->filled & SURVEY_HAS_CHAN_TIME)) {
++		survey->channel_time = 0;
+ 		wpa_printf(MSG_INFO,
+ 			   "ACS: Survey for freq %d is missing channel time",
+ 			   survey->freq);
+-		return 0;
+ 	}
+ 
+ 	if (!(survey->filled & SURVEY_HAS_CHAN_TIME_BUSY) &&
+@@ -452,7 +452,6 @@ static int acs_survey_is_sufficient(stru
+ 		wpa_printf(MSG_INFO,
+ 			   "ACS: Survey for freq %d is missing RX and busy time (at least one is required)",
+ 			   survey->freq);
+-		return 0;
+ 	}
+ 
+ 	return 1;

@@ -1,0 +1,16 @@
+Index: hostapd-2022-09-19-01944c09/src/drivers/driver_nl80211.c
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/src/drivers/driver_nl80211.c
++++ hostapd-2022-09-19-01944c09/src/drivers/driver_nl80211.c
+@@ -8526,8 +8526,10 @@ static void *i802_init(struct hostapd_da
+ 
+ 	if (params->mld_addr)
+ 		os_memcpy(bss->mld_addr, params->mld_addr, ETH_ALEN);
+-	else
++	else if (params->bssid)
+ 		os_memcpy(bss->mld_addr, params->bssid, ETH_ALEN);
++	else
++		os_memset(bss->mld_addr, 0, ETH_ALEN);
+ 
+ 	if (linux_br_get(master_ifname, params->ifname) == 0) {
+ 		wpa_printf(MSG_DEBUG, "nl80211: Interface %s is in bridge %s",

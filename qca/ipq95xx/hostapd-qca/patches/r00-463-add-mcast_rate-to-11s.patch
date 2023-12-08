@@ -1,0 +1,55 @@
+Index: hostapd-2022-09-19-01944c09/src/drivers/driver.h
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/src/drivers/driver.h
++++ hostapd-2022-09-19-01944c09/src/drivers/driver.h
+@@ -1860,6 +1860,7 @@ struct wpa_driver_mesh_join_params {
+ 	unsigned int flags;
+ 	bool handle_dfs;
+ 	int beacon_tx_mode;
++	int mcast_rate;
+ };
+ 
+ struct wpa_driver_set_key_params {
+Index: hostapd-2022-09-19-01944c09/src/drivers/driver_nl80211.c
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/src/drivers/driver_nl80211.c
++++ hostapd-2022-09-19-01944c09/src/drivers/driver_nl80211.c
+@@ -11711,6 +11711,18 @@ static int nl80211_put_mesh_id(struct nl
+ }
+ 
+ 
++static int nl80211_put_mcast_rate(struct nl_msg *msg, int mcast_rate)
++{
++	if (mcast_rate > 0) {
++		wpa_printf(MSG_DEBUG, "  * mcast_rate=%.1f",
++			   (double)mcast_rate / 10);
++		return nla_put_u32(msg, NL80211_ATTR_MCAST_RATE, mcast_rate);
++	}
++
++	return 0;
++}
++
++
+ static int nl80211_put_mesh_config(struct nl_msg *msg,
+ 				   struct wpa_driver_mesh_bss_params *params)
+ {
+@@ -11772,6 +11784,7 @@ static int nl80211_join_mesh(struct i802
+ 	    nl80211_put_basic_rates(msg, params->basic_rates) ||
+ 	    nl80211_put_mesh_id(msg, params->meshid, params->meshid_len) ||
+ 	    nl80211_put_beacon_int(msg, params->beacon_int) ||
++	    nl80211_put_mcast_rate(msg, params->mcast_rate) ||
+ 	    nl80211_put_dtim_period(msg, params->dtim_period) ||
+ 	    (params->beacon_tx_mode &&
+ 	     nla_put_u32(msg, NL80211_ATTR_BEACON_TX_MODE, params->beacon_tx_mode)))
+Index: hostapd-2022-09-19-01944c09/wpa_supplicant/mesh.c
+===================================================================
+--- hostapd-2022-09-19-01944c09.orig/wpa_supplicant/mesh.c
++++ hostapd-2022-09-19-01944c09/wpa_supplicant/mesh.c
+@@ -691,6 +691,7 @@ int wpa_supplicant_join_mesh(struct wpa_
+ 
+ 	params->meshid = ssid->ssid;
+ 	params->meshid_len = ssid->ssid_len;
++	params->mcast_rate = ssid->mcast_rate;
+ 	ibss_mesh_setup_freq(wpa_s, ssid, &params->freq);
+ 	wpa_s->mesh_ht_enabled = !!params->freq.ht_enabled;
+ 	wpa_s->mesh_vht_enabled = !!params->freq.vht_enabled;

@@ -1,0 +1,12 @@
+Index: linux-5.4.213-qsdk-f2ee796db820cd8261889849f043c9c816196452/Makefile
+===================================================================
+--- linux-5.4.213-qsdk-f2ee796db820cd8261889849f043c9c816196452.orig/Makefile
++++ linux-5.4.213-qsdk-f2ee796db820cd8261889849f043c9c816196452/Makefile
+@@ -481,6 +481,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Werror
+ 		   -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE \
+ 		   -Werror=implicit-function-declaration -Werror=implicit-int \
+ 		   -Werror=return-type -Wno-format-security \
++		   -Wno-misleading-indentation \
+ 		   -std=gnu89
+ KBUILD_CPPFLAGS := -D__KERNEL__
+ KBUILD_AFLAGS_KERNEL :=

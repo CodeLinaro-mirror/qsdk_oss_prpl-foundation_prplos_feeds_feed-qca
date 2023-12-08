@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+
+START=30
+
+boot() {
+	. /lib/functions.sh
+
+	case "$(board_name)" in
+	prpl,freedom)
+		aq-fw-download /lib/firmware/AQR-G4_v5.6.7-AQR_Marvell_NoSwap_USX_ID44858_VER1922.cld miireg 8 ram > /dev/null
+		sleep 1
+		ssdk_sh debug phy set 8 0x4004c441 0x8
+		;;
+	esac
+}
