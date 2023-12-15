@@ -3,21 +3,17 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=mac80211-qca
 
-PKG_BACKPORTS_VERSION:=42a95ce7
-PKG_BACKPORTS_SOURCE_URL:=git://git.kernel.org/pub/scm/linux/kernel/git/backports/backports.git
-PKG_BACKPORTS_BRANCH:=master
-
 PKG_KERNEL_VERSION:=ef7197996efe
-PKG_KERNEL_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/kvalo/ath.git
-PKG_KERNEL_BRANCH:=ath12k-bringup-extras
+PKG_LINUX_VERSION:=5.4.213
 
 PKG_VERSION:=20220822
-PKG_SOURCE:=backports-$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION).tar.bz2
-PKG_SUBDIR:=backports-$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION)
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/platform/qualcomm/backports/-/archive/20220822-5.4.213-ef7197996efe
+PKG_SOURCE:=backports-$(PKG_VERSION)-$(PKG_LINUX_VERSION)-$(PKG_KERNEL_VERSION).tar.bz2
+PKG_HASH:=297143c9944cebce975158e16413bfe7d44012379ba3bd7cd408fcf5e974ed99
+PKG_SUBDIR:=backports-$(PKG_VERSION)-$(PKG_LINUX_VERSION)-$(PKG_KERNEL_VERSION)
 PKG_RELEASE:=1
-PKG_BUILD_ID:=1
 
-PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_SUBDIR)-$(BUILD_VARIANT)/$(PKG_SUBDIR)
+PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_SUBDIR)
 PKG_BUILD_PARALLEL:=1
 
 PKG_BUILD_MLO_SUPPORT:=1
@@ -35,97 +31,6 @@ PKG_CONFIG_DEPENDS:= \
 include $(INCLUDE_DIR)/package.mk
 
 WMENU:=Wireless Drivers
-
-ifeq ($(IS_EXT_KERNEL_TREE_GIT), true)
-  $(eval _LINUX_SRC:=$(CONFIG_EXTERNAL_KERNEL_TREE))
-else
-  _LINUX_SRC=$(CONFIG_KERNEL_GIT_CLONE_URI)
-endif
-
-ifneq ($(call qstrip,$(CONFIG_KERNEL_GIT_BRANCH)),)
-  KERNEL_GIT_BRANCH:=-b $(CONFIG_KERNEL_GIT_BRANCH)
-else
-  KERNEL_GIT_BRANCH:=
-endif
-
-ifneq ($(call qstrip,$(CONFIG_KERNEL_GIT_DEPTH)),)
-  KERNEL_GIT_DEPTH:=--depth $(CONFIG_KERNEL_GIT_DEPTH)
-else
-  KERNEL_GIT_DEPTH:=
-endif
-
-ifneq ($(call qstrip,$(CONFIG_KERNEL_GIT_REF)),)
-  KERNEL_GIT_REF:=git checkout $(CONFIG_KERNEL_GIT_REF);
-else
-  KERNEL_GIT_REF:=
-endif
-
-KERNEL_SOURCE_SUBDIR:=linux-$(LINUX_VERSION)$(KERNEL_NAME_SUFFIX)
-
-define CloneKernel	
-	git clone $(_LINUX_SRC) $(KERNEL_GIT_DEPTH) $(KERNEL_GIT_BRANCH) $(2) || \
-	(rm -rf $(2) && \
-	git clone $(_LINUX_SRC) $(KERNEL_GIT_DEPTH) $(KERNEL_GIT_BRANCH) $(2))
-	(cd $(2);$(KERNEL_GIT_REF) git remote add src $(1); git fetch src) 	
-endef
-
-ifeq ($(PKG_BUILD_MLO_SUPPORT),1)
-  define backports_mlo_support
-	$(info Backports mlo support enabled)
-	sed -i 's/struct ieee80211_tx_info \*info;/ktime_t ack_hwtstamp;/' \
-			$(1)/patches/0097-skb-list/mac80211-status.patch
-	sed -i 's/struct sk_buff \*skb;/u8 n_rates;/' \
-			$(1)/patches/0097-skb-list/mac80211-status.patch
-	sed -i '13s/.*/ /' \
-			$(1)/patches/0097-skb-list/mac80211-status.patch
-	sed -i '58,75d' $(1)/patches/0099-netlink-range/mac80211.patch
-  endef
-else
-  define backports_mlo_support
-	$(info Backports mlo support disabled)
-  endef
-endif
-
-define DownloadBackports
-  $(eval $(Download/Defaults))
-  $(eval $(Download/backports))
-
-  $(foreach dep,$(DOWNLOAD_RDEP),
-    $(dep): $(DL_DIR)/$(FILE)
-  )
-  download: $(DL_DIR)/$(FILE)
-
-  $(DL_DIR)/$(FILE):
-	mkdir -p $(TMP_DIR)/dl/$(PKG_NAME)-$(PKG_VERSION)
-	$(call CloneKernel,$(PKG_KERNEL_SOURCE_URL),$(TMP_DIR)/dl/$(PKG_NAME)-kernel)
-	(cd $(TMP_DIR)/dl/$(PKG_NAME)-kernel && git checkout $(PKG_KERNEL_VERSION))
-
-	git clone $(PKG_BACKPORTS_SOURCE_URL) $(TMP_DIR)/dl/$(PKG_NAME)-source || \
-	(rm -rf $(TMP_DIR)/dl/$(PKG_NAME)-source && \
-	git clone $(PKG_BACKPORTS_SOURCE_URL) $(TMP_DIR)/dl/$(PKG_NAME)-source)
-	cp files/copy-list.ath $(TMP_DIR)/dl/$(PKG_NAME)-source
-	(cd $(TMP_DIR)/dl/$(PKG_NAME)-source && git checkout $(PKG_BACKPORTS_VERSION) && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0073-netdevice-mtu-range.cocci && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0075-ndo-stats-64.cocci && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0105-remove-const-from-rchan_callbacks.patch)
-	$(call backports_mlo_support,$(TMP_DIR)/dl/$(PKG_NAME)-source)
-	(cd $(TMP_DIR)/dl/$(PKG_NAME)-source && \
-	python2 ./gentree.py --clean --copy-list ./copy-list.ath \
-		$(TMP_DIR)/dl/$(PKG_NAME)-kernel $(TMP_DIR)/dl/$(SUBDIR))
-
-	(cd $(TMP_DIR)/dl ; if [ -z "$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR))" ]; then $(call dl_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)); else : ; fi; \
-	$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)) )
-
-	mv $(TMP_DIR)/dl/$(FILE) $(DL_DIR)
-	rm -rf $(TMP_DIR)/dl
-endef
-
-define Download/backports
-  FILE:=$(PKG_SOURCE)
-  SUBDIR:=$(PKG_SUBDIR)
-endef
-
-$(if $(wildcard $(DL_DIR)/$(PKG_SOURCE)),,$(eval $(call DownloadBackports,backports)))
 
 define KernelPackage/mac80211-qca/Default
   SUBMENU:=$(WMENU)
