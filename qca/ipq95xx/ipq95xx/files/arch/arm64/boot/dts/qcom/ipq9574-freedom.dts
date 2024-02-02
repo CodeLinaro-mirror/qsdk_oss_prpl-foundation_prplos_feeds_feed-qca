@@ -104,6 +104,28 @@
 				bias-disable;
 			};
 
+			pcie0_sdx_pins: pcie0_sdx_pinmux {
+				ap2mdm_status {
+					pins = "gpio44";
+					function = "gpio";
+					drive-strength = <8>;
+					bias-pull-up;
+					output-high;
+				};
+				mdm2ap_e911_status {
+					pins = "gpio37";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+			};
+
+			pcie0_wake_pins: pcie0_wake_gpio {
+				pins = "gpio24";
+				function = "pcie0_wake";
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+
 			gps_pins: gps_pins {
 				blsp3_uart_pinmux {
 					pins = "gpio17", "gpio18";
@@ -431,18 +453,76 @@
 		};
 
 		pcie0_x1: pci@28000000 {
-			pinctrl-0 = <&pci0_pin>;
+			pinctrl-0 = <&pcie0_wake_pins &pcie0_sdx_pins &pci0_pin>;
 			pinctrl-names = "default";
 			perst-gpio = <&tlmm 23 1>;
-			max-payload-size = <1>; // 1-256 TLP bytes for WKK
-			status = "disabled";
+			pwr_on-gpio =<&tlmm 55 GPIO_ACTIVE_HIGH>;	// Add FULL_CARD_POWER_OFF as output high
+			e911-gpio =  <&tlmm 37 GPIO_ACTIVE_HIGH>;
+
+			interrupts-extended = <&tlmm 24 IRQ_TYPE_LEVEL_HIGH>,
+			                      <&tlmm 37 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "wake_gpio", "mdm2ap_e911";
+			status = "ok";
+			slot_id = <0>;
 			pcie0_rp {
 				reg = <0 0 0 0 0>;
+				#address-cells = <5>;
+				#size-cells = <0>;
+
+				status = "ok";
+				aliases {
+					mhi_netdev2 = &mhi_netdev_2;
+				};
+
+				mhi_0: qcom,mhi@0 {
+					reg = <0 0 0 0 0 >;
+
+					ap2mdm-gpio = <&tlmm 44 0>;
+					mdm2ap-gpio = <&tlmm 36 0>;
+					// controller specific configuration
+					qcom,iommu-dma = "disabled";
+
+					// mhi bus specific settings
+					mhi,ssr-negotiate;
+
+					mhi_devices: mhi_devices {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						mhi_netdev_0: mhi_rmnet@0 {
+							reg = <0x0>;
+							mhi,chan = "IP_HW0";
+							mhi,interface-name = "rmnet_mhi";
+							mhi,mru = <0x4000>;
+							mhi,chain-skb;
+						};
+
+						mhi_rmnet@1 {
+							reg = <0x1>;
+							mhi,chan = "IP_HW0_RSC";
+							mhi,mru = <0x8000>;
+							mhi,rsc-parent = <&mhi_netdev_0>;
+						};
+
+						mhi_netdev_2: mhi_rmnet@2 {
+							reg = <0x2>;
+							mhi,chan = "IP_SW0";
+							mhi,interface-name = "rmnet_mhi_sw";
+							mhi,mru = <0x4000>;
+							mhi,disable-chain-skb;
+						};
+
+						mhi_qrtr {
+							mhi,chan = "IPCR";
+							qcom,net-id = <3>;
+						};
+					};
+				};
 			};
 		};
 
 		pcie0_phy: phy@84000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		wsi: wsi {
