@@ -1,0 +1,14 @@
+#!/bin/sh
+
+uci get wireless.vendor 1>/dev/null 2>/dev/null || {
+	uci set wireless.vendor=vendor
+}
+
+uci batch <<EOF
+	set wireless.vendor.min_phy=3
+	set wireless.vendor.phy_detect_timeout=10
+	commit wireless
+EOF
+
+exit 0
+
