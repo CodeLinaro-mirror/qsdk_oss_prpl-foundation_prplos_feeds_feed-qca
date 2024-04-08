@@ -39,7 +39,9 @@
 		mdio@90000 {
 			pinctrl-0 = <&mdio_pins>;
 			pinctrl-names = "default";
+			#if 0
 			phy-reset-gpio = <&tlmm 57 GPIO_ACTIVE_LOW>;
+			#endif
 			phyaddr_fixup = <0xC90F018>;
 			uniphyaddr_fixup = <0xC90F014>;
 			mdio_clk_fixup; /* MDIO clock sequence fix up flag */
@@ -731,7 +733,7 @@
 &pwm {
 	pinctrl-0 = <&pwm_pins>;
 	pinctrl-names = "default";
-	status = "okay";
+	status = "disabled";
 };
 
 &xo_board_clk {
