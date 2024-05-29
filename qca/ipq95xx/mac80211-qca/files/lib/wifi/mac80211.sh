@@ -668,7 +668,7 @@ detect_mac80211() {
 
 						set wireless.guest_${name}=wifi-iface
 						set wireless.guest_${name}.device=${name}
-						set wireless.guest_${name}.network=lan
+						set wireless.guest_${name}.network=guest
 						set wireless.guest_${name}.mode=ap
 						set wireless.guest_${name}.ssid=prplOS-guest
 						set wireless.guest_${name}.encryption=none
@@ -714,7 +714,7 @@ detect_mac80211() {
 
 					set wireless.guest_${name}=wifi-iface
 					set wireless.guest_${name}.device=${name}
-					set wireless.guest_${name}.network=lan
+					set wireless.guest_${name}.network=guest
 					set wireless.guest_${name}.mode=ap
 					set wireless.guest_${name}.ssid=prplOS-guest
 			EOF
