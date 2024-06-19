@@ -20,6 +20,7 @@ DEFAULT_PACKAGES += \
 	kmod-usb-phy-ipq807x kmod-usb-dwc3-qcom-internal \
 	kmod-qca-nss-ppe kmod-qca-nss-ppe-ds kmod-qca-nss-ppe-vp \
 	kmod-qca-ssdk-qca-nohnat kmod-qca-nss-dp-qca \
+	kmod-qca-nss-ppe-bridge-mgr kmod-qca-nss-ppe-vlan-mgr \
 	iwinfo kmod-ath12k-qca ath12k-firmware-qcn92xx \
 	kmod-leds-gpio swconfig kmod-fs-ext4 losetup
 
