@@ -1,6 +1,7 @@
 #!/bin/sh /etc/rc.common
 
 START=13
+name=$(basename "$0")
 
 io_expander_set() {
 	# echo "********* config I/O expander **********" > /dev/console
@@ -15,6 +16,14 @@ io_expander_set() {
 	i2cset -y 0 0x20 0x02 0xfe
 }
 
+enable_m2_full_card_power() {
+	logger -t "$name" "enabling power to Quectel RM520N-GL module"
+	echo 502 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio502/direction
+	echo 1 > /sys/class/gpio/gpio502/value
+}
+
 boot() {
 	io_expander_set
+	enable_m2_full_card_power
 }
