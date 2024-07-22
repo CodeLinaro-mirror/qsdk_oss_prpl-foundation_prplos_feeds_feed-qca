@@ -1,0 +1,46 @@
+From 1657132be616708c95c8d00da497a08e9aa190ce Mon Sep 17 00:00:00 2001
+From: Gokul Sriram Palanisamy <quic_gokulsri@quicinc.com>
+Date: Tue, 14 May 2024 09:59:51 +0530
+Subject: [PATCH] arm64: dts: qcom: disable uart3 that shares emmc gpio
+
+Change-Id: Ib31293e9c5300b85ea8543e67f5769d6c1a88ed0
+Signed-off-by: Gokul Sriram Palanisamy <quic_gokulsri@quicinc.com>
+---
+
+diff --git a/arch/arm64/boot/dts/qcom/ipq9574-rdp437.dts b/arch/arm64/boot/dts/qcom/ipq9574-rdp437.dts
+index c83d749..d41fbb7 100755
+--- a/arch/arm64/boot/dts/qcom/ipq9574-rdp437.dts
++++ b/arch/arm64/boot/dts/qcom/ipq9574-rdp437.dts
+@@ -367,7 +367,7 @@
+ &blsp1_uart3 {
+ 	pinctrl-0 = <&gps_pins>;
+ 	pinctrl-names = "default";
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &blsp1_uart4 {
+diff --git a/arch/arm64/boot/dts/qcom/ipq9574-rdp461.dts b/arch/arm64/boot/dts/qcom/ipq9574-rdp461.dts
+index fed65dc..5a8a85e 100755
+--- a/arch/arm64/boot/dts/qcom/ipq9574-rdp461.dts
++++ b/arch/arm64/boot/dts/qcom/ipq9574-rdp461.dts
+@@ -304,7 +304,7 @@
+ &blsp1_uart3 {
+ 	pinctrl-0 = <&gps_pins>;
+ 	pinctrl-names = "default";
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &blsp1_uart4 {
+@@ -365,6 +365,10 @@
+ 	pinctrl-names = "default";
+ 	perst-gpios = <&tlmm 32 GPIO_ACTIVE_LOW>;
+ 	status = "okay";
++
++	pcie3_rp {
++		reg = <0 0 0 0 0>;
++	};
+ };
+ 
+ &qpic_bam {
