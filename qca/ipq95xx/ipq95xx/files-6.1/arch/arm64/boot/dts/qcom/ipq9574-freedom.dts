@@ -392,6 +392,7 @@
 			qcom,bt-priority-time = <0x12>;
 			qcom,coex-algo = <0x2>;
 			qcom,pta-priority = <0x80800505>;
+			qcom,msi = <0x10>;
 		};
 	};
 };

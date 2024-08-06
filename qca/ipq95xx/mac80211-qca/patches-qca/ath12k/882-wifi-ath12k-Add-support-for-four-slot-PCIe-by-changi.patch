@@ -1,0 +1,209 @@
+From e07dce6c59f40bad8970d9293d38e556d840d9b7 Mon Sep 17 00:00:00 2001
+From: Aishwarya R <quic_aisr@quicinc.com>
+Date: Mon, 26 Feb 2024 14:48:28 +0530
+Subject: [PATCH] wifi: ath12k: Add support for four slot PCIe by changing
+ number of MSI.
+Currently 96 MSI interrupts has been supported for three slot
+PCI. To support four slot PCI, number of MSI has to be split
+in below order
+PCIe0 - 16,
+PCIe1 - 16,
+PCIe2 - 32,
+PCIe3 - 32
+Made changes to configure the MSI dynamically based on the DTS
+property in PCI node. Based on the number of MSI corresponding
+ring mask will be taken for DP grouping.
+Signed-off-by: Aishwarya R <quic_aisr@quicinc.com>
+---
+ drivers/net/wireless/ath/ath12k/core.h |  3 +
+ drivers/net/wireless/ath/ath12k/hw.c   | 82 +++++++++++++++++++++++++-
+ drivers/net/wireless/ath/ath12k/pci.c  | 13 +++-
+ drivers/net/wireless/ath/ath12k/pcic.h | 10 ++++
+ 4 files changed, 104 insertions(+), 4 deletions(-)
+diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
+index 1f50a95..d85048b 100644
+--- a/drivers/net/wireless/ath/ath12k/core.h
++++ b/drivers/net/wireless/ath/ath12k/core.h
+@@ -191,9 +191,12 @@ struct ath12k_ext_irq_grp {
+ 
+ #define HE_PPET16_PPET8_SIZE            8
+ 
++#define ATH12K_MSI_16	16
++
+ enum ath12k_msi_supported_hw {
+ 	ATH12K_MSI_CONFIG_PCI,
+ 	ATH12K_MSI_CONFIG_IPCI,
++	ATH12K_MSI_CONFIG_PCI_16,
+ };
+ 
+ /* 802.11ax PPE (PPDU packet Extension) threshold */
+diff --git a/drivers/net/wireless/ath/ath12k/hw.c b/drivers/net/wireless/ath/ath12k/hw.c
+index cac0167..e88df62 100644
+--- a/drivers/net/wireless/ath/ath12k/hw.c
++++ b/drivers/net/wireless/ath/ath12k/hw.c
+@@ -795,6 +795,75 @@ static const struct service_to_pipe ath12k_target_service_to_ce_map_wlan_ipq5332
+ 	},
+ };
+ 
++static struct ath12k_hw_ring_mask ath12k_hw_ring_mask_qcn9274_msi8 = {
++        .tx  = {
++                ATH12K_TX_RING_MASK_0,
++                ATH12K_TX_RING_MASK_1,
++                ATH12K_TX_RING_MASK_2 | ATH12K_TX_RING_MASK_4,
++                0, 0, 0, 0, 0
++        },
++        .rx_mon_dest = {
++                0, 0,
++		ATH12K_RX_MON_RING_MASK_0,
++		ATH12K_RX_MON_RING_MASK_1,
++		ATH12K_RX_MON_RING_MASK_2,
++		0, 0, 0
++        },
++        .rx = {
++                0, 0, 0,
++                ATH12K_RX_RING_MASK_0,
++                ATH12K_RX_RING_MASK_1,
++                ATH12K_RX_RING_MASK_2 | ATH12K_RX_RING_MASK_3,
++		0, 0
++        },
++	.rx_err = {
++                0, 0,
++                ATH12K_RX_ERR_RING_MASK_0,
++                0, 0, 0, 0
++        },
++        .rx_wbm_rel = {
++                0, 0,
++                ATH12K_RX_WBM_REL_RING_MASK_0,
++                0, 0, 0, 0
++        },
++        .reo_status = {
++                0, 0,
++                ATH12K_REO_STATUS_RING_MASK_0,
++                0, 0, 0, 0
++        },
++        .host2rxdma = {
++                0, 0,
++                ATH12K_HOST2RXDMA_RING_MASK_0,
++                0, 0, 0, 0
++        },
++        .tx_mon_dest = {
++                ATH12K_TX_MON_RING_MASK_0,
++                ATH12K_TX_MON_RING_MASK_1,
++                0, 0, 0, 0, 0, 0
++        },
++        .ppe2tcl = {
++                0, 0, 0, 0, 0, 0,
++                ATH12K_PPE2TCL_RING_MASK_0,
++		0
++        },
++        .reo2ppe = {
++                0, 0, 0, 0, 0,
++                ATH12K_REO2PPE_RING_MASK_0,
++		0, 0
++        },
++#ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
++        .wbm2sw6_ppeds_tx_cmpln = {
++		ATH12K_PPE_WBM2SW_RELEASE_RING_MASK_0,
++		0, 0, 0, 0, 0, 0, 0
++        },
++#endif
++        .umac_dp_reset = {
++                0, 0, 0, 0, 0, 0, 0,
++		ATH12K_UMAC_RESET_INTR_MASK_0
++        },
++};
++
++
+ static struct ath12k_hw_ring_mask ath12k_hw_ring_mask_qcn9274 = {
+ 	.tx  = {
+ 		ATH12K_TX_RING_MASK_0,
+@@ -1988,6 +2057,7 @@ void ath12k_dp_restore_interrupt_mask(struct ath12k_base *ab)
+ int ath12k_hw_init(struct ath12k_base *ab)
+ {
+ 	const struct ath12k_hw_params *hw_params = NULL;
++	struct ath12k_hw_params *hw_params_msi8 = NULL;
+ 	int i;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(ath12k_hw_params); i++) {
+@@ -2001,11 +2071,17 @@ int ath12k_hw_init(struct ath12k_base *ab)
+ 		ath12k_err(ab, "Unsupported hardware version: 0x%x\n", ab->hw_rev);
+ 		return -EINVAL;
+ 	}
+-
+ 	ab->hw_params = hw_params;
+-
++	if (ab->msi.config->total_vectors == ATH12K_MSI_16) {
++		hw_params_msi8 = kzalloc(sizeof(struct ath12k_hw_params), GFP_KERNEL);
++		if (!hw_params_msi8)
++			return -ENOMEM;
++		memcpy(hw_params_msi8, hw_params, sizeof(struct ath12k_hw_params));
++		hw_params_msi8->ext_irq_grp_num_max = 6;
++		hw_params_msi8->ring_mask = &ath12k_hw_ring_mask_qcn9274_msi8;
++		ab->hw_params = hw_params_msi8;
++	}
+ 	ath12k_info(ab, "Hardware name: %s\n", ab->hw_params->name);
+-
+ 	return 0;
+ }
+ 
+diff --git a/drivers/net/wireless/ath/ath12k/pci.c b/drivers/net/wireless/ath/ath12k/pci.c
+index 30bc407..61a4672 100644
+--- a/drivers/net/wireless/ath/ath12k/pci.c
++++ b/drivers/net/wireless/ath/ath12k/pci.c
+@@ -481,6 +481,10 @@ free_msi_vector:
+ 
+ static void ath12k_pci_msi_free(struct ath12k_pci *ab_pci)
+ {
++	struct ath12k_base *ab = ab_pci->ab;
++
++	if (ab->msi.config->total_vectors == ATH12K_MSI_16)
++		kfree(ab->hw_params);
+ 	pci_free_irq_vectors(ab_pci->pdev);
+ }
+ 
+@@ -903,6 +907,7 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
+ 	struct ath12k_pci *ab_pci;
+ 	u32 soc_hw_version_major, soc_hw_version_minor;
+ 	u32 addr;
++	u32 msi = 0;
+ 	int ret;
+ #ifdef CPTCFG_ATH12K_BONDED_DS_SUPPORT
+        ath12k_bond_enable_ppe_ds();
+@@ -944,7 +949,13 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
+ 
+ 	switch (pci_dev->device) {
+ 	case QCN9274_DEVICE_ID:
+-		ab->msi.config = &ath12k_msi_config[ATH12K_MSI_CONFIG_PCI];
++		if(!of_property_read_u32(ab->dev->of_node, "qcom,msi", &msi) &&
++		   msi == ATH12K_MSI_16) {
++			ath12k_dbg(ab, ATH12K_DBG_PCI, "ath12k supported MSI %d\n", msi);
++			ab->msi.config = &ath12k_msi_config[ATH12K_MSI_CONFIG_PCI_16];
++		} else {
++			ab->msi.config = &ath12k_msi_config[ATH12K_MSI_CONFIG_PCI];
++		}
+ 		ab->static_window_map = true;
+ 		ab_pci->pci_ops = &ath12k_pci_ops_qcn9274;
+ 		ath12k_pci_read_hw_version(ab, &soc_hw_version_major,
+diff --git a/drivers/net/wireless/ath/ath12k/pcic.h b/drivers/net/wireless/ath/ath12k/pcic.h
+index 4ca5593..eb674fd 100644
+--- a/drivers/net/wireless/ath/ath12k/pcic.h
++++ b/drivers/net/wireless/ath/ath12k/pcic.h
+@@ -47,6 +47,16 @@ static const struct ath12k_msi_config ath12k_msi_config[] = {
+ 			{ .name = "DP", .num_vectors = 9, .base_vector = 6 },
+ 		},
+ 	},
++	{
++                /* MSI spec expects number of interrupts to be a power of 2 */
++                .total_vectors = 16,
++                .total_users = 3,
++                .users = (struct ath12k_msi_user[]) {
++                        { .name = "MHI", .num_vectors = 3, .base_vector = 0 },
++                        { .name = "CE", .num_vectors = 5, .base_vector = 3 },
++                        { .name = "DP", .num_vectors = 8, .base_vector = 8 },
++                },
++        },
+ };
+ 
+ int ath12k_pcic_start(struct ath12k_base *ab);
+-- 
+2.34.1
