@@ -1,0 +1,57 @@
+From 637d8cf469e737e77932ffff510b2cf8135aa38f Mon Sep 17 00:00:00 2001
+From: Ajith C <quic_ajithc@quicinc.com>
+Date: Fri, 23 Aug 2024 15:10:18 +0530
+Subject: [PATCH] wlan: cfg80211: update ssid during update AP operation
+
+Currently, the AP update operation is not correctly
+updating new SSID.
+
+This issue arises because the NL80211_CMD_UPDATE_AP
+command does not process its NL80211_ATTR_SSID attribute.
+
+Resolve this issue by ensuring that the SSID is updated
+if it is provided with the NL80211_CMD_UPDATE_AP command.
+
+Patch-work: none
+Patch-dependency: none
+
+Signed-off-by: Ajith C <quic_ajithc@quicinc.com>
+Signed-off-by: Marvin Lu <marvin.lu@wnc.com.tw> [rebased]
+---
+ net/wireless/nl80211.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 82b77ef..f3f023c 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -7008,6 +7008,14 @@ static int nl80211_update_ap(struct sk_buff *skb, struct genl_info *info)
+ 
+ 	memset(params, 0, sizeof(*params));
+ 
++	if (info->attrs[NL80211_ATTR_SSID]) {
++		params->ssid_len =
++		    nla_len(info->attrs[NL80211_ATTR_SSID]);
++		if (params->ssid_len != 0)
++			params->ssid =
++			    nla_data(info->attrs[NL80211_ATTR_SSID]);
++	}
++
+ 	if (info->attrs[NL80211_ATTR_AP_PS]) {
+ 		params->ap_ps_enable = nla_get_u8(info->attrs[NL80211_ATTR_AP_PS]);
+ 		params->ap_ps_valid = true;
+@@ -7040,6 +7048,12 @@ static int nl80211_update_ap(struct sk_buff *skb, struct genl_info *info)
+ 
+ 	wdev_lock(wdev);
+ 	err = rdev_update_ap(rdev, dev, params);
++	if (!err) {
++		wdev->u.ap.ssid_len = params->ssid_len;
++		memcpy(wdev->u.ap.ssid, params->ssid,
++		       params->ssid_len);
++	}
++
+ 	wdev_unlock(wdev);
+ 
+ out:
+-- 
+2.34.1
