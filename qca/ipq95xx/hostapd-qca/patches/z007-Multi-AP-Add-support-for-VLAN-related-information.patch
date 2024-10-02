@@ -1,0 +1,169 @@
+From 941b023a2ff4b501604b728c21c4f5552e8f15f0 Mon Sep 17 00:00:00 2001
+From: Manoj Sekar <quic_sekar@quicinc.com>
+Date: Mon, 26 Feb 2024 18:26:38 +0530
+Subject: [PATCH 6/6] Multi-AP: Add support for VLAN related information
+
+Add support to fill "multi_ap_vlanid" info to the hostapd config file.
+Add the Multi-AP Default 802.1Q Setting subelement into Multi-AP element
+generating and parsing.
+
+Signed-off-by: Manoj Sekar <quic_sekar@quicinc.com>
+---
+ hostapd/config_file.c          | 10 ++++++++++
+ hostapd/hostapd.conf           |  4 ++++
+ src/ap/ap_config.h             |  3 +++
+ src/ap/ieee802_11.c            |  1 +
+ src/common/ieee802_11_common.c | 35 ++++++++++++++++++++++++++++++++++
+ src/common/ieee802_11_common.h |  1 +
+ src/common/ieee802_11_defs.h   |  1 +
+ 7 files changed, 55 insertions(+)
+
+diff --git a/hostapd/config_file.c b/hostapd/config_file.c
+index acc463135..d7f22e4c3 100644
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -4576,6 +4576,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+ 			return -1;
+ 		}
+ 		bss->multi_ap_profile = val;
++	} else if (os_strcmp(buf, "multi_ap_vlanid") == 0) {
++		int val = atoi(pos);
++
++		if (val < 0 || val > MAX_VLAN_ID) {
++			wpa_printf(MSG_ERROR,
++				   "Line %d: Invalid multi_ap_vlan_id '%s'",
++				   line, buf);
++			return -1;
++		}
++		bss->multi_ap_vlanid = val;
+ 	} else if (os_strcmp(buf, "rssi_reject_assoc_rssi") == 0) {
+ 		conf->rssi_reject_assoc_rssi = atoi(pos);
+ 	} else if (os_strcmp(buf, "rssi_reject_assoc_timeout") == 0) {
+diff --git a/hostapd/hostapd.conf b/hostapd/hostapd.conf
+index 46693c7aa..48b4a04b6 100644
+--- a/hostapd/hostapd.conf
++++ b/hostapd/hostapd.conf
+@@ -2396,6 +2396,10 @@ own_ip_addr=127.0.0.1
+ # 2 = Supports Multi-AP profile 2 as defined in Wi-Fi EasyMesh specification
+ #multi_ap_profile=2
+ 
++# Multi-AP VLAN ID
++# A valid non-zero VLAN ID will be used to update Default IEEE 802.1Q Setting
++#multi_ap_vlanid=0
++
+ # WPS UPnP interface
+ # If set, support for external Registrars is enabled.
+ #upnp_iface=br0
+diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
+index 8534b4572..2de3c05cc 100644
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -778,6 +778,9 @@ struct hostapd_bss_config {
+ 	int multi_ap; /* bitmap of BACKHAUL_BSS, FRONTHAUL_BSS */
+ 	int multi_ap_profile;
+ 
++    /* Primary VLAN ID to use in Multi-AP */
++    int multi_ap_vlanid;
++    
+ #ifdef CONFIG_AIRTIME_POLICY
+ 	unsigned int airtime_weight;
+ 	int airtime_limit;
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 7b78d1ae8..f31077cd0 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -101,6 +101,7 @@ static u8 * hostapd_eid_multi_ap(struct hostapd_data *hapd, u8 *eid, size_t len)
+ 		multi_ap.capability |= MULTI_AP_FRONTHAUL_BSS;
+ 
+     multi_ap.profile = hapd->conf->multi_ap_profile;
++    multi_ap.vlanid = hapd->conf->multi_ap_vlanid;
+     
+ 	return eid + add_multi_ap_ie(eid, len, &multi_ap);
+ }
+diff --git a/src/common/ieee802_11_common.c b/src/common/ieee802_11_common.c
+index cf7244532..2038b567a 100644
+--- a/src/common/ieee802_11_common.c
++++ b/src/common/ieee802_11_common.c
+@@ -2058,6 +2058,7 @@ u16 check_multi_ap_ie(const u8 *multi_ap_ie, size_t multi_ap_len,
+ {
+ 	const struct element *elem;
+ 	bool ext_present = false;
++	unsigned int vlan_id;
+ 
+ 	os_memset(multi_ap, 0, sizeof(*multi_ap));
+ 
+@@ -2095,6 +2096,27 @@ u16 check_multi_ap_ie(const u8 *multi_ap_ie, size_t multi_ap_len,
+ 				return WLAN_STATUS_ASSOC_DENIED_UNSPEC;
+ 			}
+ 			break;
++		case MULTI_AP_VLAN_SUB_ELEM_TYPE:
++			if (multi_ap->profile < MULTI_AP_PROFILE_2) {
++				wpa_printf(MSG_DEBUG,
++					   "Multi-AP IE invalid profile to read VLAN IE");
++				return WLAN_STATUS_INVALID_IE;
++			}
++			if (elen < 2) {
++				wpa_printf(MSG_DEBUG,
++					   "Multi-AP IE invalid Multi-AP VLAN subelement");
++				return WLAN_STATUS_INVALID_IE;
++			}
++
++			vlan_id = WPA_GET_LE16(pos);
++			if (vlan_id < 1 || vlan_id > 4094) {
++				wpa_printf(MSG_INFO,
++					   "Multi-AP IE invalid Multi-AP VLAN ID %d",
++					   vlan_id);
++				return WLAN_STATUS_INVALID_IE;
++			}
++			multi_ap->vlanid = vlan_id;
++			break;
+ 		default:
+ 			wpa_printf(MSG_DEBUG,
+ 				   "Ignore unknown subelement %u in Multi-AP IE",
+@@ -2152,6 +2174,19 @@ size_t add_multi_ap_ie(u8 *buf, size_t len,
+ 		*pos++ = multi_ap->profile;
+ 	}
+ 
++	/* Add Multi-AP Default 802.1Q Setting subelement only for backhaul BSS
++	 */
++	if (multi_ap->vlanid &&
++	    multi_ap->profile >= MULTI_AP_PROFILE_2 &&
++	    (multi_ap->capability & MULTI_AP_BACKHAUL_BSS)) {
++		if (buf + len - pos < 4)
++			return 0;
++		*pos++ = MULTI_AP_VLAN_SUB_ELEM_TYPE;
++		*pos++ = 2;
++		WPA_PUT_LE16(pos, multi_ap->vlanid);
++		pos += 2;
++	}
++
+ 	*len_ptr = pos - len_ptr - 1;
+ 
+ 	return pos - buf;
+diff --git a/src/common/ieee802_11_common.h b/src/common/ieee802_11_common.h
+index 92dbf27c6..9118c2e5d 100644
+--- a/src/common/ieee802_11_common.h
++++ b/src/common/ieee802_11_common.h
+@@ -49,6 +49,7 @@ struct frag_ies_info {
+ struct multi_ap_params {
+ 	u8 capability;
+ 	u8 profile;
++	u16 vlanid;
+ };
+ 
+ /* Parsed Information Elements */
+diff --git a/src/common/ieee802_11_defs.h b/src/common/ieee802_11_defs.h
+index 9034c7e87..4fea880e2 100644
+--- a/src/common/ieee802_11_defs.h
++++ b/src/common/ieee802_11_defs.h
+@@ -1368,6 +1368,7 @@ struct ieee80211_ampe_ie {
+ 
+ #define MULTI_AP_SUB_ELEM_TYPE 0x06
+ #define MULTI_AP_PROFILE_SUB_ELEM_TYPE 0x07
++#define MULTI_AP_VLAN_SUB_ELEM_TYPE 0x08
+ 
+ #define MULTI_AP_TEAR_DOWN BIT(4)
+ #define MULTI_AP_FRONTHAUL_BSS BIT(5)
+-- 
+2.17.1
+
