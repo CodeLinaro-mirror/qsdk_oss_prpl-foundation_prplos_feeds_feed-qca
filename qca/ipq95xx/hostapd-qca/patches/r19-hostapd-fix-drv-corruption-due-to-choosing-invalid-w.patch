@@ -17,7 +17,15 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -960,9 +960,11 @@ add:
+@@ -900,6 +900,7 @@ nl80211_get_wiphy_data_ap(struct i802_bs
+ 	struct nl80211_wiphy_data *w;
+ 	int wiphy_idx, found = 0;
+ 	struct i802_bss *tmp_bss;
++	struct dl_list *list;
+ 	u8 channel;
+ 
+ 	if (bss->wiphy_data != NULL)
+@@ -960,9 +961,13 @@ add:
  			break;
  		}
  	}
@@ -25,13 +33,15 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
 -	if (!found)
 +	/* if not add it by deleting the older wiphy */
 +	if (!found) {
-+		dl_list_del(&bss->drv->wiphy_list);
++		list = &bss->drv->wiphy_list;
++		if (list->next && list->prev)
++			dl_list_del(list);
  		dl_list_add(&w->drvs, &bss->drv->wiphy_list);
 +	}
  
  	dl_list_add(&w->bsss, &bss->wiphy_list);
  	bss->wiphy_data = w;
-@@ -2264,6 +2266,7 @@ static void * wpa_driver_nl80211_drv_ini
+@@ -2264,6 +2269,7 @@ static void * wpa_driver_nl80211_drv_ini
  	drv->ctx = ctx;
  	drv->hostapd = !!hostapd;
  	drv->eapol_sock = -1;
