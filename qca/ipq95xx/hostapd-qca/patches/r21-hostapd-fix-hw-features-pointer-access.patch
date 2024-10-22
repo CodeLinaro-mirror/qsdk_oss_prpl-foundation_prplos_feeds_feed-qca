@@ -1,0 +1,13 @@
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 261dc92..12904e5 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -386,7 +386,7 @@ int hostapd_reload_config(struct hostapd_iface *iface, int reconf)
+ 	}
+ 	iface->conf = newconf;
+ 
+-	for (i = 0; i < iface->num_hw_features; i++) {
++	for (i = 0; iface->hw_features && i < iface->num_hw_features; i++) {
+ 		struct hostapd_hw_modes *mode = &iface->hw_features[i];
+ 		if (mode->mode == iface->conf->hw_mode) {
+ 			iface->current_mode = mode;
