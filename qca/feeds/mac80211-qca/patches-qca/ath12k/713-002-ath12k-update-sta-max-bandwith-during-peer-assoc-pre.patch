@@ -26,7 +26,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -1852,6 +1852,94 @@ static void ath12k_peer_assoc_h_crypto(s
+@@ -1982,6 +1982,94 @@ static void ath12k_peer_assoc_h_crypto(s
  	/* TODO: safe_mode_enabled (bypass 4-way handshake) flag req? */
  }
  
@@ -121,7 +121,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void ath12k_peer_assoc_h_rates(struct ath12k *ar,
  				      struct ath12k_link_vif *arvif,
  				      struct ath12k_link_sta *arsta,
-@@ -2379,6 +2467,7 @@ static void ath12k_peer_assoc_h_he(struc
+@@ -2442,6 +2530,7 @@ static void ath12k_peer_assoc_h_he(struc
  	struct ieee80211_bss_conf* link_conf;
  	struct ieee80211_link_sta *link_sta;
  	u32 peer_he_ops;
@@ -129,7 +129,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	link_conf = ath12k_get_link_bss_conf(arvif);
  
-@@ -2407,6 +2496,8 @@ static void ath12k_peer_assoc_h_he(struc
+@@ -2470,6 +2559,8 @@ static void ath12k_peer_assoc_h_he(struc
  
  	band = def.chan->band;
  	he_mcs_mask = arvif->bitrate_mask.control[band].he_mcs;
@@ -138,7 +138,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	if (ath12k_peer_assoc_h_he_masked(he_mcs_mask))
  		return;
-@@ -2537,7 +2628,7 @@ static void ath12k_peer_assoc_h_he(struc
+@@ -2601,7 +2692,7 @@ static void ath12k_peer_assoc_h_he(struc
  		he_mcs_mask[link_sta->rx_nss - 1] = he_mcs_mask[he_nss - 1];
  	}
  
@@ -147,15 +147,15 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	case IEEE80211_STA_RX_BW_160:
  		if (he_cap->he_cap_elem.phy_cap_info[0] &
  		    IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G) {
-@@ -2836,6 +2927,7 @@ static void ath12k_peer_assoc_h_eht(stru
- 	u32 peer_eht_ops;
+@@ -2901,6 +2992,7 @@ static void ath12k_peer_assoc_h_eht(stru
+ 	struct ieee80211_link_sta *link_sta;
  	struct ieee80211_sta_eht_cap *own_eht_cap;
  	struct ieee80211_eht_mcs_nss_supp *own_eht_mcs_nss_supp;
 +	enum ieee80211_sta_rx_bandwidth radio_max_bw_caps;
  
  	link_conf = ath12k_get_link_bss_conf(arvif);
  
-@@ -2866,6 +2958,9 @@ static void ath12k_peer_assoc_h_eht(stru
+@@ -2928,6 +3020,9 @@ static void ath12k_peer_assoc_h_eht(stru
  	band = def.chan->band;
  	eht_mcs_mask = arvif->bitrate_mask.control[band].eht_mcs;
  
@@ -165,7 +165,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	own_eht_cap = &ar->mac.sbands[band].iftype_data->eht_cap;
  	own_eht_mcs_nss_supp = &own_eht_cap->eht_mcs_nss_supp;
  
-@@ -2913,7 +3008,7 @@ static void ath12k_peer_assoc_h_eht(stru
+@@ -2974,7 +3069,7 @@ static void ath12k_peer_assoc_h_eht(stru
  		eht_mcs_mask[link_sta->rx_nss - 1] = eht_mcs_mask[eht_nss - 1];
  	}
  
@@ -174,7 +174,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	case IEEE80211_STA_RX_BW_320:
  		mcs_nss_supp_bw = &mcs_nss->bw._320;
  		mcs_idx = WMI_EHTCAP_TXRX_MCS_NSS_IDX_320;
-@@ -2983,8 +3078,8 @@ static void ath12k_peer_assoc_h_eht(stru
+@@ -3044,8 +3139,8 @@ static void ath12k_peer_assoc_h_eht(stru
  		arg->ru_punct_bitmap = ~link_sta->ru_punct_bitmap;
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_MAC,

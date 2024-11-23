@@ -25,7 +25,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	ATH12K_DBG_SAWF		= 0x40000000,
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -6427,7 +6427,7 @@ static void ath12k_sta_rc_update_wk(stru
+@@ -6430,7 +6430,7 @@ static void ath12k_sta_rc_update_wk(stru
  	}
  
  	if (changed & IEEE80211_RC_NSS_CHANGED) {
@@ -34,7 +34,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			   arsta->addr, nss);
  
  		err = ath12k_wmi_set_peer_param(ar, arsta->addr, arvif->vdev_id,
-@@ -6438,7 +6438,7 @@ static void ath12k_sta_rc_update_wk(stru
+@@ -6441,7 +6441,7 @@ static void ath12k_sta_rc_update_wk(stru
  	}
  
  	if (changed & IEEE80211_RC_SMPS_CHANGED) {
@@ -43,7 +43,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			   arsta->addr, smps);
  
  		err = ath12k_wmi_set_peer_param(ar, arsta->addr, arvif->vdev_id,
-@@ -6552,7 +6552,7 @@ static void ath12k_sta_set_4addr_wk(stru
+@@ -6555,7 +6555,7 @@ static void ath12k_sta_set_4addr_wk(stru
  		arvif = arsta->arvif;
  		ar = arvif->ar;
  
@@ -52,7 +52,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			   "setting USE_4ADDR for peer %pM\n", arsta->addr);
  
  		ret = ath12k_wmi_set_peer_param(ar, arsta->addr,
-@@ -6663,7 +6663,7 @@ static int ath12k_mac_station_remove(str
+@@ -6666,7 +6666,7 @@ static int ath12k_mac_station_remove(str
  		ath12k_warn(ar->ab, "Failed to delete peer: %pM for VDEV: %d\n",
  			    arsta->addr, arvif->vdev_id);
  	else
@@ -61,7 +61,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			   arsta->addr, arvif->vdev_id);
  
  	ath12k_mac_station_post_remove(ar, arvif, arsta);
-@@ -6746,7 +6746,7 @@ static int ath12k_mac_station_add(struct
+@@ -6749,7 +6749,7 @@ static int ath12k_mac_station_add(struct
  		goto free_rx_stats;
  	}
  
@@ -70,7 +70,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		    arsta->addr, arvif->vdev_id, ar->num_stations);
  
  	if (ath12k_debugfs_is_extd_tx_stats_enabled(ar) && (!arsta->tx_stats)) {
-@@ -6862,6 +6862,8 @@ static u16 ath12k_mac_alloc_ml_peer_id(s
+@@ -6866,6 +6866,8 @@ static u16 ath12k_mac_alloc_ml_peer_id(s
  	if (ml_peer_id == ATH12K_MAX_MLO_PEERS)
  		ml_peer_id = ATH12K_MLO_PEER_ID_INVALID;
  
@@ -79,7 +79,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	return ml_peer_id;
  }
  
-@@ -7120,6 +7122,10 @@ static int ath12k_mac_handle_link_sta_st
+@@ -7099,6 +7101,10 @@ static int ath12k_mac_handle_link_sta_st
  	}
  
  	mutex_unlock(&ar->conf_mutex);
@@ -139,8 +139,8 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	return 0;
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -1703,7 +1703,7 @@ int ath12k_wmi_send_peer_create_cmd(stru
- 	ml_param->flags = FIELD_PREP(ATH12K_WMI_FLAG_MLO_ENABLED, param->ml_enabled);
+@@ -1704,7 +1704,7 @@ int ath12k_wmi_send_peer_create_cmd(stru
+ 	ml_param->flags = FIELD_PREP(ATH12K_WMI_FLAG_MLO_ENABLED, arg->ml_enabled);
  	
  
 -	ath12k_dbg(ar->ab, ATH12K_DBG_WMI,
@@ -148,7 +148,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		   "WMI peer create vdev_id %d peer_addr %pM ml_enabled %d\n",
  		   arg->vdev_id, arg->peer_addr, arg->ml_enabled);
  
-@@ -1735,7 +1735,7 @@ int ath12k_wmi_send_peer_delete_cmd(stru
+@@ -1736,7 +1736,7 @@ int ath12k_wmi_send_peer_delete_cmd(stru
  	ether_addr_copy(cmd->peer_macaddr.addr, peer_addr);
  	cmd->vdev_id = cpu_to_le32(vdev_id);
  
@@ -157,8 +157,16 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		   "WMI peer delete vdev_id %d peer_addr %pM num_peer : %d\n",
  		   vdev_id,  peer_addr, ar->num_peers);
  
-@@ -3130,7 +3130,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
+@@ -3223,15 +3223,9 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
+ 		ptr += sizeof(*partner_info);
  	}
+ 
+-	ret = ath12k_wmi_cmd_send(wmi, skb, WMI_PEER_ASSOC_CMDID);
+-	if (ret) {
+-		ath12k_warn(ar->ab,
+-			    "failed to send WMI_PEER_ASSOC_CMDID\n");
+-		dev_kfree_skb(skb);
+-	}
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_WMI,
 -		   "wmi peer assoc vdev id %d assoc id %d peer mac %pM peer_flags %x rate_caps %x peer_caps %x listen_intval %d ht_caps %x max_mpdu %d nss %d phymode %d peer_mpdu_density %d vht_caps %x he cap_info %x he ops %x he cap_info_ext %x he phy %x %x %x peer_bw_rxnss_override %x peer_flags_ext %x eht mac_cap %x %x eht phy_cap %x %x %x eht ops %x ml flags %x ml peer id %d num_partner_links %d\n",
@@ -166,7 +174,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		   cmd->vdev_id, cmd->peer_associd, arg->peer_mac,
  		   cmd->peer_flags, cmd->peer_rate_caps, cmd->peer_caps,
  		   cmd->peer_listen_intval, cmd->peer_ht_caps,
-@@ -3144,9 +3144,10 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
+@@ -3245,9 +3239,17 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  		   cmd->peer_eht_cap_mac[0], cmd->peer_eht_cap_mac[1],
  		   cmd->peer_eht_cap_phy[0], cmd->peer_eht_cap_phy[1],
  		   cmd->peer_eht_cap_phy[2], cmd->peer_eht_ops,
@@ -177,10 +185,17 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 +		   ml_params->logical_link_idx, ml_params->ml_peer_id,
 +		   ml_params->ieee_link_id,
 +		   arg->ml.num_partner_links);
++
++	ret = ath12k_wmi_cmd_send(wmi, skb, WMI_PEER_ASSOC_CMDID);
++	if (ret) {
++		ath12k_warn(ar->ab,
++			    "failed to send WMI_PEER_ASSOC_CMDID\n");
++		dev_kfree_skb(skb);
++	}
  
  	return ret;
  }
-@@ -7791,7 +7792,7 @@ static void ath12k_peer_delete_resp_even
+@@ -8628,7 +8630,7 @@ static void ath12k_peer_delete_resp_even
  
  	complete(&ar->peer_delete_done);
  	rcu_read_unlock();
@@ -189,7 +204,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		   peer_del_resp.vdev_id, peer_del_resp.peer_macaddr.addr);
  }
  
-@@ -10623,7 +10624,7 @@ static void ath12k_peer_sta_kickout_even
+@@ -11460,7 +11462,7 @@ static void ath12k_peer_sta_kickout_even
  		goto exit;
  	}
  

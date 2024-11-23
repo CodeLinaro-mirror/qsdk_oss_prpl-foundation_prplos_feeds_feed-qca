@@ -15,7 +15,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/testmode.c
 +++ b/drivers/net/wireless/ath/ath12k/testmode.c
-@@ -433,35 +433,46 @@ out:
+@@ -432,35 +432,46 @@ out:
  	return ret;
  }
  int ath12k_tm_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
@@ -23,7 +23,8 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 +		  u8 link_id, void *data, int len)
  {
  	struct ath12k_hw *ah = hw->priv;
- 	struct ath12k *ar;
+-	struct ath12k *ar;
++	struct ath12k *ar = NULL;
  	struct ath12k_base *ab;
  	struct nlattr *tb[ATH12K_TM_ATTR_MAX + 1];
 -	int ret;

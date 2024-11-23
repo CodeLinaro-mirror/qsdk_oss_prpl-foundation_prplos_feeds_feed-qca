@@ -24,7 +24,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
 
 --- a/net/mac80211/chan.c
 +++ b/net/mac80211/chan.c
-@@ -1072,6 +1072,9 @@ __ieee80211_link_copy_chanctx_to_vlans(s
+@@ -1096,6 +1096,9 @@ __ieee80211_link_copy_chanctx_to_vlans(s
  		if (WARN_ON(!vlan_conf))
  			continue;
  
@@ -34,22 +34,26 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  		rcu_assign_pointer(vlan_conf->chanctx_conf, conf);
  	}
  	rcu_read_unlock();
-@@ -2069,6 +2072,14 @@ void ieee80211_link_vlan_copy_chanctx(st
+@@ -2101,18 +2104,23 @@ void ieee80211_link_vlan_copy_chanctx(st
  	if (WARN_ON(sdata->vif.type != NL80211_IFTYPE_AP_VLAN || !sdata->bss))
  		return;
  
+-	ap = container_of(sdata->bss, struct ieee80211_sub_if_data, u.ap);
 +	/* TODO: This check would help only for SLO WDS VAP. For MLO WDS VAP,
 +		we have to extend the logic for all the links
 +	*/
+ 
+ 	mutex_lock(&local->chanctx_mtx);
+-
+ 	rcu_read_lock();
++
 +	if (sdata->vif.valid_links) {
 +		link_id = ffs(sdata->vif.valid_links) - 1;
 +		link_conf = rcu_dereference(sdata->vif.link_conf[link_id]);
 +	}
 +
- 	ap = container_of(sdata->bss, struct ieee80211_sub_if_data, u.ap);
- 
- 	mutex_lock(&local->chanctx_mtx);
-@@ -2078,9 +2089,6 @@ void ieee80211_link_vlan_copy_chanctx(st
++	ap = container_of(sdata->bss, struct ieee80211_sub_if_data, u.ap);
+ 	ap_conf = rcu_dereference(ap->vif.link_conf[link_id]);
  	conf = rcu_dereference_protected(ap_conf->chanctx_conf,
  					 lockdep_is_held(&local->chanctx_mtx));
  	rcu_assign_pointer(link_conf->chanctx_conf, conf);
@@ -61,7 +65,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
 --- a/net/mac80211/iface.c
 +++ b/net/mac80211/iface.c
-@@ -405,6 +405,7 @@ static void ieee80211_do_stop(struct iee
+@@ -472,6 +472,7 @@ static void ieee80211_do_stop(struct iee
  	struct cfg80211_chan_def chandef;
  	bool cancel_scan;
  	struct cfg80211_nan_func *func;
@@ -69,7 +73,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  
  	clear_bit(SDATA_STATE_RUNNING, &sdata->state);
  	synchronize_rcu(); /* flush _ieee80211_wake_txqs() */
-@@ -433,6 +434,13 @@ static void ieee80211_do_stop(struct iee
+@@ -494,6 +495,13 @@ static void ieee80211_do_stop(struct iee
  			break;
  		list_del_rcu(&sdata->u.mntr.list);
  		break;
@@ -83,7 +87,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  	default:
  		break;
  	}
-@@ -1381,7 +1389,30 @@ int ieee80211_do_open(struct wireless_de
+@@ -1352,7 +1360,30 @@ int ieee80211_do_open(struct wireless_de
  		memcpy(sdata->vif.hw_queue, master->vif.hw_queue,
  		       sizeof(sdata->vif.hw_queue));
  		sdata->vif.bss_conf.chandef = master->vif.bss_conf.chandef;
@@ -116,7 +120,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  			master->crypto_tx_tailroom_needed_cnt;
 --- a/net/wireless/util.c
 +++ b/net/wireless/util.c
-@@ -2781,7 +2781,8 @@ void cfg80211_remove_link(struct wireles
+@@ -2974,7 +2974,8 @@ void cfg80211_remove_link(struct wireles
  
  	wdev->valid_links &= ~BIT(link_id);
  
@@ -128,7 +132,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
 --- a/net/mac80211/link.c
 +++ b/net/mac80211/link.c
-@@ -17,6 +17,36 @@ void ieee80211_link_setup(struct ieee802
+@@ -18,6 +18,36 @@ void ieee80211_link_setup(struct ieee802
  		ieee80211_mgd_setup_link(link);
  }
  
@@ -165,7 +169,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  void ieee80211_link_init(struct ieee80211_sub_if_data *sdata,
  			 int link_id,
  			 struct ieee80211_link_data *link,
-@@ -49,6 +79,9 @@ void ieee80211_link_init(struct ieee8021
+@@ -53,6 +83,9 @@ void ieee80211_link_init(struct ieee8021
  	link->ap_power_level = IEEE80211_UNSET_POWER_LEVEL;
  	link->user_power_level = local->user_power_level;
  
@@ -175,7 +179,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  	if (!deflink) {
  		switch (sdata->vif.type) {
  		case NL80211_IFTYPE_AP:
-@@ -207,6 +240,11 @@ static int ieee80211_vif_update_links(st
+@@ -222,6 +255,11 @@ static int ieee80211_vif_update_links(st
  
  	memset(to_free, 0, sizeof(links));
  

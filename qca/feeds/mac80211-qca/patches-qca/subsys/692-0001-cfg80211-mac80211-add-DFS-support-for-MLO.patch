@@ -422,7 +422,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (list_empty(&local->radar_info_list))
 -		return ieee80211_dfs_radar_detected_processing(local, 0);
 +		return ieee80211_dfs_radar_detected_processing(local, 0,
-+							       radar_channel);
++							       NULL);
  
  	list_for_each_entry_safe(radar_info, temp, &local->radar_info_list, list) {
  		radar_bitmap = radar_info->radar_bitmap;

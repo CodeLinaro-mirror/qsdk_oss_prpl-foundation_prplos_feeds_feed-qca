@@ -81,15 +81,26 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  #define DP_RXDMA_MONITOR_DESC_RING_SIZE	8192
  #define DP_RX_MONITOR_BUF_LOW_TH	32
  #define DP_TX_MONITOR_BUF_RING_SIZE	4096
-@@ -188,7 +206,6 @@ struct ath12k_pdev_dp {
+@@ -184,11 +202,17 @@ struct ath12k_pdev_dp {
+ #define DP_TX_MONITOR_BUF_SIZE_MIN	48
+ #define DP_TX_MONITOR_BUF_SIZE_MAX	8192
+ 
++#ifdef CPTCFG_ATH12K_MEM_PROFILE_512M
++#define DP_RX_BUFFER_SIZE	1856
++#elif CPTCFG_MAC80211_SFE_SUPPORT
++#define DP_RX_BUFFER_SIZE	1920
++#else
+ #define DP_RX_BUFFER_SIZE	2048
++#endif
  #define DP_RX_BUFFER_SIZE_LITE	1024
++#define DP_RX_MON_BUFFER_SIZE	2048
  #define DP_RX_BUFFER_ALIGN_SIZE	128
  
 -#define DP_REO2PPE_RING_SIZE 16384
  #define DP_PPE2TCL_RING_SIZE 2048
  #define DP_PPE_WBM2SW_RING_SIZE 8192
  #define HAL_REO2PPE_DST_IND 6
-@@ -208,17 +225,12 @@ struct ath12k_pdev_dp {
+@@ -208,17 +232,12 @@ struct ath12k_pdev_dp {
  #define ATH12K_SHADOW_DP_TIMER_INTERVAL 20
  #define ATH12K_SHADOW_CTRL_TIMER_INTERVAL 10
  
@@ -162,7 +173,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
 +#endif
  
  		.idle_ps = false,
- 		.cold_boot_calib = false,
+ 		.cold_boot_calib = true,
 @@ -1787,6 +1796,7 @@ static struct ath12k_hw_params ath12k_hw
  		.support_ce_manual_poll=true,
  		.en_qdsslog = false,
@@ -180,7 +191,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
 +#endif
  
  		.idle_ps = false,
- 		.cold_boot_calib = false,
+ 		.cold_boot_calib = true,
 @@ -1863,7 +1875,7 @@ static struct ath12k_hw_params ath12k_hw
  		.en_fwlog = false,
  		.support_umac_reset = false,
@@ -218,7 +229,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  struct ath12k_hw_ops {
 --- a/drivers/net/wireless/ath/ath12k/qmi.c
 +++ b/drivers/net/wireless/ath/ath12k/qmi.c
-@@ -6159,7 +6159,7 @@ int ath12k_qmi_init_service(struct ath12
+@@ -6157,7 +6157,7 @@ int ath12k_qmi_init_service(struct ath12
  	memset(&ab->qmi.target_mem, 0, sizeof(struct target_mem_chunk));
  	ab->qmi.ab = ab;
  
@@ -251,11 +262,61 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	USERPD_0 = 0,
 --- a/local-symbols
 +++ b/local-symbols
-@@ -189,6 +189,7 @@ ATH12K_PPE_DS_SUPPORT=
- ATH12K_BONDED_DS_SUPPORT=
+@@ -189,6 +189,7 @@ ATH12K_TRACING=
+ ATH12K_PPE_DS_SUPPORT=
  ATH12K_SPECTRAL=
  ATH12K_PKTLOG=
 +ATH12K_MEM_PROFILE_512M=
  ATH12K_SAWF=
  WLAN_VENDOR_ATMEL=
  ATMEL=
+--- a/drivers/net/wireless/ath/ath12k/dp_mon.c
++++ b/drivers/net/wireless/ath/ath12k/dp_mon.c
+@@ -2529,7 +2529,7 @@ int ath12k_dp_mon_buf_replenish(struct a
+ 	ath12k_hal_srng_access_begin(ab, srng);
+ 
+ 	while (req_entries > 0) {
+-		skb = dev_alloc_skb(DP_RX_BUFFER_SIZE + DP_RX_BUFFER_ALIGN_SIZE);
++		skb = dev_alloc_skb(DP_RX_MON_BUFFER_SIZE + DP_RX_BUFFER_ALIGN_SIZE);
+ 		if (unlikely(!skb))
+ 			goto fail_alloc_skb;
+ 
+@@ -3756,7 +3756,7 @@ int ath12k_dp_mon_srng_process(struct at
+ 		rx_buf_sz = DP_RX_BUFFER_SIZE_LITE;
+ 	} else if (ath12k_debugfs_is_pktlog_rx_stats_enabled(ar)) {
+ 		log_type = ATH12K_PKTLOG_TYPE_RX_STATBUF;
+-		rx_buf_sz = DP_RX_BUFFER_SIZE;
++		rx_buf_sz = DP_RX_MON_BUFFER_SIZE;
+ 	}
+ 
+ 	srng = &ab->hal.srng_list[mon_dst_ring->ring_id];
+@@ -3817,12 +3817,12 @@ int ath12k_dp_mon_srng_process(struct at
+ 		end_offset = u32_get_bits(mon_dst_desc->info0,
+ 					  HAL_MON_DEST_INFO0_END_OFFSET);
+ 
+-		if (likely(end_offset < DP_RX_BUFFER_SIZE)) {
++		if (likely(end_offset < DP_RX_MON_BUFFER_SIZE)) {
+ 			skb_put(skb, end_offset);
+ 		} else {
+ 			ath12k_warn(ab, "invalid offset received from mon dest %u\n",
+ 				    end_offset);
+-			skb_put(skb, DP_RX_BUFFER_SIZE);
++			skb_put(skb, DP_RX_MON_BUFFER_SIZE);
+ 		}
+ 
+ 		__skb_queue_tail(&skb_list, skb);
+@@ -4003,12 +4003,12 @@ int ath12k_dp_mon_rx_process_stats(struc
+ 		end_offset = u32_get_bits(mon_dst_desc->info0,
+ 					  HAL_MON_DEST_INFO0_END_OFFSET);
+ 
+-		if (likely(end_offset < DP_RX_BUFFER_SIZE)) {
++		if (likely(end_offset < DP_RX_MON_BUFFER_SIZE)) {
+ 			skb_put(skb, end_offset);
+ 		} else {
+ 			ath12k_warn(ab, "invalid offset received on mon stats dest %u\n",
+ 				    end_offset);
+-			skb_put(skb, DP_RX_BUFFER_SIZE);
++			skb_put(skb, DP_RX_MON_BUFFER_SIZE);
+ 		}
+ 
+ 		__skb_queue_tail(&skb_list, skb);

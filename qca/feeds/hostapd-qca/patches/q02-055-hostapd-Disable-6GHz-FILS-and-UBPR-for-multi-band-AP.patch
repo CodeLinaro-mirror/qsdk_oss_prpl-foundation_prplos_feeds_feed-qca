@@ -42,7 +42,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -954,6 +954,11 @@ struct hostapd_bss_config {
+@@ -954,6 +954,16 @@ struct hostapd_bss_config {
  	/* The MLD ID to which the AP MLD is affiliated with */
  	u8 mld_id;
  #endif /* CONFIG_IEEE80211BE */
@@ -51,12 +51,17 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +		FILS_UBPR_FORCE_DISABLED,
 +		FILS_UBPR_ENABLED
 +	} fils_state, ubpr_state;
++
++	/* Flag to decide whether or not to force disable FILS/UBPR for
++ 	 * 6GHz AP based on colocation.
++	 */
++	bool force_disable_in_band_discovery;
  };
  
  /**
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -1382,16 +1382,28 @@ static u8 * hostapd_probe_resp_offloads(
+@@ -1381,16 +1381,29 @@ static u8 * hostapd_probe_resp_offloads(
  
  
  #ifdef CONFIG_IEEE80211AX
@@ -72,6 +77,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		return NULL;
  
 +	if (hapd->conf->unsol_bcast_probe_resp_interval &&
++	    hapd->conf->force_disable_in_band_discovery &&
 +	    (get_colocation_mode(hapd) == COLOCATED_6GHZ)) {
 +		hapd->conf->ubpr_state = FILS_UBPR_FORCE_DISABLED;
 +		return NULL;
@@ -86,7 +92,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	return hostapd_gen_probe_resp(hapd, NULL, 0,
  				      &params->unsol_bcast_probe_resp_tmpl_len,
  				      NULL, 0);
-@@ -1677,6 +1689,17 @@ static u8 * hostapd_gen_fils_discovery(s
+@@ -1676,6 +1689,18 @@ static u8 * hostapd_gen_fils_discovery(s
  static u8 * hostapd_fils_discovery(struct hostapd_data *hapd,
  				   struct wpa_driver_ap_params *params)
  {
@@ -95,6 +101,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +	 */
 +
 +	if (is_6ghz_op_class(hapd->iconf->op_class) &&
++	    hapd->conf->force_disable_in_band_discovery &&
 +	    get_colocation_mode(hapd) == COLOCATED_6GHZ &&
 +	    hapd->conf->fils_discovery_max_int) {
 +		hapd->conf->fils_state = FILS_UBPR_FORCE_DISABLED;
@@ -104,7 +111,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	params->fd_max_int = hapd->conf->fils_discovery_max_int;
  	if (is_6ghz_op_class(hapd->iconf->op_class) &&
  	    params->fd_max_int > FD_MAX_INTERVAL_6GHZ)
-@@ -1686,10 +1709,12 @@ static u8 * hostapd_fils_discovery(struc
+@@ -1685,10 +1710,12 @@ static u8 * hostapd_fils_discovery(struc
  	if (params->fd_min_int > params->fd_max_int)
  		params->fd_min_int = params->fd_max_int;
  
@@ -130,7 +137,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  
  int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
-@@ -2828,7 +2830,7 @@ void hostapd_interface_deinit(struct hos
+@@ -2831,7 +2833,7 @@ void hostapd_interface_deinit(struct hos
  			break;
  		hostapd_bss_deinit(iface->bss[j]);
  	}
@@ -139,7 +146,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  #ifdef NEED_AP_MLME
  	hostapd_stop_setup_timers(iface);
  	eloop_cancel_timeout(ap_ht2040_timeout, iface, NULL);
-@@ -3240,6 +3242,7 @@ int hostapd_disable_iface(struct hostapd
+@@ -3243,6 +3245,7 @@ int hostapd_disable_iface(struct hostapd
  	wpa_printf(MSG_DEBUG, "Interface %s disabled",
  		   hapd_iface->bss[0]->conf->iface);
  	hostapd_set_state(hapd_iface, HAPD_IFACE_DISABLED);
@@ -147,7 +154,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	return 0;
  }
  
-@@ -4241,6 +4244,8 @@ int hostapd_fill_cca_settings(struct hos
+@@ -4244,6 +4247,8 @@ int hostapd_fill_cca_settings(struct hos
  	settings->counter_offset_beacon = hapd->cca_c_off_beacon;
  	settings->counter_offset_presp = hapd->cca_c_off_proberesp;
  
@@ -156,7 +163,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	return 0;
  }
  
-@@ -4412,6 +4417,68 @@ void hostapd_ocv_check_csa_sa_query(void
+@@ -4415,6 +4420,72 @@ void hostapd_ocv_check_csa_sa_query(void
  }
  #endif /* CONFIG_OCV */
  
@@ -202,6 +209,10 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +			if (!iface_6g->bss[j] || !iface_6g->bss[j]->started)
 +				continue;
 +
++			/* fils/ubpr force disabling is not preferred for this BSS */
++			if (!iface_6g->bss[j]->conf->force_disable_in_band_discovery)
++				continue;
++
 +			/* Lower band interface coming up but fils/ubpr is already disabled */
 +			if (iface_enabled &&
 +			    (iface_6g->bss[j]->conf->fils_state != FILS_UBPR_ENABLED &&
@@ -227,7 +238,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  struct hostapd_data * hostapd_mld_get_link_bss(struct hostapd_data *hapd,
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7371,15 +7371,7 @@ hostapd_eid_rnr_iface_len(struct hostapd
+@@ -7366,15 +7366,7 @@ hostapd_eid_rnr_iface_len(struct hostapd
  	return total_len;
  }
  
@@ -244,7 +255,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  {
  	u8 i;
  	bool is_6ghz = is_6ghz_op_class(hapd->iconf->op_class);
-@@ -7398,6 +7390,9 @@ static enum colocation_mode get_colocati
+@@ -7393,6 +7385,9 @@ static enum colocation_mode get_colocati
  		if (iface == hapd->iface || !iface || !iface->conf)
  			continue;
  
@@ -307,3 +318,44 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	}
  
  	wpa_printf(MSG_DEBUG,
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -4466,6 +4466,8 @@ static int hostapd_config_fill(struct ho
+ 	} else if (os_strcmp(buf, "fils_discovery_max_interval") == 0) {
+ 		bss->fils_discovery_max_int = atoi(pos);
+ #endif /* CONFIG_FILS */
++	} else if (os_strcmp(buf, "force_disable_in_band_discovery") == 0) {
++		bss->force_disable_in_band_discovery = atoi(pos);
+ 	} else if (os_strcmp(buf, "multicast_to_unicast") == 0) {
+ 		bss->multicast_to_unicast = atoi(pos);
+ 	} else if (os_strcmp(buf, "bridge_multicast_to_unicast") == 0) {
+--- a/hostapd/hostapd.conf
++++ b/hostapd/hostapd.conf
+@@ -2191,6 +2191,17 @@ own_ip_addr=127.0.0.1
+ #fils_discovery_min_interval=20
+ #fils_discovery_max_interval=0
+ 
++# FILS discovery and unsolicited broadcast probe response frames are
++# in-band discovery frames for 6GHz APs.
++# For a 6GHz AP colocated with lower band APs (2.4/5GHz) above in-band
++# discovery frames can be optionally disabled since lower bands
++# will carry the information about the 6GHz BSS in co-location RNR. Setting
++# "force_disable_in_band_discovery" to 1 will allow hostapd to dynamically
++# enable/disable 6GHz in band disocvery frame based on lower band AP's states.
++# default: 1
++
++#force_disable_in_band_discovery=0
++
+ # Transition Disable indication
+ # The AP can notify authenticated stations to disable transition mode in their
+ # network profiles when the network has completed transition steps, i.e., once
+--- a/src/ap/ap_config.c
++++ b/src/ap/ap_config.c
+@@ -171,6 +171,7 @@ void hostapd_config_defaults_bss(struct
+ 	bss->pasn_comeback_after = 10;
+ 	bss->pasn_noauth = 1;
+ #endif /* CONFIG_PASN */
++	bss->force_disable_in_band_discovery = 1;
+ }
+ 
+ 

@@ -209,15 +209,14 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
 +				   " chan_width : %d", chan->chan, chan_width);
 +			return 0;
  		}
--
++		new_start_freq = new_centre_freq - channel_width_to_int(chan_width) / 2;
++		new_end_freq = new_centre_freq + channel_width_to_int(chan_width) / 2;
+ 
 -		if (ret_chan && idx == channel_idx) {
 -			wpa_printf(MSG_DEBUG, "AWGN: Selected channel %d (%d)",
 -				   chan->freq, chan->chan);
 -			*ret_chan = chan;
 -			return idx;
-+		new_start_freq = new_centre_freq - channel_width_to_int(chan_width) / 2;
-+		new_end_freq = new_centre_freq + channel_width_to_int(chan_width) / 2;
-+ 
 +		/* check whether new operating range is outside the current
 +		 * operating range since current operating range contains awgn
 +		 * interference
@@ -316,12 +315,17 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		return 0;
  	}
  
-@@ -314,47 +381,47 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -314,47 +381,52 @@ int hostapd_intf_awgn_detected(struct ho
  	if (!chan_bw_interference_bitmap || (chan_bw_interference_bitmap & SEG_PRI20))
  		channel_switch = 1;
  
 +	available_chandef_list = os_zalloc(sizeof(struct hostapd_channel_data *) *
 +					   mode->num_channels);
++	if (!available_chandef_list) {
++		wpa_printf(MSG_ERROR, "available_chandef_list memory allocation failed");
++		goto exit;
++	}
++
  	if (channel_switch) {
 -		/* Find a random channel to be switched */
 -		num_available_chandefs = intf_awgn_find_channel(iface, NULL, 0,
@@ -387,7 +391,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	} else {
  		/* interference is not present in the primary 20Mhz, so reduce bandwidth*/
  		for (i = 0; i < mode->num_channels; i++) {
-@@ -364,7 +431,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -364,7 +436,7 @@ int hostapd_intf_awgn_detected(struct ho
  		}
  		if (!chan_data) {
  			wpa_printf(MSG_ERROR, "AWGN : no channel found");
@@ -396,7 +400,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		}
  
  		if ((chan_width > CHAN_WIDTH_160) &&
-@@ -390,7 +457,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -390,7 +462,7 @@ int hostapd_intf_awgn_detected(struct ho
  			wpa_printf(MSG_ERROR,
  				   "AWGN : couldn't find centre freq for chan : %d"
  				   " chan_width : %d", chan_data->chan, new_chan_width);
@@ -405,7 +409,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		}
  	} else {
  		new_centre_freq = chan_data->freq;
-@@ -446,5 +513,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -446,5 +518,7 @@ int hostapd_intf_awgn_detected(struct ho
  		}
  	}
  

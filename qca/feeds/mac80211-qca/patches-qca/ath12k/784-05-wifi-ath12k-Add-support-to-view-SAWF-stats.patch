@@ -1,10 +1,19 @@
 From 7885f6a28a283ff166e81b75a07edd17b8a56a13 Mon Sep 17 00:00:00 2001
 From: Nagarajan Maran <quic_nmaran@quicinc.com>
 Date: Tue, 6 Jun 2023 21:30:04 +0530
-Subject: [PATCH] wifi: ath12k: Add support to view SAWF stats
+Subject: [PATCH] QSDK: wifi: ath12k: Add support to view SAWF stats
 
 Add support to handle the get stats command via Vendor NL and
 send the stats buffer to Userspace via Vendor NL.
+
+Patch-dependency:
+750-01-ath12k-Add-SAWF-support.patch
+753-02-ath12k-sawf-add-callback-operation-for-dynamic-msduq.patch
+753-03-ath12k-sawf-add-default-q-mapping-support.patch
+784-01-ath12k-Add-debugfs-support-to-enable-and-disable.patch
+784-02-wifi-ath12k-Add-sawf-tx-stats-support.patch
+784-03-wifi-ath12k-Add-support-to-handle-streaming-stats.patch
+784-04-ath12k-Add-SAWF-tx-delay-stats-support.patch
 
 Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 ---
@@ -24,7 +33,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  #include <linux/module.h>
  #include <qca-nss-ecm/ecm_classifier_emesh_public.h>
  
-@@ -462,6 +463,7 @@ struct ath12k_base *ath12k_sawf_get_ab_f
+@@ -461,6 +462,7 @@ struct ath12k_base *ath12k_sawf_get_ab_f
  	struct wireless_dev *wdev;
  	struct ieee80211_vif *vif;
  	struct ath12k_base *ab = NULL;
@@ -32,7 +41,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	struct ath12k_peer *peer;
  	struct ath12k_vif *ahvif;
  	struct ath12k_link_vif *arvif;
-@@ -492,8 +494,10 @@ struct ath12k_base *ath12k_sawf_get_ab_f
+@@ -493,8 +495,10 @@ struct ath12k_base *ath12k_sawf_get_ab_f
  
  		if (WARN_ON(!arvif))
  			continue;
@@ -45,7 +54,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		spin_lock_bh(&ab->base_lock);
  		peer = ath12k_peer_find_by_addr(ab, peer_mac);
  		spin_unlock_bh(&ab->base_lock);
-@@ -1509,3 +1513,235 @@ latency_stats_update:
+@@ -1575,3 +1579,235 @@ latency_stats_update:
  	}
  	return;
  }
@@ -293,7 +302,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  #ifdef CPTCFG_ATH12K_SAWF
  
-@@ -547,7 +550,55 @@ struct sawf_tx_stats {
+@@ -562,7 +565,55 @@ struct sawf_tx_stats {
   * @avg: Average frequency
   */
  
@@ -349,7 +358,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	int max;
  	int min;
  	int avg;
-@@ -794,6 +845,10 @@ int ath12k_htt_sawf_streaming_stats_conf
+@@ -810,6 +861,10 @@ int ath12k_htt_sawf_streaming_stats_conf
  					      u32 config_param_3);
  void ath12k_htt_sawf_streaming_stats_ind_handler(struct ath12k_base *ab,
  						 struct sk_buff *skb);
@@ -381,7 +390,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  static void ath12k_set_default_values(struct ath12k_sawf_svc_params *param)
  {
  	param->min_throughput_rate = SAWF_SVC_PARAM_DEFAULT_MIN_THRUPUT;
-@@ -696,6 +708,190 @@ static int ath12k_vendor_sawf_streaming_
+@@ -696,6 +708,194 @@ static int ath12k_vendor_sawf_streaming_
  	return ret;
  }
  
@@ -420,6 +429,10 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +		}
 +
 +		attr = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_STATS_RECURSIVE);
++		if (!attr) {
++			kfree_skb(skb);
++			return -ENOBUFS;
++		}
 +		for (i = feat; i < STATS_FEAT_MAX; i++) {
 +			if (!stats->feat[i] || !stats->size[i])
 +				continue;
@@ -572,7 +585,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  #endif /* CPTCFG_ATH12K_SAWF */
  static struct wiphy_vendor_command ath12k_vendor_commands[] = {
  #ifdef CPTCFG_ATH12K_SAWF
-@@ -773,6 +969,14 @@ static struct wiphy_vendor_command ath12
+@@ -773,6 +973,14 @@ static struct wiphy_vendor_command ath12
  		.maxattr = QCA_WLAN_VENDOR_ATTR_SAWF_STREAMING_MAX,
  		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV,
  	},

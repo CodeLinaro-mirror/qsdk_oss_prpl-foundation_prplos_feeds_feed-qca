@@ -9,11 +9,9 @@ Date:   Thu Aug 31 18:09:03 2023 +0530
 Signed-off-by: Gautham Kumar Senthilkumaran <quic_gauthamk@quicinc.com>
 Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 4879ede7c9af..1e53022c16b0 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -2806,6 +2806,67 @@ int ath12k_wmi_send_init_country_cmd(struct ath12k *ar,
+@@ -2813,6 +2813,67 @@ out:
  	return ret;
  }
  
@@ -81,11 +79,9 @@ index 4879ede7c9af..1e53022c16b0 100644
  int ath12k_wmi_pdev_pktlog_enable(struct ath12k *ar, u32 pktlog_filter)
  {
  	struct ath12k_wmi_pdev *wmi = ar->wmi;
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index 2091f1670469..b0482675f7f7 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -3675,6 +3675,39 @@ struct wmi_init_country_cmd {
+@@ -3677,6 +3677,39 @@ struct wmi_init_country_cmd {
  	} cc_info;
  } __packed;
  
@@ -116,16 +112,16 @@ index 2091f1670469..b0482675f7f7 100644
 +
 +struct wmi_therm_throt_level_config_info {
 +	__le32 tlv_header;
-+	u32 temp_lwm;
-+	u32 temp_hwm;
-+	u32 dc_off_percent;
-+	u32 prio;
++	__le32 temp_lwm;
++	__le32 temp_hwm;
++	__le32 dc_off_percent;
++	__le32 prio;
 +} __packed;
 +
  struct wmi_delba_send_cmd {
  	__le32 tlv_header;
  	__le32 vdev_id;
-@@ -4796,6 +4829,9 @@ int ath12k_wmi_send_bcn_offload_control_cmd(struct ath12k *ar,
+@@ -4798,6 +4831,9 @@ int ath12k_wmi_send_bcn_offload_control_
  					    u32 vdev_id, u32 bcn_ctrl_op);
  int ath12k_wmi_send_init_country_cmd(struct ath12k *ar,
  				     struct ath12k_wmi_init_country_arg *arg);

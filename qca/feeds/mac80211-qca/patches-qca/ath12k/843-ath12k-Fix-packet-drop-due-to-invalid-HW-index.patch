@@ -22,19 +22,17 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  drivers/net/wireless/ath/ath12k/mac.c | 4 +---
  1 file changed, 1 insertion(+), 3 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 5e270b8..dc9b0ce 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -121,6 +121,7 @@ static const struct ieee80211_channel ath12k_5ghz_channels[] = {
+@@ -114,6 +114,7 @@ static const struct ieee80211_channel at
+ };
  
  static const struct ieee80211_channel ath12k_6ghz_channels[] = {
- 	CHAN6G(1, 5955, 0),
 +	CHAN6G(2, 5935, 0),
+ 	CHAN6G(1, 5955, 0),
  	CHAN6G(5, 5975, 0),
  	CHAN6G(9, 5995, 0),
- 	CHAN6G(13, 6015, 0),
-@@ -179,9 +180,6 @@ static const struct ieee80211_channel ath12k_6ghz_channels[] = {
+@@ -173,9 +174,6 @@ static const struct ieee80211_channel at
  	CHAN6G(225, 7075, 0),
  	CHAN6G(229, 7095, 0),
  	CHAN6G(233, 7115, 0),
@@ -44,6 +42,3 @@ index 5e270b8..dc9b0ce 100644
  };
  
  static struct ieee80211_rate ath12k_legacy_rates[] = {
--- 
-2.34.1
-

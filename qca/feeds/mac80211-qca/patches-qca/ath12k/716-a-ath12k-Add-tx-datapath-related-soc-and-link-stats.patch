@@ -19,7 +19,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -1490,6 +1490,59 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -1502,6 +1502,59 @@ static ssize_t ath12k_debugfs_dump_soc_d
  			"\nREO_CMD_CACHE_FLUSH Failure: %u\n",
  			soc_stats->reo_cmd_cache_error);
  
@@ -79,7 +79,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	len += ath12k_debugfs_dump_soc_ring_bp_stats(ab, buf + len, size - len);
  
  	if (len > size)
-@@ -1500,8 +1553,32 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -1512,8 +1565,32 @@ static ssize_t ath12k_debugfs_dump_soc_d
  	return retval;
  }
  
@@ -112,14 +112,14 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	.open = simple_open,
  	.owner = THIS_MODULE,
  	.llseek = default_llseek,
-@@ -4057,6 +4134,105 @@ static const struct file_operations ath1
+@@ -4069,6 +4146,106 @@ static const struct file_operations ath1
  	.open = simple_open
  };
  
 +static int ath12k_open_link_stats(struct inode *inode, struct file *file)
 +{
 +	struct ath12k_vif *ahvif = inode->i_private;
-+	struct ath12k_hw *ah = ahvif->ah;
++	struct ath12k_hw *ah;
 +	struct host_link_stats *linkstat = NULL;
 +	size_t len = 0, buf_len = PAGE_SIZE * 2;
 +	char *buf;
@@ -127,6 +127,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 +
 +	if (!ahvif)
 +		return -EINVAL;
++	ah = ahvif->ah;
 +
 +	buf = kzalloc(buf_len, GFP_KERNEL);
 +	if (!buf)
@@ -218,7 +219,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  int ath12k_debugfs_add_interface(struct ath12k_link_vif *arvif)
  {
  	struct ath12k_vif *ahvif = arvif->ahvif;
-@@ -4121,6 +4297,29 @@ int ath12k_debugfs_add_interface(struct
+@@ -4133,6 +4310,29 @@ int ath12k_debugfs_add_interface(struct
  		}
  	}
  
@@ -248,7 +249,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  exit:
  	return ret;
  }
-@@ -4131,21 +4330,27 @@ void ath12k_debugfs_remove_interface(str
+@@ -4143,21 +4343,27 @@ void ath12k_debugfs_remove_interface(str
  	struct ieee80211_vif *vif = ahvif->vif;
  	u8 link_id = arvif->link_id;
  
@@ -528,7 +529,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  enum hal_wbm_rel_desc_type {
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -8565,6 +8565,7 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -8545,6 +8545,7 @@ static void ath12k_mac_op_tx(struct ieee
  	}
  
  	arvif = ahvif->link[link];
@@ -536,7 +537,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  
  	if (!arvif || !arvif->ar) {
  		ieee80211_free_txskb(hw, skb);
-@@ -8584,7 +8585,6 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -8569,7 +8570,6 @@ static void ath12k_mac_op_tx(struct ieee
  	} else if (ieee80211_is_mgmt(hdr->frame_control)) {
  		frm_type = FIELD_GET(IEEE80211_FCTL_STYPE, hdr->frame_control);
  		is_prb_rsp = ieee80211_is_probe_resp(hdr->frame_control);
@@ -546,7 +547,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  			if (ret != -EBUSY)
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -310,6 +310,7 @@ struct ath12k_link_vif {
+@@ -308,6 +308,7 @@ struct ath12k_link_vif {
  	struct ath12k_reg_tpc_power_info reg_tpc_info;
  	u8 vdev_stats_id;
  	struct ath12k_fw_vdev_ol_stats vdev_stats;
@@ -554,7 +555,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	u8 nontransmitting_vif_count;
  	bool bcca_zero_sent;
  	bool do_not_send_tmpl;
-@@ -363,6 +364,9 @@ struct ath12k_vif {
+@@ -362,6 +363,9 @@ struct ath12k_vif {
  	u8 num_vdev_started;
  	struct ath12k_vif_cache cache[IEEE80211_MLD_MAX_NUM_LINKS];
  	u8 last_scan_link;

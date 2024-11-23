@@ -63,7 +63,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -1450,7 +1450,7 @@ static ssize_t ath12k_read_wmm_stats(str
+@@ -1452,7 +1452,7 @@ static ssize_t ath12k_read_wmm_stats(str
  
  	buf = kzalloc(size, GFP_KERNEL);
  	if (!buf) {
@@ -72,7 +72,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  		return -ENOMEM;
  	}
  
-@@ -2158,7 +2158,7 @@ static ssize_t ath12k_write_fw_dbglog(st
+@@ -2160,7 +2160,7 @@ static ssize_t ath12k_write_fw_dbglog(st
  	ab->fw_dbglog_val = value;
  	ret = ath12k_wmi_dbglog_cfg(ar, param, value);
  	if (ret) {
@@ -81,29 +81,9 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  			    ret);
  		goto out;
  	}
---- a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
-+++ b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
-@@ -358,11 +358,13 @@ void htt_print_tx_pdev_mu_ppdu_dist_stat
- 	}
- 
- 	len += scnprintf(buf + len, buf_len - len,
--			 htt_stats_buf->mu_mimo_num_seq_posted,
--			 "%s_mu_mimo_num_seq_posted_nr4\n", hw_mode_prefix[k]);
-+			 "%s_mu_mimo_num_seq_posted_nr4:%u\n",
-+			 hw_mode_prefix[k],
-+			 htt_stats_buf->mu_mimo_num_seq_posted[0]);
- 	len += scnprintf(buf + len, buf_len - len,
--			 htt_stats_buf->mu_mimo_num_seq_posted,
--			 "%s_mu_mimo_num_seq_posted_nr8\n", hw_mode_prefix[k]);
-+			 "%s_mu_mimo_num_seq_posted_nr8:%u\n",
-+			 hw_mode_prefix[k],
-+			 htt_stats_buf->mu_mimo_num_seq_posted[1]);
- 
- 	for (j = 0; j < HTT_STATS_MAX_NUM_MU_PPDU_PER_BURST; j++) {
- 		len += scnprintf(buf + len, buf_len - len,
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3799,7 +3799,7 @@ static int ath12k_dp_rx_h_verify_tkip_mi
+@@ -3805,7 +3805,7 @@ static int ath12k_dp_rx_h_verify_tkip_mi
  		return 0;
  
  	rx_info.filled = 0;
@@ -125,7 +105,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -11132,7 +11132,7 @@ void ath12k_mac_vif_cache_flush(struct a
+@@ -11150,7 +11150,7 @@ void ath12k_mac_vif_cache_flush(struct a
  			}
  
  			ret = ath12k_mac_set_key(ar, key_conf->cmd,
@@ -136,7 +116,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  				ath12k_warn(ar->ab, "unable to apply set key param to vdev %d ret %d\n",
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -224,6 +224,14 @@ again:
+@@ -241,6 +241,14 @@ again:
  		ath12k_info(ab, "Grouping of multiple SoC not done\n");
  
  		ag = ath12k_core_hw_group_alloc(group_id, 1);
@@ -151,7 +131,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  	} else {
  		if (of_property_read_u32(mlo, "num_chip", &num_chips)) {
  			ath12k_err(ab, "num_chip is not configured\n");
-@@ -249,10 +257,15 @@ again:
+@@ -266,10 +274,15 @@ again:
  		ag = ath12k_core_hw_group_find_by_id(group_id);
  		if (!ag) {
  			ag = ath12k_core_hw_group_alloc(group_id, num_chips);
@@ -167,7 +147,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  		} else if (test_bit(ATH12K_FLAG_UNREGISTERING, &ag->dev_flags)) {
  			ath12k_dbg(ab, ATH12K_DBG_BOOT, "group id %d in unregister state\n",
  				   ag->id);
-@@ -1506,14 +1519,9 @@ static int ath12k_core_hw_group_start(st
+@@ -1535,14 +1548,9 @@ static int ath12k_core_hw_group_start(st
  	struct ath12k_base *ab = ag->ab[0];
  	int ret, i;
  	bool is_registered = false;

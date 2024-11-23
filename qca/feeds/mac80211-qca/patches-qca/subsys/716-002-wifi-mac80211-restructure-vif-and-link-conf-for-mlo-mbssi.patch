@@ -24,7 +24,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
-@@ -758,6 +758,8 @@ struct ieee80211_bss_conf {
+@@ -756,6 +756,8 @@ struct ieee80211_bss_conf {
  	struct ieee80211_ftm_responder_params *ftmr_params;
  	/* Multiple BSSID data */
  	bool nontransmitted;
@@ -33,7 +33,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	u8 transmitter_bssid[ETH_ALEN];
  	u8 bssid_index;
  	u8 bssid_indicator;
-@@ -1978,8 +1980,6 @@ struct ieee80211_vif {
+@@ -1967,8 +1969,6 @@ struct ieee80211_vif {
  
  	bool noqueue_enable;
  
@@ -84,7 +84,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		link_conf->nontransmitted = true;
  		link_conf->bssid_index = params.index;
  	}
-@@ -1702,8 +1720,12 @@ static int ieee80211_stop_ap(struct wiph
+@@ -1638,8 +1656,12 @@ static int ieee80211_stop_ap(struct wiph
  	struct cfg80211_chan_def chandef;
  	struct ieee80211_link_data *link =
  		sdata_dereference(sdata->link[link_id], sdata);
@@ -98,7 +98,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sdata_assert_lock(sdata);
  
  	old_beacon = sdata_dereference(link->u.ap.beacon, sdata);
-@@ -1767,7 +1789,6 @@ static int ieee80211_stop_ap(struct wiph
+@@ -1702,7 +1724,6 @@ static int ieee80211_stop_ap(struct wiph
  	kfree(link_conf->ftmr_params);
  	link_conf->ftmr_params = NULL;
  
@@ -106,7 +106,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	link_conf->bssid_index = 0;
  	link_conf->nontransmitted = false;
  	link_conf->ema_ap = false;
-@@ -1775,7 +1796,10 @@ static int ieee80211_stop_ap(struct wiph
+@@ -1710,7 +1731,10 @@ static int ieee80211_stop_ap(struct wiph
  
  	__sta_info_flush(sdata, true);
  
@@ -117,7 +117,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sdata->beacon_rate_set = false;
  	sdata->vif.cfg.ssid_len = 0;
  	clear_bit(SDATA_STATE_OFFCHANNEL_BEACON_STOPPED, &sdata->state);
-@@ -3848,23 +3872,41 @@ void ieee80211_csa_finish(struct ieee802
+@@ -3771,23 +3795,41 @@ void ieee80211_csa_finish(struct ieee802
  		return;
  	}
  
@@ -164,7 +164,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		}
  	}
  	ieee80211_queue_work(&local->hw, &link->csa_finalize_work);
-@@ -5081,6 +5123,7 @@ ieee80211_color_change_bss_config_notify
+@@ -5004,6 +5046,7 @@ ieee80211_color_change_bss_config_notify
  {
  	struct ieee80211_sub_if_data *sdata = link->sdata;
  
@@ -172,7 +172,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	link->conf->he_bss_color.color = color;
  	link->conf->he_bss_color.enabled = enable;
  
-@@ -5088,19 +5131,38 @@ ieee80211_color_change_bss_config_notify
+@@ -5011,19 +5054,38 @@ ieee80211_color_change_bss_config_notify
  
  	ieee80211_link_info_change_notify(sdata, link, changed);
  
@@ -358,10 +358,10 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -2709,4 +2709,5 @@ ieee80211_eht_cap_ie_to_sta_eht_cap(stru
+@@ -2704,4 +2704,5 @@ ieee80211_eht_cap_ie_to_sta_eht_cap(stru
+ 				    const struct ieee80211_240mhz_vendor_oper *eht_240mhz_cap,
+ 				    u8 eht_240mhz_len,
  				    struct link_sta_info *link_sta);
- void ieee80211_eht_op_ie_to_bss_conf(struct ieee80211_bss_conf *link_conf,
- 				     const struct ieee80211_eht_operation *op_ie);
 +void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata);
  #endif /* IEEE80211_I_H */
 --- a/net/wireless/sme.c

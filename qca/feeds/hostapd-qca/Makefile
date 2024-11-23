@@ -5,13 +5,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hostapd-qca
-PKG_RELEASE:=7
+PKG_RELEASE:=6
 
 PKG_SOURCE_URL:=http://w1.fi/hostap.git
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2023-06-22
 PKG_SOURCE_VERSION:=599d00be9de2846c6ea18c1487d8329522ade22b
-PKG_MIRROR_HASH:=c05a31e0b7481544f99ea494676a43497403a918aeeb4121b9c7fc488f7df2b6
+PKG_MIRROR_HASH:=828810c558ea181e45ed0c8b940f5c41e55775e2979a15aed8cf0ab17dd7723c
 
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-3-Clause
@@ -611,11 +611,16 @@ TARGET_CPPFLAGS := \
 	-I$(STAGING_DIR)/usr/include/libnl3 \
 	-I$(PKG_BUILD_DIR)/src/crypto \
 	$(TARGET_CPPFLAGS) \
+	-DCONFIG_LIBNL20 \
 	-D_GNU_SOURCE \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
 TARGET_LDFLAGS += -lubox -lubus
+TARGET_CFLAGS += -fPIC
 
+ifdef CONFIG_DEBUG
+	TARGET_CFLAGS += -g3
+endif
 ifdef CONFIG_PACKAGE_kmod-cfg80211-qca
   TARGET_LDFLAGS += -lm -lnl-3 -lnl-genl-3
 endif
@@ -709,6 +714,26 @@ define Build/Compile
 	$(Build/Compile/$(BUILD_VARIANT))
 endef
 
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include
+	$(INSTALL_DIR) $(1)/usr/lib/
+	$(CP) $(PKG_BUILD_DIR)/src/common/wpa_ctrl.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/utils/os.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/utils/common.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/utils/wpa_debug.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/common/qca-vendor.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/drivers/nl80211_copy.h $(1)/usr/include/
+ifneq ($(CONFIG_PACKAGE_hostapd-utils),)
+ifneq ($(LOCAL_VARIANT),macsec)
+	ar rcs $(1)/usr/lib/libwpa_ctrl.a \
+		$(PKG_BUILD_DIR)/build/hostapd/src/common/wpa_ctrl.o \
+		$(PKG_BUILD_DIR)/build/hostapd/src/utils/os_unix.o \
+		$(PKG_BUILD_DIR)/build/hostapd/src/utils/wpa_debug.o \
+		$(PKG_BUILD_DIR)/build/hostapd/src/utils/common.o
+endif
+endif
+endef
+
 define Install/hostapd-qca
 	$(INSTALL_DIR) $(1)/usr/sbin
 endef
@@ -725,6 +750,10 @@ define Package/hostapd-qca-common/install
 	$(INSTALL_BIN) ./files/wps-hotplug.sh $(1)/etc/rc.button/wps
 	$(INSTALL_DATA) ./files/wpad_acl.json $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/wpad.json $(1)/etc/capabilities
+	$(INSTALL_DATA) $(EXTERNAL_PATCH_DIR)/files/dpp-hostapd-event-update.sh $(1)/lib/netifd/dpp-hostapd-event-update
+	chmod 0755 $(1)/lib/netifd/dpp-hostapd-event-update
+	$(INSTALL_DATA) $(EXTERNAL_PATCH_DIR)/files/dpp-supplicant-event-update.sh $(1)/lib/netifd/dpp-supplicant-event-update
+	chmod 0755 $(1)/lib/netifd/dpp-supplicant-event-update
 endef
 
 define Package/hostapd-qca/install

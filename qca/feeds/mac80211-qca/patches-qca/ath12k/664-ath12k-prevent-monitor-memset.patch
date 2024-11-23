@@ -37,11 +37,9 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  drivers/net/wireless/ath/ath12k/hal_rx.h |  8 ++-
  2 files changed, 49 insertions(+), 25 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_mon.c b/drivers/net/wireless/ath/ath12k/dp_mon.c
-index 9f880d2..0e6d540 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.c
-@@ -1842,12 +1842,12 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12k *ar, u32 mpdu_idx,
+@@ -1842,12 +1842,12 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12
  	if (!head_msdu)
  		goto err_merge_fail;
  
@@ -56,7 +54,7 @@ index 9f880d2..0e6d540 100644
  
  	ath12k_dp_mon_fill_rx_stats(ar, ppdu_info, rxs);
  
-@@ -2147,7 +2147,7 @@ static void ath12k_dp_mon_rx_deliver_msdu(struct ath12k *ar, struct napi_struct
+@@ -2147,7 +2147,7 @@ static void ath12k_dp_mon_rx_deliver_msd
  	}
  
  	if (!(status->flag & RX_FLAG_ONLY_MONITOR))
@@ -65,7 +63,7 @@ index 9f880d2..0e6d540 100644
  	spin_lock_bh(&ar->ab->base_lock);
  	peer = ath12k_dp_rx_h_find_peer(ar->ab, msdu);
  	if (peer && peer->sta)
-@@ -2301,10 +2301,10 @@ ath12k_dp_mon_parse_rx_msdu_end(u8 *tlv_data, struct hal_rx_mon_ppdu_info *ppdu_
+@@ -2301,10 +2301,10 @@ ath12k_dp_mon_parse_rx_msdu_end(u8 *tlv_
  
  	decap_format = u32_get_bits(info, RX_MSDU_END_INFO11_DECAP_FORMAT);
  
@@ -80,16 +78,16 @@ index 9f880d2..0e6d540 100644
  }
  
  static void
-@@ -2314,7 +2314,7 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct ath12k *ar,
+@@ -2314,7 +2314,7 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct a
  {
  	int offset;
  
 -	if (ppdu_info->mpdu_count > HAL_RX_MAX_MPDU) {
-+	if (ppdu_info->cmn_mpdu_info.mpdu_count > HAL_RX_MAX_MPDU) {
++	if (ppdu_info->cmn_mpdu_info.mpdu_count >= HAL_RX_MAX_MPDU) {
  		ath12k_warn(ar->ab, "MPDU count reached max limit\n");
  		return;
  	}
-@@ -2329,7 +2329,7 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct ath12k *ar,
+@@ -2329,7 +2329,7 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct a
  		struct ath12k_skb_rxcb *rxcb;
  		struct dp_rxdma_ring *buf_ring;
  		struct ath12k_dp *dp = &ar->ab->dp;
@@ -98,7 +96,7 @@ index 9f880d2..0e6d540 100644
  
  		buf_ring = &dp->rxdma_mon_buf_ring;
  		spin_lock_bh(&buf_ring->idr_lock);
-@@ -2350,7 +2350,8 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct ath12k *ar,
+@@ -2350,7 +2350,8 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct a
  
  		offset = packet_info->dma_length + ATH12K_WIFIRX_DOT11_OFFSET;
  
@@ -108,7 +106,7 @@ index 9f880d2..0e6d540 100644
  		if (ath12k_dp_pkt_set_pktlen(msdu, offset) ||
  		    msdu_count >= HAL_RX_MAX_MSDU) {
  			dev_kfree_skb_any(msdu);
-@@ -2358,20 +2359,22 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct ath12k *ar,
+@@ -2358,20 +2359,22 @@ ath12k_dp_mon_parse_rx_dest_tlv(struct a
  		}
  
  		if (!msdu_count)
@@ -138,7 +136,7 @@ index 9f880d2..0e6d540 100644
  		break;
  	}
  	case HAL_RX_MON_STATUS_MSDU_END:
-@@ -2452,8 +2455,8 @@ ath12k_dp_mon_rx_parse_mon_status(struct ath12k *ar,
+@@ -2452,8 +2455,8 @@ ath12k_dp_mon_rx_parse_mon_status(struct
  	if (hal_status != HAL_RX_MON_STATUS_PPDU_DONE)
  		return hal_status;
  
@@ -149,7 +147,7 @@ index 9f880d2..0e6d540 100644
  		if (!mon_mpdu)
  			continue;
  
-@@ -3568,6 +3571,23 @@ ath12k_dp_mon_rx_update_peer_mu_stats(struct ath12k *ar,
+@@ -3568,6 +3571,23 @@ ath12k_dp_mon_rx_update_peer_mu_stats(st
  		ath12k_dp_mon_rx_update_user_stats(ar, ppdu_info, i);
  }
  
@@ -181,8 +179,8 @@ index 9f880d2..0e6d540 100644
 +		ath12k_dp_mon_rx_memset_ppdu_info(ppdu_info);
  
  	while ((skb = __skb_dequeue(&skb_list))) {
- 		if (log_type)
-@@ -3723,7 +3743,7 @@ next_skb:
+ 		if (log_type) {
+@@ -3729,7 +3749,7 @@ next_skb:
  		rcu_read_unlock();
  free_skb:
  		dev_kfree_skb_any(skb);
@@ -191,7 +189,7 @@ index 9f880d2..0e6d540 100644
  		ppdu_info->peer_id = HAL_INVALID_PEERID;
  	}
  
-@@ -3814,7 +3834,7 @@ move_next:
+@@ -3820,7 +3840,7 @@ move_next:
  		return 0;
  
  	if (!ppdu_info->ppdu_continuation)
@@ -200,7 +198,7 @@ index 9f880d2..0e6d540 100644
  
  	while ((skb = __skb_dequeue(&skb_list))) {
  
-@@ -3853,7 +3873,7 @@ next_skb:
+@@ -3859,7 +3879,7 @@ next_skb:
  		rcu_read_unlock();
  free_skb:
  		dev_kfree_skb_any(skb);
@@ -209,8 +207,6 @@ index 9f880d2..0e6d540 100644
  		ppdu_info->peer_id = HAL_INVALID_PEERID;
  	}
  
-diff --git a/drivers/net/wireless/ath/ath12k/hal_rx.h b/drivers/net/wireless/ath/ath12k/hal_rx.h
-index d368ddb..18cb0bf 100644
 --- a/drivers/net/wireless/ath/ath12k/hal_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/hal_rx.h
 @@ -181,6 +181,11 @@ struct hal_rx_u_sig_info {
@@ -242,6 +238,3 @@ index d368ddb..18cb0bf 100644
  };
  
  #define HAL_RX_PPDU_START_INFO0_PPDU_ID		GENMASK(15, 0)
--- 
-2.17.1
-

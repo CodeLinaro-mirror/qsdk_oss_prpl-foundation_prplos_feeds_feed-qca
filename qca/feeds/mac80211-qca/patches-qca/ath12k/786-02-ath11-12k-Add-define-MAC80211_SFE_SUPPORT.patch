@@ -74,7 +74,7 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -9237,6 +9237,7 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -9229,6 +9229,7 @@ static void ath12k_mac_op_tx(struct ieee
  
  	ar = arvif->ar;
  
@@ -82,11 +82,28 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
  	if (skb->fast_xmit) {
  		ret = ath12k_mac_tx_check_max_limit(ar, skb);
  		if (ret) {
-@@ -9255,6 +9256,7 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -9247,6 +9248,7 @@ static void ath12k_mac_op_tx(struct ieee
  		}
  		return;
  	}
 +#endif
  
  	ah = ar->ah;
+ 
+--- a/drivers/net/wireless/ath/ath12k/dp_rx.c
++++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
+@@ -257,8 +257,14 @@ int ath12k_dp_rx_bufs_replenish(struct a
+ 	num_remain = req_entries;
+ 
+ 	while (num_remain > 0) {
++#ifdef CPTCFG_MAC80211_SFE_SUPPORT
++		skb = netdev_alloc_skb_fast(NULL,
++					    DP_RX_BUFFER_SIZE +\
++					    DP_RX_BUFFER_ALIGN_SIZE);
++#else
+ 		skb = dev_alloc_skb(DP_RX_BUFFER_SIZE +
+ 				    DP_RX_BUFFER_ALIGN_SIZE);
++#endif
+ 		if (unlikely(!skb))
+ 			break;
  

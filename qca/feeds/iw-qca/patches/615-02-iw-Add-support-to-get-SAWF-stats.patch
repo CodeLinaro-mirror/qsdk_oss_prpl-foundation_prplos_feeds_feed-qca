@@ -1,7 +1,13 @@
 From 581b7eb9fb63e21a277e71799756f6f629581ebf Mon Sep 17 00:00:00 2001
 From: Nagarajan Maran <quic_nmaran@quicinc.com>
 Date: Thu, 8 Jun 2023 18:30:49 +0530
-Subject: [PATCH] iw: Add support to get SAWF stats
+Subject: [PATCH] QSDK: iw: Add support to get SAWF stats
+
+Patch-dependency: 611-add-sawf-support.patch
+		  612-iw-default-q-map-support.patch
+		  613-iw-add-sawf-uplink-configuration-paramters-support.patch
+		  614-iw-add-support-to-configure-telemetry.patch
+		  615-01-iw-Add-support-to-handle-streaming-stats-in-target.patch
 
 Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 ---
@@ -30,7 +36,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  SECTION(streaming_stats);
  
-@@ -100,3 +101,401 @@ err:
+@@ -100,3 +101,406 @@ err:
  }
  
  COMMAND(streaming_stats, handle, "<value> [-l <link_id>]", NL80211_CMD_VENDOR, 0, CIB_NETDEV, handle_streaming_stats, ".");
@@ -215,7 +221,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +static int print_telemetry_stats(struct nl_msg *msg, void *arg)
 +{
 +	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
-+	struct nlattr *stats[QCA_WLAN_VENDOR_ATTR_TELEMETRIC_MAX + 1];
++	struct nlattr *stats[QCA_WLAN_VENDOR_ATTR_STATS_MAX + 1];
 +	struct nlattr *feat[QCA_WLAN_VENDOR_ATTR_FEAT_MAX + 1];
 +	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 +        static struct nla_policy stats_policy[QCA_WLAN_VENDOR_ATTR_STATS_MAX + 1] = {
@@ -404,13 +410,18 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +
 +	memset(telemetry_stats, 0, sizeof(struct unified_stats));
 +
-+	ret = nl_send_auto_complete(state->nl_sock, msg);
-+	if (ret < 0)
++	cb = nl_cb_alloc(iw_debug ? NL_CB_DEBUG : NL_CB_DEFAULT);
++	if (!cb)
 +		goto unified_stats_free;
++
++	ret = nl_send_auto_complete(state->nl_sock, msg);
++	if (ret < 0) {
++		nl_cb_put(cb); // free the cb
++		goto unified_stats_free;
++	}
 +
 +	telemetry_stats->err = -1;
 +
-+	cb = nl_cb_alloc(iw_debug ? NL_CB_DEBUG : NL_CB_DEFAULT);
 +	nl_cb_err(cb, NL_CB_CUSTOM, error_stats_handler, telemetry_stats);
 +	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, print_telemetry_stats, telemetry_stats);
 +	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, complete_telemetry_stats, telemetry_stats);

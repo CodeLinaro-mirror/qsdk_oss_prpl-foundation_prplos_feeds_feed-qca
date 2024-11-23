@@ -14,16 +14,17 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-if [ "$1" = ds_enable ]||[ "$1" = ds_disable ]; then
+disable_qdisc_on_eth() {
+        [ -f /tmp/sysinfo/board_name ] && {
+                board=ap$(cat /tmp/sysinfo/board_name | awk -F 'ap' '{print$2}')
+        }
 
-        if [ -d /sys/module/ath12k ]; then
-                rmmod ath12k
-        fi
-        if [ "$1" == ds_enable ]; then
-                insmod ath12k mlo_capable=2
-        else
-                insmod ath12k
-        fi
-else
-        echo "Invalid argument"
-fi
+	tc qdisc replace dev eth0 root noqueue
+	tc qdisc replace dev eth1 root noqueue
+	tc qdisc replace dev eth2 root noqueue
+	tc qdisc replace dev eth3 root noqueue
+	tc qdisc replace dev eth4 root noqueue
+	tc qdisc replace dev eth5 root noqueue
+
+        echo "##### Qdisc disable for DS mode in $board #######" > /dev/ttyMSM0
+}

@@ -25,15 +25,15 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
   * @BSS_CHANGED_TXPOWER: TX power setting changed for this interface
   * @BSS_CHANGED_P2P_PS: P2P powersave settings (CTWindow, opportunistic PS)
   *	changed
-@@ -788,6 +788,7 @@ struct ieee80211_bss_conf {
- 		u8 ccfs1;
- 		u8 present_bm;
- 	} eht_oper;
+@@ -779,6 +779,7 @@ struct ieee80211_bss_conf {
+ 	u8 pwr_reduction;
+ 	bool eht_support;
+ 	u16 eht_puncturing;
 +	bool ap_ps_enable;
  	bool eht_su_beamformer;
  	bool eht_su_beamformee;
  	bool eht_mu_beamformer;
-@@ -2747,6 +2748,8 @@ struct ieee80211_txq {
+@@ -2740,6 +2741,8 @@ struct ieee80211_txq {
   * @IEEE80211_HW_SUPPORTS_RX_DECAP_OFFLOAD: Hardware supports rx decapsulation
   *	offload
   *
@@ -42,7 +42,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
   * @IEEE80211_HW_SUPPORTS_CONC_MON_RX_DECAP: Hardware supports concurrent rx
   *	decapsulation offload and passing raw 802.11 frames for monitor iface.
   *	If this is supported, the driver must pass both 802.3 frames for real
-@@ -2823,6 +2826,7 @@ enum ieee80211_hw_flags {
+@@ -2816,6 +2819,7 @@ enum ieee80211_hw_flags {
  	IEEE80211_HW_SUPPORTS_NSS_OFFLOAD,
  	IEEE80211_HW_SUPPORTS_MESH_NSS_OFFLOAD,
  	IEEE80211_HW_SUPPORTS_TID_CLASS_OFFLOAD,
@@ -52,7 +52,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	NUM_IEEE80211_HW_FLAGS
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1593,13 +1593,13 @@ error:
+@@ -1531,13 +1531,13 @@ error:
  	return err;
  }
  
@@ -69,7 +69,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	struct ieee80211_bss_conf *link_conf;
  	u64 changed = 0;
  
-@@ -1621,10 +1621,21 @@ static int ieee80211_change_beacon(struc
+@@ -1559,10 +1559,21 @@ static int ieee80211_change_beacon(struc
  	if (!old)
  		return -ENOENT;
  
@@ -95,7 +95,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  
  	if (params->beacon.he_bss_color_valid &&
  	    params->beacon.he_bss_color.enabled != link_conf->he_bss_color.enabled) {
-@@ -5206,7 +5217,7 @@ const struct cfg80211_ops mac80211_confi
+@@ -5129,7 +5140,7 @@ const struct cfg80211_ops mac80211_confi
  	.set_default_mgmt_key = ieee80211_config_default_mgmt_key,
  	.set_default_beacon_key = ieee80211_config_default_beacon_key,
  	.start_ap = ieee80211_start_ap,

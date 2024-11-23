@@ -73,7 +73,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  #define HTT_STATS_FRAME_CTRL_TYPE_MGMT  0x0
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -4711,10 +4711,18 @@ int ath12k_dp_rxdma_ring_sel_config_qcn9
+@@ -4669,10 +4669,18 @@ int ath12k_dp_rxdma_ring_sel_config_qcn9
  	tlv_filter.rx_msdu_end_offset =
  		ab->hw_params->hal_ops->rx_desc_get_msdu_end_offset();
  
@@ -130,7 +130,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	return (ipv4 || ipv6);
  }
  
-+#define MPDU_START_WMASK 0x7FC
++#define MPDU_START_WMASK 0xFFC
 +#define MSDU_END_WMASK 0x13441
 +
 +static inline u16 ath12k_hal_rx_mpdu_start_wmask_get(void)

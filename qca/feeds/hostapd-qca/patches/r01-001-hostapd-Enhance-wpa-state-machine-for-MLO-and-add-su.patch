@@ -52,7 +52,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		switch (res) {
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1558,7 +1558,6 @@ setup_mld:
+@@ -1573,7 +1573,6 @@ setup_mld:
  	}
  	if (hostapd_init_wps(hapd, conf))
  		return -1;
@@ -60,7 +60,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  #ifdef CONFIG_DPP
  	hapd->gas = gas_query_ap_init(hapd, hapd->msg_ctx);
  	if (!hapd->gas)
-@@ -1582,7 +1581,6 @@ setup_mld:
+@@ -1597,7 +1596,6 @@ setup_mld:
  		wpa_printf(MSG_ERROR, "Accounting initialization failed.");
  		return -1;
  	}
@@ -361,7 +361,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			      void *ctx),
 --- a/src/ap/wpa_auth.c
 +++ b/src/ap/wpa_auth.c
-@@ -102,6 +102,81 @@ static const u8 * wpa_auth_get_spa(const
+@@ -102,6 +102,80 @@ static const u8 * wpa_auth_get_spa(const
  	return sm->addr;
  }
  
@@ -374,7 +374,6 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +void wpa_update_gkeydone(struct wpa_state_machine *sm, int update)
 +{
 +	int link_id;
-+	struct wpa_authenticator *wpa_auth;
 +
 +	if (!sm || !sm->wpa_auth)
 +		return;
@@ -389,7 +388,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +{
 +	int link_id;
 +
-+	if (!sm || link_id >= MAX_NUM_MLD_LINKS)
++	if (!sm || release_link_id >= MAX_NUM_MLD_LINKS)
 +		return;
 +
 +	for_each_sm_auth(sm, link_id)
@@ -443,7 +442,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  static inline int wpa_auth_mic_failure_report(
  	struct wpa_authenticator *wpa_auth, const u8 *addr)
-@@ -364,15 +439,15 @@ static void wpa_rekey_gmk(void *eloop_ct
+@@ -364,15 +438,15 @@ static void wpa_rekey_gmk(void *eloop_ct
  	}
  }
  
@@ -462,7 +461,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		wpa_group_get(wpa_auth, group);
  
  		group->GTKReKey = true;
-@@ -385,6 +460,71 @@ static void wpa_rekey_gtk(void *eloop_ct
+@@ -385,6 +459,71 @@ static void wpa_rekey_gtk(void *eloop_ct
  		wpa_group_put(wpa_auth, group);
  		group = next;
  	}
@@ -534,7 +533,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (wpa_auth->conf.wpa_group_rekey) {
  		eloop_register_timeout(wpa_auth->conf.wpa_group_rekey,
-@@ -392,7 +532,6 @@ static void wpa_rekey_gtk(void *eloop_ct
+@@ -392,7 +531,6 @@ static void wpa_rekey_gtk(void *eloop_ct
  	}
  }
  
@@ -542,7 +541,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  static void wpa_rekey_ptk(void *eloop_ctx, void *timeout_ctx)
  {
  	struct wpa_authenticator *wpa_auth = eloop_ctx;
-@@ -535,6 +674,12 @@ struct wpa_authenticator * wpa_init(cons
+@@ -535,6 +673,12 @@ struct wpa_authenticator * wpa_init(cons
  	if (!wpa_auth)
  		return NULL;
  	os_memcpy(wpa_auth->addr, addr, ETH_ALEN);
@@ -555,7 +554,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	os_memcpy(&wpa_auth->conf, conf, sizeof(*conf));
  	wpa_auth->cb = cb;
  	wpa_auth->cb_ctx = cb_ctx;
-@@ -579,7 +724,10 @@ struct wpa_authenticator * wpa_init(cons
+@@ -579,7 +723,10 @@ struct wpa_authenticator * wpa_init(cons
  				       wpa_rekey_gmk, wpa_auth, NULL);
  	}
  
@@ -567,7 +566,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		eloop_register_timeout(wpa_auth->conf.wpa_group_rekey, 0,
  				       wpa_rekey_gtk, wpa_auth, NULL);
  	}
-@@ -623,6 +771,9 @@ void wpa_deinit(struct wpa_authenticator
+@@ -623,6 +770,9 @@ void wpa_deinit(struct wpa_authenticator
  	struct wpa_group *group, *prev;
  
  	eloop_cancel_timeout(wpa_rekey_gmk, wpa_auth, NULL);
@@ -577,7 +576,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
  
  	pmksa_cache_auth_deinit(wpa_auth->pmksa);
-@@ -773,6 +924,8 @@ void wpa_auth_sta_no_wpa(struct wpa_stat
+@@ -773,6 +923,8 @@ void wpa_auth_sta_no_wpa(struct wpa_stat
  
  static void wpa_free_sta_sm(struct wpa_state_machine *sm)
  {
@@ -586,7 +585,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  #ifdef CONFIG_P2P
  	if (WPA_GET_BE32(sm->ip_addr)) {
  		wpa_printf(MSG_DEBUG,
-@@ -786,7 +939,7 @@ static void wpa_free_sta_sm(struct wpa_s
+@@ -786,7 +938,7 @@ static void wpa_free_sta_sm(struct wpa_s
  	}
  #endif /* CONFIG_P2P */
  	if (sm->GUpdateStationKeys) {
@@ -595,7 +594,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		sm->GUpdateStationKeys = false;
  	}
  #ifdef CONFIG_IEEE80211R_AP
-@@ -796,6 +949,10 @@ static void wpa_free_sta_sm(struct wpa_s
+@@ -796,6 +948,10 @@ static void wpa_free_sta_sm(struct wpa_s
  	os_free(sm->last_rx_eapol_key);
  	os_free(sm->wpa_ie);
  	os_free(sm->rsnxe);
@@ -606,7 +605,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	wpa_group_put(sm->wpa_auth, sm->group);
  #ifdef CONFIG_DPP2
  	wpabuf_clear_free(sm->dpp_z);
-@@ -803,10 +960,10 @@ static void wpa_free_sta_sm(struct wpa_s
+@@ -803,10 +959,10 @@ static void wpa_free_sta_sm(struct wpa_s
  	bin_clear_free(sm, sizeof(*sm));
  }
  
@@ -618,7 +617,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (!sm)
  		return;
-@@ -815,10 +972,15 @@ void wpa_auth_sta_deinit(struct wpa_stat
+@@ -815,10 +971,15 @@ void wpa_auth_sta_deinit(struct wpa_stat
  	if (wpa_auth->conf.wpa_strict_rekey && sm->has_GTK) {
  		wpa_auth_logger(wpa_auth, wpa_auth_get_spa(sm), LOGGER_DEBUG,
  				"strict rekeying - force GTK rekey since STA is leaving");
@@ -636,7 +635,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	}
  
  	eloop_cancel_timeout(wpa_send_eapol_timeout, wpa_auth, sm);
-@@ -1465,12 +1627,12 @@ continue_processing:
+@@ -1465,12 +1626,12 @@ continue_processing:
  			wpa_auth_logger(wpa_auth, wpa_auth_get_spa(sm),
  					LOGGER_INFO,
  					"received EAPOL-Key Request for GTK rekeying");
@@ -651,7 +650,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		}
  	} else {
  		/* Do not allow the same key replay counter to be reused. */
-@@ -1986,7 +2148,7 @@ int wpa_auth_sm_event(struct wpa_state_m
+@@ -1986,7 +2147,7 @@ int wpa_auth_sm_event(struct wpa_state_m
  			 * Reauthentication cancels the pending group key
  			 * update for this STA.
  			 */
@@ -660,7 +659,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			sm->GUpdateStationKeys = false;
  			sm->PtkGroupInit = true;
  		}
-@@ -2063,7 +2225,7 @@ SM_STATE(WPA_PTK, INITIALIZE)
+@@ -2063,7 +2224,7 @@ SM_STATE(WPA_PTK, INITIALIZE)
  
  	sm->keycount = 0;
  	if (sm->GUpdateStationKeys)
@@ -669,7 +668,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sm->GUpdateStationKeys = false;
  	if (sm->wpa == WPA_VERSION_WPA)
  		sm->PInitAKeys = false;
-@@ -3782,35 +3944,48 @@ static void wpa_auth_get_ml_key_info(str
+@@ -3782,35 +3943,48 @@ static void wpa_auth_get_ml_key_info(str
  }
  
  
@@ -736,7 +735,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	return kde_len;
  }
  
-@@ -3819,6 +3994,7 @@ static u8 * wpa_auth_ml_group_kdes(struc
+@@ -3819,6 +3993,7 @@ static u8 * wpa_auth_ml_group_kdes(struc
  {
  	struct wpa_auth_ml_key_info ml_key_info;
  	unsigned int i, link_id;
@@ -744,7 +743,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	/* First fetch the key information from all the authenticators */
  	os_memset(&ml_key_info, 0, sizeof(ml_key_info));
-@@ -3869,8 +4045,10 @@ static u8 * wpa_auth_ml_group_kdes(struc
+@@ -3869,8 +4044,10 @@ static u8 * wpa_auth_ml_group_kdes(struc
  		i++;
  	}
  
@@ -756,7 +755,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	/* Add MLO IGTK KDEs */
  	for (i = 0, link_id = 0; link_id < MAX_NUM_MLD_LINKS; link_id++) {
-@@ -3908,8 +4086,10 @@ static u8 * wpa_auth_ml_group_kdes(struc
+@@ -3908,8 +4085,10 @@ static u8 * wpa_auth_ml_group_kdes(struc
  		i++;
  	}
  
@@ -768,7 +767,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	/* Add MLO BIGTK KDEs */
  	for (i = 0, link_id = 0; link_id < MAX_NUM_MLD_LINKS; link_id++) {
-@@ -3947,6 +4127,7 @@ static u8 * wpa_auth_ml_group_kdes(struc
+@@ -3947,6 +4126,7 @@ static u8 * wpa_auth_ml_group_kdes(struc
  		i++;
  	}
  
@@ -776,7 +775,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	return pos;
  }
  
-@@ -3987,6 +4168,7 @@ static u8 * wpa_auth_ml_kdes(struct wpa_
+@@ -3987,6 +4167,7 @@ static u8 * wpa_auth_ml_kdes(struct wpa_
  {
  #ifdef CONFIG_IEEE80211BE
  	u8 link_id;
@@ -784,7 +783,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (sm->mld_assoc_link_id < 0)
  		return pos;
-@@ -4037,6 +4219,7 @@ static u8 * wpa_auth_ml_kdes(struct wpa_
+@@ -4037,6 +4218,7 @@ static u8 * wpa_auth_ml_kdes(struct wpa_
  		}
  	}
  
@@ -792,7 +791,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	pos = wpa_auth_ml_group_kdes(sm, pos);
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -4802,7 +4985,7 @@ SM_STATE(WPA_PTK_GROUP, REKEYESTABLISHED
+@@ -4802,7 +4984,7 @@ SM_STATE(WPA_PTK_GROUP, REKEYESTABLISHED
  #endif /* CONFIG_OCV */
  
  	if (sm->GUpdateStationKeys)
@@ -801,7 +800,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sm->GUpdateStationKeys = false;
  	sm->GTimeoutCtr = 0;
  	/* FIX: MLME.SetProtection.Request(TA, Tx_Rx) */
-@@ -4817,7 +5000,7 @@ SM_STATE(WPA_PTK_GROUP, KEYERROR)
+@@ -4817,7 +4999,7 @@ SM_STATE(WPA_PTK_GROUP, KEYERROR)
  {
  	SM_ENTRY_MA(WPA_PTK_GROUP, KEYERROR, wpa_ptk_group);
  	if (sm->GUpdateStationKeys)
@@ -810,7 +809,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sm->GUpdateStationKeys = false;
  	sm->Disconnect = true;
  	sm->disconnect_reason = WLAN_REASON_GROUP_KEY_UPDATE_TIMEOUT;
-@@ -4905,7 +5088,6 @@ static int wpa_gtk_update(struct wpa_aut
+@@ -4905,7 +5087,6 @@ static int wpa_gtk_update(struct wpa_aut
  	return ret;
  }
  
@@ -818,7 +817,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  static void wpa_group_gtk_init(struct wpa_authenticator *wpa_auth,
  			       struct wpa_group *group)
  {
-@@ -4930,11 +5112,35 @@ static void wpa_group_gtk_init(struct wp
+@@ -4930,11 +5111,35 @@ static void wpa_group_gtk_init(struct wp
  
  static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
  {
@@ -856,7 +855,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  				LOGGER_DEBUG,
  				"Not in PTKINITDONE; skip Group Key update");
  		sm->GUpdateStationKeys = false;
-@@ -4946,7 +5152,7 @@ static int wpa_group_update_sta(struct w
+@@ -4946,7 +5151,7 @@ static int wpa_group_update_sta(struct w
  		 * Since we clear the GKeyDoneStations before the loop, the
  		 * station needs to be counted here anyway.
  		 */
@@ -865,7 +864,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  				LOGGER_DEBUG,
  				"GUpdateStationKeys was already set when marking station for GTK rekeying");
  	}
-@@ -4955,7 +5161,7 @@ static int wpa_group_update_sta(struct w
+@@ -4955,7 +5160,7 @@ static int wpa_group_update_sta(struct w
  	if (sm->is_wnmsleep)
  		return 0;
  
@@ -874,7 +873,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sm->GUpdateStationKeys = true;
  
  	wpa_sm_step(sm);
-@@ -5099,18 +5305,11 @@ int wpa_wnmsleep_bigtk_subelem(struct wp
+@@ -5099,18 +5304,11 @@ int wpa_wnmsleep_bigtk_subelem(struct wp
  
  #endif /* CONFIG_WNM_AP */
  
@@ -895,7 +894,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	tmp = group->GM;
  	group->GM = group->GN;
  	group->GN = tmp;
-@@ -5124,8 +5323,21 @@ static void wpa_group_setkeys(struct wpa
+@@ -5124,8 +5322,21 @@ static void wpa_group_setkeys(struct wpa
  	 * counting the STAs that are marked with GUpdateStationKeys instead of
  	 * including all STAs that could be in not-yet-completed state. */
  	wpa_gtk_update(wpa_auth, group);
@@ -918,7 +917,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		wpa_printf(MSG_DEBUG,
  			   "wpa_group_setkeys: Unexpected GKeyDoneStations=%d when starting new GTK rekey",
  			   group->GKeyDoneStations);
-@@ -5239,6 +5451,44 @@ static void wpa_group_sm_step(struct wpa
+@@ -5239,6 +5450,44 @@ static void wpa_group_sm_step(struct wpa
  	}
  }
  
@@ -963,7 +962,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  static int wpa_sm_step(struct wpa_state_machine *sm)
  {
-@@ -5259,7 +5509,7 @@ static int wpa_sm_step(struct wpa_state_
+@@ -5259,7 +5508,7 @@ static int wpa_sm_step(struct wpa_state_
  			break;
  
  		sm->changed = false;
@@ -972,7 +971,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  		SM_STEP_RUN(WPA_PTK);
  		if (sm->pending_deinit)
-@@ -5267,8 +5517,8 @@ static int wpa_sm_step(struct wpa_state_
+@@ -5267,8 +5516,8 @@ static int wpa_sm_step(struct wpa_state_
  		SM_STEP_RUN(WPA_PTK_GROUP);
  		if (sm->pending_deinit)
  			break;
@@ -983,7 +982,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	sm->in_step_loop = 0;
  
  	if (sm->pending_deinit) {
-@@ -6497,8 +6747,8 @@ int wpa_auth_rekey_gtk(struct wpa_authen
+@@ -6497,8 +6746,8 @@ int wpa_auth_rekey_gtk(struct wpa_authen
  {
  	if (!wpa_auth)
  		return -1;
@@ -994,7 +993,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  }
  
  
-@@ -6596,6 +6846,7 @@ void wpa_auth_set_ml_info(struct wpa_sta
+@@ -6596,6 +6845,7 @@ void wpa_auth_set_ml_info(struct wpa_sta
  	for (i = 0, link_id = 0; link_id < MAX_NUM_MLD_LINKS; link_id++) {
  		struct mld_link_info *link = &info->links[link_id];
  		struct mld_link *sm_link = &sm->mld_links[link_id];
@@ -1002,7 +1001,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  		sm_link->valid = link->valid;
  		if (!link->valid)
-@@ -6610,10 +6861,25 @@ void wpa_auth_set_ml_info(struct wpa_sta
+@@ -6610,10 +6860,25 @@ void wpa_auth_set_ml_info(struct wpa_sta
  			   MAC2STR(sm_link->own_addr),
  			   MAC2STR(sm_link->peer_addr));
  

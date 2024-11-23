@@ -17,22 +17,21 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2510,10 +2510,12 @@ process_radar_event:
- 	}
+@@ -2571,10 +2571,11 @@ static void nl80211_radar_event(struct i
+ 		   bss->ifname);
  }
  
 -static void nl80211_awgn_event(struct wpa_driver_nl80211_data *drv,
 -			        struct nlattr **tb)
 +static void nl80211_awgn_event(struct i802_bss *bss, struct nlattr **tb)
  {
-+	struct wpa_driver_nl80211_data *drv = bss->drv;
  	union wpa_event_data data;
 +	struct i802_link *mld_link = bss->flink;
 +	void *ctx = bss->ctx;
  
  	os_memset(&data, 0, sizeof(data));
  
-@@ -2534,7 +2536,38 @@ static void nl80211_awgn_event(struct wp
+@@ -2595,7 +2596,38 @@ static void nl80211_awgn_event(struct wp
  		data.awgn_event.chan_bw_interference_bitmap =
  			nla_get_u32(tb[NL80211_ATTR_AWGN_INTERFERENCE_BITMAP]);
  
@@ -72,7 +71,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  }
  
  static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
-@@ -4179,7 +4212,7 @@ static void do_process_drv_event(struct
+@@ -4240,7 +4272,7 @@ static void do_process_drv_event(struct
  		nl80211_update_muedca_params_event(drv, tb);
  		break;
  	case NL80211_CMD_AWGN_DETECT:

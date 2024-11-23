@@ -15,7 +15,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/peer.c
 +++ b/drivers/net/wireless/ath/ath12k/peer.c
-@@ -194,6 +194,10 @@ void ath12k_peer_map_event(struct ath12k
+@@ -209,6 +209,10 @@ void ath12k_peer_map_event(struct ath12k
  		peer->ast_hash = ast_hash;
  		peer->hw_peer_id = hw_peer_id;
  		ether_addr_copy(peer->addr, mac_addr);
@@ -28,7 +28,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/sawf.c
 +++ b/drivers/net/wireless/ath/ath12k/sawf.c
-@@ -1460,8 +1460,35 @@ void ath12k_sawf_compute_hw_delay(struct
+@@ -1471,8 +1471,35 @@ void ath12k_sawf_compute_hw_delay(struct
  
  #define	ATH12K_HIST_AVG_DIV	2
  
@@ -64,7 +64,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	if (!hist_stats->min || value < hist_stats->min)
  		hist_stats->min = value;
  
-@@ -1634,6 +1661,19 @@ latency_stats_update:
+@@ -1645,6 +1672,19 @@ latency_stats_update:
  	return;
  }
  
@@ -86,12 +86,11 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	struct ath12k_sawf_ctx *sawf_ctx;
 --- a/drivers/net/wireless/ath/ath12k/sawf.h
 +++ b/drivers/net/wireless/ath/ath12k/sawf.h
-@@ -882,6 +882,7 @@ int ath12k_telemetry_get_sawf_tx_stats_d
- 					    u8 tid, u8 msduq_id);
- void ath12k_telemetry_notify_breach(u8 *mac_addr, u8 svc_id, u8 param,
- 				    bool set_clear, u8 tid);
+@@ -894,6 +894,7 @@ void ath12k_telemetry_notify_breach(u8 *
+ void ath12k_telemetry_breach_indication(u8 *mac_addr, u8 svc_id,
+ 					u8 param, bool set_clear,
+ 					u8 tid);
 +void ath12k_sdwf_fill_hbucket_type(struct ath12k_peer *peer);
  #else /* CPTCFG_ATH12K_SAWF */
  
  static inline void ath12k_sawf_init(struct ath12k_base *ab) {
-

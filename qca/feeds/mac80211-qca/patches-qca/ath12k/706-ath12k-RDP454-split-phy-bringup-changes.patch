@@ -18,9 +18,9 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -610,15 +610,21 @@ struct ath12k_sta {
- 	u8 num_peer;
+@@ -564,15 +564,21 @@ struct ath12k_sta {
   };
+ 
  #define ATH12K_HALF_20MHZ_BW 10
 +#define ATH12K_2G_MIN_CENTER 2412
 +#define ATH12K_2G_MAX_CENTER 2484
@@ -40,7 +40,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
  #define ATH12K_NUM_CHANS 102
  #define ATH12K_MIN_5G_CHAN 36
-@@ -718,6 +724,7 @@ enum ath12k_fw_recovery_option {
+@@ -668,6 +674,7 @@ enum ath12k_fw_recovery_option {
  struct ath12k_chan_info {
  	u32 low_freq;
  	u32 high_freq;
@@ -50,7 +50,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  #define ATH12K_FLUSH_TIMEOUT (5 * HZ)
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -693,16 +693,39 @@ struct ath12k_link_vif *ath12k_mac_get_a
+@@ -827,8 +827,30 @@ struct ath12k_link_vif *ath12k_mac_get_a
  	return NULL;
  }
  
@@ -58,17 +58,16 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
 -						enum nl80211_band band)
 +static struct ath12k *ath12k_mac_get_ar_by_agile_chandef(struct ieee80211_hw *hw,
 +							 enum nl80211_band band)
- {
- 	struct ath12k_hw *ah = hw->priv;
- 	struct ath12k *ar;
- 	int i;
- 
++{
++	struct ath12k_hw *ah = hw->priv;
++	struct ath12k *ar;
++	int i;
++
 +	if (band != NL80211_BAND_5GHZ)
 +		return NULL;
 +
- 	ar = ah->radio;
- 	for (i = 0; i < ah->num_radio; i++) {
--		if (ar->mac.sbands[band].channels)
++	ar = ah->radio;
++	for (i = 0; i < ah->num_radio; i++) {
 +		if (!ar->agile_chandef.chan)
 +			continue;
 +		if (ar->agile_chandef.chan->center_freq > ar->chan_info.low_freq &&
@@ -81,19 +80,20 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
 +
 +static struct ath12k *ath12k_mac_get_ar_by_chan(struct ieee80211_hw *hw,
 +						struct ieee80211_channel *channel)
-+{
-+	struct ath12k_hw *ah = hw->priv;
-+	struct ath12k *ar;
-+	int i;
-+
-+	ar = ah->radio;
-+	for (i = 0; i < ah->num_radio; i++) {
+ {
+ 	struct ath12k_hw *ah = hw->priv;
+ 	struct ath12k *ar;
+@@ -836,7 +858,8 @@ static struct ath12k *ath12k_mac_get_ar_
+ 
+ 	ar = ah->radio;
+ 	for (i = 0; i < ah->num_radio; i++) {
+-		if (ar->mac.sbands[band].channels)
 +		if (channel->center_freq >= ar->chan_info.low_freq &&
 +		    channel->center_freq <= ar->chan_info.high_freq)
  			return ar;
  		ar++;
  	}
-@@ -715,9 +738,7 @@ static struct ath12k *ath12k_get_ar_by_c
+@@ -849,9 +872,7 @@ static struct ath12k *ath12k_get_ar_by_c
  	if (!ctx)
  		return NULL;
  
@@ -104,13 +104,13 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  }
  
  struct ath12k *ath12k_get_ar_by_vif(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
-@@ -4615,9 +4636,14 @@ ath12k_mac_select_scan_device(struct iee
+@@ -4656,9 +4677,14 @@ ath12k_mac_select_scan_device(struct iee
  	ar = ah->radio;
  
  	for (i = 0; i < ah->num_radio; i++) {
 -		/* TODO 5G low high split changes */
 -		if (ar->mac.sbands[band].channels)
-+		if (band == NL80211_BAND_5GHZ) {
++		if (band == NL80211_BAND_5GHZ || band == NL80211_BAND_6GHZ) {
 +			if (req->req.channels[0]->center_freq > ar->chan_info.low_freq &&
 +			    req->req.channels[0]->center_freq < ar->chan_info.high_freq)
 +				if (ar->mac.sbands[band].channels)
@@ -121,7 +121,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  		ar++;
  	}
  
-@@ -12811,9 +12837,6 @@ static int ath12k_mac_op_get_survey(stru
+@@ -12914,9 +12940,6 @@ static int ath12k_mac_op_get_survey(stru
  		sband = NULL;
  	}
  
@@ -131,7 +131,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	if (!sband) {
  		sband = hw->wiphy->bands[NL80211_BAND_5GHZ];
  		band = NL80211_BAND_5GHZ;
-@@ -12834,10 +12857,17 @@ static int ath12k_mac_op_get_survey(stru
+@@ -12937,10 +12960,17 @@ static int ath12k_mac_op_get_survey(stru
  		goto exit;
  	}
  
@@ -152,7 +152,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	}
  
  	ar_survey = &ar->survey[idx];
-@@ -13099,7 +13129,13 @@ static int ath12k_mac_op_set_radar_backg
+@@ -13225,7 +13255,13 @@ static int ath12k_mac_op_set_radar_backg
  	int ret;
  	struct cfg80211_chan_def conf_def;
  
@@ -167,7 +167,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
  	mutex_lock(&ar->conf_mutex);
  
-@@ -13246,6 +13282,67 @@ static void ath12k_mac_update_ch_list(st
+@@ -13373,6 +13409,67 @@ static void ath12k_mac_update_ch_list(st
  	}
  }
  
@@ -235,16 +235,16 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  #define ATH12K_5_9_MIN_FREQ 5845
  #define ATH12K_5_9_MAX_FREQ 5885
  
-@@ -13294,7 +13391,7 @@ static int ath12k_mac_setup_channels_rat
+@@ -13421,7 +13518,7 @@ static int ath12k_mac_setup_channels_rat
  	void *channels;
  	u32 phy_id, freq_low, freq_high;
  	struct ieee80211_6ghz_channel *chan_6g;
 -	int i = 0;
 +	int i = 0, ret;
  
- 
  	BUILD_BUG_ON((ARRAY_SIZE(ath12k_2ghz_channels) +
-@@ -13318,7 +13415,6 @@ static int ath12k_mac_setup_channels_rat
+ 		      ARRAY_SIZE(ath12k_5ghz_channels) +
+@@ -13444,7 +13541,6 @@ static int ath12k_mac_setup_channels_rat
  		band->channels = channels;
  		band->n_bitrates = ath12k_g_rates_size;
  		band->bitrates = ath12k_g_rates;
@@ -252,9 +252,9 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
  		if (ab->hw_params->single_pdev_only) {
  			phy_id = ath12k_get_phy_id(ar, WMI_HOST_WLAN_2G_CAP);
-@@ -13332,9 +13428,26 @@ static int ath12k_mac_setup_channels_rat
- 
- 		ath12k_mac_update_ch_list(ar, band, freq_low, freq_high);
+@@ -13459,9 +13555,26 @@ static int ath12k_mac_setup_channels_rat
+ 		freq_high = min(temp_reg_cap->high_2ghz_chan,
+ 			        ab->reg_freq_2g.end_freq);
  
 -		ah->supported_band_mask |= BIT(NL80211_BAND_2GHZ);
  		ar->chan_info.low_freq = freq_low;
@@ -280,7 +280,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	}
  
  	if (supported_bands & WMI_HOST_WLAN_5G_CAP) {
-@@ -13361,7 +13474,6 @@ static int ath12k_mac_setup_channels_rat
+@@ -13488,7 +13601,6 @@ static int ath12k_mac_setup_channels_rat
                          band->channels = channels;
                          band->n_bitrates = ath12k_a_rates_size;
                          band->bitrates = ath12k_a_rates;
@@ -288,9 +288,9 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
                          if (ar->ab->hw_params->single_pdev_only) {
                                  phy_id = ath12k_get_phy_id(ar, WMI_HOST_WLAN_5G_CAP);
-@@ -13377,9 +13489,27 @@ static int ath12k_mac_setup_channels_rat
- 
- 			ath12k_mac_update_5_9_ch_list(ar, band);
+@@ -13505,9 +13617,27 @@ static int ath12k_mac_setup_channels_rat
+ 			freq_high = min(temp_reg_cap->high_5ghz_chan,
+ 					ab->reg_freq_5g.end_freq);
  
 -			ah->supported_band_mask |= BIT(NL80211_BAND_5GHZ);
  			ar->chan_info.low_freq = freq_low;
@@ -317,17 +317,17 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  		} else if (reg_cap->low_5ghz_chan >= ATH12K_MIN_6G_FREQ &&
                             reg_cap->high_5ghz_chan <= ATH12K_MAX_6G_FREQ) {
                          band = &ar->mac.sbands[NL80211_BAND_6GHZ];
-@@ -13413,7 +13543,6 @@ static int ath12k_mac_setup_channels_rat
+@@ -13541,7 +13671,6 @@ static int ath12k_mac_setup_channels_rat
                          ar->supports_6ghz = true;
                          band->n_bitrates = ath12k_a_rates_size;
                          band->bitrates = ath12k_a_rates;
 -                        ah->hw->wiphy->bands[NL80211_BAND_6GHZ] = band;
  
- 			freq_low = max(temp_reg_cap->low_5ghz_chan,
- 				       ab->reg_freq_6g.start_freq);
-@@ -13431,15 +13560,33 @@ static int ath12k_mac_setup_channels_rat
-                        band->n_channels = band->chan_6g[0]->n_channels;
-                        band->channels = band->chan_6g[0]->channels;
+                         ath12k_mac_update_ch_list(ar, band,
+ 						  temp_reg_cap->low_5ghz_chan,
+@@ -13561,15 +13690,33 @@ static int ath12k_mac_setup_channels_rat
+ 			freq_high = min(temp_reg_cap->high_5ghz_chan,
+ 					ab->reg_freq_6g.end_freq);
  
 -			ah->supported_band_mask |= BIT(NL80211_BAND_6GHZ);
  			ar->chan_info.low_freq = freq_low;
@@ -362,7 +362,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	return 0;
  }
  
-@@ -13709,23 +13856,54 @@ ath12k_setup_per_hw_chan(struct ath12k *
+@@ -13841,23 +13988,54 @@ ath12k_setup_per_hw_chan(struct ath12k *
  	struct ieee80211_chans_per_hw *chans;
  	struct ieee80211_supported_band *band;
  	struct ath12k_pdev *pdev = ar->pdev;
@@ -424,7 +424,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/reg.c
 +++ b/drivers/net/wireless/ath/ath12k/reg.c
-@@ -181,6 +181,12 @@ int ath12k_reg_update_chan_list(struct a
+@@ -180,6 +180,12 @@ int ath12k_reg_update_chan_list(struct a
  			    IEEE80211_CHAN_DISABLED)
  				continue;
  
@@ -437,7 +437,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  			num_channels++;
  		}
  	}
-@@ -210,6 +216,13 @@ int ath12k_reg_update_chan_list(struct a
+@@ -207,6 +213,13 @@ int ath12k_reg_update_chan_list(struct a
  			if (channel->flags & IEEE80211_CHAN_DISABLED)
  				continue;
  
@@ -451,7 +451,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  			/* TODO: Set to true/false based on some condition? */
  			ch->allow_ht = true;
  			ch->allow_vht = true;
-@@ -269,6 +282,24 @@ static void ath12k_copy_regd(struct ieee
+@@ -266,6 +279,24 @@ static void ath12k_copy_regd(struct ieee
  		       sizeof(struct ieee80211_reg_rule));
  }
  
@@ -476,7 +476,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  int ath12k_regd_update(struct ath12k *ar, bool init)
  {
  	struct ieee80211_regdomain *regd, *regd_copy = NULL;
-@@ -315,10 +346,14 @@ int ath12k_regd_update(struct ath12k *ar
+@@ -312,10 +343,14 @@ int ath12k_regd_update(struct ath12k *ar
  
  	ar->chan_info.low_freq = freq_low;
  	ar->chan_info.high_freq = freq_high;
@@ -495,12 +495,12 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  		mutex_unlock(&ah->conf_mutex);
 --- a/drivers/net/wireless/ath/ath12k/reg.h
 +++ b/drivers/net/wireless/ath/ath12k/reg.h
-@@ -38,5 +38,8 @@ enum wmi_reg_6g_ap_type
+@@ -94,5 +94,8 @@ enum wmi_reg_6g_ap_type
  ath12k_ieee80211_ap_pwr_type_convert(enum ieee80211_ap_reg_power power_type);
  int ath12k_regd_update(struct ath12k *ar, bool init);
  int ath12k_reg_update_chan_list(struct ath12k *ar);
 +int ath12k_reg_get_num_chans_in_band(struct ath12k *ar,
 +				     struct ieee80211_supported_band *band,
 +			             u32 freq_low, u32 freq_high);
-
+ 
  #endif

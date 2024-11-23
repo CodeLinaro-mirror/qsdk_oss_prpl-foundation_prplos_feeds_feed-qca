@@ -19,10 +19,8 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  station.c | 51 +++++++++++++++++++++++++++++++++++++++++++--------
  2 files changed, 51 insertions(+), 8 deletions(-)
 
-Index: iw-5.19/station.c
-===================================================================
---- iw-5.19.orig/station.c
-+++ iw-5.19/station.c
+--- a/station.c
++++ b/station.c
 @@ -148,9 +148,11 @@ static void parse_tid_stats(struct nlatt
  		printf("\n\tTXQs:%s", txqbuf);
  }
@@ -46,8 +44,8 @@ Index: iw-5.19/station.c
 +	if (tb[NL80211_ATTR_MLO_LINKS]) {
 +		int ret = 0, dtim_offset = 0, beacon_int_offset = 0;
 +		const char *dtim_indent = "", *beacon_int_indent = "";
-+		char dtim_buf[MLD_MAX_LINK_BUF_SIZE],
-+		     beacon_int_buf[MLD_MAX_LINK_BUF_SIZE];
++		char dtim_buf[MLD_MAX_LINK_BUF_SIZE] = {0},
++		     beacon_int_buf[MLD_MAX_LINK_BUF_SIZE] = {0};
 +
 +		nla_for_each_nested(attrs, bss_param_attr, ret) {
 +			if (nla_parse_nested(bss_param_info,
@@ -113,3 +111,125 @@ Index: iw-5.19/station.c
  	if (sinfo[NL80211_STA_INFO_CONNECTED_TIME])
  		printf("\n\tconnected time:\t%u seconds",
  			nla_get_u32(sinfo[NL80211_STA_INFO_CONNECTED_TIME]));
+--- a/link.c
++++ b/link.c
+@@ -113,7 +113,8 @@ static int print_link_sta(struct nl_msg
+ 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+ 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+ 	struct nlattr *sinfo[NL80211_STA_INFO_MAX + 1];
+-	struct nlattr *binfo[NL80211_STA_BSS_PARAM_MAX + 1];
++	struct nlattr *binfo[NL80211_STA_BSS_PARAM_MAX + 1],  *info;
++	struct nlattr *attrs;
+ 	static struct nla_policy stats_policy[NL80211_STA_INFO_MAX + 1] = {
+ 		[NL80211_STA_INFO_INACTIVE_TIME] = { .type = NLA_U32 },
+ 		[NL80211_STA_INFO_RX_BYTES] = { .type = NLA_U32 },
+@@ -135,6 +136,8 @@ static int print_link_sta(struct nl_msg
+ 		[NL80211_STA_BSS_PARAM_BEACON_INTERVAL] = { .type = NLA_U16 },
+ 	};
+ 
++	bool bss_flag_set = 0;
++
+ 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+ 		  genlmsg_attrlen(gnlh, 0), NULL);
+ 
+@@ -174,31 +177,75 @@ static int print_link_sta(struct nl_msg
+ 		printf("\ttx bitrate: %s\n", buf);
+ 	}
+ 
+-	if (sinfo[NL80211_STA_INFO_BSS_PARAM]) {
+-		if (nla_parse_nested(binfo, NL80211_STA_BSS_PARAM_MAX,
+-				     sinfo[NL80211_STA_INFO_BSS_PARAM],
+-				     bss_policy)) {
+-			fprintf(stderr, "failed to parse nested bss parameters!\n");
+-		} else {
+-			char *delim = "";
+-			printf("\n\tbss flags:\t");
+-			if (binfo[NL80211_STA_BSS_PARAM_CTS_PROT]) {
+-				printf("CTS-protection");
+-				delim = " ";
+-			}
+-			if (binfo[NL80211_STA_BSS_PARAM_SHORT_PREAMBLE]) {
+-				printf("%sshort-preamble", delim);
+-				delim = " ";
+-			}
+-			if (binfo[NL80211_STA_BSS_PARAM_SHORT_SLOT_TIME])
+-				printf("%sshort-slot-time", delim);
+-			printf("\n\tdtim period:\t%d",
+-			       nla_get_u8(binfo[NL80211_STA_BSS_PARAM_DTIM_PERIOD]));
+-			printf("\n\tbeacon int:\t%d",
+-			       nla_get_u16(binfo[NL80211_STA_BSS_PARAM_BEACON_INTERVAL]));
+-			printf("\n");
+-		}
+-	}
++        if (sinfo[NL80211_STA_INFO_BSS_PARAM]) {
++                if (tb[NL80211_ATTR_MLO_LINKS]) {
++                        int ret = 0, dtim_offset = 0, beacon_int_offset = 0;
++                        const char *dtim_indent = "", *beacon_int_indent = "";
++                        char dtim_buf[MLD_MAX_LINK_BUF_SIZE] = "",
++                             beacon_int_buf[MLD_MAX_LINK_BUF_SIZE] = "";
++                        nla_for_each_nested(attrs, sinfo[NL80211_STA_INFO_BSS_PARAM], ret) {
++                                if (nla_parse_nested(binfo, NL80211_STA_BSS_PARAM_MAX, attrs,
++                                                     bss_policy)) {
++                                        printf("\nFailed to parse nested bss param attributes!\n");
++                                }
++                                else {
++                                        info = binfo[NL80211_STA_BSS_PARAM_DTIM_PERIOD];
++                                        if (info) {
++                                                dtim_offset += snprintf(dtim_buf + dtim_offset,
++                                                                        MLD_MAX_LINK_BUF_SIZE - dtim_offset,
++                                                                        "%s%u", dtim_indent,
++                                                                        nla_get_u8(info));
++                                                dtim_indent = ", ";
++                                        }
++                                        info = binfo[NL80211_STA_BSS_PARAM_BEACON_INTERVAL];
++                                        if (info) {
++                                                beacon_int_offset += snprintf(beacon_int_buf + beacon_int_offset,
++                                                                              MLD_MAX_LINK_BUF_SIZE - beacon_int_offset,
++                                                                              "%s%u", beacon_int_indent,
++                                                                              nla_get_u16(info));
++                                                beacon_int_indent = ", ";
++                                        }
++                                }
++                        }
++
++                        printf("\tdtim period:\t%s\n",dtim_buf);
++                        printf("\tbeacon interval:%s\n",beacon_int_buf);
++                }
++
++                else {
++                        if (nla_parse_nested(binfo, NL80211_STA_BSS_PARAM_MAX,
++                                             sinfo[NL80211_STA_INFO_BSS_PARAM],
++                                             bss_policy)) {
++                                fprintf(stderr, "failed to parse nested bss parameters!\n");
++                        }
++                        else {
++                                printf("\tdtim period:\t%d\n",
++                                       nla_get_u8(binfo[NL80211_STA_BSS_PARAM_DTIM_PERIOD]));
++                                printf("\tbeacon int:\t%d\n",
++                                       nla_get_u16(binfo[NL80211_STA_BSS_PARAM_BEACON_INTERVAL]));
++                        }
++                }
++
++                char *delim = "";
++                printf("\tbss flags:\t");
++                if (binfo[NL80211_STA_BSS_PARAM_CTS_PROT]) {
++                        printf("CTS-protection");
++                        delim = " ";
++                        bss_flag_set = 1;
++                }
++                if (binfo[NL80211_STA_BSS_PARAM_SHORT_PREAMBLE]) {
++                        printf("%sshort-preamble", delim);
++                        delim = " ";
++                        bss_flag_set = 1;
++                }
++                if (binfo[NL80211_STA_BSS_PARAM_SHORT_SLOT_TIME]) {
++                        printf("%sshort-slot-time", delim);
++                        bss_flag_set = 1;
++                }
++                if (!bss_flag_set)
++                        printf("none");
++                printf("\n");
++        }
+ 
+ 	return NL_SKIP;
+ }

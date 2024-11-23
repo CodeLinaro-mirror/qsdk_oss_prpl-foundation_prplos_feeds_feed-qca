@@ -1000,6 +1000,14 @@ mac80211_prepare_vif() {
 
 	if_idx=$((${if_idx:-0} + 1))
 
+	disable_qdisc_for_ds=$(cat /sys/module/ath12k/parameters/ppe_ds_enable)
+        if [ -n "$disable_qdisc_for_ds" ] && [ $disable_qdisc_for_ds == '1' ]; then
+                [ -f "/lib/ds_enable.sh" ] && {
+                        . /lib/ds_enable.sh
+                        disable_qdisc_on_eth
+                }
+        fi
+
 	set_default wds 0
 	set_default powersave 0
 
@@ -1626,40 +1634,6 @@ drv_mac80211_cleanup() {
 	hostapd_common_cleanup
 }
 
-mac80211_update_bondif() {
-	local iflist
-	config_load wireless
-	mac80211_get_wifi_mlds() {
-		append _mlds $1
-	}
-
-	config_foreach mac80211_get_wifi_mlds wifi-mld
-
-	if [ -z "$_mlds" ]; then
-		return
-	fi
-	for _mld in $_mlds
-	do
-		config_get mld_ifname "$_mld" ifname
-		config_get is_bonded "$_mld" bonded
-		mac80211_export_mld_info
-		#Check if ppe_ds_enable is set and then update the bondif
-		if ([ $mld_vaps_count -ge 2 ] && [ -n $mld_ifname ]); then
-			cmd="ls /sys/class/net"
-			iface=$($cmd | grep "$mld_ifname"_b)
-			if ([ -d /sys/class/net/"$mld_ifname"_b ] && [ -n $network_bridge ]); then
-				bonded_macaddr=$(iw dev $mld_ifname info | grep addr | head -1 | awk '{print $2}')
-				brctl delif $network_bridge $mld_ifname
-				brctl addif $network_bridge "$mld_ifname"_b
-				ifconfig "$mld_ifname"_b down
-				ifconfig "$mld_ifname"_b hw ether $bonded_macaddr
-				ifconfig "$mld_ifname"_b up
-			fi
-		fi
-	done
-	return
-}
-
 drv_mac80211_setup() {
 	local device=$1
 	# Note: In case of single wiphy, the device name would be radio#idx_band#bid
@@ -1693,6 +1667,26 @@ drv_mac80211_setup() {
 		wireless_set_retry 1
 		return 1
 	}
+
+	if [ $(cat /sys/module/ath12k/parameters/ppe_rfs_support) == 'Y' ]; then
+		# Note: ppe_vp_accel and ppe_vp_rfs are mutually exclusive.
+		#       ppe_vp_accel enables PPE acceleration path and ppe_vp_rfs
+		#       is expected to enable only flow steering for VLAN type
+		#       interface (eg: WDS root).
+		echo 1 >> /sys/module/mac80211/parameters/ppe_vp_rfs
+		# Note: Format is default MLO mask followed by band specific core masks
+		#	in order of 2 GHz, 5 GHz and 6GHz bands
+		#	echo <DEFAULT/ MLO MASK>,<2GHZ MASK>,<5GHZ MASK>,<6GHZ_MASK>
+		echo 0x7,0x7,0x7,0x7 > /sys/module/ath12k/parameters/rfs_core_mask
+		if [ $(cat /sys/module/mac80211/parameters/ppe_vp_accel) == 'Y' ]; then
+			echo "ppe_vp_accel is enabled. Please disable to support RFS on WDS" > /dev/ttyMSM0
+		fi
+
+		if echo "$(cat /sys/sfe/ppe_rfs_feature)" | grep -q "disabled"; then
+			echo 1 >> /sys/sfe/ppe_rfs_feature
+			echo "enabled ppe_rfs_feature" > /dev/ttyMSM0
+		fi
+	fi
 
 	wireless_set_data phy="$phy"
 	[ -z "$(uci -q -P /var/state show wireless._${phy})" ] && uci -q -P /var/state set wireless._${phy}=phy
@@ -1921,12 +1915,6 @@ drv_mac80211_setup() {
 		. /lib/performance.sh
 	}
 	for_each_interface "ap mesh" mac80211_set_fq_limit
-	#Check if ppe_ds_enable is set and then update the bondif
-	if [ $(cat /sys/module/ath12k/parameters/ppe_ds_enable) -eq 1 ]; then
-		mac80211_update_bondif
-	fi
-
-
 }
 
 _list_phy_interfaces() {

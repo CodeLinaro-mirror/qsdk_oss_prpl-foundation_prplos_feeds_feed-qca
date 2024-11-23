@@ -6,6 +6,7 @@
 
 init_wireless_driver "$@"
 MLD_VAP_DETAILS="/lib/netifd/wireless/wifi_mld_cfg.config"
+WIFI_STATE_FILE="/var/run/wifi_state"
 
 MP_CONFIG_INT="mesh_retry_timeout mesh_confirm_timeout mesh_holding_timeout mesh_max_peer_links
 	       mesh_max_retries mesh_ttl mesh_element_ttl mesh_hwmp_max_preq_retries
@@ -25,6 +26,7 @@ NEWUMLIST=
 OLDUMLIST=
 
 hostapd_started=
+sta_started=
 bss_color=
 enable_color=
 interf_dfs=
@@ -32,6 +34,7 @@ link_ids=
 interf_state=
 link=
 hostapd_state=
+mld_names=
 
 drv_mac80211_init_device_config() {
 	hostapd_common_add_device_config
@@ -107,6 +110,9 @@ drv_mac80211_init_iface_config() {
 	config_add_int start_disabled
 	config_add_int ieee80211w
 	config_add_int beacon_prot
+	config_add_int unsol_bcast_presp
+	config_add_int fils_discovery
+	config_add_string ppe_vp
 
 	# mesh
 	config_add_string mesh_id
@@ -168,7 +174,7 @@ mac80211_hostapd_setup_base() {
 	[ "$auto_channel" -gt 0 ] && json_get_values channel_list channels
 	json_get_vars disable_eml_cap discard_6g_awgn_event
 
-	[ "$min_tx_power" -gt 0 ] && append base_cfg "min_tx_power=$min_tx_power"
+	[ "$min_tx_power" -gt 0 ] && append base_cfg "min_tx_power=$min_tx_power" "$N"
 
 	if [ "$band" = "2g" ]; then
 		sedString="iw phy ${phy} info | awk  '/Band 1/{ f = 1; next } /Band /{ f = 0 } f'"
@@ -270,16 +276,24 @@ mac80211_hostapd_setup_base() {
 	fi
 	idx="$channel"
 	case "$htmode" in
-		VHT20|HE20|EHT20) enable_ac=1;;
+		VHT20|HE20|EHT20)
+			enable_ac=1
+			if [ "$hwmode" = "a" ]; then
+				vht_oper_chwidth=0
+				vht_center_seg0=$idx
+				eht_center_seg0=$idx
+			fi
+			;;
 		VHT40|HE40|EHT40)
 			case "$(( (($channel / 4) + $chan_ofs) % 2 ))" in
 				1) idx=$(($channel + 2));;
 				0) idx=$(($channel - 2));;
 			esac
 			enable_ac=1
-			if [ $channel -ge 36 ]; then
+			if [ "$hwmode" = "a" ]; then
 				vht_oper_chwidth=0
 				vht_center_seg0=$idx
+				eht_center_seg0=$idx
 			fi
 		;;
 		VHT80|HE80|EHT80)
@@ -411,6 +425,11 @@ mac80211_hostapd_setup_base() {
 		cap_rx_stbc=$((($vht_cap >> 8) & 7))
 		[ "$rx_stbc" -lt "$cap_rx_stbc" ] && cap_rx_stbc="$rx_stbc"
 		vht_cap="$(( ($vht_cap & ~(0x700)) | ($cap_rx_stbc << 8) ))"
+
+		[ "$vht_oper_chwidth" -lt 2 ] && {
+			vht160=0
+			short_gi_160=0
+		}
 
 		mac80211_add_capabilities vht_capab $vht_cap \
 			RXLDPC:0x10::$rxldpc \
@@ -685,28 +704,24 @@ EOF
 
 mac80211_wds_support_check() {
 	local phy="$1"
+	wds_support=1
 
 	local platform=$(grep -o "IPQ.*" /proc/device-tree/model | awk -F/ '{print $1}')
 	case "$platform" in
 		"IPQ8074" | "IPQ6018" | "IPQ5018")
-			frame_mode=$(cat /sys/module/ath11k/parameters/frame_mode)
+			wds_support=$(cat /sys/module/ath11k/parameters/frame_mode)
 			;;
 		"IPQ9574")
 			local freq="$(get_freq "$phy" "$channel" "$band")"
 			local board_type=$(grep -o "IPQ.*" /proc/device-tree/model | awk -F/ '{print $3}' | awk -F- '{print $3}')
 
 			if [ $board_type == "C6" ] && [ $freq -gt 2000 ] && [ $freq -lt 3000 ]; then
-				frame_mode=$(cat /sys/module/ath11k/parameters/frame_mode)
-			else
-				frame_mode=$(cat /sys/module/ath12k/parameters/frame_mode)
+				wds_support=$(cat /sys/module/ath11k/parameters/frame_mode)
 			fi
-			;;
-		 "IPQ5332")
-			frame_mode=$(cat /sys/module/ath12k/parameters/frame_mode)
 			;;
 	esac
 
-	echo "$frame_mode"
+	echo "$wds_support"
 }
 
 mac80211_hostapd_setup_bss() {
@@ -714,6 +729,7 @@ mac80211_hostapd_setup_bss() {
 	local ifname="$2"
 	local macaddr="$3"
 	local type="$4"
+	local mode="$5"
 	local ieee80211w
 	local beacon_prot
 
@@ -722,6 +738,8 @@ mac80211_hostapd_setup_bss() {
 
 	hostapd_set_bss_options hostapd_cfg "$phy" "$vif" || return 1
 	json_get_vars wds wds_bridge dtim_period max_listen_int start_disabled ieee80211w beacon_prot
+	json_get_vars unsol_bcast_presp fils_discovery
+	json_get_vars wds wds_bridge dtim_period max_listen_int start_disabled ieee80211w beacon_prot ppe_vp
 
 	case "$auth_type" in
 		psk|sae|psk-sae|owe|eap*|wep|sae-mixed|ft-sae-ext-key)
@@ -735,10 +753,10 @@ mac80211_hostapd_setup_bss() {
 	set_default start_disabled 0
 
 	if [ "$wds" -gt 0 ]; then
-		frame_mode=$(mac80211_wds_support_check "$phy")
+		wds_support=$(mac80211_wds_support_check "$phy")
 
-		if [ $frame_mode -ne 1 ]; then
-			echo WDS is supported only in native wifi mode. Kindly update the config > /dev/ttyMSM0
+		if [ $wds_support -ne 1 ]; then
+			echo WDS is supported only in native wifi mode for ath11k driver. Kindly update the config > /dev/ttyMSM0
 			return
 		fi
 		append hostapd_cfg "wds_sta=1" "$N"
@@ -769,6 +787,21 @@ mac80211_hostapd_setup_bss() {
 		append hostapd_cfg "mld_ap=1" "$N"
 	fi
 
+	case "$ppe_vp" in
+		"passive")
+			append hostapd_cfg "ppe_vp=1" "$N"
+			;;
+		"active")
+			append hostapd_cfg "ppe_vp=2" "$N"
+			;;
+		"ds")
+			append hostapd_cfg "ppe_vp=3" "$N"
+			;;
+		*)
+			append hostapd_cfg "ppe_vp=3" "$N"
+			;;
+	esac
+
 	cat >> "$hostapd_conf_file"  <<EOF
 $hostapd_cfg
 bssid=$macaddr
@@ -784,11 +817,41 @@ mac80211_get_addr() {
 	head -n $idx /sys/class/ieee80211/${phy}/addresses | tail -n1
 }
 
+mac80211_hwidx_from_channel_list() {
+	local phy="$1"
+	local i=0
+	local first_chan highest_chan chidx hw_nchans
+	local n_hw_idx=$(iw phy ${phy} info | grep -e "channel list" | wc -l)
+
+	while [ "$i" -lt "$n_hw_idx" ]; do
+		hw_nchans=$(iw phy ${phy} info | awk -v p1="$i channel list" \
+			-v p2="$((i+1)) channel list"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f')
+		first_chan=$(echo $hw_nchans | awk '{print $1}')
+		highest_chan=$first_chan
+		for chidx in $hw_nchans; do
+			if [ "$chidx" -gt "$highest_chan" ]; then
+				highest_chan=$chidx;
+			fi
+		done
+		if [ "$2" == "$first_chan-$highest_chan" ]; then
+			break;
+		fi
+		i=$((i+1))
+	done
+
+	if [ "$i" -eq "$n_hw_idx" ]; then
+		echo ""
+	else
+		echo $i
+	fi
+}
+
 mac80211_generate_mac() {
 	local phy="$1"
 	local id="${macidx:-0}"
 	local mode="$2"
 	local device="$3"
+	local hw_idx n_hwidx
 
 	local ref="$(cat /sys/class/ieee80211/${phy}/macaddress)"
 	local mask="$(cat /sys/class/ieee80211/${phy}/address_mask)"
@@ -796,22 +859,33 @@ mac80211_generate_mac() {
 	[ "$mask" = "00:00:00:00:00:00" ] && {
 		mask="ff:ff:ff:ff:ff:ff";
 
-		[ "$(wc -l < /sys/class/ieee80211/${phy}/addresses)" -gt 1 ] && {
-			addr="$(mac80211_get_addr "$phy" "$id")"
-			[ -n "$addr" ] && {
-				echo "$addr"
-				return
+		[ $is_sphy_mband -eq 0 ] && {
+			[ "$(wc -l < /sys/class/ieee80211/${phy}/addresses)" -gt 1 ] && {
+				addr="$(mac80211_get_addr "$phy" "$id")"
+				[ -n "$addr" ] && {
+					echo "$addr"
+					return
+				}
 			}
 		}
 	}
 
 	if [ $is_sphy_mband -eq 1 ]; then
-		dev_idx=${device:11:1}
-		local ref_dec=$( printf '%d\n' $( echo "0x$ref" | tr -d ':' ) )
-		local mac_mask=$(($(($(($dev_idx << 8)) | $dev_idx))))
-		local genref="$( echo $( printf '%012x\n' $(($(($mac_mask + $ref_dec))))) \
-			| sed 's!\(..\)!\1:!g;s!:$!!' )"
+		n_hwidx=$(iw phy ${phy} info | grep -e "channel list" | wc -l)
+		if [ -n "$channel_list" ] && \
+		[ "$(wc -l < /sys/class/ieee80211/${phy}/addresses)" == "$n_hwidx" ]; then
+			hw_idx="$(mac80211_hwidx_from_channel_list "$phy" "$channel_list")"
+		fi
+		if [ -n "$hw_idx" ]; then
+			ref="$(mac80211_get_addr "$phy" "$hw_idx")"
+		else
+			dev_idx=${device:11:1}
+			local ref_dec=$( printf '%d\n' $( echo "0x$ref" | tr -d ':' ) )
+			local mac_mask=$(($(($(($dev_idx << 8)) | $dev_idx))))
+			local genref="$( echo $( printf '%012x\n' $(($(($mac_mask + $ref_dec))))) \
+				| sed 's!\(..\)!\1:!g;s!:$!!' )"
 			ref=$genref
+		fi
 	fi
 
 	local oIFS="$IFS"; IFS=":"; set -- $mask; IFS="$oIFS"
@@ -960,7 +1034,8 @@ mac80211_iw_interface_add() {
 	local phy="$1"
 	local ifname="$2"
 	local type="$3"
-	local wdsflag="$4"
+	local ppe_vp="$4"
+	local wdsflag="$5"
 	local rc
 	local oldifname
 
@@ -1019,6 +1094,7 @@ mac80211_iw_interface_add() {
 		[ "$oldifname" ] && ip link set "$oldifname" name "$ifname" 1>/dev/null 2>&1
 		rc="$?"
 	}
+	iw dev $ifname set_intf_offload type $ppe_vp
 
 	[ "$rc" != 0 ] && echo "Failed to create interface $ifname"
 	return $rc
@@ -1031,9 +1107,10 @@ mac80211_set_ifname() {
 }
 
 mac80211_prepare_vif() {
+	ppe_vp="ds"
 	json_select config
 
-	json_get_vars ifname mode ssid wds powersave macaddr enable wpa_psk_file vlan_file mld
+	json_get_vars ifname mode ssid wds powersave macaddr enable wpa_psk_file vlan_file mld ppe_vp
 	if [ $is_sphy_mband -eq 1 ]; then
 		wdev=$((${1:5:1} + ${1:11:1}))
 		config_get ht_mode $device htmode
@@ -1064,10 +1141,15 @@ mac80211_prepare_vif() {
 				break;
 			fi
 		done
-		[ -n "$ifname" ] || ifname="wlan${phy#phy}${if_idx:+-$if_idx}"
+		[ -n "$ifname" ] || ifname="wlan${phy:0-1}${if_idx:+-$if_idx}"
 	fi
 
 	if_idx=$((${if_idx:-0} + 1))
+	[ -z $ppe_vp ] && ppe_vp="ds"
+
+	if [ $mode == "mesh" ] && [ $ppe_vp == "ds" ]; then
+		ppe_vp="passive"
+	fi
 
 	set_default wds 0
 	set_default powersave 0
@@ -1095,7 +1177,7 @@ mac80211_prepare_vif() {
 	# It is far easier to delete and create the desired interface
 	case "$mode" in
 		adhoc)
-			mac80211_iw_interface_add "$phy" "$ifname" adhoc || return
+			mac80211_iw_interface_add "$phy" "$ifname" adhoc "$ppe_vp" || return
 		;;
 		ap)
 			# Hostapd will handle recreating the interface and
@@ -1106,7 +1188,7 @@ mac80211_prepare_vif() {
 				type=interface
 			fi
 
-			mac80211_hostapd_setup_bss "$phy" "$ifname" "$macaddr" "$type" || return
+			mac80211_hostapd_setup_bss "$phy" "$ifname" "$macaddr" "$type" "$mode" || return
 
 			NEWAPLIST="${NEWAPLIST}$ifname "
 			[ -n "$hostapd_ctrl" ] || {
@@ -1115,24 +1197,24 @@ mac80211_prepare_vif() {
 			}
 		;;
 		mesh)
-			mac80211_iw_interface_add "$phy" "$ifname" mp || return
+			mac80211_iw_interface_add "$phy" "$ifname" mp "$ppe_vp" || return
 		;;
 		monitor)
-			mac80211_iw_interface_add "$phy" "$ifname" monitor || return
+			mac80211_iw_interface_add "$phy" "$ifname" monitor "$ppe_vp" || return
 			NEWUMLIST="${NEWUMLIST}$ifname"
 		;;
 		sta)
 			local wdsflag=
 			[ "$enable" = 0 ] || staidx="$(($staidx + 1))"
 			if [ "$wds" -gt 0 ]; then
-				frame_mode=$(mac80211_wds_support_check "$phy")
-				if [ $frame_mode -ne 1 ]; then
-					echo WDS is supported only in native wifi mode. Kindly update the config > /dev/ttyMSM0
+				wds_support=$(mac80211_wds_support_check "$phy")
+				if [ $wds_support -ne 1 ]; then
+					echo WDS is supported only in native wifi mode for ath11k driver. Kindly update the config > /dev/ttyMSM0
 					return
 				fi
 				wdsflag="4addr on"
 			fi
-			mac80211_iw_interface_add "$phy" "$ifname" managed "$wdsflag" || return
+			mac80211_iw_interface_add "$phy" "$ifname" managed "$ppe_vp" "$wdsflag" || return
 			if [ "$wds" -gt 0 ]; then
 				iw "$ifname" set 4addr on
 			else
@@ -1585,6 +1667,7 @@ mac80211_setup_vif() {
 	local name="$1"
 	local failed
 	local action=up
+	local allow_action=0
 
 	json_select data
 	json_get_vars ifname
@@ -1596,7 +1679,15 @@ mac80211_setup_vif() {
 	json_get_var vif_enable enable 1
 
 	[ "$vif_enable" = 1 ] || action=down
-	if [ "$mode" != "ap" ] || \
+	if [ "$mode" = "sta" ]; then
+		if ["$sta_started" -eq 1 ]; then
+			allow_action=1
+		fi
+	elif [ "$mode" != "ap" ]; then
+		allow_action=1
+	fi
+
+	if [ "$allow_action" -eq 1 ] || \
 	   ( [ "$ifname" = "$ap_ifname" ] && \
 	     ( [[ "$mode" = "ap" ]] && [ "$hostapd_started" -eq 1 ] ) ); then
 		ip link set dev "$ifname" "$action" || {
@@ -1649,6 +1740,7 @@ mac80211_setup_vif() {
                             [ "$sta_vaps_count" -gt 1 ] && [ "$sta_radio" -gt 1 ]); then
                                 #Keep count of the links to be supported before the supplicant is started
                                 touch /var/run/wpa_supplicant-$device-updated-cfg
+				echo freq_list=$freq_list > /var/run/wpa_supplicant-$device-updated-cfg
                                 sta_cfg_updated=$(ls /var/run/wpa_supplicant-*-updated-cfg | wc -l)
                                 if [ -n "$freq_list" ]; then
                                         if [ -f  "/tmp/${mld}_freq_list" ]; then
@@ -1665,8 +1757,6 @@ mac80211_setup_vif() {
                                 if [ "$sta_cfg_updated" = "$sta_radio" ]; then
                                         mac80211_setup_supplicant || failed=1
                                         sta_started=1
-					rm -rf /var/run/wpa_supplicant-*-updated-cfg
-					rm -rf /tmp/*_freq_list
                                 fi
                         else
                                 mac80211_setup_supplicant || failed=1
@@ -1756,6 +1846,13 @@ mac80211_vap_cleanup() {
 			continue;
 		fi
 
+		## PPE expects interface to be removed from the bridge
+		## before issuing ppe_vp_free from driver cleanup
+		bridge_name=$(ip link show $wdev | awk '/master/ {print $9}')
+		if [ -n "$bridge_name" ]; then
+			echo "brctl delif $bridge_name $wdev" > /dev/console
+			brctl delif $bridge_name $wdev 2>/dev/null
+		fi
 		case $service in
 			"hostapd")
 				if ( [ -f "/var/run/hostapd-${wdev}.lock" ] || \
@@ -1766,10 +1863,10 @@ mac80211_vap_cleanup() {
 					rm -rf /var/run/hostapd-${4}.lock
 				fi
 
-				if [ -f "/var/run/wifi-$device.pid" ]; then
-					pid=$(cat /var/run/wifi-$device.pid)
+				if [ -f "/var/run/wifi-$phy.pid" ]; then
+					pid=$(cat /var/run/wifi-$phy.pid)
 					kill -15 $pid
-					rm -rf  /var/run/wifi-$device.pid
+					rm -rf  /var/run/wifi-$phy.pid
 					rm /var/run/hostapd/w*
 				fi
 			;;
@@ -1820,38 +1917,12 @@ drv_mac80211_cleanup() {
 	hostapd_common_cleanup
 }
 
-mac80211_update_bondif() {
-	local iflist
-	config_load wireless
-	mac80211_get_wifi_mlds() {
-		append _mlds $1
-	}
+drv_mac80211_radio_count() {
+        local config="$1"
+        local count="$2"
 
-	config_foreach mac80211_get_wifi_mlds wifi-mld
-
-	if [ -z "$_mlds" ]; then
-		return
-	fi
-	for _mld in $_mlds
-	do
-		config_get mld_ifname "$_mld" ifname
-		config_get is_bonded "$_mld" bonded
-		mac80211_export_mld_info
-		#Check if ppe_ds_enable is set and then update the bondif
-		if ([ $mld_vaps_count -ge 2 ] && [ -n $mld_ifname ]); then
-			cmd="ls /sys/class/net"
-			iface=$($cmd | grep "$mld_ifname"_b)
-			if ([ -d /sys/class/net/"$mld_ifname"_b ] && [ -n $network_bridge ]); then
-				bonded_macaddr=$(iw dev $mld_ifname info | grep addr | head -1 | awk '{print $2}')
-				brctl delif $network_bridge $mld_ifname
-				brctl addif $network_bridge "$mld_ifname"_b
-				ifconfig "$mld_ifname"_b down
-				ifconfig "$mld_ifname"_b hw ether $bonded_macaddr
-				ifconfig "$mld_ifname"_b up
-			fi
-		fi
-	done
-	return
+        config_get disabled "$config" disabled
+        [ "$disabled" -eq 0 ] && radio_up_count=$((radio_up_count+1))
 }
 
 drv_mac80211_setup() {
@@ -1889,6 +1960,37 @@ drv_mac80211_setup() {
 		wireless_set_retry 1
 		return 1
 	}
+
+	OLDAPLIST=$(uci -q -P /var/state get wireless.${device}.aplist)
+	if [ -n "$OLDAPLIST" ]; then
+		mac80211_vap_ceanup hostapd "${OLDAPLIST}"
+		uci -q -P /var/state revert wireless.${device}
+		wireless_set_retry 1
+		return 1
+	fi
+
+	[ -f $WIFI_STATE_FILE ] && echo 1 > $WIFI_STATE_FILE
+
+	if [ $(cat /sys/module/ath12k/parameters/ppe_rfs_support) == 'Y' ]; then
+		# Note: ppe_vp_accel and ppe_vp_rfs are mutually exclusive.
+		#       ppe_vp_accel enables PPE acceleration path and ppe_vp_rfs
+		#       is expected to enable only flow steering for VLAN type
+		#       interface (eg: WDS root).
+		echo 1 >> /sys/module/mac80211/parameters/ppe_vp_rfs
+		# Note: Format is default MLO mask followed by band specific core masks
+		#	in order of 2 GHz, 5 GHz and 6GHz bands
+		#	echo <DEFAULT/ MLO MASK>,<2GHZ MASK>,<5GHZ MASK>,<6GHZ_MASK>
+		echo 0x7,0x7,0x7,0x7 > /sys/module/ath12k/parameters/rfs_core_mask
+
+		if [ $(cat /sys/module/mac80211/parameters/ppe_vp_accel) == 'Y' ]; then
+			echo "ppe_vp_accel is enabled. Please disable to support RFS on WDS" > /dev/ttyMSM0
+		fi
+
+		if echo "$(cat /sys/sfe/ppe_rfs_feature)" | grep -q "disabled"; then
+			echo 1 >> /sys/sfe/ppe_rfs_feature
+			echo "enabled ppe_rfs_feature" > /dev/ttyMSM0
+		fi
+	fi
 
 	wireless_set_data phy="$phy"
 	[ -z "$(uci -q -P /var/state show wireless._${phy})" ] && uci -q -P /var/state set wireless._${phy}=phy
@@ -1994,8 +2096,6 @@ drv_mac80211_setup() {
 	NEW_MD5=$(test -e "${hostapd_conf_file}" && md5sum ${hostapd_conf_file})
 	OLD_MD5=$(uci -q -P /var/state get wireless._${phy}.md5)
 
-	mac80211_vap_cleanup hostapd "${OLDAPLIST}"
-
 	NEWSTALIST=
 	NEWUMLIST=
 	for_each_interface "sta adhoc mesh monitor" mac80211_prepare_vif ${device}
@@ -2046,81 +2146,97 @@ drv_mac80211_setup() {
 		if [ "$is_sphy_mband" -eq 1 ]; then
 			dev_wlan="wlan$((${device:5:1} + ${device:11:1}))"
 		else
-			dev_wlan="wlan${phy#phy}"
+			dev_wlan="wlan${phy:0-1}"
 		fi
-
-		if [ -z "$is_sphy_mband" ] || [ "$hostapd_add_bss" -eq 1 ]; then
-			[ -f "/var/run/hostapd-$dev_wlan.lock" ] && rm /var/run/hostapd-$dev_wlan.lock
-			# let hostapd manage interface $dev_wlan
-			hostapd_cli -iglobal raw ADD bss_config=$dev_wlan:$hostapd_conf_file
-			touch /var/run/hostapd-$dev_wlan.lock
-		else
-			if [ -f "/var/run/wifi-$device.pid" ]; then
-				return
-			fi
+		[ -f "/var/run/hostapd-updated-cfg" ] || touch -f "/var/run/hostapd-updated-cfg"
+		if [ -f "/var/run/hostapd-updated-cfg" ]; then
+			exec 200>"/var/run/hostapd-updated-cfg"
+			flock 200
 			touch /var/run/hostapd-$device-updated-cfg
 			hostapd_cfg_updated=$(ls /var/run/hostapd-*-updated-cfg | wc -l)
-		
-			if [ "$hostapd_cfg_updated" = "$radio_up_count" ]; then
-				bands_info=$(ls /var/run/hostapd*updated-cfg | grep -o band.)
-				for __band in $bands_info
-				do
-					append  config_files /var/run/hostapd-phy${phy#phy}_${__band}.conf
-				done
-				#MLO vaps, single instance of hostapd is started
-				/usr/sbin/hostapd -B -P /var/run/wifi-"$device".pid $config_files
-				ret="$?"
 
-				if [ "$band" = "5g" ]; then
-					interf_dfs="$(cat /var/run/hostapd-${phy}_band${device:11:1}.conf | grep interface | grep wlan | cut -d'=' -f 2 )"
-					iw dev $interf_dfs info 2> /dev/null
-					ifret="$?"
-				fi
-				if [ "$band" = "5g" -a "$ifret" -eq 0 ]; then
-					config_get ht_mode $device htmode
+			if [ -z "$is_sphy_mband" ] || [ "$hostapd_add_bss" -eq 1 ]; then
+				[ -f "/var/run/hostapd-$dev_wlan.lock" ] && rm /var/run/hostapd-$dev_wlan.lock
+				# let hostapd manage interface $dev_wlan
+				hostapd_cli -iglobal raw ADD bss_config=$dev_wlan:$hostapd_conf_file
+				touch /var/run/hostapd-$dev_wlan.lock
 
-					if ([ -n "$ht_mode" ] && [[ $ht_mode == "EHT"* ]]); then
-						#Wait until link ids are filled, hostapd_cli command can give empty output in starting.
-						while [ -z "$link_ids" ]; do
-							link_ids="$(hostapd_cli -i $interf_dfs status | grep link_id= | cut -d'=' -f 2)"
-						done
-					fi
-					if [ -n "$link_ids" ]; then
-						for i in $link_ids
-						do
-							interf_state="$(hostapd_cli -i $interf_dfs -l $i status | grep state | cut -d'=' -f 2)"
-							if [ "$interf_state" = "DFS" ]; then
-								link=$i
-							fi
-						done
-					fi
-					while true;
-					do
-						if [ -n "$link" ]; then
-							hostapd_state="$(hostapd_cli -i $interf_dfs -l $link status 2> /dev/null | grep state | cut -d'=' -f 2)"
-						else
-							hostapd_state="$(hostapd_cli -i $interf_dfs status 2> /dev/null | grep state | cut -d'=' -f 2)"
-						fi
-						if [ "$hostapd_state" = "ENABLED" ]; then
-							wireless_add_process "$(cat /var/run/wifi-"$device".pid)" "/usr/sbin/hostapd" 1
-							[ "$ret" != 0 ] && {
-							wireless_setup_failed HOSTAPD_START_FAILED
-							return
-							}
-							break;
-						fi
-
-					done
-				else
-					wireless_add_process "$(cat /var/run/wifi-"$device".pid)" "/usr/sbin/hostapd" 1
-					[ "$ret" != 0 ] && {
-						wireless_setup_failed HOSTAPD_START_FAILED
-						return
-					}
+				config_foreach drv_mac80211_radio_count wifi-device
+				if [ "$hostapd_cfg_updated" = "$radio_up_count" ]; then
+					[ -f $WIFI_STATE_FILE ] && echo 2 > $WIFI_STATE_FILE
 				fi
 			else
-				hostapd_started=0
+				if [ -f "/var/run/wifi-$phy.pid" ]; then
+					return
+				fi
+				touch /var/run/hostapd-mld-$device-updated-cfg
+				hostapd_cfg_updated=$(ls /var/run/hostapd-mld-*-updated-cfg | wc -l)
+				if [ "$hostapd_cfg_updated" = "$radio_up_count" ]; then
+					bands_info=$(ls /var/run/hostapd-mld-*-updated-cfg | grep -o band.)
+					for __band in $bands_info
+					do
+						append  config_files /var/run/hostapd-phy${phy#phy}_${__band}.conf
+					done
+					#MLO vaps, single instance of hostapd is started
+					/usr/sbin/hostapd -B -P /var/run/wifi-"$phy".pid $config_files
+					ret="$?"
+
+					[ -f $WIFI_STATE_FILE -a "$ret" -eq 0 ] && echo 2 > $WIFI_STATE_FILE
+
+					if [ "$band" = "5g" ]; then
+						interf_dfs="$(cat /var/run/hostapd-${phy}_band${device:11:1}.conf | grep interface | grep wlan | cut -d'=' -f 2 )"
+						iw dev $interf_dfs info 2> /dev/null
+						ifret="$?"
+					fi
+					if [ "$band" = "5g" -a "$ifret" -eq 0 ]; then
+						config_get ht_mode $device htmode
+
+						if ([ -n "$ht_mode" ] && [[ $ht_mode == "EHT"* ]]); then
+							#Wait until link ids are filled, hostapd_cli command can give empty output in starting.
+							while [ -z "$link_ids" ]; do
+								link_ids="$(hostapd_cli -i $interf_dfs status | grep link_id= | cut -d'=' -f 2)"
+							done
+						fi
+						if [ -n "$link_ids" ]; then
+							for i in $link_ids
+							do
+								interf_state="$(hostapd_cli -i $interf_dfs -l $i status | grep state | cut -d'=' -f 2)"
+								if [ "$interf_state" = "DFS" ]; then
+									link=$i
+								fi
+							done
+						fi
+						while true;
+						do
+							if [ -n "$link" ]; then
+								hostapd_state="$(hostapd_cli -i $interf_dfs -l $link status 2> /dev/null | grep state | cut -d'=' -f 2)"
+							else
+								hostapd_state="$(hostapd_cli -i $interf_dfs status 2> /dev/null | grep state | cut -d'=' -f 2)"
+							fi
+							if [ "$hostapd_state" = "ENABLED" ]; then
+								wireless_add_process "$(cat /var/run/wifi-"$phy".pid)" "/usr/sbin/hostapd" 1
+								[ "$ret" != 0 ] && {
+								wireless_setup_failed HOSTAPD_START_FAILED
+								return
+								}
+								update_primary_link
+								break;
+							fi
+
+						done
+					else
+						wireless_add_process "$(cat /var/run/wifi-"$phy".pid)" "/usr/sbin/hostapd" 1
+						[ "$ret" != 0 ] && {
+							wireless_setup_failed HOSTAPD_START_FAILED
+							return
+						}
+						update_primay_link
+					fi
+				else
+					hostapd_started=0
+				fi
 			fi
+			flock -u 200
 		fi
 		hostapd_dpp_action $ifname
 
@@ -2186,12 +2302,6 @@ drv_mac80211_setup() {
 		. /lib/performance.sh
 	}
 	for_each_interface "ap mesh" mac80211_set_fq_limit
-	#Check if ppe_ds_enable is set and then update the bondif
-	if [ $(cat /sys/module/ath12k/parameters/ppe_ds_enable) -eq 1 ]; then
-		mac80211_update_bondif
-	fi
-
-
 }
 
 _list_phy_interfaces() {
@@ -2220,6 +2330,7 @@ drv_mac80211_teardown() {
 		echo "Bug: PHY is undefined for device '$1'"
 		return 1
 	}
+	[ -f $WIFI_STATE_FILE ] && echo 0 > $WIFI_STATE_FILE
 	device=$1
 	mac80211_interface_cleanup "$phy" "$1"
 	uci -q -P /var/state revert wireless.${device}
@@ -2235,6 +2346,7 @@ mac80211_update_mld_iface_config() {
 	config_get mld_encryption "$mld_name" encryption
 	config_get mld_key "$mld_name" key
 	config_get mld_sae "$mld_name" sae_pwe
+	config_get mld_vp "$mld_name" ppe_vp
 
 	json_get_keys _ifaces interfaces
 	json_select interfaces
@@ -2258,6 +2370,10 @@ mac80211_update_mld_iface_config() {
 			if [ -n "$mld_sae" ]; then
 				json_add_int "sae_pwe" "$mld_sae"
 				uci_set wireless "$vif_name" sae_pwe "$mld_sae"
+			fi
+			if [ -n "$mld_vp" ]; then
+				json_add_string "ppe_vp" "$mld_vp"
+				uci_set wireless "$vif_name" ppe_vp "$mld_vp"
 			fi
 		fi
 		json_select ..
@@ -2283,6 +2399,7 @@ mac80211_update_mld_configs() {
 		config_get ml_device $name device
 		config_get ht_mode $ml_device htmode
 		if ([ -n "$ht_mode" ] && [[ $ht_mode == "EHT"* ]]  && [ -n "$mld_name" ]); then
+			append mld_names $mld_name
 			mac80211_update_mld_iface_config $name $mld_name
 		fi
 	done
@@ -2468,6 +2585,27 @@ get_sta_freq_list() {
 			fi
 		done
 	done
+}
+
+update_primary_link ()
+{
+        if [ -n "$mld_names" ]; then
+                for mld_iface in $mld_names; do
+                        config_get mld_primary_link "$mld_iface" primary_link
+                        config_get mld_ifname "$mld_iface" ifname
+                        if [ -n "$mld_primary_link" ]; then
+                                while true;
+                                do
+                                        ifname_state="$(hostapd_cli -i $mld_ifname status 2> /dev/null | grep state | cut -d'=' -f 2)"
+                                        if [ "$ifname_state" = "ENABLED" ]; then
+                                                echo "$mld_primary_link" > /sys/kernel/debug/ieee80211/phy${phy#phy}/netdev:$mld_ifname/primary_link
+                                                break;
+                                        fi
+                                done
+                        fi
+                done
+        fi
+
 }
 
 add_driver mac80211

@@ -1,0 +1,40 @@
+From c29e0cffb2f202489b06e63284ce20c17fd46670 Mon Sep 17 00:00:00 2001
+From: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
+Date: Thu, 22 Feb 2024 15:29:24 +0530
+Subject: [PATCH] iw: Add power mode to print_iface_handler
+
+Display the power mode in the output of "iw dev" command.
+The power mode is obtained from the driver through
+NL80211_CMD_GET_INTERFACE. Power mode is applicable only for 6 GHz,
+and it is not applicable for 2 GHz and 5 GHz (it will be 0).
+
+Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
+---
+ interface.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/interface.c b/interface.c
+index 10b98d9..3aacc97 100644
+--- a/interface.c
++++ b/interface.c
+@@ -396,6 +396,7 @@ static void print_channel_txpower(struct nlattr *tb_msg[], const char *space)
+ 		 printf("\t\t%stxpower %d.%.2d dBm\n", space,
+ 			txp / 100, txp % 100);
+ 	}
++
+ }
+ 
+ static int print_iface_handler(struct nl_msg *msg, void *arg)
+@@ -441,6 +442,9 @@ static int print_iface_handler(struct nl_msg *msg, void *arg)
+ 		printf("%s\ttype %s\n", indent, iftype_name(nla_get_u32(tb_msg[NL80211_ATTR_IFTYPE])));
+ 	if (!wiphy && tb_msg[NL80211_ATTR_WIPHY])
+ 		printf("%s\twiphy %d\n", indent, nla_get_u32(tb_msg[NL80211_ATTR_WIPHY]));
++	if (tb_msg[NL80211_ATTR_6G_REG_POWER_MODE])
++		printf("%s\tPower mode: %d\n", indent,
++		       nla_get_u8(tb_msg[NL80211_ATTR_6G_REG_POWER_MODE]));
+ 	if (tb_msg[NL80211_ATTR_MLO_LINKS]) {
+ 		int ret = 0;
+ 		nla_for_each_nested(attrs, tb_msg[NL80211_ATTR_MLO_LINKS], ret) {
+-- 
+2.34.1
+

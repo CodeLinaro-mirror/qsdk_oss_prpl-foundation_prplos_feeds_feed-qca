@@ -17,7 +17,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -3004,11 +3004,11 @@ static void ath12k_core_reset(struct wor
+@@ -2987,11 +2987,12 @@ static void ath12k_core_reset(struct wor
  			default:
  				ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
  		}
@@ -26,12 +26,13 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	} else {
  		ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
  	}
-+       ath12k_info(ab, "Recovery is initiated with Mode%s\n",
-+                   (ag->recovery_mode == ATH12K_MLO_RECOVERY_MODE0 ? "0" : "1"));
++	if (ab->fw_recovery_support)
++		ath12k_info(ab, "Recovery is initiated with Mode%s\n",
++			   (ag->recovery_mode == ATH12K_MLO_RECOVERY_MODE0 ? "0" : "1"));
  
  	/* Sometimes the recovery will fail and then the next all recovery fail,
  	 * this is to avoid infinite recovery since it can not recovery success.
-@@ -3109,6 +3109,7 @@ static void ath12k_core_reset(struct wor
+@@ -3092,6 +3093,7 @@ static void ath12k_core_reset(struct wor
  				 */
  				ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
  			}
@@ -39,7 +40,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		}
  	}
  
-@@ -3118,6 +3119,7 @@ static void ath12k_core_reset(struct wor
+@@ -3101,6 +3103,7 @@ static void ath12k_core_reset(struct wor
  			/* Fallback to Mode0 if umac reset/peer_cleanup is
  			 * failed */
  			ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
@@ -47,7 +48,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		} else {
  			/* wake queues here as ping should continue for
  			 * legacy clients in non-asserted chipsets
-@@ -3128,6 +3130,8 @@ static void ath12k_core_reset(struct wor
+@@ -3111,6 +3114,8 @@ static void ath12k_core_reset(struct wor
  					continue;
  
  				ieee80211_wake_queues(ah->hw);
@@ -56,7 +57,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			}
  		}
  	}
-@@ -3143,9 +3147,7 @@ static void ath12k_core_reset(struct wor
+@@ -3126,9 +3131,7 @@ static void ath12k_core_reset(struct wor
  		 */
  		if (ag->recovery_mode == ATH12K_MLO_RECOVERY_MODE0 &&
  		    !test_bit(ATH12K_FLAG_RECOVERY, &partner_ab->dev_flags)) {
@@ -64,12 +65,12 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 -				"sending fw_hang cmd ar:%p\n",
 -				partner_ab->pdevs[0].ar);
 +			ath12k_info(ab, "sending fw_hang cmd to partner chipset(s)\n");
+ 			clear_bit(ATH12K_FLAG_UMAC_RECOVERY_START, &partner_ab->dev_flags);
+ 			partner_ab->qmi.num_radios = ATH12K_QMI_INVALID_RADIO;
  			ath12k_wmi_force_fw_hang_cmd(partner_ab->pdevs[0].ar,
- 						     ATH12K_WMI_FW_HANG_ASSERT_TYPE,
- 						     ATH12K_WMI_FW_HANG_DELAY, true);
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -801,6 +801,7 @@ enum ath12k_ap_ps_state {
+@@ -809,6 +809,7 @@ enum ath12k_ap_ps_state {
  enum ath12k_fw_recovery_option {
  	 ATH12K_FW_RECOVERY_DISABLE = 0,
  	 ATH12K_FW_RECOVERY_ENABLE_AUTO, /* Automatically recover after FW assert */
@@ -77,7 +78,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	 /* Enable only recovery. Send MPD SSR WMI */
  	 /* command to unlink UserPD assert from RootPD */
  	 ATH12K_FW_RECOVERY_ENABLE_SSR_ONLY,
-@@ -1416,7 +1417,7 @@ struct ath12k_base {
+@@ -1427,7 +1428,7 @@ struct ath12k_base {
  
  	struct completion htc_suspend;
  
@@ -88,7 +89,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	u64 fw_dbglog_val;
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -1943,6 +1943,7 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -1958,6 +1958,7 @@ static ssize_t ath12k_debug_write_fw_rec
  	struct ath12k_pdev *pdev;
  	struct ath12k_hw_group *ag;
  	unsigned int value;
@@ -96,7 +97,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	int ret, radio_idx, radioup = 0;
  	int i;
  
-@@ -1951,8 +1952,8 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -1966,8 +1967,8 @@ static ssize_t ath12k_debug_write_fw_rec
  
  	if (value < ATH12K_FW_RECOVERY_DISABLE ||
  	    value > ATH12K_FW_RECOVERY_ENABLE_SSR_ONLY) {
@@ -107,7 +108,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	         ret = -EINVAL;
  	         goto exit;
  	}
-@@ -1960,9 +1961,9 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -1975,9 +1976,9 @@ static ssize_t ath12k_debug_write_fw_rec
  	ag = ab->ag;
  
  	if (!value)
@@ -119,7 +120,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			ATH12K_WMI_FW_HANG_RECOVERY_MODE1 :
  			ATH12K_WMI_FW_HANG_RECOVERY_MODE0;
  
-@@ -1970,7 +1971,7 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -1985,7 +1986,7 @@ static ssize_t ath12k_debug_write_fw_rec
  		for (i = 0; i < ag->num_chip; i++) {
  			ab = ag->ab[i];
  			mutex_lock(&ab->core_lock);
@@ -128,7 +129,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			mutex_unlock(&ab->core_lock);
  
  			/*
-@@ -1992,9 +1993,9 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -2007,9 +2008,9 @@ static ssize_t ath12k_debug_write_fw_rec
  
  				if (radioup) {
  					ret = ath12k_wmi_force_fw_hang_cmd(ar,

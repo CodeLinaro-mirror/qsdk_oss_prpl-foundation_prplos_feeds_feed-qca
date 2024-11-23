@@ -19,12 +19,13 @@ PKG_SOURCE:=backports-$(PKG_VERSION).tar.xz
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/backports-$(PKG_VERSION)
 PKG_BUILD_PARALLEL:=1
 
+MKHASH ?= $(STAGING_DIR_HOST)/bin/mkhash
+PKG_BUILD_ID:=$(shell date | $(MKHASH) md5)
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 PKG_DRIVERS = \
 	mac80211-qca-hwsim \
 	mt7601u
-
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_kmod-mac80211-qca \
 	CONFIG_PACKAGE_CFG80211_TESTMODE \
@@ -157,6 +158,13 @@ define KernelPackage/mac80211-qca/config
 		  This option enables support for qca sfe in QCA boards
      endif
 
+	config PACKAGE_MAC80211_ATHMEMDEBUG
+		bool "Enable memory debug support"
+		default n
+		help
+		  This option enables ATH memory debug support.
+
+
 	config PACKAGE_MAC80211_DEBUGFS
 		bool "Export mac80211 internals in DebugFS"
 		select KERNEL_DEBUG_FS
@@ -275,7 +283,7 @@ endif
 
 config-$(CONFIG_PACKAGE_MAC80211_NSS_SUPPORT) += MAC80211_NSS_SUPPORT
 config-$(CONFIG_PACKAGE_MAC80211_PPE_SUPPORT) += MAC80211_PPE_SUPPORT
-config-$(CONFIG_PACKAGE_MAC80211_DS_SUPPORT) += MAC80211_BONDED_SUPPORT ATH12K_PPE_DS_SUPPORT ATH12K_BONDED_DS_SUPPORT
+config-$(CONFIG_PACKAGE_MAC80211_DS_SUPPORT) += ATH12K_PPE_DS_SUPPORT MAC80211_DS_SUPPORT
 config-$(CONFIG_PACKAGE_MAC80211_SFE_SUPPORT) += MAC80211_SFE_SUPPORT
 config-$(CONFIG_PACKAGE_MAC80211_MESSAGE_TRACING) += MAC80211_MESSAGE_TRACING ATH10K_TRACING ATH11K_TRACING ATH12K_TRACING
 config-$(CONFIG_PACKAGE_MAC80211_DEBUG_MENU) += MAC80211_DEBUG_MENU
@@ -285,6 +293,7 @@ config-$(CONFIG_PACKAGE_MAC80211_STA_DEBUG) += MAC80211_STA_DEBUG
 config-$(CONFIG_PACKAGE_MAC80211_HT_DEBUG) += MAC80211_HT_DEBUG
 config-$(CONFIG_PACKAGE_MAC80211_IBSS_DEBUG) += MAC80211_IBSS_DEBUG
 config-$(CONFIG_PACKAGE_MAC80211_PS_DEBUG) += MAC80211_PS_DEBUG
+config-$(CONFIG_PACKAGE_MAC80211_ATHMEMDEBUG) += MAC80211_ATHMEMDEBUG
 
 
 config-$(call config_package,mac80211-qca-hwsim) += MAC80211_HWSIM
@@ -419,6 +428,8 @@ endef
 define KernelPackage/ath-qca/install
 	$(INSTALL_DIR) $(STAGING_DIR)/usr/include/
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_sawf.h $(STAGING_DIR)/usr/include/
+	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_fse.h $(STAGING_DIR)/usr/include/
+	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_dp_accel_cfg.h $(STAGING_DIR)/usr/include/
 endef
 
 define KernelPackage/ath11k-qca/install

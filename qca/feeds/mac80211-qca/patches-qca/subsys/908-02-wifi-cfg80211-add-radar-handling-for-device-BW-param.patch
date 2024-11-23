@@ -115,7 +115,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  					    u32 bandwidth,
 --- a/net/wireless/mlme.c
 +++ b/net/wireless/mlme.c
-@@ -960,6 +960,67 @@ void cfg80211_dfs_channels_update_work(s
+@@ -960,6 +960,70 @@ void cfg80211_dfs_channels_update_work(s
  				   next_time);
  }
  
@@ -133,6 +133,9 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +
 +	for (freq = start_freq, i = 0; freq <= end_freq; i++, freq += MHZ_TO_KHZ(20)) {
 +		c = ieee80211_get_channel_khz(wiphy, freq);
++		if (!c)
++			continue;
++
 +		if (c->dfs_state == NL80211_DFS_UNAVAILABLE) {
 +			chandef->radar_bitmap &= ~BIT(i);
 +			nop_in_progress = true;
@@ -183,7 +186,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  void __cfg80211_radar_event(struct wiphy *wiphy,
  			    struct cfg80211_chan_def *chandef,
-@@ -967,6 +1028,11 @@ void __cfg80211_radar_event(struct wiphy
+@@ -967,6 +1031,11 @@ void __cfg80211_radar_event(struct wiphy
  {
  	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
  
@@ -197,7 +200,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	/* only set the chandef supplied channel to unavailable, in
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -4236,6 +4236,11 @@ int nl80211_send_chandef(struct sk_buff
+@@ -4232,6 +4232,11 @@ int nl80211_send_chandef(struct sk_buff
  	if (nla_put_u16(msg, NL80211_ATTR_RADAR_BITMAP, chandef->radar_bitmap))
  		return -ENOBUFS;
  

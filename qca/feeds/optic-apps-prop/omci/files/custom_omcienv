@@ -1,0 +1,44 @@
+# file used to customize /etc/omci/omcienv.xml by cutome_omcienv.sh
+
+cfm_enable 0
+cfm_y1731_enable 0
+cfm_reverse_mep_direction 0
+
+anig_type 4
+anig_devport 0
+anig_devaddr0 0x50
+voip_enable 0
+app_wifi_if none
+classf_veip_hw_nat 0
+cf_statistic_enable 0
+
+
+# custom for 2511: uni=b0(2511 has 1 uni), pon=b5, cpu=b6, wifi=b8
+sw_logical_port_uni_mask 0x1f
+sw_logical_port_cpu_mask 0x40
+sw_logical_port_wifi_mask 0x0
+sw_logical_port_wan_id 5
+sw_br_allowed_srcmask 0x5f
+sw_rt_allowed_srcmask 0x5f
+rldp_enable 0
+rldp_def_portmask 0
+
+mib_rw_mode 2
+olt_vendor_config_change 0
+omci_tx_crc_type 1
+tag_pbit_workaround 0
+cf_ds_gem_dg 0
+app_trap_if iftrap
+cf_et_combine 0
+cf_add_default_rules 0
+cf_dropping_rules_add 1
+cf_ds_unmatch 1
+cf_ds_mc_force_strip 0
+pseudo_image_info 1
+igmp_v1_ignore 1
+
+tag_iphost_vid_map 4089,4096,4096,4096
+tag_veip_vid_map 4093,4096
+
+swdl_script /etc/omci/script/misc/sw_download.sh
+swdl_image_name /tmp/run/swimage/swimage.bin

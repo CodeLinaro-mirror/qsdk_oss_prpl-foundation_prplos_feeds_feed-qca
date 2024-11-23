@@ -62,7 +62,7 @@
 +	return conf;
 +}
 +
-+static int hostapd_ctrl_iface_update(struct hostapd_data *hapd, char *txt)
++static void hostapd_ctrl_iface_update(struct hostapd_data *hapd, char *txt)
 +{
 +	struct hostapd_config * (*config_read_cb)(const char *config_fname);
 +	struct hostapd_iface *iface = hapd->iface;

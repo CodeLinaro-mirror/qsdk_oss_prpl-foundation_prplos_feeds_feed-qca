@@ -28,7 +28,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4802,6 +4802,8 @@ static int hostapd_config_fill(struct ho
+@@ -4804,6 +4804,8 @@ static int hostapd_config_fill(struct ho
  		conf->punct_acs_threshold = val;
  	} else if (os_strcmp(buf, "mld_ap") == 0) {
  		bss->mld_ap = !!atoi(pos);
@@ -52,10 +52,10 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  # Require IEEE 802.1X authorization
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -954,6 +954,7 @@ struct hostapd_bss_config {
+@@ -953,6 +953,7 @@ struct hostapd_bss_config {
+ 
  	/* The MLD ID to which the AP MLD is affiliated with */
  	u8 mld_id;
- 	bool is_bonded_iface_enabled;
 +	u8 disable_eml_cap;
  #endif /* CONFIG_IEEE80211BE */
  	enum {
@@ -93,7 +93,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  			     size_t elem_len);
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -4631,6 +4631,8 @@ static int add_associated_sta(struct hos
+@@ -4629,6 +4629,8 @@ static int add_associated_sta(struct hos
  	int set = 1;
  	const u8 *mld_link_addr = NULL;
  	bool mld_link_sta = false;
@@ -102,7 +102,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  #ifdef CONFIG_IEEE80211BE
  	if (hapd->conf->mld_ap && sta->mld_info.mld_sta) {
-@@ -4641,6 +4643,9 @@ static int add_associated_sta(struct hos
+@@ -4639,6 +4641,9 @@ static int add_associated_sta(struct hos
  
  		if (hapd->mld_link_id != sta->mld_assoc_link_id)
  			set = 0;
@@ -112,7 +112,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -4735,7 +4740,8 @@ static int add_associated_sta(struct hos
+@@ -4733,7 +4738,8 @@ static int add_associated_sta(struct hos
  			    sta->vht_opmode, sta->p2p_ie ? 1 : 0,
  			    set, mld_link_addr, mld_link_sta,
  			    sta->flags & WLAN_STA_EHT? sta->eht_240mhz_capab : NULL,
@@ -124,7 +124,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  			       "Could not %s STA to kernel driver",
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -574,11 +574,16 @@ u8 * hostapd_eid_eht_basic_ml(struct hos
+@@ -575,11 +575,16 @@ u8 * hostapd_eid_eht_basic_ml(struct hos
  	control = MULTI_LINK_CONTROL_TYPE_BASIC |
  		BASIC_MULTI_LINK_CTRL_PRES_LINK_ID |
  		BASIC_MULTI_LINK_CTRL_PRES_BSS_PARAM_CH_COUNT |
@@ -142,7 +142,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	if (include_mld_id) {
  		/* AP MLD ID */
  		control |= BASIC_MULTI_LINK_CTRL_PRES_AP_MLD_ID;
-@@ -598,9 +603,11 @@ u8 * hostapd_eid_eht_basic_ml(struct hos
+@@ -599,9 +604,11 @@ u8 * hostapd_eid_eht_basic_ml(struct hos
  	/* Currently hard code the BSS Parameters Change Count to 0x1 */
  	wpabuf_put_u8(buf, 0x1);
  
@@ -157,7 +157,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  	wpa_printf(MSG_DEBUG, "MLD: MLD Capabilities and Operations=0x%x",
  		   hapd->iface->mld_mld_capa);
-@@ -768,6 +775,10 @@ size_t hostapd_eid_eht_basic_ml_len(stru
+@@ -769,6 +776,10 @@ size_t hostapd_eid_eht_basic_ml_len(stru
  	len += 2;
  	/* Common info len for Basic MLE */
  	len += MLE_COMMON_INFO_LEN;
@@ -170,7 +170,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
 --- a/src/ap/sta_info.c
 +++ b/src/ap/sta_info.c
-@@ -1657,6 +1657,8 @@ int ap_sta_re_add(struct hostapd_data *h
+@@ -1660,6 +1660,8 @@ int ap_sta_re_add(struct hostapd_data *h
  {
  	const u8 *mld_link_addr = NULL;
  	bool mld_link_sta = false;
@@ -179,7 +179,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  	/*
  	 * If a station that is already associated to the AP, is trying to
-@@ -1672,6 +1674,8 @@ int ap_sta_re_add(struct hostapd_data *h
+@@ -1675,6 +1677,8 @@ int ap_sta_re_add(struct hostapd_data *h
  
  		mld_link_sta = sta->mld_assoc_link_id != mld_link_id;
  		mld_link_addr = sta->mld_info.links[mld_link_id].peer_addr;
@@ -188,7 +188,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -1684,7 +1688,8 @@ int ap_sta_re_add(struct hostapd_data *h
+@@ -1687,7 +1691,8 @@ int ap_sta_re_add(struct hostapd_data *h
  			    sta->supported_rates_len,
  			    0, NULL, NULL, NULL, 0, NULL, 0, NULL,
  			    sta->flags, 0, 0, 0, 0,
@@ -200,7 +200,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  			       HOSTAPD_LEVEL_NOTICE,
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2611,6 +2611,8 @@ struct hostapd_sta_add_params {
+@@ -2609,6 +2609,8 @@ struct hostapd_sta_add_params {
  	const u8 *mld_link_addr;
  	const struct ieee80211_240mhz_vendor_oper *eht_240mhz_capab;
  	size_t eht_240mhz_len;
@@ -211,7 +211,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  struct mac_address {
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5860,6 +5860,20 @@ static int wpa_driver_nl80211_sta_add(vo
+@@ -5888,6 +5888,20 @@ static int wpa_driver_nl80211_sta_add(vo
  			goto fail;
  	}
  

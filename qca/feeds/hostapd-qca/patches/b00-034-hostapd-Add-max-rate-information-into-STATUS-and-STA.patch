@@ -8,11 +8,9 @@ Date:   Thu Dec 6 15:17:46 2018 +0800
     These allow external programs to get max MCS, max nss, and rate
     information of an interface or a STA.
 
-diff --git a/src/ap/ctrl_iface_ap.c b/src/ap/ctrl_iface_ap.c
-index 50a4dc4..f9c3fa0 100644
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -96,6 +96,103 @@ static int hostapd_get_sta_conn_time(struct sta_info *sta,
+@@ -96,6 +96,103 @@ static int hostapd_get_sta_conn_time(str
  	return ret;
  }
  
@@ -78,20 +76,20 @@ index 50a4dc4..f9c3fa0 100644
 +{
 +	u8 rates[WLAN_SUPP_RATES_MAX];
 +	u8 i;
-+	u8 j = 0;
++	int j = -1;
 +
 +	for (i = 0; i < WLAN_SUPP_HT_RATES_MAX; i++) {
-+		if (mcs_set[i / 8] & (1 << (i % 8)))
-+			rates[j++] = i;
 +		if (j == WLAN_SUPP_RATES_MAX) {
 +			wpa_printf(MSG_INFO,
 +				   "HT extended rate set too large; using only %u rates",
 +				   j);
 +			break;
 +		}
++		if (mcs_set[i / 8] & (1 << (i % 8)))
++			rates[++j] = i;
 +	}
-+	if (j <= WLAN_SUPP_RATES_MAX)
-+		return rates[j - 1];
++	if (j > -1)
++		return rates[j];
 +
 +	return 0;
 +}
@@ -116,7 +114,7 @@ index 50a4dc4..f9c3fa0 100644
  
  static int hostapd_get_sta_info(struct hostapd_data *hapd,
  				struct sta_info *sta,
-@@ -419,6 +516,39 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
+@@ -419,6 +516,39 @@ static int hostapd_ctrl_iface_sta_mib(st
  			len += ret;
  	}
  
@@ -156,7 +154,7 @@ index 50a4dc4..f9c3fa0 100644
  	return len;
  }
  
-@@ -875,6 +1005,20 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
+@@ -875,6 +1005,20 @@ int hostapd_ctrl_iface_status(struct hos
  		if (os_snprintf_error(buflen - len, ret))
  			return len;
  		len += ret;
@@ -177,12 +175,13 @@ index 50a4dc4..f9c3fa0 100644
  	}
  
  	if (iface->conf->ieee80211n && !hapd->conf->disable_11n) {
-@@ -909,8 +1053,33 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
+@@ -909,7 +1053,32 @@ int hostapd_ctrl_iface_status(struct hos
  		if (os_snprintf_error(buflen - len, ret))
  			return len;
  		len += ret;
+-	}
 + 
-+		 if (mode) {
++		 if (mode && iface->conf->ieee80211n) {
 +			 ret = os_snprintf(buf + len, buflen - len,
 +					   "max_mcs=%u\n",
 +					   hostapd_htmaxmcs(mode->mcs_set));
@@ -190,8 +189,8 @@ index 50a4dc4..f9c3fa0 100644
 +				 return len;
 +			 len += ret;
 +		 }
- 	}
- 
++	}
++
 +	 if (mode && mode->rates && mode->num_rates &&
 +	     mode->num_rates <= WLAN_SUPP_RATES_MAX) {
 +		 ret = os_snprintf(buf + len, buflen - len,
@@ -207,12 +206,9 @@ index 50a4dc4..f9c3fa0 100644
 +	 if (os_snprintf_error(buflen - len, ret))
 +		  return len;
 +	 len += ret;
-+
+ 
  	for (j = 0; mode && j < mode->num_channels; j++) {
  		if (mode->channels[j].freq == iface->freq) {
- 			ret = os_snprintf(buf + len, buflen - len,
-diff --git a/src/ap/sta_info.h b/src/ap/sta_info.h
-index e6b6881..c9326fe 100644
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
 @@ -51,6 +51,7 @@

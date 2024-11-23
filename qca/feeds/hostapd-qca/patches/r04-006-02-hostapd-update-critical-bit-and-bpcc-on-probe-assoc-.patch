@@ -37,7 +37,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -2750,6 +2750,7 @@ static int hostapd_ctrl_iface_color_chan
+@@ -2761,6 +2761,7 @@ static int hostapd_ctrl_iface_color_chan
  	int ret, color;
  	unsigned int i;
  	char *end;
@@ -45,7 +45,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	os_memset(&settings, 0, sizeof(settings));
  	color = strtol(pos, &end, 10);
-@@ -2819,6 +2820,14 @@ static int hostapd_ctrl_iface_color_chan
+@@ -2830,6 +2831,14 @@ static int hostapd_ctrl_iface_color_chan
  
  		if (ret)
  			 hostapd_cleanup_cca_params(bss);
@@ -62,7 +62,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
          return 0;
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -831,7 +831,7 @@ static u8 * hostapd_gen_sta_profile(stru
+@@ -832,7 +832,7 @@ static u8 * hostapd_gen_sta_profile(stru
  	return sta_profile;
  }
  
@@ -71,7 +71,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  {
  	struct ieee80211_mgmt *own_data, *link_data;
  	struct hostapd_data *link_bss;
-@@ -1024,6 +1024,9 @@ static u8 * hostapd_gen_probe_resp(struc
+@@ -1026,6 +1026,9 @@ static u8 * hostapd_gen_probe_resp(struc
  	resp->u.probe_resp.capab_info =
  		host_to_le16(hostapd_own_capab_info(hapd));
  
@@ -92,7 +92,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #endif /* BEACON_H */
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2188,11 +2188,22 @@ static void hostapd_mld_if_enable(struct
+@@ -2162,11 +2162,22 @@ static void hostapd_mld_if_enable(struct
  }
  
  
@@ -115,7 +115,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifndef CONFIG_NO_STDOUT_DEBUG
  	int level = MSG_DEBUG;
  #endif /* CONFIG_NO_STDOUT_DEBUG */
-@@ -2470,8 +2481,13 @@ void hostapd_wpa_event(void *ctx, enum w
+@@ -2444,8 +2455,13 @@ void hostapd_wpa_event(void *ctx, enum w
  		break;
  #endif /* CONFIG_IEEE80211AX */
  	 case EVENT_UPDATE_MUEDCA_PARAMS:
@@ -133,7 +133,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		break;
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4487,6 +4487,7 @@ int hostapd_switch_channel(struct hostap
+@@ -4496,6 +4496,7 @@ int hostapd_switch_channel(struct hostap
  	int ret;
  	int oper_centr_freq0_idx;
  	int cur_bandwidth;
@@ -141,7 +141,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA)) {
  		wpa_printf(MSG_INFO, "CSA is not supported");
-@@ -4521,6 +4522,14 @@ int hostapd_switch_channel(struct hostap
+@@ -4530,6 +4531,14 @@ int hostapd_switch_channel(struct hostap
  	}
  
  	hapd->csa_in_progress = 1;
@@ -156,7 +156,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	return 0;
  }
  
-@@ -4663,6 +4672,7 @@ static void hostapd_switch_color_timeout
+@@ -4672,6 +4681,7 @@ static void hostapd_switch_color_timeout
  	unsigned int b;
  	int i, r;
  	u64 neighbor_color;
@@ -164,7 +164,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	 /* CCA can be triggered once the handler constantly receives
  	  * color collision events to for at least
-@@ -4729,6 +4739,15 @@ static void hostapd_switch_color_timeout
+@@ -4738,6 +4748,15 @@ static void hostapd_switch_color_timeout
  
  		free_beacon_data(&settings.beacon_cca);
  		free_beacon_data(&settings.beacon_after);
@@ -205,7 +205,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	struct dl_list link;
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -377,6 +377,26 @@ u16 hostapd_own_capab_info(struct hostap
+@@ -377,6 +377,29 @@ u16 hostapd_own_capab_info(struct hostap
  }
  
  
@@ -215,7 +215,10 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +	struct hostapd_data *bss;
 +	size_t i;
 +
-+	if (hapd && hapd->conf->mld_ap && hapd->rx_cu_param.critical_flag)
++	if (!hapd)
++		return capab;
++
++	if (hapd->conf->mld_ap && hapd->rx_cu_param.critical_flag)
 +		capab |= WLAN_CAPABILITY_PBCC;
 +
 +	if (hapd->iconf && hapd->iconf->mbssid) {
@@ -232,7 +235,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifdef CONFIG_WEP
  #ifndef CONFIG_NO_RC4
  static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
-@@ -6115,6 +6135,43 @@ static void notify_mgmt_frame(struct hos
+@@ -6119,6 +6142,43 @@ static void notify_mgmt_frame(struct hos
  
  
  /**
@@ -276,7 +279,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
   * ieee802_11_mgmt - process incoming IEEE 802.11 management frames
   * @hapd: hostapd BSS data structure (the BSS to which the management frame was
   * sent to)
-@@ -6192,6 +6249,7 @@ int ieee802_11_mgmt(struct hostapd_data
+@@ -6196,6 +6256,7 @@ int ieee802_11_mgmt(struct hostapd_data
  
  	if (stype == WLAN_FC_STYPE_PROBE_REQ) {
  		handle_probe_req(hapd, mgmt, len, ssi_signal);
@@ -284,7 +287,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		return 1;
  	}
  
-@@ -6224,11 +6282,13 @@ int ieee802_11_mgmt(struct hostapd_data
+@@ -6228,11 +6289,13 @@ int ieee802_11_mgmt(struct hostapd_data
  	case WLAN_FC_STYPE_ASSOC_REQ:
  		wpa_printf(MSG_DEBUG, "mgmt::assoc_req");
  		handle_assoc(hapd, mgmt, len, 0, ssi_signal);
@@ -298,7 +301,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		ret = 1;
  		break;
  	case WLAN_FC_STYPE_DISASSOC:
-@@ -7959,18 +8019,27 @@ repeat_rnr:
+@@ -7971,18 +8034,27 @@ repeat_rnr:
  				 *  b) Link ID advertised shall be 15.
  				 *  c) BPCC advertised shall be 255
  				 */
@@ -337,7 +340,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #endif /* CONFIG_IEEE80211BE */
  			}
  
-@@ -8319,6 +8388,9 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -8314,6 +8386,9 @@ static u8 * hostapd_eid_mbssid_elem(stru
  		capab_info = hostapd_own_capab_info(bss);
  		*eid++ = WLAN_EID_NONTRANSMITTED_BSSID_CAPA;
  		*eid++ = sizeof(capab_info);

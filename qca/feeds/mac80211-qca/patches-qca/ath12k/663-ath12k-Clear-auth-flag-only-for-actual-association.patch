@@ -20,7 +20,7 @@ Signed-off-by: Thiraviyam Mariyappan <quic_tmariyap@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -3285,6 +3285,7 @@ static void ath12k_bss_assoc(struct ath1
+@@ -3290,6 +3290,7 @@ static void ath12k_bss_assoc(struct ath1
  
  	rcu_read_unlock();
  
@@ -28,7 +28,7 @@ Signed-off-by: Thiraviyam Mariyappan <quic_tmariyap@quicinc.com>
  	ret = ath12k_wmi_send_peer_assoc_cmd(ar, &peer_arg);
  	if (ret) {
  		ath12k_warn(ar->ab, "failed to run peer assoc for %pM vdev %i: %d\n",
-@@ -5017,6 +5018,7 @@ static int ath12k_station_assoc(struct a
+@@ -5007,6 +5008,7 @@ static int ath12k_station_assoc(struct a
  
  	ath12k_peer_assoc_prepare(ar, vif, sta, &peer_arg, reassoc);
  
@@ -36,7 +36,7 @@ Signed-off-by: Thiraviyam Mariyappan <quic_tmariyap@quicinc.com>
  	ret = ath12k_wmi_send_peer_assoc_cmd(ar, &peer_arg);
  	if (ret) {
  		ath12k_warn(ar->ab, "failed to run peer assoc for STA %pM vdev %i: %d\n",
-@@ -5292,6 +5294,7 @@ static void ath12k_sta_rc_update_wk(stru
+@@ -5282,6 +5284,7 @@ static void ath12k_sta_rc_update_wk(stru
  			ath12k_peer_assoc_prepare(ar, arvif->vif, sta,
  						  &peer_arg, true);
  
@@ -55,17 +55,10 @@ Signed-off-by: Thiraviyam Mariyappan <quic_tmariyap@quicinc.com>
  			cmd->peer_flags &= cpu_to_le32(~WMI_PEER_AUTH);
  	}
  	if (arg->need_gtk_2_way)
-@@ -9328,4 +9328,4 @@ int ath12k_wmi_pdev_ap_ps_cmd_send(struc
- 		   pdev_id, param_value);
- 
- 	return ret;
--}
-\ No newline at end of file
-+}
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -3963,6 +3963,7 @@ struct ath12k_wmi_peer_assoc_arg {
- 	u32 peer_eht_ops;
+@@ -3970,6 +3970,7 @@ struct ath12k_wmi_peer_assoc_arg {
+ 	u32 peer_eht_tx_mcs_set[WMI_MAX_EHTCAP_RATE_SET];
  	struct ath12k_ppe_threshold peer_eht_ppet;
  	u32 ru_punct_bitmap;
 +	bool is_assoc;

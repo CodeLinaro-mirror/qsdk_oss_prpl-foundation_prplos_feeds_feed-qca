@@ -29,7 +29,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -43,6 +43,8 @@ static unsigned int ath12k_en_fwlog = tr
+@@ -42,6 +42,8 @@ static unsigned int ath12k_en_fwlog = tr
  module_param_named(en_fwlog, ath12k_en_fwlog, uint, 0644);
  MODULE_PARM_DESC(en_fwlog, "fwlog: 0-disable, 1-enable");
  
@@ -38,7 +38,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  static DEFINE_MUTEX(ath12k_hw_lock);
  static struct list_head ath12k_hw_groups = LIST_HEAD_INIT(ath12k_hw_groups);
  
-@@ -132,6 +134,7 @@ ath12k_core_hw_group_alloc(u8 id, u8 max
+@@ -131,6 +133,7 @@ ath12k_core_hw_group_alloc(u8 id, u8 max
  	ag->mlo_capable = !!ath12k_mlo_capable;
  	list_add(&ag->list, &ath12k_hw_groups);
  	mutex_init(&ag->mutex_lock);
@@ -46,7 +46,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
  	return ag;
  }
-@@ -957,10 +960,8 @@ static int ath12k_core_start(struct ath1
+@@ -944,10 +947,8 @@ static int ath12k_core_start(struct ath1
  		goto err_reo_cleanup;
  	}
  
@@ -59,7 +59,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
  	return 0;
  
-@@ -1189,6 +1190,10 @@ static void ath12k_core_trigger_partner(
+@@ -1176,6 +1177,10 @@ static void ath12k_core_trigger_partner(
  		if (!partner_ab)
  			continue;
  
@@ -70,7 +70,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  		if (found)
  			ath12k_qmi_trigger_host_cap(partner_ab);
  
-@@ -1310,8 +1315,6 @@ static int ath12k_core_reconfigure_on_cr
+@@ -1297,8 +1302,6 @@ static int ath12k_core_reconfigure_on_cr
  	if (ret)
  		goto err_hal_srng_deinit;
  
@@ -79,7 +79,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	return 0;
  
  err_hal_srng_deinit:
-@@ -1319,106 +1322,101 @@ err_hal_srng_deinit:
+@@ -1306,106 +1309,100 @@ err_hal_srng_deinit:
  	return ret;
  }
  
@@ -120,10 +120,9 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 +		* In Mode0, partner chips are expected to be asserted, hence reset
 +		* qmi.num_radios count to ensure avoiding duplicate host cap triggers.
 +		*/
-+		if (ath12k_recovery_mode == ATH12K_MLO_RECOVERY_MODE0) {
++		if (ath12k_recovery_mode == ATH12K_MLO_RECOVERY_MODE0)
 +			ab->qmi.num_radios = ATH12K_QMI_INVALID_RADIO;
-+			clear_bit(ATH12K_FLAG_QMI_HOST_CAP_SENT, &ab->dev_flags);
-+		}
++
 +	}
  }
  
@@ -256,7 +255,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  			case ATH12K_STATE_ON:
  				ar->state = ATH12K_STATE_RESTARTING;
  				ath12k_core_halt(ar);
-@@ -1426,50 +1424,108 @@ static void ath12k_core_restart(struct w
+@@ -1413,50 +1410,108 @@ static void ath12k_core_restart(struct w
  			case ATH12K_STATE_OFF:
  				ath12k_warn(ab,
  					    "cannot restart radio %d that hasn't been started\n",
@@ -384,7 +383,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	reset_count = atomic_inc_return(&ab->reset_count);
  
  	if (reset_count > 1) {
-@@ -1488,11 +1544,45 @@ static void ath12k_core_reset(struct wor
+@@ -1475,11 +1530,45 @@ static void ath12k_core_reset(struct wor
  			return;
  		}
  
@@ -430,7 +429,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	/* reset host fixed mem off to zero */
  	ab->host_ddr_fixed_mem_off = 0;
  	/* prepare coredump */
-@@ -1504,6 +1594,7 @@ static void ath12k_core_reset(struct wor
+@@ -1491,6 +1580,7 @@ static void ath12k_core_reset(struct wor
  
  		ath12k_dbg(ab, ATH12K_DBG_BOOT, "reset started\n");
  	}
@@ -438,7 +437,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  }
  
  int ath12k_core_pre_init(struct ath12k_base *ab)
-@@ -1746,8 +1837,6 @@ struct ath12k_base *ath12k_core_alloc(st
+@@ -1732,8 +1822,6 @@ struct ath12k_base *ath12k_core_alloc(st
  	if (!ab)
  		return NULL;
  
@@ -449,8 +448,8 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  		goto err_sc_free;
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -42,7 +42,7 @@
- extern unsigned int ath12k_frame_mode;
+@@ -43,7 +43,7 @@ extern unsigned int ath12k_frame_mode;
+ 
  
  #define ATH12K_MON_TIMER_INTERVAL  10
 -#define ATH12K_RESET_TIMEOUT_HZ			(20 * HZ)
@@ -458,16 +457,8 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  #define ATH12K_RESET_MAX_FAIL_COUNT_FIRST	3
  #define ATH12K_RESET_MAX_FAIL_COUNT_FINAL	5
  #define ATH12K_RESET_FAIL_TIMEOUT_HZ		(20 * HZ)
-@@ -226,6 +226,7 @@ enum ath12k_dev_flags {
- 	ATH12K_FLAG_QMI_FAIL,
- 	ATH12K_FLAG_HTC_SUSPEND_COMPLETE,
- 	ATH12K_FLAG_QMI_FW_READY_COMPLETE,
-+	ATH12K_FLAG_QMI_HOST_CAP_SENT,
- 	ATH12K_FLAG_HW_GROUP_ATTACHED,
- 	ATH12K_FLAG_FTM_SEGMENTED,
- };
-@@ -1052,6 +1053,10 @@ struct ath12k_mlo_memory {
- 	bool init_done;
+@@ -1004,6 +1004,10 @@ struct vendor_info {
+     u32 subsystem_device;
  };
  
 +enum ath12k_mlo_recovery_mode {
@@ -477,7 +468,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  /* Holds info on the group of SOCs that are registered as a single wiphy
   * or single SOC where each radio registered as separate wiphy in non-MLO
   */
-@@ -1064,6 +1069,7 @@ struct ath12k_hw_group {
+@@ -1016,6 +1020,7 @@ struct ath12k_hw_group {
  	u8 num_started;
  	u8 num_hw;
  	bool mlo_capable;
@@ -485,7 +476,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	unsigned long dev_flags;
  	struct ath12k_hw *ah[ATH12K_GROUP_MAX_RADIO];
  	struct ath12k_base *ab[ATH12K_MAX_SOCS];
-@@ -1160,13 +1166,19 @@ struct ath12k_base {
+@@ -1108,13 +1113,19 @@ struct ath12k_base {
  	struct work_struct restart_work;
  	struct workqueue_struct *workqueue_aux;
  	struct work_struct reset_work;
@@ -507,7 +498,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	struct ath12k_ftm_event_obj ftm_event_obj;
 --- a/drivers/net/wireless/ath/ath12k/coredump.c
 +++ b/drivers/net/wireless/ath/ath12k/coredump.c
-@@ -327,6 +327,7 @@ void ath12k_coredump_download_rddm(struc
+@@ -326,6 +326,7 @@ void ath12k_coredump_download_rddm(struc
  				    atomic_read(&ath12k_coredump_ram_info.num_chip));
  	} else {
  		/* TODO dump collection for MLO when fw_recovery set */
@@ -517,7 +508,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -734,6 +734,40 @@ static const struct file_operations fops
+@@ -735,6 +735,40 @@ static const struct file_operations fops
  	.open = simple_open
  };
  
@@ -558,7 +549,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  static ssize_t ath12k_read_simulate_fw_crash(struct file *file,
  					     char __user *user_buf,
  					     size_t count, loff_t *ppos)
-@@ -793,7 +827,7 @@ static ssize_t ath12k_write_simulate_fw_
+@@ -806,7 +840,7 @@ static ssize_t ath12k_write_simulate_fw_
  		ath12k_info(ab, "simulating firmware assert crash\n");
  		ret = ath12k_wmi_force_fw_hang_cmd(ar,
  						   ATH12K_WMI_FW_HANG_ASSERT_TYPE,
@@ -567,7 +558,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	} else {
  		ret = -EINVAL;
  		goto exit;
-@@ -1204,8 +1238,10 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -1217,8 +1251,10 @@ static ssize_t ath12k_debug_write_fw_rec
  					      size_t count, loff_t *ppos)
  {
  	struct ath12k_base *ab = file->private_data;
@@ -578,7 +569,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
  	if (kstrtouint_from_user(user_buf, count, 0, &value))
  	         return -EINVAL;
-@@ -1218,7 +1254,16 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -1231,7 +1267,16 @@ static ssize_t ath12k_debug_write_fw_rec
  	         goto exit;
  	}
  
@@ -596,7 +587,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
  	ret = count;
  
-@@ -1500,6 +1545,9 @@ int ath12k_debugfs_pdev_create(struct at
+@@ -1513,6 +1558,9 @@ int ath12k_debugfs_pdev_create(struct at
  	debugfs_create_file("rx_hash_ix3", 0600, ab->debugfs_soc, ab,
  			    &fops_soc_rx_hash_ix3);
  
@@ -608,7 +599,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -12822,7 +12822,7 @@ ath12k_mac_op_reconfig_complete(struct i
+@@ -12883,7 +12883,7 @@ ath12k_mac_op_reconfig_complete(struct i
  {
  	struct ath12k_hw *ah = hw->priv;
  	struct ath12k *ar;
@@ -617,7 +608,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	int i;
  
  	if (reconfig_type != IEEE80211_RECONFIG_TYPE_RESTART)
-@@ -12842,6 +12842,28 @@ ath12k_mac_op_reconfig_complete(struct i
+@@ -12903,6 +12903,28 @@ ath12k_mac_op_reconfig_complete(struct i
  			restart_count++;
  		}
  
@@ -646,7 +637,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  		mutex_unlock(&ar->conf_mutex);
  		ar++;
  	}
-@@ -12850,6 +12872,7 @@ ath12k_mac_op_reconfig_complete(struct i
+@@ -12911,6 +12933,7 @@ ath12k_mac_op_reconfig_complete(struct i
  		ieee80211_wake_queues(ah->hw);
  
  	mutex_unlock(&ah->conf_mutex);
@@ -656,7 +647,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  static void
 --- a/drivers/net/wireless/ath/ath12k/mhi.c
 +++ b/drivers/net/wireless/ath/ath12k/mhi.c
-@@ -330,8 +330,10 @@ static void ath12k_mhi_op_status_cb(stru
+@@ -334,8 +334,10 @@ static void ath12k_mhi_op_status_cb(stru
  		ath12k_warn(ab, "firmware crashed: MHI_CB_SYS_ERROR\n");
  		break;
  	case MHI_CB_EE_RDDM:
@@ -670,7 +661,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	default:
 --- a/drivers/net/wireless/ath/ath12k/qmi.c
 +++ b/drivers/net/wireless/ath/ath12k/qmi.c
-@@ -3237,12 +3237,9 @@ static void ath12k_qmi_free_mlo_mem_chun
+@@ -3205,12 +3205,9 @@ static void ath12k_qmi_free_mlo_mem_chun
  
  	lockdep_assert_held(&ag->mutex_lock);
  
@@ -684,7 +675,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	if (idx >= ARRAY_SIZE(ag->mlo_mem.chunk)) {
  		ath12k_warn(ab, "invalid idx %d for MLO memory chunk free\n", idx);
  		return;
-@@ -3268,7 +3265,6 @@ static void ath12k_qmi_free_mlo_mem_chun
+@@ -3236,7 +3233,6 @@ static void ath12k_qmi_free_mlo_mem_chun
  	mlo_chunk->paddr = NULL;
  	mlo_chunk->size = 0;
  
@@ -692,7 +683,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	if (fixed_mem)
  		chunk->v.ioaddr = NULL;
  	else
-@@ -4434,7 +4430,6 @@ static int ath12k_qmi_event_server_arriv
+@@ -4400,7 +4396,6 @@ static int ath12k_qmi_event_server_arriv
  	}
  
  	ath12k_qmi_phy_cap_send(ab);
@@ -700,19 +691,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	if (ath12k_cold_boot_cal && ab->qmi.cal_done == 0 &&
  			ab->hw_params->cold_boot_calib &&
  			ab->qmi.cal_timeout == 0) {
-@@ -4465,9 +4460,11 @@ static int ath12k_qmi_event_host_cap(str
- 
- 	ret = ath12k_qmi_host_cap_send(ab);
- 	if (ret < 0) {
-+		clear_bit(ATH12K_FLAG_QMI_HOST_CAP_SENT, &ab->dev_flags);
- 		ath12k_warn(ab, "qmi failed to send host cap QMI:%d\n", ret);
- 		return ret;
- 	}
-+	set_bit(ATH12K_FLAG_QMI_HOST_CAP_SENT, &ab->dev_flags);
- 
- 	return ret;
- }
-@@ -5076,7 +5073,6 @@ static void ath12k_qmi_driver_event_work
+@@ -5089,7 +5084,6 @@ static void ath12k_qmi_driver_event_work
  			break;
  		case ATH12K_QMI_EVENT_SERVER_EXIT:
  			set_bit(ATH12K_FLAG_CRASH_FLUSH, &ab->dev_flags);
@@ -722,22 +701,22 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  			ret = ath12k_qmi_event_mem_request(qmi);
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -1746,12 +1746,12 @@ int ath12k_wmi_set_sta_ps_param(struct a
-	return ret;
+@@ -2080,12 +2080,12 @@ int ath12k_wmi_set_sta_ps_param(struct a
+ 	return ret;
  }
-
+ 
 -int ath12k_wmi_force_fw_hang_cmd(struct ath12k *ar, u32 type, u32 delay_time_ms)
 +int ath12k_wmi_force_fw_hang_cmd(struct ath12k *ar, u32 type, u32 delay_time_ms, bool nowait)
  {
-	struct ath12k_wmi_pdev *wmi = ar->wmi;
-	struct wmi_force_fw_hang_cmd *cmd;
-	struct sk_buff *skb;
+ 	struct ath12k_wmi_pdev *wmi = ar->wmi;
+ 	struct wmi_force_fw_hang_cmd *cmd;
+ 	struct sk_buff *skb;
 -	int ret, len;
 +	int ret = 0, len;
-
-	len = sizeof(*cmd);
-
-@@ -1766,8 +1766,10 @@ int ath12k_wmi_force_fw_hang_cmd(struct
+ 
+ 	len = sizeof(*cmd);
+ 
+@@ -2100,8 +2100,10 @@ int ath12k_wmi_force_fw_hang_cmd(struct
  	cmd->type = cpu_to_le32(type);
  	cmd->delay_time_ms = cpu_to_le32(delay_time_ms);
  
@@ -752,7 +731,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  		dev_kfree_skb(skb);
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -6950,7 +6950,8 @@ int ath12k_wmi_vdev_set_param_cmd(struct
+@@ -6664,7 +6664,8 @@ int ath12k_wmi_vdev_set_param_cmd(struct
  
  int ath12k_wmi_set_sta_ps_param(struct ath12k *ar, u32 vdev_id,
  				u32 param, u32 param_value);

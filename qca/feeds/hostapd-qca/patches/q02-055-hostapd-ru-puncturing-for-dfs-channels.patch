@@ -1,4 +1,4 @@
-From 4cb83cf30b75ca1351614e0eabe7105449cb5681 Mon Sep 17 00:00:00 2001
+From 685b536a5f5d6163ce770cb38a56fb85f42db919 Mon Sep 17 00:00:00 2001
 From: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
 Date: Mon, 28 Nov 2022 11:38:07 +0530
 Subject: [PATCH] hostapd: Puncturing support for interference affected dfs sub channels
@@ -13,7 +13,14 @@ with current oper channel with same bandwidth with
 valid puncturing bitmap. If not valid, then fall back to default
 switch channel behavior using random channel selection.
 
+Patch-depdendency: q02-054-hostapd-Radar-bitmap-support-during-radar-detection.patch
+
+Patch-work: none
+
+PUNCTURING
+
 Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
+Signed-off-by: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
 ---
  hostapd/ctrl_iface.c |  25 ++++-
  src/ap/dfs.c         | 126 +++++++++++++++++++++++-
@@ -166,7 +173,18 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  int hostapd_handle_dfs(struct hostapd_iface *iface);
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3972,6 +3972,9 @@ static int hostapd_fill_csa_settings(str
+@@ -2403,6 +2403,10 @@ static int hostapd_setup_interface_compl
+ 			}
+ 		}
+ #endif /* NEED_AP_MLME */
++		if (iface->radar_bit_pattern) {
++			hapd->iconf->ru_punct_bitmap |=
++				iface->radar_bit_pattern;
++		}
+ 
+ #ifdef CONFIG_MESH
+ 		if (iface->mconf != NULL) {
+@@ -3977,6 +3981,9 @@ static int hostapd_fill_csa_settings(str
  	u16 old_punct_bitmap;
  #endif /* CONFIG_IEEE80211BE */
  	u8 chan, bandwidth;
@@ -176,7 +194,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  
  	os_memset(&old_freq, 0, sizeof(old_freq));
  	if (!iface || !iface->freq || hapd->csa_in_progress)
-@@ -3995,16 +3998,39 @@ static int hostapd_fill_csa_settings(str
+@@ -4000,16 +4007,39 @@ static int hostapd_fill_csa_settings(str
  		break;
  	}
  
@@ -218,7 +236,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  			   settings->freq_params.vht_enabled,
  			   settings->freq_params.he_enabled,
  			   settings->freq_params.eht_enabled);
-@@ -4035,6 +4061,39 @@ static int hostapd_fill_csa_settings(str
+@@ -4040,6 +4070,39 @@ static int hostapd_fill_csa_settings(str
  	if (ret)
  		return ret;
  
@@ -258,7 +276,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  	/* set channel switch parameters for csa ie */
  	hapd->cs_freq_params = settings->freq_params;
  	hapd->cs_count = settings->cs_count;
-@@ -4103,16 +4162,28 @@ int hostapd_switch_channel(struct hostap
+@@ -4108,16 +4171,28 @@ int hostapd_switch_channel(struct hostap
  			   struct csa_settings *settings)
  {
  	int ret;
@@ -340,7 +358,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  		non_ofdma_bitmap_count = ARRAY_SIZE(ru_punct_bitmap_160);
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1218,6 +1218,7 @@ struct hostapd_config {
+@@ -1223,6 +1223,7 @@ struct hostapd_config {
  		MBSSID_ENABLED = 1,
  		ENHANCED_MBSSID_ENABLED = 2,
  	} mbssid;
@@ -362,7 +380,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4814,6 +4814,8 @@ static int hostapd_config_fill(struct ho
+@@ -4815,6 +4815,8 @@ static int hostapd_config_fill(struct ho
  #endif /* CONFIG_IEEE80211BE */
  	} else if (os_strcmp(buf, "disable_csa_dfs") == 0) {
  		conf->disable_csa_dfs = atoi(pos);

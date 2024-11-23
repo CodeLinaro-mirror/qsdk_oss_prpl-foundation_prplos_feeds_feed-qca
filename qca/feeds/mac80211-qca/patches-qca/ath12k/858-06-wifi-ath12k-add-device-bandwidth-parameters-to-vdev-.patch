@@ -18,7 +18,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -11746,6 +11746,11 @@ static int ath12k_mac_vdev_start_restart
+@@ -11752,6 +11752,11 @@ static int ath12k_mac_vdev_start_restart
  	arg.channel.max_reg_power = chandef->chan->max_reg_power;
  	arg.channel.max_antenna_gain = chandef->chan->max_antenna_gain;
  	arg.ru_punct_bitmap = ~chandef->ru_punct_bitmap;
@@ -30,7 +30,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	arg.pref_tx_streams = ar->num_tx_chains;
  	arg.pref_rx_streams = ar->num_rx_chains;
-@@ -12192,6 +12197,13 @@ ath12k_mac_multi_vdev_restart(struct ath
+@@ -12198,6 +12203,13 @@ ath12k_mac_multi_vdev_restart(struct ath
  	arg.channel.freq2_radar = radar_enabled;
  	arg.channel.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
  	arg.ru_punct_bitmap = ~chandef->ru_punct_bitmap;
@@ -156,7 +156,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	skb = ath12k_wmi_alloc_skb(wmi->wmi_ab, len);
  	if (!skb)
  		return -ENOMEM;
-@@ -1743,59 +1824,73 @@ int ath12k_wmi_vdev_start(struct ath12k
+@@ -1743,59 +1824,74 @@ int ath12k_wmi_vdev_start(struct ath12k
  
  	ptr += sizeof(*tlv);
  
@@ -240,6 +240,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +				   partner_info->vdev_addr.addr);
 +			partner_info++;
 +		}
++		ptr = partner_info;
 +	}
  
 -		ath12k_dbg(ar->ab, ATH12K_DBG_WMI, "partner vdev %d hw_link_id %d macaddr%pM\n",
@@ -267,7 +268,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (restart)
  		ret = ath12k_wmi_cmd_send(wmi, skb,
  					  WMI_VDEV_RESTART_REQUEST_CMDID);
-@@ -14798,12 +14893,14 @@ int ath12k_wmi_pdev_multiple_vdev_restar
+@@ -14800,12 +14896,14 @@ int ath12k_wmi_pdev_multiple_vdev_restar
  	struct wmi_pdev_multiple_vdev_restart_request_cmd *cmd;
  	struct ath12k_wmi_channel_params *chan;
  	struct wmi_tlv *tlv;
@@ -282,7 +283,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	if (WARN_ON(arg->vdev_ids.id_len > TARGET_NUM_VDEVS))
  		return -EINVAL;
-@@ -14812,7 +14909,15 @@ int ath12k_wmi_pdev_multiple_vdev_restar
+@@ -14814,7 +14912,15 @@ int ath12k_wmi_pdev_multiple_vdev_restar
  	vdev_ids_len = num_vdev_ids * sizeof(__le32);
  
  	len = sizeof(*cmd) + TLV_HDR_SIZE + vdev_ids_len +
@@ -299,7 +300,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	skb = ath12k_wmi_alloc_skb(wmi->wmi_ab, len);
  	if (!skb)
-@@ -14844,6 +14949,32 @@ int ath12k_wmi_pdev_multiple_vdev_restar
+@@ -14846,6 +14952,32 @@ int ath12k_wmi_pdev_multiple_vdev_restar
  	chan->tlv_header = ath12k_wmi_tlv_cmd_hdr(WMI_TAG_CHANNEL, sizeof(*chan));
  	ptr += sizeof(*chan);
  
@@ -343,7 +344,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  };
  
  struct ath12k_wmi_peer_create_arg {
-@@ -8100,6 +8102,8 @@ struct wmi_pdev_multiple_vdev_restart_re
+@@ -8102,6 +8104,8 @@ struct wmi_pdev_multiple_vdev_restart_re
  	struct wmi_vdev_ids_arg vdev_ids;
  	struct wmi_channel_arg channel;
  	u16 ru_punct_bitmap;

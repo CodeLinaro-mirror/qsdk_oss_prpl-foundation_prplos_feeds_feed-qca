@@ -4,11 +4,11 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-ssdk-qca
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=NHSS.QSDK.12.5.5
 PKG_RELEASE:=1
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ssdk
-PKG_MIRROR_HASH:=097f2998aec53fbf5bcbca83616c39834ae5052d8fd4b75de5e95c89e90752ff
-PKG_VERSION:=a5a744ea747d989b749645af67587957206b27ca
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=3e546bd54f2bdfd2ca423299ef0bc132a425a7cf
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -173,9 +173,11 @@ endef
 
 LNX_CONFIG_OPTS :=
 
-ifneq (, $(findstring $(hal_arch), "ipq53xx"))
+ifneq (, $(findstring $(hal_arch), "ipq807x" "ipq60xx" "ipq95xx" "ipq53xx"))
 LNX_CONFIG_OPTS += LNX_MAKEOPTS='$(KERNEL_MAKEOPTS)' MODULE_TYPE=KSLIB modules
 else ifeq ($(LINUX_VERSION), $(filter 6.1%, $(LINUX_VERSION)))
+LNX_CONFIG_OPTS += LNX_MAKEOPTS='$(KERNEL_MAKEOPTS)' MODULE_TYPE=KSLIB modules
+else ifeq ($(LINUX_VERSION), $(filter 6.6%, $(LINUX_VERSION)))
 LNX_CONFIG_OPTS += LNX_MAKEOPTS='$(KERNEL_MAKEOPTS)' MODULE_TYPE=KSLIB modules
 endif
 

@@ -14,6 +14,7 @@ Add changes for the same.
 
 Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
+Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 ---
  src/ap/ap_drv_ops.c                |  10 +++
  src/ap/dfs.c                       |  31 +++++++
@@ -82,7 +83,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	hostapd_ubus_notify_radar_detected(iface, freq, chan_width, cf1, cf2);
  
  	/* Proceed only if DFS is not offloaded to the driver */
-@@ -1804,6 +1823,12 @@ int hostapd_dfs_nop_finished(struct host
+@@ -1807,6 +1826,12 @@ int hostapd_dfs_nop_finished(struct host
  		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
  		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
  
@@ -95,7 +96,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	/* Proceed only if DFS is not offloaded to the driver */
  	if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
  		return 0;
-@@ -1864,6 +1889,12 @@ int hostapd_dfs_start_cac(struct hostapd
+@@ -1867,6 +1892,12 @@ int hostapd_dfs_start_cac(struct hostapd
  	u8 channel_no, cf1_ch_no;
  	bool is_background_event = hostapd_dfs_is_background_event(iface, freq);
  
@@ -177,7 +178,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +			   mld_link->link_id);
 +		ctx = mld_link->ctx;
 +	}
-+
+ 
+-static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
+-				struct nlattr **tb)
 +	switch (event_type) {
 +	case NL80211_RADAR_DETECTED:
 +		wpa_supplicant_event(ctx, EVENT_DFS_RADAR_DETECTED, data);
@@ -204,9 +207,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +		break;
 +	}
 +}
- 
--static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
--				struct nlattr **tb)
++
 +static void nl80211_radar_event(struct i802_bss *bss, struct nlattr **tb)
  {
 +	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -221,7 +222,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	if (!tb[NL80211_ATTR_WIPHY_FREQ] || !tb[NL80211_ATTR_RADAR_EVENT])
  		return;
-@@ -2445,31 +2508,52 @@ static void nl80211_radar_event(struct w
+@@ -2445,31 +2508,55 @@ static void nl80211_radar_event(struct w
  		   data.dfs_event.chan_offset, data.dfs_event.chan_width,
  		   data.dfs_event.cf1, data.dfs_event.cf2, data.dfs_event.radar_bitmap);
  
@@ -254,7 +255,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +		if (ret == 2)
 +			ctx = bss->ctx;
 +		return nl80211_process_radar_event(ctx, &data, event_type, mld_link);
-+	}
+ 	}
 +
 +	wpa_printf(MSG_DEBUG, "nl80211: Checking suitable BSS for the DFS event");
 +
@@ -275,6 +276,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +		/* For event like NL80211_RADAR_NOP_FINISHED, freq info will
 +		 * not match exactly with the link freq. Hence, check if link
 +		 * freq is 5 GHz, pass the event to its ctx.
++		 * Function is_5ghz_freq() cannot be used since it skips over
++		 * a few channels which can cause radar events for the skipped
++		 * channels to be dropped here
 +		 */
 +		for (i = 0; i < bss_iter->n_links; i++) {
 +			if (bss_iter->links[i].freq < 5180 ||
@@ -288,7 +292,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +			if (!hit)
 +				hit = true;
 +		}
- 	}
++	}
 +
 +	if (hit)
 +		return;
@@ -298,7 +302,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  }
  
  static void nl80211_awgn_event(struct wpa_driver_nl80211_data *drv,
-@@ -4003,7 +4087,7 @@ static void do_process_drv_event(struct
+@@ -4003,7 +4090,7 @@ static void do_process_drv_event(struct
  		mlme_event_ft_event(drv, tb);
  		break;
  	case NL80211_CMD_RADAR_DETECT:

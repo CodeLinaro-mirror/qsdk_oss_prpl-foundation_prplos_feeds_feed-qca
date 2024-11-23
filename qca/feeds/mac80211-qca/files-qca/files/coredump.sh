@@ -24,7 +24,7 @@ if [ ! -n "$SERVER" ]; then
 fi
 
 if [ -e /sys/bus/pci/devices/0002:00:00.0/0002:01:00.0/devcoredump/data ] && [ "$ACTION" = add ]; then
-	FILENAME="qcn9224-pci0-q6dump-$TIMESTAMP.bin"
+	FILENAME="qcn9274-pci2-q6dump-$TIMESTAMP.bin"
 	DUMPPATH="/sys/bus/pci/devices/0002:00:00.0/0002:01:00.0/devcoredump/data"
 fi
 
@@ -39,22 +39,22 @@ if [ -e /sys/devices/platform/soc/c000000.wifi/devcoredump/data ] && [ "$ACTION"
 fi
 
 if [ -e /sys/bus/pci/devices/0000:01:00.0/devcoredump/data ] && [ "$ACTION" = add ]; then
-	FILENAME="qcn9000-pci0-q6dump-$TIMESTAMP.bin"
+	FILENAME="qcn9274-pci0-q6dump-$TIMESTAMP.bin"
 	DUMPPATH="/sys/bus/pci/devices/0000:01:00.0/devcoredump/data"
 fi
 
 if [ -e /sys/bus/pci/devices/0001:01:00.0/devcoredump/data ] && [ "$ACTION" = add ]; then
-	FILENAME="qcn9000-pci1-q6dump-$TIMESTAMP.bin"
+	FILENAME="qcn9274-pci1-q6dump-$TIMESTAMP.bin"
 	DUMPPATH="/sys/bus/pci/devices/0001:01:00.0/devcoredump/data"
 fi
 
 if [ -e /sys/bus/pci/devices/0003:01:00.0/devcoredump/data ] && [ "$ACTION" = add ]; then
-	FILENAME="qcn9000-pci0-q6dump-$TIMESTAMP.bin"
+	FILENAME="qcn9274-pci3-q6dump-$TIMESTAMP.bin"
 	DUMPPATH="/sys/bus/pci/devices/0003:01:00.0/devcoredump/data"
 fi
 
 if [ -e /sys/bus/pci/devices/0004:01:00.0/devcoredump/data ] && [ "$ACTION" = add ]; then
-	FILENAME="qcn9000-pci1-q6dump-$TIMESTAMP.bin"
+	FILENAME="qcn9274-pci4-q6dump-$TIMESTAMP.bin"
 	DUMPPATH="/sys/bus/pci/devices/0004:01:00.0/devcoredump/data"
 fi
 
@@ -85,15 +85,33 @@ if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remote
 fi
 
 # Collect QCN6432 External Radio's Coredump
-if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd1/remoteproc/remoteproc3/devcoredump/data ] && [ "$ACTION" = add ]; then
-        FILENAME="qcn6432-q6dump-$TIMESTAMP.bin"
-        DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd1/remoteproc/remoteproc3/devcoredump/data"
+if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd2/remoteproc/remoteproc3/devcoredump/data ] && [ "$ACTION" = add ]; then
+        FILENAME="qcn6432-userpd2-q6dump-$TIMESTAMP.bin"
+        DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd2/remoteproc/remoteproc3/devcoredump/data"
 fi
 
 # Collect QCN6432 External Radio's Coredump
-if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd1/remoteproc/remoteproc4/devcoredump/data ] && [ "$ACTION" = add ]; then
-        FILENAME="qcn6432-q6dump-$TIMESTAMP.bin"
-        DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd1/remoteproc/remoteproc4/devcoredump/data"
+if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd3/remoteproc/remoteproc4/devcoredump/data ] && [ "$ACTION" = add ]; then
+        FILENAME="qcn6432-userpd3-q6dump-$TIMESTAMP.bin"
+        DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd3/remoteproc/remoteproc4/devcoredump/data"
+fi
+
+# Collect QCN6432 External Radio's Coredump,without textpd
+if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd1/remoteproc/remoteproc1/devcoredump/data ] && [ "$ACTION" = add ]; then
+	FILENAME="ipq5332-q6dump-$TIMESTAMP.bin"
+	DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd1/remoteproc/remoteproc1/devcoredump/data"
+fi
+
+# Collect QCN6432 External Radio's Coredump,without textpd
+if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd2/remoteproc/remoteproc2/devcoredump/data ] && [ "$ACTION" = add ]; then
+	FILENAME="qcn6432-userpd2-q6dump-$TIMESTAMP.bin"
+	DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd2/remoteproc/remoteproc2/devcoredump/data"
+fi
+
+# Collect QCN6432 External Radio's Coredump,without textpd
+if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd3/remoteproc/remoteproc3/devcoredump/data ] && [ "$ACTION" = add ]; then
+	FILENAME="qcn6432-userpd3-q6dump-$TIMESTAMP.bin"
+	DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd2/remoteproc/remoteproc2/devcoredump/data"
 fi
 
 if [ -n "$FILENAME" ]; then

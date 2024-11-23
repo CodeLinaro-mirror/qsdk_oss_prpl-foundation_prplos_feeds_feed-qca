@@ -42,7 +42,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  again:
 @@ -987,7 +988,7 @@ static int ath12k_core_mlo_teardown(stru
- 	int ret;
+ 	int ret = 0;
  	int i;
  
 -	if (ag->id == ATH12K_INVALID_GRP_ID)

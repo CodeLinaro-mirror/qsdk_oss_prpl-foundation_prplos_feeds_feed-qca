@@ -20,7 +20,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -2511,7 +2511,7 @@ static void ath12k_peer_assoc_h_eht(stru
+@@ -2512,7 +2512,7 @@ static void ath12k_peer_assoc_h_eht(stru
  	band = def.chan->band;
  	eht_mcs_mask = arvif->bitrate_mask.control[band].eht_mcs;
  
@@ -29,27 +29,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		return;
  
  	if (!sta->deflink.he_cap.has_he || !eht_cap->has_eht)
-@@ -2533,8 +2533,6 @@ static void ath12k_peer_assoc_h_eht(stru
- 	       sizeof(eht_cap->eht_cap_elem.mac_cap_info));
- 	memcpy(arg->peer_eht_cap_phy, eht_cap->eht_cap_elem.phy_cap_info,
- 	       sizeof(eht_cap->eht_cap_elem.phy_cap_info));
--	memcpy(&arg->peer_eht_ops, &vif->bss_conf.eht_oper,
--	       sizeof(vif->bss_conf.eht_oper));
- 
- 	eht_nss = ath12k_mac_max_eht_nss(eht_mcs_mask);
- 
-@@ -3696,8 +3694,8 @@ static void ath12k_mac_op_bss_info_chang
- 						    param_value, arvif->vdev_id, ret);
- 
- 				param_id = WMI_VDEV_PARAM_EHTOPS_0_31;
--				memcpy(&param_value, &vif->bss_conf.eht_oper,
--				       sizeof(vif->bss_conf.eht_oper));
-+				memcpy(&param_value, &info->eht_oper,
-+			       sizeof(info->eht_oper));
- 				ret = ath12k_wmi_vdev_set_param_cmd(ar,
- 						arvif->vdev_id,
- 						param_id,
-@@ -5914,6 +5912,47 @@ static void ath12k_gen_eht_mcs_nss(struc
+@@ -5900,6 +5900,47 @@ static void ath12k_gen_eht_mcs_nss(struc
  		       sizeof(struct ieee80211_eht_mcs_nss_supp_bw));
  }
  
@@ -97,7 +77,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  static void ath12k_mac_copy_eht_cap(struct ath12k *ar,
  				    struct ath12k_band_cap *band_cap,
  				    struct ieee80211_he_cap_elem *he_cap_elem,
-@@ -5946,6 +5985,9 @@ static void ath12k_mac_copy_eht_cap(stru
+@@ -5932,6 +5973,9 @@ static void ath12k_mac_copy_eht_cap(stru
  			  IEEE80211_EHT_PHY_CAP7_MU_BEAMFORMER_160MHZ |
  			  IEEE80211_EHT_PHY_CAP7_MU_BEAMFORMER_320MHZ);
  		break;
@@ -107,7 +87,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	default:
  		break;
  	}
-@@ -8372,7 +8414,8 @@ ath12k_mac_bitrate_mask_get_single_nss(s
+@@ -8360,7 +8404,8 @@ ath12k_mac_bitrate_mask_get_single_nss(s
  	}
  
  	mcs_nss_len = ieee80211_eht_mcs_nss_size(&sband->iftype_data->he_cap.he_cap_elem,

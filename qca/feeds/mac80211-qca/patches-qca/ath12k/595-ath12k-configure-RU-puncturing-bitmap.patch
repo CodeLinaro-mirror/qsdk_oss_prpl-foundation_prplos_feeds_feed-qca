@@ -13,20 +13,18 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h | 11 +++++++++--
  3 files changed, 17 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 12f5d97..7f98404 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -932,6 +932,8 @@ static int ath12k_mac_monitor_vdev_start(struct ath12k *ar, int vdev_id,
+@@ -945,6 +945,8 @@ static int ath12k_mac_monitor_vdev_start
  
- 	arg.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
+ 	arg.channel.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
  
 +	arg.ru_punct_bitmap = 0xFFFFFFFF;
 +
  	reinit_completion(&ar->vdev_setup_done);
  	reinit_completion(&ar->vdev_delete_done);
  
-@@ -2318,6 +2320,7 @@ static void ath12k_peer_assoc_h_eht(struct ath12k *ar,
+@@ -2329,6 +2331,7 @@ static void ath12k_peer_assoc_h_eht(stru
  	max_nss = max(max_nss, (uint8_t)eht_nss);
  
  	arg->peer_nss = min(sta->deflink.rx_nss, max_nss);
@@ -34,16 +32,16 @@ index 12f5d97..7f98404 100644
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
  		   "mac he peer %pM nss %d mcs cnt %d\n",
-@@ -6617,6 +6620,7 @@ ath12k_mac_vdev_start_restart(struct ath12k_vif *arvif,
-	arg.channel.max_power = chandef->chan->max_power * 2;
-	arg.channel.max_reg_power = chandef->chan->max_reg_power * 2;
-	arg.channel.max_antenna_gain = chandef->chan->max_antenna_gain * 2;
+@@ -6615,6 +6618,7 @@ ath12k_mac_vdev_start_restart(struct ath
+ 	arg.channel.max_power = chandef->chan->max_power * 2;
+ 	arg.channel.max_reg_power = chandef->chan->max_reg_power * 2;
+ 	arg.channel.max_antenna_gain = chandef->chan->max_antenna_gain * 2;
 +	arg.ru_punct_bitmap = ~chandef->ru_punct_bitmap;
-
-	arg.pref_tx_streams = ar->num_tx_chains;
-	arg.pref_rx_streams = ar->num_rx_chains;
-@@ -6639,8 +6643,8 @@ ath12k_mac_vdev_start_restart(struct ath12k_vif *arvif,
- 	arg.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
+ 
+ 	arg.pref_tx_streams = ar->num_tx_chains;
+ 	arg.pref_rx_streams = ar->num_rx_chains;
+@@ -6638,8 +6642,8 @@ ath12k_mac_vdev_start_restart(struct ath
+ 	arg.channel.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
  
  	ath12k_dbg(ab, ATH12K_DBG_MAC,
 -		   "mac vdev %d start center_freq %d phymode %s\n",
@@ -53,11 +51,9 @@ index 12f5d97..7f98404 100644
  		   ath12k_mac_phymode_str(arg.mode));
  
  	ret = ath12k_wmi_vdev_start(ar, &arg, restart);
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 0c222cd..c139e49 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -1120,6 +1120,7 @@ int ath12k_wmi_vdev_start(struct ath12k *ar, struct wmi_vdev_start_req_arg *arg,
+@@ -1122,6 +1122,7 @@ int ath12k_wmi_vdev_start(struct ath12k
  	cmd->cac_duration_ms = cpu_to_le32(arg->cac_duration_ms);
  	cmd->regdomain = cpu_to_le32(arg->regdomain);
  	cmd->he_ops = cpu_to_le32(arg->he_ops);
@@ -65,7 +61,7 @@ index 0c222cd..c139e49 100644
  
  	if (!restart) {
  		if (arg->ssid) {
-@@ -2041,6 +2042,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2076,6 +2077,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  
  	cmd->peer_new_assoc = cpu_to_le32(arg->peer_new_assoc);
  	cmd->peer_associd = cpu_to_le32(arg->peer_associd);
@@ -73,11 +69,9 @@ index 0c222cd..c139e49 100644
  
  	ath12k_wmi_copy_peer_flags(cmd, arg,
  				   test_bit(ATH12K_FLAG_HW_CRYPTO_DISABLED,
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index 6d3a78f..d06c37a 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2894,6 +2894,11 @@ struct wmi_vdev_start_request_cmd {
+@@ -2890,6 +2890,11 @@ struct wmi_vdev_start_request_cmd {
  	__le32 he_ops;
  	__le32 cac_duration_ms;
  	__le32 regdomain;
@@ -89,12 +83,12 @@ index 6d3a78f..d06c37a 100644
  } __packed;
  
  #define MGMT_TX_DL_FRM_LEN		     64
-@@ -2972,7 +2977,7 @@ struct wmi_vdev_start_req_arg {
+@@ -2967,7 +2972,7 @@ struct wmi_channel_arg {
  	bool ht40plus;
  	bool chan_radar;
  	bool freq2_radar;
 -	bool allow_he;
-+	bool allow_he;   
++	bool allow_he;
  	u32 min_power;
  	u32 max_power;
  	u32 max_reg_power;
@@ -106,15 +100,15 @@ index 6d3a78f..d06c37a 100644
  };
  
  struct ath12k_wmi_peer_create_arg {
-@@ -3750,6 +3756,7 @@ struct ath12k_wmi_peer_assoc_arg {
+@@ -3776,6 +3782,7 @@ struct ath12k_wmi_peer_assoc_arg {
+ 	u32 peer_eht_rx_mcs_set[WMI_MAX_EHTCAP_RATE_SET];
  	u32 peer_eht_tx_mcs_set[WMI_MAX_EHTCAP_RATE_SET];
- 	u32 peer_eht_ops;
  	struct ath12k_ppe_threshold peer_eht_ppet;
 +	u32 ru_punct_bitmap;
  };
  
  struct wmi_peer_assoc_complete_cmd {
-@@ -3785,7 +3792,7 @@ struct wmi_peer_assoc_complete_cmd {
+@@ -3811,7 +3818,7 @@ struct wmi_peer_assoc_complete_cmd {
  	__le32 bss_max_idle_option;
  	__le32 auth_mode;
  	__le32 peer_flags_ext;
@@ -123,6 +117,3 @@ index 6d3a78f..d06c37a 100644
  	__le32 peer_eht_cap_mac[WMI_MAX_EHTCAP_MAC_SIZE];
  	__le32 peer_eht_cap_phy[WMI_MAX_EHTCAP_PHY_SIZE];
  	__le32 peer_eht_ops;
--- 
-2.17.1
-

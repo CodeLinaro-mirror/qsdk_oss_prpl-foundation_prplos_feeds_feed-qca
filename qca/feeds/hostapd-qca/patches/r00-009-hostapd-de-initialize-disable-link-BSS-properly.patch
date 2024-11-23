@@ -208,7 +208,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  					hostapd_free_hapd_data(hapd);
  					if (j == 0)
  						break;
-@@ -2847,10 +2872,8 @@ static void hostapd_bss_deinit(struct ho
+@@ -2850,10 +2875,8 @@ static void hostapd_bss_deinit(struct ho
  		hapd->rad_attr_db = NULL;
  	}
  #endif /* CONFIG_SQLITE */
@@ -221,7 +221,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	hostapd_cleanup(hapd);
  }
  
-@@ -3193,6 +3216,40 @@ hostapd_interface_init_bss(struct hapd_i
+@@ -3196,6 +3219,40 @@ hostapd_interface_init_bss(struct hapd_i
  	return iface;
  }
  
@@ -262,7 +262,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  void hostapd_interface_deinit_free(struct hostapd_iface *iface)
  {
-@@ -3211,13 +3268,7 @@ void hostapd_interface_deinit_free(struc
+@@ -3214,13 +3271,7 @@ void hostapd_interface_deinit_free(struc
  	hostapd_interface_deinit(iface);
  	wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
  		   __func__, driver, drv_priv);
@@ -277,7 +277,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	hostapd_interface_free(iface);
  }
  
-@@ -3256,21 +3307,22 @@ static void hostapd_deinit_driver(const
+@@ -3259,21 +3310,22 @@ static void hostapd_deinit_driver(const
  
  	wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
  		   __func__, driver, drv_priv);
@@ -310,7 +310,15 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		}
  	}
  }
-@@ -3389,6 +3441,7 @@ int hostapd_disable_iface(struct hostapd
+@@ -3311,6 +3363,7 @@ int hostapd_enable_iface(struct hostapd_
+ 		return -1;
+ 
+ 	if (hostapd_setup_interface(hapd_iface)) {
++		hostapd_bss_link_deinit(hapd_iface->bss[0]);
+ 		hostapd_deinit_driver(hapd_iface->bss[0]->driver,
+ 				      hapd_iface->bss[0]->drv_priv,
+ 				      hapd_iface);
+@@ -3392,6 +3445,7 @@ int hostapd_disable_iface(struct hostapd
  	for (j = 0; j < hapd_iface->num_bss; j++) {
  		struct hostapd_data *hapd = hapd_iface->bss[j];
  		hostapd_bss_deinit_no_free(hapd);
@@ -318,7 +326,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		hostapd_free_hapd_data(hapd);
  	}
  
-@@ -3587,6 +3640,7 @@ int hostapd_add_iface(struct hapd_interf
+@@ -3590,6 +3644,7 @@ int hostapd_add_iface(struct hapd_interf
  			if (start_ctrl_iface_bss(hapd) < 0 ||
  			    (hapd_iface->state == HAPD_IFACE_ENABLED &&
  			     hostapd_setup_bss(hapd, -1, true))) {
@@ -326,7 +334,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  				hostapd_cleanup(hapd);
  				hapd_iface->bss[hapd_iface->num_bss - 1] = NULL;
  				hapd_iface->conf->num_bss--;
-@@ -3684,6 +3738,7 @@ fail:
+@@ -3687,6 +3742,7 @@ fail:
  				wpa_printf(MSG_DEBUG, "%s: free hapd %p (%s)",
  					   __func__, hapd_iface->bss[i],
  					   hapd->conf->iface);

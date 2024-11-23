@@ -13,10 +13,10 @@ Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
 ---
 
 diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 339cb7f..166ce67 100644
+index c3080f4..aed628f 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4319,6 +4319,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -4320,6 +4320,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
  	} else if (os_strcmp(buf, "wowlan_triggers") == 0) {
  		os_free(bss->wowlan_triggers);
  		bss->wowlan_triggers = os_strdup(pos);
@@ -26,7 +26,7 @@ index 339cb7f..166ce67 100644
                  conf->enable_160mhz_bw = atoi(pos);
  	} else if (os_strcmp(buf, "disable_40mhz_scan") == 0) {
 diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index c8d219b..bfc08fa 100644
+index 4d65422..2616bb3 100644
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
 @@ -1204,6 +1204,7 @@ struct hostapd_config {
@@ -38,26 +38,26 @@ index c8d219b..bfc08fa 100644
  	enum mbssid {
  		MBSSID_DISABLED = 0,
 diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index a2093e0..0e9fcaf 100644
+index 08cb3c9..e01e38f 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1366,6 +1366,11 @@ struct wpa_driver_associate_params {
+@@ -1358,6 +1358,11 @@ struct wpa_driver_associate_params {
+	 */
 	int beacon_tx_mode;
  
-	/**
++	/**
 +	 * Enable 320MHz BW - set it 1 to enable mesh 320MHz 6G
 +	 */
 +	int enable_320mhz_bw;
 +
-+	/**
+	/**
 	 * Enable 160MHz BW - set it 1 to enable mesh 160MHz 6G
 	 */
-	int enable_160mhz_bw;
 diff --git a/wpa_supplicant/ap.c b/wpa_supplicant/ap.c
-index 97836e7..83476dd 100644
+index 2343bf1..063eb3e 100644
 --- a/wpa_supplicant/ap.c
 +++ b/wpa_supplicant/ap.c
-@@ -425,6 +425,11 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
+@@ -420,6 +420,11 @@ int wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
  			    ssid->he)
  				conf->ieee80211ax = 1;
  
@@ -70,10 +70,10 @@ index 97836e7..83476dd 100644
  				conf->ieee80211ac = 1;
  				conf->vht_capab |= mode->vht_capab;
 diff --git a/wpa_supplicant/config.c b/wpa_supplicant/config.c
-index 9ab4e03..6d4273c 100644
+index a2a398f..35473a1 100644
 --- a/wpa_supplicant/config.c
 +++ b/wpa_supplicant/config.c
-@@ -2884,6 +2884,7 @@ static const struct parse_data ssid_fields[] = {
+@@ -2815,6 +2815,7 @@ static const struct parse_data ssid_fields[] = {
  	{ INT_RANGE(disable_40mhz_scan, 0, 1)},
  	{ INT_RANGE(beacon_tx_mode, 1, 2)},
  	{ INT_RANGE(enable_160mhz_bw, 0, 1)},
@@ -82,11 +82,11 @@ index 9ab4e03..6d4273c 100644
  	{ INT_RANGE(enable_4addr_mode, 0, 1)},
  };
 diff --git a/wpa_supplicant/config_ssid.h b/wpa_supplicant/config_ssid.h
-index 86a05db..e073028 100644
+index be208e1..8ceb877 100644
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
-@@ -1288,6 +1288,11 @@ struct wpa_ssid {
-	*/
+@@ -1276,6 +1276,11 @@ struct wpa_ssid {
+        */
 	int enable_160mhz_bw;
  
 +	/**
@@ -98,7 +98,7 @@ index 86a05db..e073028 100644
 	 * disable_eht - Disable EHT (IEEE 802.11be) for this network
 	 *
 diff --git a/wpa_supplicant/mesh.c b/wpa_supplicant/mesh.c
-index 91b1cb2..499b157 100644
+index ab51bb7..ed46a90 100644
 --- a/wpa_supplicant/mesh.c
 +++ b/wpa_supplicant/mesh.c
 @@ -468,6 +468,9 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
@@ -122,48 +122,10 @@ index 91b1cb2..499b157 100644
  			ssid->max_oper_chwidth = CONF_OPER_CHWIDTH_USE_HT;
  			break;
 diff --git a/wpa_supplicant/mesh_mpm.c b/wpa_supplicant/mesh_mpm.c
-index 656dda8..67415a3 100644
+index 7afd31d..913e32f 100644
 --- a/wpa_supplicant/mesh_mpm.c
 +++ b/wpa_supplicant/mesh_mpm.c
-@@ -257,6 +257,16 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
- 				3 + sizeof(struct ieee80211_he_6ghz_band_cap);
- 	}
- #endif /* CONFIG_IEEE80211AX */
-+#ifdef CONFIG_IEEE80211BE
-+	if (type != PLINK_CLOSE && wpa_s->mesh_eht_enabled) {
-+		buf_len += 3 +
-+			   2 +
-+			   EHT_PHY_CAPAB_LEN +
-+			   EHT_MCS_NSS_CAPAB_LEN +
-+			   EHT_PPE_THRESH_CAPAB_LEN;
-+		buf_len += 3 + sizeof(struct ieee80211_eht_operation);
-+	}
-+#endif /* CONFIG_IEEE80211BE */
- 	if (type != PLINK_CLOSE)
- 		buf_len += conf->rsn_ie_len; /* RSN IE */
- #ifdef CONFIG_OCV
-@@ -398,6 +408,20 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
- 		wpabuf_put_data(buf, he_capa_oper, pos - he_capa_oper);
- 	}
- #endif /* CONFIG_IEEE80211AX */
-+#ifdef CONFIG_IEEE80211BE
-+	if (type != PLINK_CLOSE && wpa_s->mesh_eht_enabled) {
-+		u8 eht_capa_oper[3 +
-+				 2 +
-+				 EHT_PHY_CAPAB_LEN +
-+				 EHT_MCS_NSS_CAPAB_LEN +
-+				 EHT_PPE_THRESH_CAPAB_LEN +
-+				 3 + sizeof(struct ieee80211_eht_operation)];
-+		pos = hostapd_eid_eht_capab(bss, eht_capa_oper,
-+					    IEEE80211_MODE_MESH);
-+		pos = hostapd_eid_eht_operation(bss, pos, IEEE80211_MODE_MESH);
-+		wpabuf_put_data(buf, eht_capa_oper, pos - eht_capa_oper);
-+	}
-+#endif /* CONFIG_IEEE80211BE */
- #ifdef CONFIG_OCV
- 	if (type != PLINK_CLOSE && conf->ocv) {
- 		struct wpa_channel_info ci;
-@@ -788,6 +812,11 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
+@@ -788,6 +788,11 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
  			   elems->eht_capabilities_len);
  #endif /*CONFIG_IEEE80211BE */
  

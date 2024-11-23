@@ -21,8 +21,8 @@ Signed-off-by: Rahul Bhattacharjee <quic_rbhattac@quicinc.com>
 
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
-@@ -4327,8 +4327,10 @@ static bool ieee80211_rx_data_set_sta(st
- 		rx->link_sta = &sta->deflink;
+@@ -4322,8 +4322,10 @@ static bool ieee80211_rx_data_set_sta(st
+ 		rx->link_sta = NULL;
  	}
  
 -	if (link_id < 0)
@@ -33,7 +33,7 @@ Signed-off-by: Rahul Bhattacharjee <quic_rbhattac@quicinc.com>
  	else if (!ieee80211_rx_data_set_link(rx, link_id))
  		return false;
  
-@@ -5344,11 +5346,13 @@ static void __ieee80211_rx_handle_packet
+@@ -5290,11 +5292,13 @@ static void __ieee80211_rx_handle_packet
  	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(skb);
  	struct ieee80211_sub_if_data *sdata;
  	struct ieee80211_hdr *hdr;
@@ -48,7 +48,7 @@ Signed-off-by: Rahul Bhattacharjee <quic_rbhattac@quicinc.com>
  
  	fc = ((struct ieee80211_hdr *)skb->data)->frame_control;
  	memset(&rx, 0, sizeof(rx));
-@@ -5457,8 +5461,15 @@ static void __ieee80211_rx_handle_packet
+@@ -5402,8 +5406,15 @@ static void __ieee80211_rx_handle_packet
  	}
  
  	prev = NULL;
@@ -56,7 +56,7 @@ Signed-off-by: Rahul Bhattacharjee <quic_rbhattac@quicinc.com>
 +	prev_flag = false;
  
  	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
-+		unsigned int link_id;
++		int link_id = -1;
 +		struct ieee80211_bss_conf *conf;
 +		u16 valid_links = sdata->vif.valid_links;
 +		bool flag = false;
@@ -64,7 +64,7 @@ Signed-off-by: Rahul Bhattacharjee <quic_rbhattac@quicinc.com>
  		if (!ieee80211_sdata_running(sdata))
  			continue;
  
-@@ -5466,28 +5477,103 @@ static void __ieee80211_rx_handle_packet
+@@ -5411,28 +5422,103 @@ static void __ieee80211_rx_handle_packet
  		    sdata->vif.type == NL80211_IFTYPE_AP_VLAN)
  			continue;
  

@@ -131,10 +131,10 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  /**
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
-@@ -707,8 +707,8 @@ struct ieee80211_fils_discovery {
+@@ -705,8 +705,8 @@ struct ieee80211_fils_discovery {
+  *	beamformee
+  * @nss_ap_isolate: Used for notifying the NSS host about AP isolate feature
   * @beacon_tx_mode: Beacon Tx Mode setting.
-  * @eht_oper: EHT operation information of the BSS (AP/Mesh) or of the AP we
-  * 	are connected to (STA)
 - * @critical_update_flag: indicates any Critical update going on in the BSS.
 - *	see &enum ieee80211_critical_updates
 + * @elemid_added: critical update element id inserted
@@ -142,7 +142,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
   */
  struct ieee80211_bss_conf {
  	struct ieee80211_vif *vif;
-@@ -823,8 +823,8 @@ struct ieee80211_bss_conf {
+@@ -814,8 +814,8 @@ struct ieee80211_bss_conf {
  	bool nss_offld_mesh_forward_enabled;
  	u32 nss_offld_mpath_refresh_time;
  
@@ -204,7 +204,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #endif /* __LINUX_NL80211_H */
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1668,6 +1668,8 @@ static int ieee80211_start_ap(struct wip
+@@ -1651,6 +1651,8 @@ static int ieee80211_start_ap(struct wip
  		goto error;
  	changed |= BSS_CHANGED_UNSOL_BCAST_PROBE_RESP;
  
@@ -213,7 +213,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	err = drv_start_ap(sdata->local, sdata, link_conf);
  	if (err) {
  		old = sdata_dereference(link->u.ap.beacon, sdata);
-@@ -1676,6 +1678,8 @@ static int ieee80211_start_ap(struct wip
+@@ -1659,6 +1661,8 @@ static int ieee80211_start_ap(struct wip
  			kfree_rcu(old, rcu_head);
  		RCU_INIT_POINTER(link->u.ap.beacon, NULL);
  		sdata->u.ap.active = false;
@@ -222,7 +222,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		goto error;
  	}
  
-@@ -1687,6 +1691,8 @@ static int ieee80211_start_ap(struct wip
+@@ -1670,6 +1674,8 @@ static int ieee80211_start_ap(struct wip
  	list_for_each_entry(vlan, &sdata->u.ap.vlans, u.vlan.list)
  		netif_carrier_on(vlan->dev);
  
@@ -231,7 +231,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	return 0;
  
  error:
-@@ -1765,8 +1771,12 @@ static int ieee80211_update_ap(struct wi
+@@ -1748,8 +1754,12 @@ static int ieee80211_update_ap(struct wi
  		return err;
  	changed |= BSS_CHANGED_UNSOL_BCAST_PROBE_RESP;
  
@@ -244,7 +244,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	return 0;
  }
  
-@@ -4146,6 +4156,7 @@ static int ieee80211_set_after_csa_beaco
+@@ -4129,6 +4139,7 @@ static int ieee80211_set_after_csa_beaco
  					  u64 *changed)
  {
  	struct ieee80211_sub_if_data *sdata = link->sdata;
@@ -252,7 +252,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	int err;
  
  	switch (sdata->vif.type) {
-@@ -4161,9 +4172,8 @@ static int ieee80211_set_after_csa_beaco
+@@ -4144,9 +4155,8 @@ static int ieee80211_set_after_csa_beaco
  		if (err < 0)
  			return err;
  
@@ -264,7 +264,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  		break;
  	case NL80211_IFTYPE_ADHOC:
-@@ -4292,6 +4302,7 @@ void ieee80211_csa_finalize_work(struct
+@@ -4275,6 +4285,7 @@ void ieee80211_csa_finalize_work(struct
  		goto unlock;
  
  	ieee80211_csa_finalize(link);
@@ -272,7 +272,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  unlock:
  	mutex_unlock(&local->chanctx_mtx);
-@@ -4355,10 +4366,6 @@ static int ieee80211_set_csa_beacon(stru
+@@ -4338,10 +4349,6 @@ static int ieee80211_set_csa_beacon(stru
  			return err;
  		}
  
@@ -283,7 +283,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		break;
  	case NL80211_IFTYPE_ADHOC:
  		if (!sdata->vif.cfg.ibss_joined)
-@@ -4509,6 +4516,8 @@ __ieee80211_channel_switch(struct wiphy
+@@ -4492,6 +4499,8 @@ __ieee80211_channel_switch(struct wiphy
  	if (err)
  		goto out;
  	changed |= BSS_CHANGED_UNSOL_BCAST_PROBE_RESP;
@@ -292,7 +292,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	/* should we pass link_id here ? */
  	err = drv_pre_channel_switch(sdata, &ch_switch);
-@@ -4567,6 +4576,7 @@ __ieee80211_channel_switch(struct wiphy
+@@ -4550,6 +4559,7 @@ __ieee80211_channel_switch(struct wiphy
  
  out:
  	mutex_unlock(&local->chanctx_mtx);
@@ -300,7 +300,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	return err;
  }
  
-@@ -5304,8 +5314,6 @@ ieee80211_set_after_color_change_beacon(
+@@ -5290,8 +5300,6 @@ ieee80211_set_after_color_change_beacon(
  		if (ret < 0)
  			return ret;
  
@@ -309,7 +309,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		break;
  	}
  	default:
-@@ -5349,8 +5357,6 @@ ieee80211_set_color_change_beacon(struct
+@@ -5335,8 +5343,6 @@ ieee80211_set_color_change_beacon(struct
  			return err;
  		}
  
@@ -318,7 +318,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		break;
  	default:
  		return -EOPNOTSUPP;
-@@ -5580,6 +5586,7 @@ ieee80211_color_change(struct wiphy *wip
+@@ -5578,6 +5584,7 @@ ieee80211_color_change(struct wiphy *wip
  
  	link_conf->color_change_active = true;
  	link_conf->color_change_color = params->color;
@@ -326,7 +326,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	err = ieee80211_set_unsol_bcast_probe_resp(sdata, &params->unsol_bcast_probe_resp,
  						   link, link_conf);
-@@ -5598,6 +5605,7 @@ ieee80211_color_change(struct wiphy *wip
+@@ -5596,6 +5603,7 @@ ieee80211_color_change(struct wiphy *wip
  
  out:
  	mutex_unlock(&local->mtx);

@@ -9,6 +9,8 @@ which causes KASAN warning for u16 usage of links_map variable.
 Fix this by declaring ahsta->links_map, ahvif->links_map as unsigned long
 variables and modify debug prints accordingly.
 
+Patch-dependency: none
+
 Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
 ---
  drivers/net/wireless/ath/ath12k/core.c  |  2 +-
@@ -132,7 +134,7 @@ index 21e09d226ff5..b527d16da804 100644
 -	links_map = ahvif->links_map;
 -
 -	for_each_set_bit(link_id, &links_map, ATH12K_NUM_MAX_LINKS) {
-+	for_each_set_bit(link_id, &ahvif->links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
++	for_each_set_bit(link_id, &ahvif->links_map, ATH12K_NUM_MAX_LINKS) {
  		arvif = ahvif->link[link_id];
  
  		if (WARN_ON(arvif == NULL))

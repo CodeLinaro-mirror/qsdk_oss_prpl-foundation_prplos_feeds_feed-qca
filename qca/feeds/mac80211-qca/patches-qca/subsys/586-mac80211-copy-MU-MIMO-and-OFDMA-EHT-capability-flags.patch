@@ -40,11 +40,11 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 - *	beamformer
   * @nss_ap_isolate: Used for notifying the NSS host about AP isolate feature
   * @beacon_tx_mode: Beacon Tx Mode setting.
-  * @eht_oper: EHT operation information of the BSS (AP/Mesh) or of the AP we
-@@ -788,6 +788,10 @@ struct ieee80211_bss_conf {
- 		u8 ccfs1;
- 		u8 present_bm;
- 	} eht_oper;
+  */
+@@ -779,6 +779,10 @@ struct ieee80211_bss_conf {
+ 	u8 pwr_reduction;
+ 	bool eht_support;
+ 	u16 eht_puncturing;
 +	bool eht_su_beamformer;
 +	bool eht_su_beamformee;
 +	bool eht_mu_beamformer;
@@ -52,7 +52,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
  	bool csa_active;
  	u16 csa_punct_bitmap;
-@@ -806,9 +810,6 @@ struct ieee80211_bss_conf {
+@@ -797,9 +801,6 @@ struct ieee80211_bss_conf {
  	bool vht_su_beamformee;
  	bool vht_mu_beamformer;
  	bool vht_mu_beamformee;
@@ -64,22 +64,13 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1455,6 +1455,18 @@ static int ieee80211_start_ap(struct wip
- 			return -EOPNOTSUPP;
- 
- 		sdata->vif.bss_conf.eht_support = true;
-+		sdata->vif.bss_conf.eht_su_beamformer =
-+				params->eht_cap->fixed.phy_cap_info[0] &
-+				IEEE80211_EHT_PHY_CAP0_SU_BEAMFORMER;
-+		sdata->vif.bss_conf.eht_su_beamformee =
-+				params->eht_cap->fixed.phy_cap_info[0] &
-+				IEEE80211_EHT_PHY_CAP0_SU_BEAMFORMEE;
-+		sdata->vif.bss_conf.eht_mu_beamformer =
-+				params->eht_cap->fixed.phy_cap_info[7] &
-+				IEEE80211_EHT_PHY_CAP7_MU_BEAMFORMER_80MHZ;
-+		sdata->vif.bss_conf.eht_80mhz_full_bw_ul_mumimo =
-+				params->eht_cap->fixed.phy_cap_info[7] &
+@@ -1373,6 +1373,9 @@ static int ieee80211_start_ap(struct wip
+ 				(IEEE80211_EHT_PHY_CAP7_MU_BEAMFORMER_80MHZ |
+ 				 IEEE80211_EHT_PHY_CAP7_MU_BEAMFORMER_160MHZ |
+ 				 IEEE80211_EHT_PHY_CAP7_MU_BEAMFORMER_320MHZ);
++		link_conf->eht_80mhz_full_bw_ul_mumimo =
++			params->eht_cap->fixed.phy_cap_info[7] &
 +				IEEE80211_EHT_PHY_CAP7_NON_OFDMA_UL_MU_MIMO_80MHZ;
- 		ieee80211_eht_op_ie_to_bss_conf(&sdata->vif, params->eht_oper);
- 	}
- 
+ 	} else {
+ 		link_conf->eht_su_beamformer = false;
+ 		link_conf->eht_su_beamformee = false;

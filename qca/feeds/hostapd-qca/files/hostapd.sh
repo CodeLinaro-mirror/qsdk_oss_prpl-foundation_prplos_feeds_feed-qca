@@ -66,7 +66,7 @@ hostapd_append_wpa_key_mgmt() {
 		psk-sae)
 			append wpa_key_mgmt "WPA-PSK"
 			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-PSK"
-			[ "${ieee80211w:-0}" -gt 0 ] && append wpa_key_mgmt "WPA-PSK-SHA256"
+			[ "${ieee80211w:-0}" -eq 2 ] && append wpa_key_mgmt "WPA-PSK-SHA256"
 			append wpa_key_mgmt "SAE"
 			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-SAE"
 		;;
@@ -78,6 +78,9 @@ hostapd_append_wpa_key_mgmt() {
 		;;
 		ft-sae-ext-key)
 			append wpa_key_mgmt "FT-SAE-EXT-KEY"
+		;;
+		dpp)
+			append wpa_key_mgmt "DPP"
 		;;
 	esac
 
@@ -339,6 +342,7 @@ hostapd_common_add_bss_config() {
 
 	config_add_boolean sae_require_mfp
 	config_add_int sae_pwe
+	config_add_int rsn_overriding
 
 	config_add_string 'owe_transition_bssid:macaddr' 'owe_transition_ssid:string'
 	config_add_string owe_transition_ifname
@@ -385,6 +389,13 @@ hostapd_common_add_bss_config() {
 
 	config_add_int dpp
 	config_add_string dpp_csign dpp_connector dpp_netaccesskey dpp_ppkey dpp_connector_sign
+
+	config_add_int rsn_override_mfp
+	config_add_string rsn_override_key_mgmt rsn_override_pairwise
+
+	config_add_int rsn_override_mfp_2
+	config_add_string rsn_override_key_mgmt_2 rsn_override_pairwise_2
+	config_add_int ssid_protection
 
 }
 
@@ -572,14 +583,17 @@ hostapd_set_bss_options() {
 		ppsk airtime_bss_weight airtime_bss_limit airtime_sta_weight \
 		multicast_to_unicast_all proxy_arp per_sta_vif \
 		eap_server eap_user_file ca_cert server_cert private_key private_key_passwd server_id \
-		vendor_elements fils ocv dpp
+		vendor_elements fils ocv dpp \
+		rsn_override_key_mgmt rsn_override_pairwise rsn_override_mfp \
+		rsn_override_key_mgmt_2 rsn_override_pairwise_2 rsn_override_mfp_2 \
+		ssid_protection
 
 	json_get_values sae_groups sae_groups
 	json_get_values owe_groups owe_groups
 
 	set_default fils 0
 	set_default isolate 0
-	set_default maxassoc 0
+	set_default maxassoc 128
 	set_default max_inactivity 0
 	set_default short_preamble 1
 	set_default disassoc_low_ack 1
@@ -661,6 +675,31 @@ hostapd_set_bss_options() {
 			set_default sae_pwe 2
 		;;
 	esac
+
+	#currently rsn override used for sae encryption only
+	[ -n "$rsn_override_key_mgmt" ] && {
+		set_default ieee80211w 1
+		set_default sae_pwe 2
+		set_default rsn_override_mfp 1
+		set_default rsn_override_pairwise CCMP
+
+		append bss_conf "rsn_override_key_mgmt=$rsn_override_key_mgmt" "$N"
+		append bss_conf "rsn_override_pairwise=$rsn_override_pairwise" "$N"
+		append bss_conf "rsn_override_mfp=$rsn_override_mfp" "$N"
+	}
+
+	#currently rsn override 2 used for sae-ext-key and ft-sae-ext-key
+	[ -n "$rsn_override_key_mgmt_2" ] && {
+		set_default ieee80211w 1
+		set_default sae_pwe 2
+		set_default rsn_override_mfp_2 2
+		set_default rsn_override_pairwise_2 GCMP
+
+		append bss_conf "rsn_override_key_mgmt_2=$rsn_override_key_mgmt_2" "$N"
+		append bss_conf "rsn_override_pairwise_2=$rsn_override_pairwise_2" "$N"
+		append bss_conf "rsn_override_mfp_2=$rsn_override_mfp_2" "$N"
+	}
+
 	[ -n "$sae_require_mfp" ] && append bss_conf "sae_require_mfp=$sae_require_mfp" "$N"
 	[ -n "$sae_pwe" ] && append bss_conf "sae_pwe=$sae_pwe" "$N"
 	[ -n "$sae_groups" ] && append bss_conf "sae_groups=$sae_groups" "$N"
@@ -683,7 +722,7 @@ hostapd_set_bss_options() {
 			# with WPS enabled, we got to be in unconfigured state.
 			wps_not_configured=1
 		;;
-		psk|sae|psk-sae)
+		psk|*sae*)
 			json_get_vars key wpa_psk_file
 			if [ "$auth_type" = "psk" ] && [ "$ppsk" -ne 0 ] ; then
 				json_get_vars auth_secret auth_port
@@ -1183,6 +1222,8 @@ hostapd_set_bss_options() {
 		[ -n "$dpp_connector_sign" ] && append bss_conf "dpp_connector_sign=$dpp_connector_sign" "$N"
 	fi
 
+	[ -n "$ssid_protection" ] && append bss_conf "ssid_protection=$ssid_protection" "$N"
+
 	append "$var" "$bss_conf" "$N"
 	return 0
 }
@@ -1301,7 +1342,7 @@ wpa_supplicant_set_fixed_freq() {
 	append network_data "frequency=$freq" "$N$T"
 	case "$htmode" in
 		NOHT) append network_data "disable_ht=1" "$N$T";;
-		HE20|HT20|VHT20) append network_data "disable_ht40=1" "$N$T";;
+		HE20|HT20|VHT20|EHT20) append network_data "disable_ht40=1" "$N$T";;
 		HT40*|VHT40|VHT80|VHT160|HE40|HE80|HE160) append network_data "ht40=1" "$N$T";;
 	esac
 	case "$htmode" in
@@ -1345,10 +1386,12 @@ wpa_supplicant_add_network() {
 		basic_rate mcast_rate \
 		ieee80211w ieee80211r fils ocv \
 		multi_ap \
-		default_disabled dpp
+		default_disabled dpp \
+		ssid_protection \
+		ppe_vp
 
 	case "$auth_type" in
-		sae|owe|eap192|eap-eap192)
+		sae*|ft-sae*|owe|eap192|eap-eap192)
 			set_default ieee80211w 2
 		;;
 		psk-sae)
@@ -1433,7 +1476,7 @@ wpa_supplicant_add_network() {
 		wps)
 			key_mgmt='WPS'
 		;;
-		psk|sae|psk-sae)
+		psk|*sae*)
 			local passphrase
 
 			if [ "$_w_mode" != "mesh" ]; then
@@ -1598,9 +1641,9 @@ wpa_supplicant_add_network() {
 		;;
 	esac
 
-	[ "$wpa_cipher" = GCMP ] && {
-		append network_data "pairwise=GCMP" "$N$T"
-		append network_data "group=GCMP" "$N$T"
+	[ -n "$wpa_cipher" ] && {
+		append network_data "pairwise=$wpa_cipher" "$N$T"
+		append network_data "group=$wpa_cipher" "$N$T"
 	}
 
 	[ "$mode" = mesh ] || {
@@ -1626,11 +1669,13 @@ wpa_supplicant_add_network() {
 	json_get_values bssid_blacklist bssid_blacklist
 	json_get_values bssid_whitelist bssid_whitelist
 	json_get_var sae_pwe sae_pwe
+	json_get_var rsn_overriding rsn_overriding
 
 	[ -n "$bssid_blacklist" ] && append network_data "bssid_blacklist=$bssid_blacklist" "$N$T"
 	[ -n "$bssid_whitelist" ] && append network_data "bssid_whitelist=$bssid_whitelist" "$N$T"
 
 	[ -n "$sae_pwe" ] && append saepwe "sae_pwe=$sae_pwe" "$N$T"
+	[ -n "$rsn_overriding" ] && append rsn_override "rsn_overriding=$rsn_overriding" "$N$T"
 
 	[ -n "$basic_rate" ] && {
 		local br rate_list=
@@ -1658,6 +1703,27 @@ wpa_supplicant_add_network() {
 		[ -n "$dpp_connector_sign" ] && append network_data "dpp_connector_sign=$dpp_connector_sign" "$N"
 
 	fi
+	[ -n "$ssid_protection" ] && append network_data "ssid_protection=$ssid_protection" "$N$T"
+
+	local ppe_vp_type=
+	case "$ppe_vp" in
+		"passive")
+			ppe_vp_type=1
+			;;
+		"active")
+			ppe_vp_type=2
+			;;
+		"ds")
+			ppe_vp_type=3
+			;;
+		*)
+			ppe_vp_type=3
+			;;
+	esac
+
+	if [ "$mode" = "mesh" ] && [ "$ppe_vp_type" -eq 3 ]; then
+		ppe_vp_type=1
+	fi
 
 	if [ "$key_mgmt" = "WPS" ]; then
 		echo "wps_cred_processing=1" >> "$_config"
@@ -1667,6 +1733,8 @@ $mesh_ctrl_interface
 $user_mpm
 $disable_csa_dfs
 $saepwe
+$rsn_override
+ppe_vp=$ppe_vp_type
 $freq_list
 network={
 	$scan_ssid

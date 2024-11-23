@@ -34,7 +34,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  struct ath12k_link_vif {
  	struct ath12k_base *ab;
  	struct ath12k_dp *dp;
-@@ -448,6 +456,7 @@ struct ath12k_link_vif {
+@@ -449,6 +457,7 @@ struct ath12k_link_vif {
  	struct work_struct peer_ch_width_switch_work;
  	struct ath12k_peer_ch_width_switch_data *peer_ch_width_switch_data;
  	struct ieee80211_key_conf *keys[WMI_MAX_KEY_INDEX + 1];
@@ -154,15 +154,15 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	if (ret) {
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2210,6 +2210,7 @@ enum wmi_tlv_tag {
+@@ -2203,6 +2203,7 @@ enum wmi_tlv_tag {
+ 	WMI_TAG_BCN_TMPL_ML_INFO_CMD = 0x436,
  	WMI_TAG_CTRL_PATH_CMD_FIXED_PARAM = 0x442,
  	WMI_TAG_CTRL_PATH_EVENT_FIXED_PARAM,
- 	WMI_TAG_PDEV_DFS_RADAR_FLAGS = 0x4b4,
 +	WMI_TAG_PRB_RESP_TMPL_ML_INFO_CMD = 0x460,
+ 	WMI_TAG_PDEV_DFS_RADAR_FLAGS = 0x4b4,
  	WMI_TAG_MAX
  };
- 
-@@ -8116,6 +8117,15 @@ struct wmi_critical_update_arg {
+@@ -8109,6 +8110,15 @@ struct wmi_critical_update_arg {
  	struct wmi_bcn_tmpl_ml_info *ml_info;
  };
  

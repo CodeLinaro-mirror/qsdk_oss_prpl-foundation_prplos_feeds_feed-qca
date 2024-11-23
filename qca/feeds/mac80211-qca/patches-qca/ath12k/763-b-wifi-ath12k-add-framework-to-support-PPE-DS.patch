@@ -173,7 +173,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	ret = ath12k_dp_alloc(ab);
  	if (ret) {
  		ath12k_err(ab, "failed to init DP: %d\n", ret);
-@@ -2288,6 +2326,9 @@ struct ath12k_base *ath12k_core_alloc(st
+@@ -2287,6 +2325,9 @@ struct ath12k_base *ath12k_core_alloc(st
  	ab->hif.bus = bus;
  	ab->qmi.num_radios = ATH12K_QMI_INVALID_RADIO;
  
@@ -185,7 +185,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  err_free_wq:
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -27,6 +27,10 @@
+@@ -28,6 +28,10 @@
  #include "pktlog.h"
  #include "sawf.h"
  #include "vendor.h"
@@ -196,15 +196,15 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  
  #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)
  
-@@ -227,6 +231,7 @@ enum ath12k_dev_flags {
- 	ATH12K_FLAG_QMI_HOST_CAP_SENT,
+@@ -226,6 +230,7 @@ enum ath12k_dev_flags {
+ 	ATH12K_FLAG_QMI_FW_READY_COMPLETE,
  	ATH12K_FLAG_HW_GROUP_ATTACHED,
  	ATH12K_FLAG_FTM_SEGMENTED,
 +	ATH12K_FLAG_PPE_DS_ENABLED,
  };
  
  enum ath12k_monitor_flags {
-@@ -1084,6 +1089,30 @@ struct ath12k_soc_dp_stats {
+@@ -1092,6 +1097,30 @@ struct ath12k_soc_dp_stats {
  	u32 reo_cmd_update_rx_queue_error;
  };
  
@@ -235,7 +235,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  struct ath12k_reg_freq {
           u32 start_freq;
           u32 end_freq;
-@@ -1176,7 +1205,7 @@ struct ath12k_base {
+@@ -1184,7 +1213,7 @@ struct ath12k_base {
  	bool wmi_ready;
  	u32 wlan_init_status;
  	int irq_num[ATH12K_IRQ_NUM_MAX];
@@ -244,7 +244,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	struct napi_struct *napi;
  	struct ath12k_wmi_target_cap_arg target_caps;
  	u32 ext_service_bitmap[WMI_SERVICE_EXT_BM_SIZE];
-@@ -1265,6 +1294,22 @@ struct ath12k_base {
+@@ -1273,6 +1302,22 @@ struct ath12k_base {
  	u32 max_msduq_per_tid;
  	u32 default_msduq_per_tid;
  
@@ -283,7 +283,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -2070,6 +2070,94 @@ static const struct file_operations fops
+@@ -2082,6 +2082,94 @@ static const struct file_operations fops
  	.write = ath12k_write_rx_hash_ix3,
  };
  
@@ -378,7 +378,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  int ath12k_debugfs_pdev_create(struct ath12k_base *ab)
  {
  	if (test_bit(ATH12K_FLAG_REGISTERED, &ab->dev_flags))
-@@ -2102,6 +2190,11 @@ int ath12k_debugfs_pdev_create(struct at
+@@ -2114,6 +2202,11 @@ int ath12k_debugfs_pdev_create(struct at
  	debugfs_create_file("fw_reset_stats", 0400, ab->debugfs_soc, ab,
  			    &fops_fw_reset_stats);
  
@@ -1046,7 +1046,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  #endif
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -2799,7 +2799,7 @@ static void ath12k_dp_rx_h_mpdu(struct a
+@@ -2765,7 +2765,7 @@ static void ath12k_dp_rx_h_mpdu(struct a
  	u32 err_bitmap;
  	u8 tid;
  #ifdef CPTCFG_MAC80211_PPE_SUPPORT
@@ -1055,7 +1055,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  #endif
  	struct wireless_dev *wdev = NULL;
  
-@@ -2834,7 +2834,7 @@ static void ath12k_dp_rx_h_mpdu(struct a
+@@ -2800,7 +2800,7 @@ static void ath12k_dp_rx_h_mpdu(struct a
  				ath12k_dp_rx_h_csum_offload(ar, msdu);
  				msdu->dev = wdev->netdev;
  #ifdef CPTCFG_MAC80211_PPE_SUPPORT
@@ -1064,39 +1064,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  					if (likely(ppe_vp_tx_to_ppe(vp, msdu)))
  						return;
  				}
-@@ -3367,6 +3367,31 @@ static void ath12k_dp_rx_process_receive
- 	rcu_read_unlock();
- }
- 
-+/* Sends WMI config to filter packets to route packets to WBM release ring */
-+int ath12k_dp_rx_pkt_type_filter(struct ath12k *ar,
-+				 enum ath12k_routing_pkt_type pkt_type,
-+				 u32 meta_data)
-+{
-+	struct ath12k_wmi_pkt_route_param param;
-+	int ret;
-+
-+	/* Routing Eapol packets to CCE is only allowed now */
-+	if (pkt_type != ATH12K_PKT_TYPE_EAP)
-+		return -EINVAL;
-+
-+	param.opcode = ATH12K_WMI_PKTROUTE_ADD;
-+	param.meta_data = meta_data;
-+	param.dst_ring = ATH12K_ROUTE_WBM_RELEASE;
-+	param.dst_ring_handler = ATH12K_WMI_PKTROUTE_USE_CCE;
-+	param.route_type_bmap = 1 << pkt_type;
-+
-+	ret = ath12k_wmi_send_pdev_pkt_route(ar, &param);
-+	if (ret)
-+		ath12k_warn(ar->ab, "failed to configure pkt route %d", ret);
-+
-+	return ret;
-+}
-+
- int ath12k_dp_rx_process(struct ath12k_base *ab, int ring_id,
- 			 struct napi_struct *napi, int budget)
- {
-@@ -4975,6 +5000,55 @@ int ath12k_dp_rxdma_ring_sel_config_wcn7
+@@ -4931,6 +4931,55 @@ int ath12k_dp_rxdma_ring_sel_config_wcn7
  	return ret;
  }
  
@@ -1190,16 +1158,13 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  struct ath12k_dp_rx_tid {
  	u8 tid;
  	u32 *vaddr;
-@@ -183,4 +212,10 @@ int ath12k_dp_htt_tlv_iter(struct ath12k
+@@ -183,4 +212,7 @@ int ath12k_dp_htt_tlv_iter(struct ath12k
  				  int (*iter)(struct ath12k_base *ar, u16 tag, u16 len,
  					      const void *ptr, void *data),
  				  void *data);
 +int
 +ath12k_dp_rx_htt_rxdma_rxole_ppe_cfg_set(struct ath12k_base *ab,
 +					 struct ath12k_dp_htt_rxdma_ppe_cfg_param *param);
-+int ath12k_dp_rx_pkt_type_filter(struct ath12k *ar,
-+				 enum ath12k_routing_pkt_type pkt_type,
-+				 u32 meta_data);
  #endif /* ATH12K_DP_RX_H */
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
@@ -1285,7 +1250,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  static void ath12k_dp_tx_release_txbuf(struct ath12k_dp *dp,
  				       struct ath12k_tx_desc_info *tx_desc,
  				       u8 ring_id)
-@@ -1092,6 +1160,143 @@ static inline bool ath12k_dp_tx_completi
+@@ -1094,6 +1162,143 @@ static inline bool ath12k_dp_tx_completi
  	return true;
  }
  
@@ -1429,7 +1394,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  int ath12k_dp_tx_completion_handler(struct ath12k_base *ab, int ring_id,
  				    int budget)
  {
-@@ -1121,7 +1326,7 @@ int ath12k_dp_tx_completion_handler(stru
+@@ -1123,7 +1328,7 @@ int ath12k_dp_tx_completion_handler(stru
  
  	valid_entries = ath12k_hal_srng_dst_num_free(ab, status_ring, false);
  	if (!valid_entries) {
@@ -1438,7 +1403,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  		return 0;
  	}
  
-@@ -1228,7 +1433,7 @@ int ath12k_dp_tx_completion_handler(stru
+@@ -1230,7 +1435,7 @@ int ath12k_dp_tx_completion_handler(stru
  						   tx_ring->tcl_data_ring_id);
  		}
  	}
@@ -1929,24 +1894,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  
  #define CHAN2G(_channel, _freq, _flags) { \
  	.band                   = NL80211_BAND_2GHZ, \
-@@ -9111,6 +9112,16 @@ static int ath12k_mac_radio_start(struct
- 		}
- 	}
- 
-+	/* PPE DS requires eapol packets to be routed to wbm release ring */
-+	if (test_bit(ATH12K_FLAG_PPE_DS_ENABLED, &ar->ab->dev_flags)) {
-+		ret = ath12k_dp_rx_pkt_type_filter(ar, ATH12K_PKT_TYPE_EAP,
-+						   ATH12K_ROUTE_EAP_METADATA);
-+		if (ret) {
-+			ath12k_err(ar->ab, "failed to configure EAP pkt route: %d\n", ret);
-+			goto err;
-+		}
-+	}
-+
- 	__ath12k_set_antenna(ar, ar->cfg_tx_chainmask, ar->cfg_rx_chainmask);
- 
- 	/* TODO: Do we need to enable ANI? */
-@@ -14083,6 +14094,10 @@ static const struct ieee80211_ops ath12k
+@@ -14190,6 +14191,10 @@ static const struct ieee80211_ops ath12k
  #endif
  	.get_txpower			= ath12k_mac_op_get_txpower,
  	.set_radar_background		= ath12k_mac_op_set_radar_background,
@@ -3280,7 +3228,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	WMI_BCN_TX_CMDID = WMI_TLV_CMD(WMI_GRP_MGMT),
  	WMI_PDEV_SEND_BCN_CMDID,
  	WMI_BCN_TMPL_CMDID,
-@@ -2177,6 +2186,7 @@ enum wmi_tlv_tag {
+@@ -2171,6 +2180,7 @@ enum wmi_tlv_tag {
  	WMI_TAG_TPC_STATS_RATES_ARRAY,
  	WMI_TAG_TPC_STATS_CTL_PWR_TABLE_EVENT,
  	WMI_TAG_BCN_TMPL_ML_PARAMS_CMD = 0x3E6,
@@ -3288,7 +3236,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	WMI_TAG_SAWF_SERVICE_CLASS_CFG_CMD_FIXED_PARAM = 0x40A,
  	WMI_TAG_SAWF_SERVICE_CLASS_DISABLE_CMD_FIXED_PARAM = 0x40B,
  	WMI_TAG_SPECTRAL_SCAN_BW_CAPABILITIES = 0x415,
-@@ -3339,6 +3349,25 @@ struct ath12k_wmi_channel_arg {
+@@ -3333,6 +3343,25 @@ struct ath12k_wmi_channel_arg {
  	u8  reg_class_id;
  };
  
@@ -3314,7 +3262,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  enum wmi_phy_mode {
  	MODE_11A        = 0,
  	MODE_11G        = 1,   /* 11b/g Mode */
-@@ -3458,6 +3487,27 @@ struct ath12k_wmi_pdev_set_regdomain_arg
+@@ -3452,6 +3481,27 @@ struct ath12k_wmi_pdev_set_regdomain_arg
  	u32 pdev_id;
  };
  
@@ -3342,7 +3290,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  struct ath12k_wmi_rx_reorder_queue_remove_arg {
  	u8 *peer_macaddr;
  	u16 vdev_id;
-@@ -3680,6 +3730,16 @@ struct wmi_pdev_set_regdomain_cmd {
+@@ -3674,6 +3724,16 @@ struct wmi_pdev_set_regdomain_cmd {
  	__le32 dfs_domain;
  } __packed;
  
@@ -3359,7 +3307,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  struct wmi_peer_set_param_cmd {
  	__le32 tlv_header;
  	__le32 vdev_id;
-@@ -7969,6 +8029,8 @@ int ath12k_wmi_peer_rx_reorder_queue_set
+@@ -7962,6 +8022,8 @@ int ath12k_wmi_peer_rx_reorder_queue_set
  int
  ath12k_wmi_rx_reord_queue_remove(struct ath12k *ar,
  				 struct ath12k_wmi_rx_reorder_queue_remove_arg *arg);
@@ -3368,7 +3316,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  int ath12k_wmi_send_pdev_set_regdomain(struct ath12k *ar,
  				       struct ath12k_wmi_pdev_set_regdomain_arg *arg);
  int ath12k_wmi_pull_fw_stats(struct ath12k_base *ab, struct sk_buff *skb,
-@@ -8057,4 +8119,10 @@ int
+@@ -8050,4 +8112,10 @@ int
  ath12k_mgmt_rx_reo_init_context(struct ath12k_base *ab);
  int
  ath12k_mgmt_rx_reo_deinit_context(struct ath12k_base *ab);

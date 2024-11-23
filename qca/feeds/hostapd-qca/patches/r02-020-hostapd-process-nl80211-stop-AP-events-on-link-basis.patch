@@ -31,7 +31,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  static void nl80211_remove_links(struct i802_bss *bss);
  
  /* Converts nl80211_chan_width to a common format */
-@@ -9500,7 +9499,7 @@ fail:
+@@ -9493,7 +9492,7 @@ fail:
  	return -1;
  }
  
@@ -51,7 +51,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  #endif /* DRIVER_NL80211_H */
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2399,10 +2399,35 @@ static void nl80211_tdls_oper_event(stru
+@@ -2399,10 +2399,40 @@ static void nl80211_tdls_oper_event(stru
  }
  
  
@@ -86,11 +86,16 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +	 */
 +	nl80211_remove_link(bss, mld_link ? mld_link->link_id : bss->flink->link_id);
 +
++	bss->ctx = bss->links[0].ctx;
++
++	if (drv->first_bss == bss && bss->n_links > 1)
++		drv->ctx = bss->ctx;
++
 +	wpa_supplicant_event(ctx, EVENT_INTERFACE_UNAVAILABLE, NULL);
  }
  
  
-@@ -4250,7 +4275,7 @@ static void do_process_drv_event(struct
+@@ -4258,7 +4288,7 @@ static void do_process_drv_event(struct
  		nl80211_radar_event(bss, tb);
  		break;
  	case NL80211_CMD_STOP_AP:

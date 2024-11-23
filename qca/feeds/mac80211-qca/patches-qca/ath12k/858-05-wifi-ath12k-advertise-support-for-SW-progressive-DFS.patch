@@ -3,14 +3,19 @@ From: Aloka Dixit <quic_alokad@quicinc.com>
 Date: Tue, 28 Nov 2023 10:42:07 -0800
 Subject: [PATCH 5/8] wifi: ath12k: advertise support for SW progressive DFS
 
-Advertise support for device bandwidth parameters different than
-the operating bandwidth parameter and for background radar detection
-on the device bandwidth if SW based progressive DFS is supported.
+Advertise support to user space that the driver supports different
+parameters for the device bandwidth compared to the operating bandwidth
+and for background radar detection on the device bandwidth
+when SW based progressive DFS is supported. Firmware will set
+the service bit WMI_TLV_SERVICE_SW_PROG_DFS_SUPPORT which 
+determines if SW Progressive DFS is supported and
+NL80211_EXT_FEATURE_DEVICE_BW in user-space will be updated.
 Check for this support when background scan is requested, no need to
 send WMI command to firmware as the CAC is requested on the current
 device bandwidth where radar detection is already active.
 
 Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
+Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 ---
  drivers/net/wireless/ath/ath12k/mac.c | 30 +++++++++++++++++++++------
  drivers/net/wireless/ath/ath12k/wmi.h |  1 +

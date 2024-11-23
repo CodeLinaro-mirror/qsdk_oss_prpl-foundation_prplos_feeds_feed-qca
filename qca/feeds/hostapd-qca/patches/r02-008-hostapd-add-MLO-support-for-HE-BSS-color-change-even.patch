@@ -19,11 +19,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/drivers/driver_nl80211_event.c | 105 +++++++++++++++++++++++++----
  4 files changed, 114 insertions(+), 13 deletions(-)
 
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index d855a5e63069..157478b8a90e 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4415,6 +4415,12 @@ int hostapd_fill_cca_settings(struct hostapd_data *hapd,
+@@ -4617,6 +4617,12 @@ int hostapd_fill_cca_settings(struct hos
  
  	settings->counter_offset_beacon = hapd->cca_c_off_beacon;
  	settings->counter_offset_presp = hapd->cca_c_off_proberesp;
@@ -34,13 +32,11 @@ index d855a5e63069..157478b8a90e 100644
 +		settings->link_id = hapd->mld_link_id;
 +#endif /* CONFIG_IEEE80211BE */
  
- 	return 0;
- }
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 6b3ba5995e87..617f5026ebee 100644
+ 	hostapd_interface_update_fils_ubpr(iface, true);
+ 
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2794,6 +2794,11 @@ struct cca_settings {
+@@ -2811,6 +2811,11 @@ struct cca_settings {
  
  	u16 counter_offset_beacon;
  	u16 counter_offset_presp;
@@ -52,11 +48,9 @@ index 6b3ba5995e87..617f5026ebee 100644
  };
  
  /* TDLS peer capabilities for send_tdls_mgmt() */
-diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
-index 93abff29ca85..6e608e471e77 100644
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -11363,6 +11363,17 @@ static int nl80211_switch_color(void *priv, struct cca_settings *settings)
+@@ -11346,6 +11346,17 @@ static int nl80211_switch_color(void *pr
  	}
  
  	nla_nest_end(msg, beacon_cca);
@@ -74,11 +68,9 @@ index 93abff29ca85..6e608e471e77 100644
  	ret = send_and_recv_msgs(drv, msg, NULL, NULL, NULL, NULL);
  	if (ret) {
  		wpa_printf(MSG_DEBUG,
-diff --git a/src/drivers/driver_nl80211_event.c b/src/drivers/driver_nl80211_event.c
-index 6381d600ddd6..e2195aa233fd 100644
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -3761,51 +3761,130 @@ static void nl80211_assoc_comeback(struct wpa_driver_nl80211_data *drv,
+@@ -3831,51 +3831,126 @@ static void nl80211_assoc_comeback(struc
  
  #ifdef CONFIG_IEEE80211AX
  
@@ -86,7 +78,6 @@ index 6381d600ddd6..e2195aa233fd 100644
 -					 struct nlattr *tb[])
 +static void nl80211_obss_color_collision(struct i802_bss *bss, struct nlattr *tb[])
  {
-+	struct wpa_driver_nl80211_data *drv = bss->drv;
  	union wpa_event_data data;
 +	struct i802_link *mld_link;
 +	void *ctx = bss->ctx;
@@ -126,7 +117,6 @@ index 6381d600ddd6..e2195aa233fd 100644
 -nl80211_color_change_announcement_started(struct wpa_driver_nl80211_data *drv)
 +nl80211_color_change_announcement_started(struct i802_bss *bss, struct nlattr *tb[])
  {
-+	struct wpa_driver_nl80211_data *drv = bss->drv;
  	union wpa_event_data data = {};
 +	struct i802_link *mld_link;
 +	void *ctx = bss->ctx;
@@ -158,7 +148,6 @@ index 6381d600ddd6..e2195aa233fd 100644
 -nl80211_color_change_announcement_aborted(struct wpa_driver_nl80211_data *drv)
 +nl80211_color_change_announcement_aborted(struct i802_bss *bss, struct nlattr *tb[])
  {
-+	struct wpa_driver_nl80211_data *drv = bss->drv;
  	union wpa_event_data data = {};
 +	struct i802_link *mld_link;
 +	void *ctx = bss->ctx;
@@ -190,7 +179,6 @@ index 6381d600ddd6..e2195aa233fd 100644
 -nl80211_color_change_announcement_completed(struct wpa_driver_nl80211_data *drv)
 +nl80211_color_change_announcement_completed(struct i802_bss *bss, struct nlattr *tb[])
  {
-+	struct wpa_driver_nl80211_data *drv = bss->drv;
  	union wpa_event_data data = {};
 +	struct i802_link *mld_link;
 +	void *ctx = bss->ctx;
@@ -218,7 +206,7 @@ index 6381d600ddd6..e2195aa233fd 100644
  }
  
  #endif /* CONFIG_IEEE80211AX */
-@@ -4073,16 +4152,16 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
+@@ -4145,16 +4220,16 @@ static void do_process_drv_event(struct
  		break;
  #ifdef CONFIG_IEEE80211AX
  	case NL80211_CMD_OBSS_COLOR_COLLISION:
@@ -238,7 +226,4 @@ index 6381d600ddd6..e2195aa233fd 100644
 +		nl80211_color_change_announcement_completed(bss, tb);
  		break;
  #endif /* CONFIG_IEEE80211AX */
-         case NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS:
--- 
-2.17.1
-
+ 	case NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS:

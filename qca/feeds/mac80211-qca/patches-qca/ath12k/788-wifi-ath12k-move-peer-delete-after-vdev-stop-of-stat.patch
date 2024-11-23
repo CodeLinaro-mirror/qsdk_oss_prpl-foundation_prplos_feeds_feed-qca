@@ -47,7 +47,7 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -6679,6 +6679,9 @@ static void ath12k_mac_station_post_remo
+@@ -6826,6 +6826,9 @@ static void ath12k_mac_station_post_remo
  	struct ath12k_peer *peer;
  	struct ath12k_sta *ahsta = arsta->ahsta;
  	struct ieee80211_sta *sta;
@@ -57,7 +57,7 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
  
  	sta = container_of((void *)ahsta, struct ieee80211_sta, drv_priv);
  
-@@ -6686,8 +6689,13 @@ static void ath12k_mac_station_post_remo
+@@ -6833,8 +6836,13 @@ static void ath12k_mac_station_post_remo
  
  	mutex_lock(&ar->ab->tbl_mtx_lock);
  	spin_lock_bh(&ar->ab->base_lock);
@@ -72,17 +72,19 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
  		ath12k_warn(ar->ab, "Found peer entry %pM n vdev %i after it was supposedly removed\n",
  			    arsta->addr, arvif->vdev_id);
  		ath12k_peer_rhash_delete(ar->ab, peer);
-@@ -6719,6 +6727,9 @@ static int ath12k_mac_station_remove(str
+@@ -6865,7 +6873,10 @@ static int ath12k_mac_station_remove(str
+ {
  	struct ath12k_sta *ahsta = arsta->ahsta;
  	struct ieee80211_sta *sta;
- 	int ret;
+-	int ret;
++	int ret = 0;
 +	struct ath12k_vif *ahvif = arvif->ahvif;
 +        struct ieee80211_vif *vif = ahvif->vif;
 +	bool skip_peer_delete;
  
  	sta = container_of((void *)ahsta, struct ieee80211_sta, drv_priv);
  
-@@ -6730,15 +6741,20 @@ static int ath12k_mac_station_remove(str
+@@ -6877,15 +6888,20 @@ static int ath12k_mac_station_remove(str
  
  	ath12k_dp_peer_cleanup(ar, arvif->vdev_id, arsta->addr);
  
@@ -95,8 +97,7 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
 -			   arsta->addr, arvif->vdev_id);
 +	skip_peer_delete = ar->ab->hw_params->vdev_start_delay &&
 +			   vif->type == NL80211_IFTYPE_STATION;
- 
--	ath12k_mac_station_post_remove(ar, arvif, arsta);
++
 +	if (!skip_peer_delete) {
 +		ret = ath12k_peer_delete(ar, arvif->vdev_id, arsta->addr);
 +		if (ret)
@@ -105,13 +106,14 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
 +		else
 +			ath12k_dbg(ar->ab, ATH12K_DBG_PEER, "Removed peer: %pM for VDEV: %d\n",
 +				   arsta->addr, arvif->vdev_id);
-+
+ 
+-	ath12k_mac_station_post_remove(ar, arvif, arsta);
 +		ath12k_mac_station_post_remove(ar, arvif, arsta);
 +	}
  
   	return ret;
  }
-@@ -12936,6 +12952,19 @@ ath12k_mac_op_unassign_vif_chanctx(struc
+@@ -13115,6 +13131,19 @@ ath12k_mac_op_unassign_vif_chanctx(struc
  	}
  
  	if (ab->hw_params->vdev_start_delay &&

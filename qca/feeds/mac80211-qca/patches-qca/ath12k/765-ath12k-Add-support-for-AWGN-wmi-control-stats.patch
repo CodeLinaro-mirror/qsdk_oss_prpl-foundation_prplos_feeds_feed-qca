@@ -30,7 +30,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -293,6 +293,90 @@ int wmi_ctrl_path_cal_stat(struct ath12k
+@@ -293,6 +293,89 @@ int wmi_ctrl_path_cal_stat(struct ath12k
  	return ret_val;
  }
  
@@ -48,8 +48,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
 +	if (!buf)
 +		return -ENOMEM;
 +
-+	mutex_lock(&ar->wmi_ctrl_path_stats_lock);
-+
++	spin_lock_bh(&ar->wmi_ctrl_path_stats_lock);
 +	list_for_each_entry(stats, &ar->debug.wmi_list, list) {
 +
 +		if (!stats)
@@ -111,7 +110,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
 +				 awgn_stats->awgn_int_bw_cnt[5]);
 +	}
 +	ath12k_wmi_crl_path_stats_list_free(ar, &ar->debug.wmi_list);
-+	mutex_unlock(&ar->wmi_ctrl_path_stats_lock);
++	spin_unlock_bh(&ar->wmi_ctrl_path_stats_lock);
 +	ret_val =  simple_read_from_buffer(ubuf, count, ppos, buf, len);
 +	kfree(buf);
 +
@@ -121,7 +120,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  int wmi_ctrl_path_btcoex_stat(struct ath12k *ar, const char __user *ubuf,
  			size_t count, loff_t *ppos)
  {
-@@ -380,6 +464,9 @@ static ssize_t ath12k_read_wmi_ctrl_path
+@@ -380,6 +463,9 @@ static ssize_t ath12k_read_wmi_ctrl_path
  	case WMI_CTRL_PATH_BTCOEX_STATS:
  		ret_val = wmi_ctrl_path_btcoex_stat(ar, ubuf, count, ppos);
  		break;
@@ -133,7 +132,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  		/* Unsupported tag */
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -4311,6 +4311,17 @@ ath12k_wmi_send_wmi_ctrl_stats_cmd(struc
+@@ -4313,6 +4313,17 @@ ath12k_wmi_send_wmi_ctrl_stats_cmd(struc
  		pdev_id_array[0] = ar->pdev->pdev_id;
  		stats_id = (1 << param->stats_id);
  		break;
@@ -193,9 +192,9 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
 +	stats->stats_ptr = awgn_stats;
 +	list_add_tail(&stats->list, &stats_buff->list);
 +
-+	mutex_lock(&ar->wmi_ctrl_path_stats_lock);
++	spin_lock_bh(&ar->wmi_ctrl_path_stats_lock);
 +	ath12k_wmi_crl_path_stats_list_free(ar, &ar->debug.wmi_list);
-+	mutex_unlock(&ar->wmi_ctrl_path_stats_lock);
++	spin_unlock_bh(&ar->wmi_ctrl_path_stats_lock);
 +	ar->debug.wmi_ctrl_path_stats_tagid = WMI_CTRL_PATH_AWGN_STATS;
 +	stats_buff->ar = ar;
 +
@@ -225,7 +224,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  	WMI_TAG_EHT_RATE_SET = 0x3C4,
  	WMI_TAG_DCS_AWGN_INT_TYPE = 0x3C5,
  	WMI_TAG_MLO_TX_SEND_PARAMS,
-@@ -7108,6 +7111,7 @@ wmi_ctrl_path_periodic_cal_type_id_to_na
+@@ -7110,6 +7111,7 @@ wmi_ctrl_path_periodic_cal_type_id_to_na
  #define WMI_CTRL_PATH_CAL_PROF_MASK	GENMASK(12, 8)
  #define WMI_CTRL_PATH_CAL_TYPE_MASK	GENMASK(7, 0)
  #define WMI_CTRL_PATH_IS_PERIODIC_CAL	GENMASK(13, 13)
@@ -233,7 +232,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  
  struct wmi_ctrl_path_pdev_stats {
  	u32 pdev_id;
-@@ -7169,6 +7173,21 @@ struct wmi_ctrl_path_btcoex_stats {
+@@ -7171,6 +7173,21 @@ struct wmi_ctrl_path_btcoex_stats {
  	u32 wl_tx_req_cntr;
  } __packed;
  
@@ -255,7 +254,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  struct wmi_ctrl_path_stats_ev_parse_param {
  	struct list_head list;
  	struct ath12k *ar;
-@@ -7706,6 +7725,7 @@ enum  wmi_ctrl_path_stats_id {
+@@ -7706,6 +7723,7 @@ enum  wmi_ctrl_path_stats_id {
  	WMI_REQ_CTRL_PATH_VDEV_EXTD_STAT = 2,
  	WMI_REQ_CTRL_PATH_MEM_STAT       = 3,
  	WMI_REQ_CTRL_PATH_CAL_STAT       = 5,

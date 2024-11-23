@@ -114,7 +114,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	ab->recovery_start = false;
  	ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
  	return ret;
-@@ -3319,7 +3325,7 @@ static void ath12k_core_reset(struct wor
+@@ -3321,7 +3327,7 @@ static void ath12k_core_reset(struct wor
  
  	if (teardown) {
  		if (ath12k_core_trigger_umac_reset(ab) ||
@@ -125,7 +125,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -1184,7 +1184,7 @@ static void ath12k_mac_dec_num_stations(
+@@ -1179,7 +1179,7 @@ static void ath12k_mac_dec_num_stations(
  	ar->num_stations--;
  }
  
@@ -134,7 +134,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  {
  
  	struct ath12k_base *partner_ab;
-@@ -1225,32 +1225,59 @@ int ath12k_mac_partner_peer_cleanup(stru
+@@ -1220,32 +1220,59 @@ int ath12k_mac_partner_peer_cleanup(stru
  				/* get arsta */
  				sta = peer->sta;
  				ahsta = (struct ath12k_sta *)sta->drv_priv;
@@ -216,7 +216,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			}
  		}
  	}
-@@ -7396,6 +7423,7 @@ static int ath12k_mac_handle_link_sta_st
+@@ -7392,6 +7419,7 @@ static int ath12k_mac_handle_link_sta_st
  		if (ret)
  			ath12k_warn(ar->ab, "Failed to add station: %pM for VDEV: %d\n",
  				    arsta->addr, arvif->vdev_id);
@@ -224,7 +224,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	} else if ((old_state == IEEE80211_STA_NONE &&
  		    new_state == IEEE80211_STA_NOTEXIST)) {
  
-@@ -7613,8 +7641,9 @@ int ath12k_mac_update_sta_state(struct i
+@@ -7629,8 +7657,9 @@ int ath12k_mac_update_sta_state(struct i
  		ret = ath12k_mac_handle_link_sta_state(hw, arvif, arsta,
  						       old_state, new_state);
  		if (ret) {
@@ -236,7 +236,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  			/* If FW recovery is ongoing, no need to move down sta states
  			 * as FW will wake up with a clean slate. Hence we set the
-@@ -9260,6 +9289,16 @@ static u8 ath12k_mac_get_tx_link(struct
+@@ -9273,6 +9302,16 @@ static u8 ath12k_mac_get_tx_link(struct
  		link = ahsta->deflink.link_id;
  
  	if (ieee80211_is_mgmt(hdr->frame_control)) {
@@ -264,16 +264,16 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  #endif
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -668,7 +668,11 @@ struct ath12k_sta {
- 	u16 links_map;
+@@ -671,7 +671,11 @@ struct ath12k_sta {
  	u16 ml_peer_id;
  	u8 assoc_link_id;
--	u8 num_peer;	
-+	u8 num_peer;
+ 	u8 num_peer;
+- };
 +	/* Indicates whether disassoc is sent after recovery
 +	 * ONLY used currently in recovery case
 +	 */
 +	bool low_ack_sent;
-  };
++};
  
  #define ATH12K_HALF_20MHZ_BW 10
+ #define ATH12K_2G_MIN_CENTER 2412

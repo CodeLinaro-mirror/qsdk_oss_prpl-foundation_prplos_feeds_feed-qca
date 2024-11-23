@@ -18,11 +18,9 @@ Signed-off-by: Balamurugan Mahalingam <quic_bmahalin@quicinc.com>
  drivers/net/wireless/ath/ath12k/mac.h         |   3 +
  10 files changed, 218 insertions(+), 134 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
-index 47e59f5..d4bbe9b 100644
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -400,6 +400,7 @@ struct ath12k_sta {
+@@ -421,6 +421,7 @@ struct ath12k_sta {
  
  	struct work_struct update_wk;
  	struct rate_info txrate;
@@ -30,11 +28,9 @@ index 47e59f5..d4bbe9b 100644
  	struct rate_info last_txrate;
  	u64 rx_duration;
  	u64 tx_duration;
-diff --git a/drivers/net/wireless/ath/ath12k/debugfs_sta.c b/drivers/net/wireless/ath/ath12k/debugfs_sta.c
-index c8aebc3..12b336d 100644
 --- a/drivers/net/wireless/ath/ath12k/debugfs_sta.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs_sta.c
-@@ -176,103 +176,9 @@ void ath12k_debugfs_sta_add_tx_stats(struct ath12k_sta *arsta,
+@@ -176,103 +176,9 @@ void ath12k_debugfs_sta_add_tx_stats(str
  }
  
  void ath12k_debugfs_sta_update_txcompl(struct ath12k *ar,
@@ -139,11 +135,9 @@ index c8aebc3..12b336d 100644
  }
  
  static ssize_t ath12k_dbg_sta_dump_tx_stats(struct file *file,
-diff --git a/drivers/net/wireless/ath/ath12k/debugfs_sta.h b/drivers/net/wireless/ath/ath12k/debugfs_sta.h
-index c356850..eec6600 100644
 --- a/drivers/net/wireless/ath/ath12k/debugfs_sta.h
 +++ b/drivers/net/wireless/ath/ath12k/debugfs_sta.h
-@@ -21,7 +21,6 @@ void ath12k_debugfs_sta_add_tx_stats(struct ath12k_sta *arsta,
+@@ -21,7 +21,6 @@ void ath12k_debugfs_sta_add_tx_stats(str
  				     struct ath12k_per_peer_tx_stats *peer_stats,
  				     u8 legacy_rate_idx);
  void ath12k_debugfs_sta_update_txcompl(struct ath12k *ar,
@@ -151,7 +145,7 @@ index c356850..eec6600 100644
  				       struct hal_tx_status *ts);
  
  #else /* CPTCFG_ATH12K_DEBUGFS */
-@@ -36,7 +35,6 @@ ath12k_debugfs_sta_add_tx_stats(struct ath12k_sta *arsta,
+@@ -36,7 +35,6 @@ ath12k_debugfs_sta_add_tx_stats(struct a
  }
  
  static inline void ath12k_debugfs_sta_update_txcompl(struct ath12k *ar,
@@ -159,11 +153,9 @@ index c356850..eec6600 100644
  						     struct hal_tx_status *ts)
  {
  }
-diff --git a/drivers/net/wireless/ath/ath12k/dp_mon.c b/drivers/net/wireless/ath/ath12k/dp_mon.c
-index 9140e03..b38be58 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.c
-@@ -292,7 +292,7 @@ static void ath12k_dp_mon_parse_he_sig_b1_mu(u8 *tlv_data,
+@@ -292,7 +292,7 @@ static void ath12k_dp_mon_parse_he_sig_b
  
  	ru_tones = u32_get_bits(info0,
  				HAL_RX_HE_SIG_B1_MU_INFO_INFO0_RU_ALLOCATION);
@@ -172,11 +164,9 @@ index 9140e03..b38be58 100644
  	ppdu_info->he_RU[0] = ru_tones;
  	ppdu_info->reception_type = HAL_RX_RECEPTION_TYPE_MU_MIMO;
  }
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index b42d3f7..fab759a 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -1442,7 +1442,7 @@ ath12k_update_per_peer_tx_stats(struct ath12k *ar,
+@@ -1442,7 +1442,7 @@ ath12k_update_per_peer_tx_stats(struct a
  		arsta->txrate.he_gi = ath12k_he_gi_to_nl80211_he_gi(sgi);
  		tones = le16_to_cpu(user_rate->ru_end) -
  			le16_to_cpu(user_rate->ru_start) + 1;
@@ -185,7 +175,7 @@ index b42d3f7..fab759a 100644
  		arsta->txrate.he_ru_alloc = v;
  		break;
  	case WMI_RATE_PREAMBLE_EHT:
-@@ -1450,7 +1450,7 @@ ath12k_update_per_peer_tx_stats(struct ath12k *ar,
+@@ -1450,7 +1450,7 @@ ath12k_update_per_peer_tx_stats(struct a
  		arsta->txrate.flags = RATE_INFO_FLAGS_EHT_MCS;
  		arsta->txrate.he_dcm = dcm;
  		arsta->txrate.he_gi = ath12k_he_gi_to_nl80211_he_gi(sgi);
@@ -194,7 +184,7 @@ index b42d3f7..fab759a 100644
  						(user_rate->ru_end -
  						 user_rate->ru_start) + 1);
  		break;
-@@ -2349,7 +2349,7 @@ static void ath12k_dp_rx_h_rate(struct ath12k *ar, struct hal_rx_desc *rx_desc,
+@@ -2472,7 +2472,7 @@ static void ath12k_dp_rx_h_rate(struct a
  		}
  		rx_status->encoding = RX_ENC_HE;
  		rx_status->nss = nss;
@@ -203,8 +193,6 @@ index b42d3f7..fab759a 100644
  		rx_status->bw = ath12k_mac_bw_to_mac80211_bw(bw);
  		break;
  	case RX_MSDU_START_PKT_TYPE_11BE:
-diff --git a/drivers/net/wireless/ath/ath12k/dp_tx.c b/drivers/net/wireless/ath/ath12k/dp_tx.c
-index 00f53e2..e6ab0df 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
 @@ -9,6 +9,7 @@
@@ -215,7 +203,7 @@ index 00f53e2..e6ab0df 100644
  
  static enum hal_tcl_encap_type
  ath12k_dp_tx_get_encap_type(struct ath12k_vif *arvif, struct sk_buff *skb)
-@@ -471,6 +472,114 @@ static void ath12k_dp_tx_cache_peer_stats(struct ath12k *ar,
+@@ -471,6 +472,114 @@ static void ath12k_dp_tx_cache_peer_stat
  	}
  }
  
@@ -230,7 +218,7 @@ index 00f53e2..e6ab0df 100644
 +	struct ath12k_sta *arsta;
 +	struct ieee80211_sta *sta;
 +	u16 rate, ru_tones;
-+	u8 mcs, rate_idx, ofdma;
++	u8 mcs, ofdma, rate_idx = 0;
 +	int ret;
 +
 +	spin_lock_bh(&ab->base_lock);
@@ -330,7 +318,7 @@ index 00f53e2..e6ab0df 100644
  static void ath12k_dp_tx_complete_msdu(struct ath12k *ar,
  				       struct sk_buff *msdu,
  				       struct hal_tx_status *ts)
-@@ -521,7 +630,8 @@ static void ath12k_dp_tx_complete_msdu(struct ath12k *ar,
+@@ -521,7 +630,8 @@ static void ath12k_dp_tx_complete_msdu(s
  	    (info->flags & IEEE80211_TX_CTL_NO_ACK))
  		info->flags |= IEEE80211_TX_STAT_NOACK_TRANSMITTED;
  
@@ -340,7 +328,7 @@ index 00f53e2..e6ab0df 100644
  		if (ts->flags & HAL_TX_STATUS_FLAGS_FIRST_MSDU) {
  			if (ar->last_ppdu_id == 0) {
  				ar->last_ppdu_id = ts->ppdu_id;
-@@ -529,12 +639,12 @@ static void ath12k_dp_tx_complete_msdu(struct ath12k *ar,
+@@ -529,12 +639,12 @@ static void ath12k_dp_tx_complete_msdu(s
  				   ar->cached_ppdu_id == ar->last_ppdu_id) {
  				ar->cached_ppdu_id = ar->last_ppdu_id;
  				ar->cached_stats.is_ampdu = true;
@@ -355,7 +343,7 @@ index 00f53e2..e6ab0df 100644
  				memset(&ar->cached_stats, 0,
  				       sizeof(struct ath12k_per_peer_tx_stats));
  			}
-@@ -577,6 +687,9 @@ static void ath12k_dp_tx_status_parse(struct ath12k_base *ab,
+@@ -577,6 +687,9 @@ static void ath12k_dp_tx_status_parse(st
  		ts->rate_stats = le32_to_cpu(desc->rate_stats.info0);
  	else
  		ts->rate_stats = 0;
@@ -365,8 +353,6 @@ index 00f53e2..e6ab0df 100644
  }
  
  void ath12k_dp_tx_completion_handler(struct ath12k_base *ab, int ring_id)
-diff --git a/drivers/net/wireless/ath/ath12k/dp_tx.h b/drivers/net/wireless/ath/ath12k/dp_tx.h
-index fcd52bf..3d7a07e 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.h
 @@ -15,6 +15,7 @@ struct ath12k_dp_htt_wbm_tx_status {
@@ -377,8 +363,6 @@ index fcd52bf..3d7a07e 100644
  int ath12k_dp_tx_htt_h2t_ver_req_msg(struct ath12k_base *ab);
  int ath12k_dp_tx(struct ath12k *ar, struct ath12k_vif *arvif,
  		 struct sk_buff *skb);
-diff --git a/drivers/net/wireless/ath/ath12k/hal_rx.h b/drivers/net/wireless/ath/ath12k/hal_rx.h
-index 3bfff16..32fae7a 100644
 --- a/drivers/net/wireless/ath/ath12k/hal_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/hal_rx.h
 @@ -630,36 +630,6 @@ struct hal_rx_resp_req_info {
@@ -418,8 +402,6 @@ index 3bfff16..32fae7a 100644
  void ath12k_hal_reo_status_queue_stats(struct ath12k_base *ab,
  				       struct hal_tlv_64_hdr *tlv,
  				       struct hal_reo_status *status);
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index c40c8e7..f6c3760 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
 @@ -249,6 +249,93 @@ static const u32 ath12k_smps_map[] = {
@@ -516,7 +498,7 @@ index c40c8e7..f6c3760 100644
  static const char *ath12k_mac_phymode_str(enum wmi_phy_mode mode)
  {
  	switch (mode) {
-@@ -2648,8 +2735,11 @@ static void ath12k_peer_assoc_prepare(struct ath12k *ar,
+@@ -2659,8 +2746,11 @@ static void ath12k_peer_assoc_prepare(st
  				      struct ath12k_wmi_peer_assoc_arg *arg,
  				      bool reassoc)
  {
@@ -528,7 +510,7 @@ index c40c8e7..f6c3760 100644
  	memset(arg, 0, sizeof(*arg));
  
  	reinit_completion(&ar->peer_assoc_done);
-@@ -2667,6 +2757,8 @@ static void ath12k_peer_assoc_prepare(struct ath12k *ar,
+@@ -2678,6 +2768,8 @@ static void ath12k_peer_assoc_prepare(st
  	ath12k_peer_assoc_h_qos(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_smps(sta, arg);
  
@@ -537,11 +519,9 @@ index c40c8e7..f6c3760 100644
  	/* TODO: amsdu_disable req? */
  }
  
-diff --git a/drivers/net/wireless/ath/ath12k/mac.h b/drivers/net/wireless/ath/ath12k/mac.h
-index 4a075f8..18c1832 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.h
 +++ b/drivers/net/wireless/ath/ath12k/mac.h
-@@ -75,6 +75,9 @@ void ath12k_mac_drain_tx(struct ath12k *ar);
+@@ -75,6 +75,9 @@ void ath12k_mac_drain_tx(struct ath12k *
  void ath12k_mac_peer_cleanup_all(struct ath12k *ar);
  int ath12k_mac_tx_mgmt_pending_free(int buf_id, void *skb, void *ctx);
  enum rate_info_bw ath12k_mac_bw_to_mac80211_bw(enum ath12k_supported_bw bw);
@@ -551,6 +531,3 @@ index 4a075f8..18c1832 100644
  enum ath12k_supported_bw ath12k_mac_mac80211_bw_to_ath12k_bw(enum rate_info_bw bw);
  enum hal_encrypt_type ath12k_dp_tx_get_encrypt_type(u32 cipher);
  #endif
--- 
-2.17.1
-

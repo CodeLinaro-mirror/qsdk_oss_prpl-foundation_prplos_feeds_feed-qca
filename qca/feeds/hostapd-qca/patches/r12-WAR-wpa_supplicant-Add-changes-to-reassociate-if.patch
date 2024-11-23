@@ -1,7 +1,7 @@
-From 5b17a5b79c7432c048035b3b48e36c1019660a97 Mon Sep 17 00:00:00 2001
+From 3fff43c33624647039bef63a23bcc0f3848ed742 Mon Sep 17 00:00:00 2001
 From: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 Date: Mon, 22 Jan 2024 12:14:33 +0530
-Subject: [PATCH] [WAR] wpa_supplicant: Add changes to reassociate if
+Subject: [PATCH] QSDK: [WAR] wpa_supplicant: Add changes to reassociate if
  associated links is lesser than requested link
 
 With the latest hostapd, when the partner link is going for a CAC/ACS
@@ -22,7 +22,14 @@ actual user requested configuration and try to re-associate after
 deauthenticating the existing link(s) if scan entry is found with the
 new link needed for completing the user configured association.
 
+Patch-depdendency: none
+
+Patch-work: none
+
+MLO
+
 Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
+Signed-off-by: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
 ---
  wpa_supplicant/bss.c              |  22 ++--
  wpa_supplicant/bss.h              |   7 +-
@@ -176,7 +183,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
 --- a/wpa_supplicant/scan.c
 +++ b/wpa_supplicant/scan.c
-@@ -3521,3 +3521,157 @@ void wpas_scan_restart_sched_scan(struct
+@@ -3521,3 +3521,167 @@ void wpas_scan_restart_sched_scan(struct
  	wpa_s->prev_sched_ssid = NULL;
  	wpa_supplicant_cancel_sched_scan(wpa_s);
  }
@@ -185,12 +192,11 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +					struct wpa_scan_res *res,
 +					struct os_reltime *fetch_time)
 +{
-+	const u8 *ml_ie, *rnr_ie, *ssid, *pos;
++	const u8 *rnr_ie, *ssid, *pos;
 +	u8 rnr_ie_len, i = 0, mbssid_idx = 0;
 +	struct wpa_bss *bss;
 +	u32 changes;
-+	u8 max_simult_link, ret = true;
-+	u16 link_count = 0;
++	u8 ret = true;
 +
 +	bss = wpa_bss_get_bssid(wpa_s, res->bssid);
 +	if (!bss) {
@@ -239,7 +245,6 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +				}
 +
 +				while (tbtt_count--) {
-+					const u8 *bssid = data + 1;
 +					u16 mld_id = *(data + 13);
 +					u8 link_id = *(data + 14) & 0xF;
 +
@@ -316,7 +321,18 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +	filter_scan_res(wpa_s, scan_res);
 +
 +	for (i = 0; i < scan_res->num; i++) {
-+		if (os_memcmp(wpa_s->current_bss->bssid, scan_res->res[i]->bssid, ETH_ALEN) != 0) {
++		const u8 *ml_ie, *mld_addr;
++
++		ml_ie = wpa_scan_get_ml_ie(scan_res->res[i],
++					   MULTI_LINK_CONTROL_TYPE_BASIC);
++		if (!ml_ie)
++			continue;
++
++		mld_addr = get_basic_mle_mld_addr(&ml_ie[3], ml_ie[1] - 1);
++		if (!mld_addr)
++			continue;
++
++		if (os_memcmp(wpa_s->bssid, mld_addr, ETH_ALEN) != 0) {
 +			/* Need to check any scan entry for current assoc bssid */
 +			continue;
 +		}
@@ -327,6 +343,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +		if (!ret)
 +			break;
 +	}
++	wpa_scan_results_free(scan_res);
 +
 +exit:
 +	if (ret)

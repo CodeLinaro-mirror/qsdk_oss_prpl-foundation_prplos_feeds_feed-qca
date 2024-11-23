@@ -39,9 +39,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +#endif /* CONFIG_IEEE80211BE */
 +
  	hapd->drv_priv = hapd->driver->hapd_init(hapd, &params);
- 	if (hapd->conf->is_bonded_iface_enabled)
- 		hostapd_mld_update_bridge_conn(hapd->conf->bridge, hapd->conf->iface);
-@@ -261,6 +270,7 @@ static int hostapd_driver_init(struct ho
+ 	os_free(params.bridge);
+ 	if (hapd->drv_priv == NULL) {
+@@ -259,6 +268,7 @@ static int hostapd_driver_init(struct ho
  	}
  
  #ifdef CONFIG_IEEE80211BE
@@ -63,7 +63,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		hapd->interface_added = 0;
  		if (hostapd_if_remove(hapd, WPA_IF_AP_BSS, hapd->conf->iface)) {
  			wpa_printf(MSG_WARNING,
-@@ -3216,25 +3219,26 @@ static void hostapd_cleanup_driver(const
+@@ -3239,25 +3242,26 @@ static void hostapd_cleanup_driver(const
  	ap_mld = !!iface->bss[0]->conf->mld_ap;
  #endif /* CONFIG_IEEE80211BE */
  
@@ -160,7 +160,16 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	if (drv->hostapd || bss->static_ap)
  		nlmode = NL80211_IFTYPE_AP;
-@@ -8907,6 +8912,7 @@ static int wpa_driver_nl80211_if_remove(
+@@ -7271,7 +7276,7 @@ static int wpa_driver_nl80211_associate(
+ 			goto fail;
+ 	}
+ 
+-	ret = send_and_recv_msgs_connect_handle(drv, msg, drv->first_bss, 1);
++	ret = send_and_recv_msgs_connect_handle(drv, msg, bss, 1);
+ 	msg = NULL;
+ 	if (ret) {
+ 		wpa_dbg(drv->ctx, MSG_DEBUG,
+@@ -8900,6 +8905,7 @@ static int wpa_driver_nl80211_if_remove(
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	int ifindex = if_nametoindex(ifname);
@@ -168,7 +177,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	wpa_printf(MSG_DEBUG, "nl80211: %s(type=%d ifname=%s) ifindex=%d added_if=%d",
  		   __func__, type, ifname, ifindex, bss->added_if);
-@@ -8945,12 +8951,20 @@ static int wpa_driver_nl80211_if_remove(
+@@ -8938,12 +8944,20 @@ static int wpa_driver_nl80211_if_remove(
  		for (tbss = drv->first_bss; tbss; tbss = tbss->next) {
  			if (tbss->next == bss) {
  				tbss->next = bss->next;
@@ -192,7 +201,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  				os_free(bss);
  				bss = NULL;
  				break;
-@@ -8960,16 +8974,29 @@ static int wpa_driver_nl80211_if_remove(
+@@ -8953,16 +8967,29 @@ static int wpa_driver_nl80211_if_remove(
  			wpa_printf(MSG_INFO, "nl80211: %s - could not find "
  				   "BSS %p in the list", __func__, bss);
  	} else {
@@ -226,7 +235,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		} else {
  			wpa_printf(MSG_DEBUG, "nl80211: No second BSS to reassign context to");
  		}
-@@ -13884,6 +13911,120 @@ static bool wpa_driver_get_shared_status
+@@ -13877,6 +13904,120 @@ static bool wpa_driver_get_shared_status
  	return false;
  }
  
@@ -312,7 +321,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +				      params->ifname, addr, ctx, drv_priv,
 +				      force_ifname, if_addr,
 +				      params->num_bridge && params->bridge[0] ? params->bridge[0] : NULL,
-+				      0, 1)) {
++				      1, 1)) {
 +		wpa_printf(MSG_DEBUG, "nl80211: Failed to add BSS. Expect issues!");
 +		goto free_all;
 +	}
@@ -347,7 +356,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  const struct wpa_driver_ops wpa_driver_nl80211_ops = {
  	.name = "nl80211",
  	.desc = "Linux nl80211/cfg80211",
-@@ -14041,5 +14182,6 @@ const struct wpa_driver_ops wpa_driver_n
+@@ -14034,5 +14175,6 @@ const struct wpa_driver_ops wpa_driver_n
  #ifdef CONFIG_IEEE80211BE
  	.if_link_remove = driver_nl80211_if_link_remove,
  	.get_drv_shared_status = wpa_driver_get_shared_status,
@@ -401,7 +410,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +int wpa_driver_set_phyname(struct wpa_driver_nl80211_data *drv)
 +{
 +	struct nl_msg *msg;
-+	u32 feat, nl_flags;
++	u32 feat, nl_flags = 0;
 +
 +	feat = get_nl80211_protocol_features(drv);
 +	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)

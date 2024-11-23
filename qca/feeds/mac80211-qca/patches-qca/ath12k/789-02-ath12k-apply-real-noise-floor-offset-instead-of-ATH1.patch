@@ -21,7 +21,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.c
-@@ -2098,7 +2098,7 @@ static void ath12k_dp_mon_update_radiota
+@@ -2100,7 +2100,7 @@ static void ath12k_dp_mon_update_radiota
  	bool ampdu_present = ppduinfo->userstats[ppduinfo->userid].ampdu_present;
  
  	rxs->flag |= RX_FLAG_MACTIME_START;
@@ -30,19 +30,9 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  	rxs->nss = ppduinfo->nss + 1;
  
  	if (ampdu_present) {
-@@ -4039,7 +4039,8 @@ move_next:
- 			if (peer && !peer->sta) {
- 				list_for_each_entry_safe(nrp, tmp, &ab->neighbor_peers, list) {
- 					if (nrp->is_filter_on && ether_addr_equal(nrp->addr, peer->addr)) {
--						nrp->rssi = ppdu_info->rssi_comb;
-+						nrp->rssi = ppdu_info->rssi_comb +
-+							    ar->rssi_offsets.rssi_offset;
- 						nrp->timestamp = ktime_to_ms(ktime_get_real());
- 						complete(&nrp->filter_done);
- 					}
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
-@@ -907,7 +907,7 @@ ath12k_dp_tx_htt_tx_complete_buf(struct
+@@ -905,7 +905,7 @@ ath12k_dp_tx_htt_tx_complete_buf(struct
  	if (ts->acked) {
  		if (!(info->flags & IEEE80211_TX_CTL_NO_ACK)) {
  			info->flags |= IEEE80211_TX_STAT_ACK;
@@ -51,7 +41,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  						  ts->ack_rssi;
  			info->status.flags = IEEE80211_TX_STATUS_ACK_SIGNAL_VALID;
  		} else {
-@@ -1174,7 +1174,7 @@ static void ath12k_dp_tx_complete_msdu(s
+@@ -1172,7 +1172,7 @@ static void ath12k_dp_tx_complete_msdu(s
  	if (ts.status == HAL_WBM_TQM_REL_REASON_FRAME_ACKED &&
  	    !(info->flags & IEEE80211_TX_CTL_NO_ACK)) {
  		info->flags |= IEEE80211_TX_STAT_ACK;
@@ -62,7 +52,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -14361,17 +14361,11 @@ static void ath12k_mac_op_sta_statistics
+@@ -14562,17 +14562,11 @@ static void ath12k_mac_op_sta_statistics
  	sinfo->txrate.flags = arsta->txrate.flags;
  	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_TX_BITRATE);
  
@@ -85,7 +75,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  }
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7643,11 +7643,9 @@ static int ath12k_pull_peer_assoc_conf_e
+@@ -7864,11 +7864,9 @@ static int ath12k_pull_peer_assoc_conf_e
  }
  
  static void ath12k_wmi_pull_pdev_stats_base(const struct wmi_pdev_stats_base *src,
@@ -98,7 +88,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  	dst->tx_frame_count = src->tx_frame_count;
  	dst->rx_frame_count = src->rx_frame_count;
  	dst->rx_clear_count = src->rx_clear_count;
-@@ -7803,7 +7801,7 @@ int ath12k_wmi_pull_fw_stats(struct ath1
+@@ -8024,7 +8022,7 @@ int ath12k_wmi_pull_fw_stats(struct ath1
  		if (!dst)
  			continue;
  
@@ -107,7 +97,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  		ath12k_wmi_pull_pdev_stats_tx(&src->tx, dst);
  		ath12k_wmi_pull_pdev_stats_rx(&src->rx, dst);
  		list_add_tail(&dst->list, &stats->pdevs);
-@@ -10995,7 +10993,7 @@ static void ath12k_mgmt_rx_event(struct
+@@ -11221,7 +11219,7 @@ static void ath12k_mgmt_rx_event(struct
  		status->freq = ieee80211_channel_to_frequency(rx_ev->channel,
  							      status->band);
  
@@ -118,7 +108,7 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  	hdr = (struct ieee80211_hdr *)skb->data;
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -900,7 +900,6 @@ struct ath12k {
+@@ -855,7 +855,6 @@ struct ath12k {
  	u32 txpower_scale;
  	u32 power_scale;
  	u32 chan_tx_pwr;

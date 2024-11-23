@@ -68,7 +68,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -1799,6 +1804,10 @@ int ieee802_11_build_ap_params(struct ho
+@@ -1800,6 +1805,10 @@ int ieee802_11_build_ap_params(struct ho
  
  		if (hapd->iconf->ru_punct_bitmap)
  			tail_len +=  DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
@@ -79,7 +79,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -1978,6 +1987,7 @@ int ieee802_11_build_ap_params(struct ho
+@@ -1979,6 +1988,7 @@ int ieee802_11_build_ap_params(struct ho
  		tailpos = hostapd_eid_eht_capab(hapd, tailpos,
  						IEEE80211_MODE_AP);
  		tailpos = hostapd_eid_eht_operation(hapd, tailpos, IEEE80211_MODE_AP);
@@ -89,7 +89,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3914,6 +3914,11 @@ static int __check_assoc_ies(struct host
+@@ -3910,6 +3910,11 @@ static int __check_assoc_ies(struct host
  					  elems->eht_capabilities_len);
  		if (resp != WLAN_STATUS_SUCCESS)
  			return resp;
@@ -101,7 +101,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  		if (!link) {
  			resp = hostapd_process_ml_assoc_req(hapd, elems, sta);
-@@ -4582,6 +4587,7 @@ static int add_associated_sta(struct hos
+@@ -4578,6 +4583,7 @@ static int add_associated_sta(struct hos
  	struct ieee80211_vht_capabilities vht_cap;
  	struct ieee80211_he_capabilities he_cap;
  	struct ieee80211_eht_capabilities eht_cap;
@@ -109,7 +109,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	int set = 1;
  	const u8 *mld_link_addr = NULL;
  	bool mld_link_sta = false;
-@@ -4661,9 +4667,13 @@ static int add_associated_sta(struct hos
+@@ -4657,9 +4663,13 @@ static int add_associated_sta(struct hos
  	}
  #endif /* CONFIG_IEEE80211AX */
  #ifdef CONFIG_IEEE80211BE
@@ -124,7 +124,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  #endif /* CONFIG_IEEE80211BE */
  
  	/*
-@@ -4683,7 +4693,9 @@ static int add_associated_sta(struct hos
+@@ -4679,7 +4689,9 @@ static int add_associated_sta(struct hos
  			    sta->he_6ghz_capab,
  			    sta->flags | WLAN_STA_ASSOC, sta->qosinfo,
  			    sta->vht_opmode, sta->p2p_ie ? 1 : 0,
@@ -135,7 +135,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		hostapd_logger(hapd, sta->addr,
  			       HOSTAPD_MODULE_IEEE80211, HOSTAPD_LEVEL_NOTICE,
  			       "Could not %s STA to kernel driver",
-@@ -4739,6 +4751,9 @@ static u16 send_assoc_resp(struct hostap
+@@ -4735,6 +4747,9 @@ static u16 send_assoc_resp(struct hostap
  			buflen +=  DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
  		if (hapd->iconf->punct_bitmap)
  			buflen += EHT_OPER_DISABLED_SUBCHAN_BITMAP_SIZE;
@@ -145,7 +145,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -4904,6 +4919,7 @@ rsnxe_done:
+@@ -4900,6 +4915,7 @@ rsnxe_done:
  			p = hostapd_eid_eht_basic_ml(hapd, p, sta, false);
  		p = hostapd_eid_eht_capab(hapd, p, IEEE80211_MODE_AP);
  		p = hostapd_eid_eht_operation(hapd, p, IEEE80211_MODE_AP);
@@ -193,7 +193,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  #include "crypto/dh_groups.h"
  #include "hostapd.h"
  #include "sta_info.h"
-@@ -136,7 +137,7 @@ u8 * hostapd_eid_eht_capab(struct hostap
+@@ -135,7 +136,7 @@ u8 * hostapd_eid_eht_capab(struct hostap
  	struct eht_capabilities *eht_cap;
  	struct ieee80211_eht_capabilities *cap;
  	size_t mcs_nss_len, ppe_thresh_len;
@@ -202,7 +202,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  	mode = hapd->iface->current_mode;
  	if (!mode)
-@@ -154,10 +155,8 @@ u8 * hostapd_eid_eht_capab(struct hostap
+@@ -153,10 +154,8 @@ u8 * hostapd_eid_eht_capab(struct hostap
  	os_memset(cap, 0, sizeof(*cap));
  	cap->mac_cap = host_to_le16(eht_cap->mac_cap);
  	os_memcpy(cap->phy_cap, eht_cap->phy_cap, EHT_PHY_CAPAB_LEN);
@@ -214,78 +214,80 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		cap->phy_cap[EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_IDX] &=
  			~EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_MASK;
  	if (!hapd->iface->conf->eht_phy_capab.su_beamformer)
-@@ -327,6 +326,70 @@ u8 * hostapd_eid_eht_operation(struct ho
- 	return pos;
+@@ -328,6 +327,72 @@ u8 * hostapd_eid_eht_operation(struct ho
  }
  
-+u8 * hostapd_eid_vendor_240mhz(struct hostapd_data *hapd, u8 *eid,
-+                               enum ieee80211_op_mode opmode)
-+{
-+       struct hostapd_hw_modes *mode;
-+       u8 *pos = eid;
-+       struct eht_capabilities *eht_cap;
-+       struct ieee80211_240mhz_vendor_oper *eht_240_cap;
-+       u8 ccfs0,ccfs1;
-+
-+       mode = hapd->iface->current_mode;
-+       if (!mode || is_6ghz_op_class(hapd->iconf->op_class) ||
-+	    hapd->iconf->eht_oper_chwidth != CONF_OPER_CHWIDTH_320MHZ)
-+               return eid;
-+
-+       eht_cap = &mode->eht_capab[opmode];
-+
-+       if (!eht_cap->eht_supported)
-+                   return eid;
-+       ccfs0 = hostapd_get_oper_centr_freq_seg0_idx(hapd->iconf);
-+       ccfs1 = ccfs0 - 16;
-+
-+       *pos++ = WLAN_EID_VENDOR_SPECIFIC;
-+       *pos++ = 6 + /* Element ID, Length, OUI, OUI Type */
-+	        4 + /* QCN version Attribute size */
-+		sizeof(struct ieee80211_240mhz_vendor_oper);
-+       WPA_PUT_BE24(pos, OUI_QCN);
-+       pos += 3;
-+       *pos++ = 1; /* QCN_OUI_TYPE */
-+
-+       /* QCN Version Attribute*/
-+       *pos++ = 1; /* QCN_ATTRIB_VERSION */
-+       *pos++ = 2; /* Length */
-+       *pos++ = 1; /* QCN_VER_ATTR_VER */
-+       *pos++ = 0; /* QCN_VER_ATTR_SUBVERSION */
-+
-+       /* QCN Attirbute */
-+       *pos++ = QCN_ATTRIB_HE_240_MHZ_SUPP; /*QCN_ATTRIB_HE_240_MHZ_SUPP*/
-+       *pos++ = sizeof(struct ieee80211_240mhz_vendor_oper);
-+
-+       /* 240Mhz fields */
-+       eht_240_cap = (struct ieee80211_240mhz_vendor_oper*)pos;
-+       os_memset(eht_240_cap, 0, sizeof(struct ieee80211_240mhz_vendor_oper));
-+
-+       eht_240_cap->ccfs1 = ccfs1;
-+       eht_240_cap->ccfs0 = hostapd_get_oper_centr_freq_seg0_idx(hapd->iconf);
-+       eht_240_cap->ru_punct_bitmap = hapd->iconf->ru_punct_bitmap;
-+       eht_240_cap->phy_cap_320mhz = eht_cap->phy_cap[EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_IDX] &
-+                                     EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_MASK;
-+       eht_240_cap->phy_cap_320mhz |= eht_cap->phy_cap[EHT_PHYCAP_BEAMFORMEE_SS_320MHZ_IDX] &
-+                                      EHT_PHYCAP_BEAMFORMEE_SS_320MHZ_MASK;
-+       eht_240_cap->phy_cap_320mhz |= (eht_cap->phy_cap[EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_IDX] &
-+                                      EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_MASK) |
-+                                      (eht_cap->phy_cap[EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_IDX_1] &
-+                                       EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_MASK);
-+       eht_240_cap->phy_cap_320mhz |= eht_cap->phy_cap[EHT_PHYCAP_NON_OFDMA_UL_MUMIMO_320MHZ_IDX] &
-+                                      EHT_PHYCAP_NON_OFDMA_UL_MUMIMO_320MHZ_MASK;
-+       eht_240_cap->phy_cap_320mhz |= eht_cap->phy_cap[EHT_PHYCAP_MU_CAPABILITY_IDX] &
-+                                       EHT_PHYCAP_MU_BEAMFORMER_MASK;
-+
-+       memcpy(&eht_240_cap->mcs_map_320mhz, &eht_cap->mcs, EHT_PHYCAP_MCS_NSS_LEN_160MHZ);
-+       pos += sizeof(struct ieee80211_240mhz_vendor_oper);
-+
-+       return pos;
-+}
  
++u8 * hostapd_eid_vendor_240mhz(struct hostapd_data *hapd, u8 *eid,
++			       enum ieee80211_op_mode opmode)
++{
++	struct hostapd_hw_modes *mode;
++	u8 *pos = eid;
++	struct eht_capabilities *eht_cap;
++	struct ieee80211_240mhz_vendor_oper *eht_240_cap;
++	u8 ccfs0,ccfs1;
++
++	mode = hapd->iface->current_mode;
++	if (!mode || is_6ghz_op_class(hapd->iconf->op_class) ||
++	    hapd->iconf->eht_oper_chwidth != CONF_OPER_CHWIDTH_320MHZ)
++		return eid;
++
++	eht_cap = &mode->eht_capab[opmode];
++
++	if (!eht_cap->eht_supported)
++		return eid;
++	ccfs0 = hostapd_get_oper_centr_freq_seg0_idx(hapd->iconf);
++	ccfs1 = ccfs0 - 16;
++
++	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
++	*pos++ = 6 + /* Element ID, Length, OUI, OUI Type */
++		 4 + /* QCN version Attribute size */
++		 sizeof(struct ieee80211_240mhz_vendor_oper);
++	WPA_PUT_BE24(pos, OUI_QCN);
++	pos += 3;
++	*pos++ = 1; /* QCN_OUI_TYPE */
++
++	/* QCN Version Attribute*/
++	*pos++ = 1; /* QCN_ATTRIB_VERSION */
++	*pos++ = 2; /* Length */
++	*pos++ = 1; /* QCN_VER_ATTR_VER */
++	*pos++ = 0; /* QCN_VER_ATTR_SUBVERSION */
++
++	/* QCN Attirbute */
++	*pos++ = QCN_ATTRIB_HE_240_MHZ_SUPP; /*QCN_ATTRIB_HE_240_MHZ_SUPP*/
++	*pos++ = sizeof(struct ieee80211_240mhz_vendor_oper);
++
++	/* 240Mhz fields */
++	eht_240_cap = (struct ieee80211_240mhz_vendor_oper*)pos;
++	os_memset(eht_240_cap, 0, sizeof(struct ieee80211_240mhz_vendor_oper));
++
++	eht_240_cap->ccfs1 = ccfs1;
++	eht_240_cap->ccfs0 = hostapd_get_oper_centr_freq_seg0_idx(hapd->iconf);
++	eht_240_cap->ru_punct_bitmap = hapd->iconf->ru_punct_bitmap;
++	eht_240_cap->phy_cap_320mhz = eht_cap->phy_cap[EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_IDX] &
++				      EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_MASK;
++	eht_240_cap->phy_cap_320mhz |= eht_cap->phy_cap[EHT_PHYCAP_BEAMFORMEE_SS_320MHZ_IDX] &
++		EHT_PHYCAP_BEAMFORMEE_SS_320MHZ_MASK;
++	eht_240_cap->phy_cap_320mhz |= (eht_cap->phy_cap[EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_IDX] &
++					EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_MASK) |
++				       (eht_cap->phy_cap[EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_IDX_1] &
++		 			EHT_PHYCAP_NUM_SOUND_DIM_320MHZ_MASK);
++	eht_240_cap->phy_cap_320mhz |= eht_cap->phy_cap[EHT_PHYCAP_NON_OFDMA_UL_MUMIMO_320MHZ_IDX] &
++				       EHT_PHYCAP_NON_OFDMA_UL_MUMIMO_320MHZ_MASK;
++	eht_240_cap->phy_cap_320mhz |= eht_cap->phy_cap[EHT_PHYCAP_MU_CAPABILITY_IDX] &
++				       EHT_PHYCAP_MU_BEAMFORMER_MASK;
++
++	memcpy(&eht_240_cap->mcs_map_320mhz, &eht_cap->mcs, EHT_PHYCAP_MCS_NSS_LEN_160MHZ);
++	pos += sizeof(struct ieee80211_240mhz_vendor_oper);
++
++	return pos;
++}
++
++
  static bool check_valid_eht_mcs_nss(struct hostapd_data *hapd, const u8 *ap_mcs,
  				    const u8 *sta_mcs, u8 mcs_count, u8 map_len)
-@@ -1198,3 +1261,41 @@ out:
+ {
+@@ -1198,3 +1263,41 @@ out:
  
  	return WLAN_STATUS_SUCCESS;
  }
@@ -494,7 +496,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  };
  
  #define HE_MAC_CAPAB_0		0
-@@ -2573,6 +2575,8 @@ struct hostapd_sta_add_params {
+@@ -2571,6 +2573,8 @@ struct hostapd_sta_add_params {
  	bool mld_link_sta;
  	s8 mld_link_id;
  	const u8 *mld_link_addr;

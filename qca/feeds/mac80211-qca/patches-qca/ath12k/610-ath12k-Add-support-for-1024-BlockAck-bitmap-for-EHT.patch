@@ -17,8 +17,6 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h      |  1 +
  5 files changed, 91 insertions(+), 48 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp.h b/drivers/net/wireless/ath/ath12k/dp.h
-index 492fbdb..93e3ad7 100644
 --- a/drivers/net/wireless/ath/ath12k/dp.h
 +++ b/drivers/net/wireless/ath/ath12k/dp.h
 @@ -145,7 +145,7 @@ struct ath12k_pdev_dp {
@@ -30,8 +28,6 @@ index 492fbdb..93e3ad7 100644
  
  #define DP_TCL_NUM_RING_MAX	4
  
-diff --git a/drivers/net/wireless/ath/ath12k/hal_desc.h b/drivers/net/wireless/ath/ath12k/hal_desc.h
-index 86661ad..b58f51c 100644
 --- a/drivers/net/wireless/ath/ath12k/hal_desc.h
 +++ b/drivers/net/wireless/ath/ath12k/hal_desc.h
 @@ -2316,6 +2316,34 @@ struct hal_rx_reo_queue_ext {
@@ -90,11 +86,9 @@ index 86661ad..b58f51c 100644
  
  struct hal_reo_update_rx_queue {
  	struct hal_reo_cmd_hdr cmd;
-diff --git a/drivers/net/wireless/ath/ath12k/hal_rx.c b/drivers/net/wireless/ath/ath12k/hal_rx.c
-index ee61a64..520452c 100644
 --- a/drivers/net/wireless/ath/ath12k/hal_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/hal_rx.c
-@@ -689,6 +689,7 @@ void ath12k_hal_reo_update_rx_reo_queue_status(struct ath12k_base *ab,
+@@ -689,6 +689,7 @@ void ath12k_hal_reo_update_rx_reo_queue_
  u32 ath12k_hal_reo_qdesc_size(u32 ba_window_size, u8 tid)
  {
  	u32 num_ext_desc;
@@ -102,7 +96,7 @@ index ee61a64..520452c 100644
  
  	if (ba_window_size <= 1) {
  		if (tid != HAL_DESC_REO_NON_QOS_TID)
-@@ -699,12 +700,16 @@ u32 ath12k_hal_reo_qdesc_size(u32 ba_window_size, u8 tid)
+@@ -699,12 +700,16 @@ u32 ath12k_hal_reo_qdesc_size(u32 ba_win
  		num_ext_desc = 1;
  	} else if (ba_window_size <= 210) {
  		num_ext_desc = 2;
@@ -122,11 +116,9 @@ index ee61a64..520452c 100644
  }
  
  void ath12k_hal_reo_qdesc_setup(struct hal_rx_reo_queue *qdesc,
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 2c765a1..41ea482 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -3408,6 +3408,22 @@ static void ath12k_mac_op_bss_info_changed(struct ieee80211_hw *hw,
+@@ -3419,6 +3419,22 @@ static void ath12k_mac_op_bss_info_chang
  		if (ret)
  			ath12k_warn(ar->ab, "failed to update bcn template: %d\n",
  				    ret);
@@ -149,7 +141,7 @@ index 2c765a1..41ea482 100644
  	}
  
  	if (changed & (BSS_CHANGED_BEACON_INFO | BSS_CHANGED_BEACON)) {
-@@ -3445,44 +3461,37 @@ static void ath12k_mac_op_bss_info_changed(struct ieee80211_hw *hw,
+@@ -3456,28 +3472,22 @@ static void ath12k_mac_op_bss_info_chang
  		}
  		ath12k_control_beaconing(arvif, info);
  
@@ -163,16 +155,11 @@ index 2c765a1..41ea482 100644
 -				ath12k_warn(ar->ab,
 -					    "failed to set BA BUFFER SIZE 256 for vdev: %d\n",
 -					    arvif->vdev_id);
- 
+-
 -			param_id = WMI_VDEV_PARAM_HEOPS_0_31;
 -			param_value = vif->bss_conf.he_oper.params;
 -			ret = ath12k_wmi_vdev_set_param_cmd(ar, arvif->vdev_id,
-+		if (arvif->is_up && vif->bss_conf.he_support) {
-+		    	if (vif->bss_conf.he_oper.params) {
-+				param_id = WMI_VDEV_PARAM_HEOPS_0_31;
-+				param_value = vif->bss_conf.he_oper.params;
-+				ret = ath12k_wmi_vdev_set_param_cmd(ar, arvif->vdev_id,
- 							    param_id, param_value);
+-							    param_id, param_value);
 -			ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
 -				   "he oper param: %x set for VDEV: %d\n",
 -				   param_value, arvif->vdev_id);
@@ -180,50 +167,26 @@ index 2c765a1..41ea482 100644
 -			if (ret)
 -				ath12k_warn(ar->ab, "Failed to set he oper params %x for VDEV %d: %i\n",
 -					    param_value, arvif->vdev_id, ret);
--
--			param_id = WMI_VDEV_PARAM_EHTOPS_0_31;
--			memcpy(&param_value, &vif->bss_conf.eht_oper,
--			       sizeof(vif->bss_conf.eht_oper));
--			ret = ath12k_wmi_vdev_set_param_cmd(ar,
--					arvif->vdev_id,
--					param_id,
--					param_value);
--			ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
--					"eht oper param: %x set for VDEV: %d\n",
--					param_value, arvif->vdev_id);
--
--			if (ret)
--				ath12k_warn(ar->ab,
--					    "Failed to set eht oper params %x for VDEV %d: %i\n",
--					    param_value, arvif->vdev_id, ret);
++		if (arvif->is_up && vif->bss_conf.he_support) {
++			if (vif->bss_conf.he_oper.params) {
++				param_id = WMI_VDEV_PARAM_HEOPS_0_31;
++				param_value = vif->bss_conf.he_oper.params;
++				ret = ath12k_wmi_vdev_set_param_cmd(ar, arvif->vdev_id,
++								    param_id,
++								    param_value);
 +				ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
 +					   "he oper param: %x set for VDEV: %d\n",
 +					   param_value, arvif->vdev_id);
 +
 +				if (ret)
-+					ath12k_warn(ar->ab, "Failed to set he oper params %x for VDEV %d: %i\n",
-+						    param_value, arvif->vdev_id, ret);
-+
-+				param_id = WMI_VDEV_PARAM_EHTOPS_0_31;
-+				memcpy(&param_value, &vif->bss_conf.eht_oper,
-+				       sizeof(vif->bss_conf.eht_oper));
-+				ret = ath12k_wmi_vdev_set_param_cmd(ar,
-+						arvif->vdev_id,
-+						param_id,
-+						param_value);
-+				ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
-+						"eht oper param: %x set for VDEV: %d\n",
-+						param_value, arvif->vdev_id);
-+
-+				if (ret)
 +					ath12k_warn(ar->ab,
-+						    "Failed to set eht oper params %x for VDEV %d: %i\n",
++						    "Failed to set he oper params %x for VDEV %d: %i\n",
 +						    param_value, arvif->vdev_id, ret);
 +			}
  		}
  	}
  
-@@ -8680,7 +8689,7 @@ static int __ath12k_mac_register(struct ath12k *ar)
+@@ -8682,7 +8692,7 @@ static int __ath12k_mac_register(struct
  	ar->hw->queues = ATH12K_HW_MAX_QUEUES;
  	ar->hw->wiphy->tx_queue_len = ATH12K_QUEUE_LEN;
  	ar->hw->offchannel_tx_hw_queue = ATH12K_HW_MAX_QUEUES - 1;
@@ -232,11 +195,9 @@ index 2c765a1..41ea482 100644
  
  	ar->hw->vif_data_size = sizeof(struct ath12k_vif);
  	ar->hw->sta_data_size = sizeof(struct ath12k_sta);
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index eb34c84..317877d 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -177,6 +177,7 @@ struct wmi_tlv {
+@@ -178,6 +178,7 @@ struct wmi_tlv {
  #define WMI_APPEND_TO_EXISTING_CHAN_LIST_FLAG 1
  
  #define WMI_BA_MODE_BUFFER_SIZE_256  3
@@ -244,6 +205,3 @@ index eb34c84..317877d 100644
  
  /* HW mode config type replicated from FW header
   * @WMI_HOST_HW_MODE_SINGLE: Only one PHY is active.
--- 
-2.17.1
-

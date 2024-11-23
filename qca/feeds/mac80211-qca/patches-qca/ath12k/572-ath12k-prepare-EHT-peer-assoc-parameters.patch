@@ -17,11 +17,9 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h |  28 +++++
  3 files changed, 196 insertions(+)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 3d9c05f..518469a 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -2057,6 +2057,166 @@ static void ath12k_peer_assoc_h_he_6ghz(struct ath12k *ar,
+@@ -2057,6 +2057,167 @@ static void ath12k_peer_assoc_h_he_6ghz(
  				     ampdu_factor)) - 1;
  }
  
@@ -174,6 +172,7 @@ index 3d9c05f..518469a 100644
 +					&arg->peer_eht_rx_mcs_set[mcs_idx],
 +					&arg->peer_eht_tx_mcs_set[mcs_idx]);
 +		} else {
++			mcs_nss_supp_bw = &mcs_nss->bw._80;
 +			mcs_idx = WMI_EHTCAP_TXRX_MCS_NSS_IDX_80;
 +			ath12k_mac_set_eht_mcs_nss_bitmap(&mcs_nss->bw._80,
 +					&arg->peer_eht_rx_mcs_set[mcs_idx],
@@ -188,7 +187,7 @@ index 3d9c05f..518469a 100644
  static void ath12k_peer_assoc_h_smps(struct ieee80211_sta *sta,
  				     struct ath12k_wmi_peer_assoc_arg *arg)
  {
-@@ -2389,6 +2549,7 @@ static void ath12k_peer_assoc_prepare(struct ath12k *ar,
+@@ -2389,6 +2550,7 @@ static void ath12k_peer_assoc_prepare(st
  	ath12k_peer_assoc_h_vht(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_he(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_he_6ghz(ar, vif, sta, arg);
@@ -196,11 +195,9 @@ index 3d9c05f..518469a 100644
  	ath12k_peer_assoc_h_qos(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_smps(sta, arg);
  
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 954b575..7117ea1 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -2138,6 +2138,13 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2173,6 +2173,13 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  		   cmd->peer_he_cap_phy[2],
  		   cmd->peer_bw_rxnss_override);
  
@@ -214,11 +211,9 @@ index 954b575..7117ea1 100644
  	ret = ath12k_wmi_cmd_send(wmi, skb, WMI_PEER_ASSOC_CMDID);
  	if (ret) {
  		ath12k_warn(ar->ab,
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index bd39a2c..54c16a3 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2170,6 +2170,8 @@ enum wmi_tlv_service {
+@@ -2173,6 +2173,8 @@ enum wmi_tlv_service {
  	WMI_MAX_EXT_SERVICE = 256,
  
  	WMI_TLV_SERVICE_REG_CC_EXT_EVENT_SUPPORT = 281,
@@ -227,7 +222,7 @@ index bd39a2c..54c16a3 100644
  	WMI_MAX_EXT2_SERVICE,
  };
  
-@@ -2300,6 +2302,25 @@ struct ath12k_wmi_hal_reg_capabilities_ext_arg {
+@@ -2304,6 +2306,25 @@ struct ath12k_wmi_hal_reg_capabilities_e
  
  #define WMI_MAX_EHTCAP_MAC_SIZE  2
  #define WMI_MAX_EHTCAP_PHY_SIZE  3
@@ -253,7 +248,7 @@ index bd39a2c..54c16a3 100644
  
  /*
   * 0 – index indicated EHT-MCS map for 20Mhz only sta (4 bytes valid)
-@@ -3674,6 +3695,13 @@ struct ath12k_wmi_peer_assoc_arg {
+@@ -3724,6 +3745,13 @@ struct ath12k_wmi_peer_assoc_arg {
  	bool twt_responder;
  	bool twt_requester;
  	struct ath12k_wmi_ppe_threshold_arg peer_ppet;
@@ -267,6 +262,3 @@ index bd39a2c..54c16a3 100644
  };
  
  struct wmi_peer_assoc_complete_cmd {
--- 
-2.17.1
-

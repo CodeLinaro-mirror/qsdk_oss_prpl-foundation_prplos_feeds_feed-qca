@@ -20,7 +20,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
-@@ -7826,4 +7826,12 @@ mesh_nss_offld_proxy_path_exp_update(str
+@@ -7756,4 +7756,12 @@ mesh_nss_offld_proxy_path_exp_update(str
  }
  #endif
  
@@ -35,15 +35,18 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #endif /* MAC80211_H */
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -4013,6 +4013,7 @@ void ieee80211_csa_finish(struct ieee802
+@@ -3988,6 +3988,10 @@ void ieee80211_csa_finish(struct ieee802
  	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
  	struct ieee80211_local *local = sdata->local;
  	struct ieee80211_link_data *link;
 +	struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
++
++	if(!wdev)
++		return;
  
- 	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
+ 	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
  		return;
-@@ -4025,6 +4026,10 @@ void ieee80211_csa_finish(struct ieee802
+@@ -4000,6 +4004,10 @@ void ieee80211_csa_finish(struct ieee802
  		return;
  	}
  
@@ -54,7 +57,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	if (link->conf->mbssid_tx_vif == vif &&
  	    link->conf->mbssid_tx_vif_linkid == link->conf->link_id) {
  		/* Trigger ieee80211_csa_finish() on the non-transmitting
-@@ -4057,6 +4062,11 @@ void ieee80211_csa_finish(struct ieee802
+@@ -4032,6 +4040,11 @@ void ieee80211_csa_finish(struct ieee802
  				    link_iter->conf->mbssid_tx_vif_linkid != link->link_id)
  					continue;
  
@@ -66,7 +69,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  				ieee80211_queue_work(&iter->local->hw,
  						     &link_iter->csa_finalize_work);
  			}
-@@ -4068,6 +4078,24 @@ void ieee80211_csa_finish(struct ieee802
+@@ -4043,6 +4056,24 @@ void ieee80211_csa_finish(struct ieee802
  }
  EXPORT_SYMBOL(ieee80211_csa_finish);
  
@@ -75,9 +78,9 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +{
 +	struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
 +
-+	if (!wdev->valid_links)
++	if (!wdev || !wdev->valid_links)
 +		return;
-+	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
++	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
 +		return;
 +	if (wdev->links[link_id].critical_flag != critical_flag ||
 +	    wdev->links[link_id].bpcc != bpcc) {
@@ -91,15 +94,18 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  void ieee80211_channel_switch_disconnect(struct ieee80211_vif *vif, bool block_tx)
  {
  	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
-@@ -5411,6 +5439,7 @@ void ieee80211_color_change_finish(struc
+@@ -5396,6 +5427,10 @@ void ieee80211_color_change_finish(struc
  {
  	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
  	struct ieee80211_link_data *link;
 +	struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
++
++	if(!wdev)
++		return;
  
- 	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
+ 	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
          	return;
-@@ -5426,6 +5455,10 @@ void ieee80211_color_change_finish(struc
+@@ -5411,6 +5446,10 @@ void ieee80211_color_change_finish(struc
  	ieee80211_queue_work(&sdata->local->hw,
  			     &link->color_change_finalize_work);
  
@@ -112,7 +118,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  EXPORT_SYMBOL_GPL(ieee80211_color_change_finish);
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
-@@ -3978,14 +3978,26 @@ static ieee80211_rx_result debug_noinlin
+@@ -3980,14 +3980,26 @@ static ieee80211_rx_result debug_noinlin
  ieee80211_rx_h_userspace_mgmt(struct ieee80211_rx_data *rx)
  {
  	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(rx->skb);
@@ -141,15 +147,15 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		return RX_CONTINUE;
 --- a/net/mac80211/tx.c
 +++ b/net/mac80211/tx.c
-@@ -5307,6 +5307,7 @@ u8 ieee80211_beacon_update_cntdwn(struct
+@@ -5317,6 +5317,7 @@ u8 ieee80211_beacon_update_cntdwn(struct
  	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
  	struct ieee80211_link_data *link;
  	struct beacon_data *beacon = NULL;
 +	struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
  	u8 count = 0;
  
- 	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
-@@ -5329,6 +5330,10 @@ u8 ieee80211_beacon_update_cntdwn(struct
+ 	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
+@@ -5339,6 +5340,10 @@ u8 ieee80211_beacon_update_cntdwn(struct
  		goto unlock;
  
  	count = __ieee80211_beacon_update_cntdwn(beacon);

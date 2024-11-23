@@ -88,8 +88,8 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 +	ath12k_umac_reset_completion(ab);
  
  	ab->free_vdev_map = (1LL << (ab->num_radios * TARGET_NUM_VDEVS)) - 1;
- 	ab->num_db_cap = 0;
-@@ -2420,6 +2434,7 @@ static void ath12k_core_hw_group_stop(st
+ 	ab->free_vdev_stats_id_map = 0;
+@@ -2419,6 +2433,7 @@ static void ath12k_core_hw_group_stop(st
  		ath12k_hif_irq_disable(ab);
  		ath12k_core_pdev_destroy(ab);
  		ath12k_core_stop(ab);
@@ -99,7 +99,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		mutex_unlock(&ab->core_lock);
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -244,6 +244,8 @@ enum ath12k_dev_flags {
+@@ -243,6 +243,8 @@ enum ath12k_dev_flags {
  	ATH12K_FLAG_FTM_SEGMENTED,
  	ATH12K_FLAG_PPE_DS_ENABLED,
  	ATH12K_FLAG_WMI_INIT_DONE,
@@ -108,7 +108,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  };
  
  enum ath12k_monitor_flags {
-@@ -1203,6 +1205,18 @@ enum ath12k_mlo_recovery_mode {
+@@ -1210,6 +1212,18 @@ enum ath12k_mlo_recovery_mode {
  	ATH12K_MLO_RECOVERY_MODE0,
  };
  
@@ -127,7 +127,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  /* Holds info on the group of SOCs that are registered as a single wiphy
   * or single SOC where each radio registered as separate wiphy in non-MLO
   */
-@@ -1227,6 +1241,7 @@ struct ath12k_hw_group {
+@@ -1234,6 +1248,7 @@ struct ath12k_hw_group {
  	struct ath12k_host_mlo_mem_arena mlomem_arena;
  	atomic_t num_dp_tx_pending;
  	u64 mlo_tstamp_offset;
@@ -135,7 +135,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  };
  
  /* Master structure to hold the hw data which may be used in core module */
-@@ -1302,7 +1317,7 @@ struct ath12k_base {
+@@ -1309,7 +1324,7 @@ struct ath12k_base {
  	bool pdevs_macaddr_valid;
  	int bd_api;
  
@@ -144,7 +144,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	struct ath12k_bus_params bus_params;
  	bool is_qdss_tracing;
  
-@@ -1405,6 +1420,7 @@ struct ath12k_base {
+@@ -1412,6 +1427,7 @@ struct ath12k_base {
  	int userpd_id;
  
  	u32 chwidth_num_peer_caps;
@@ -152,7 +152,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  	/* must be last */
  	u8 drv_priv[] __aligned(sizeof(void *));
-@@ -1575,6 +1591,10 @@ int ath12k_sawf_send_disable_soc(u8 svc_
+@@ -1582,6 +1598,10 @@ int ath12k_sawf_send_disable_soc(u8 svc_
  int ath12k_core_sawf_ul_config(struct net_device *dev, struct ath12k_sawf_wmi_peer_latency_param *latency_info);
  void *ath12k_get_ab_nd_peer_from_peer_mac(u8 *peer_mac, struct ath12k_base **ab_ref);
  #endif /* CPTCFG_ATH12K_SAWF */
@@ -499,7 +499,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  	spin_unlock_bh(&dp->rx_desc_lock);
  
-@@ -2292,3 +2433,81 @@ fail_link_desc_cleanup:
+@@ -2295,3 +2436,81 @@ fail_link_desc_cleanup:
  
  	return ret;
  }
@@ -817,7 +817,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  #endif
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -551,6 +551,28 @@ static void ath12k_peer_rx_tid_qref_rese
+@@ -557,6 +557,28 @@ static void ath12k_peer_rx_tid_qref_rese
  	qref->info1 = u32_encode_bits(0, BUFFER_ADDR_INFO1_ADDR);
  }
  
@@ -846,7 +846,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  static int ath12k_dp_reo_cmd_send(struct ath12k_base *ab, struct ath12k_dp_rx_tid *rx_tid,
  				  enum hal_reo_cmd_type type,
  				  struct ath12k_hal_reo_cmd *cmd,
-@@ -562,7 +584,8 @@ static int ath12k_dp_reo_cmd_send(struct
+@@ -568,7 +590,8 @@ static int ath12k_dp_reo_cmd_send(struct
  	struct hal_srng *cmd_ring;
  	int cmd_num;
  
@@ -856,7 +856,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		return -ESHUTDOWN;
  
  	cmd_ring = &ab->hal.srng_list[dp->reo_cmd_ring.ring_id];
-@@ -978,7 +1001,7 @@ void ath12k_dp_rx_peer_tid_cleanup(struc
+@@ -984,7 +1007,7 @@ void ath12k_dp_rx_peer_tid_cleanup(struc
  	}
  }
  
@@ -865,7 +865,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  					 struct ath12k_peer *peer,
  					 struct ath12k_dp_rx_tid *rx_tid,
  					 u32 ba_win_sz, u16 ssn,
-@@ -998,11 +1021,11 @@ static int ath12k_peer_rx_tid_reo_update
+@@ -1004,11 +1027,11 @@ static int ath12k_peer_rx_tid_reo_update
  		cmd.upd2 = u32_encode_bits(ssn, HAL_REO_CMD_UPD2_SSN);
  	}
  
@@ -879,7 +879,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			    rx_tid->tid, ret);
  		return ret;
  	}
-@@ -1012,6 +1035,68 @@ static int ath12k_peer_rx_tid_reo_update
+@@ -1018,6 +1041,68 @@ static int ath12k_peer_rx_tid_reo_update
  	return 0;
  }
  
@@ -948,7 +948,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  int ath12k_dp_rx_peer_tid_setup(struct ath12k *ar, u8 tid, u32 ba_win_sz, u16 ssn,
  				enum hal_pn_type pn_type, struct ath12k_peer *peer)
  {
-@@ -1039,7 +1124,7 @@ int ath12k_dp_rx_peer_tid_setup(struct a
+@@ -1045,7 +1130,7 @@ int ath12k_dp_rx_peer_tid_setup(struct a
  	/* Update the tid queue if it is already setup */
  	if (rx_tid->active) {
  		paddr = rx_tid->paddr;
@@ -957,7 +957,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  						    ba_win_sz, ssn, true);
  		if (ret) {
  			ath12k_warn(ab, "failed to update reo for peer %pM rx tid %d\n",
-@@ -1197,7 +1282,7 @@ int ath12k_dp_rx_ampdu_stop(struct ath12
+@@ -1203,7 +1288,7 @@ int ath12k_dp_rx_ampdu_stop(struct ath12
  		return 0;
  	}
  
@@ -1770,10 +1770,10 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 +}
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
-@@ -231,4 +231,10 @@ ath12k_dp_rx_htt_rxdma_rxole_ppe_cfg_set
- int ath12k_dp_rx_pkt_type_filter(struct ath12k *ar,
- 				 enum ath12k_routing_pkt_type pkt_type,
- 				 u32 meta_data);
+@@ -231,4 +231,10 @@ int ath12k_dp_htt_tlv_iter(struct ath12k
+ int
+ ath12k_dp_rx_htt_rxdma_rxole_ppe_cfg_set(struct ath12k_base *ab,
+ 					 struct ath12k_dp_htt_rxdma_ppe_cfg_param *param);
 +void ath12k_dp_tid_cleanup(struct ath12k_base *ab);
 +void ath12k_dp_peer_tid_setup(struct ath12k_base *ab);
 +void ath12k_dp_peer_reo_tid_setup(struct ath12k_base *ab, struct ath12k_link_sta *arsta);
@@ -1837,7 +1837,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 +}
 --- a/drivers/net/wireless/ath/ath12k/hal.c
 +++ b/drivers/net/wireless/ath/ath12k/hal.c
-@@ -2255,6 +2255,12 @@ int ath12k_hal_srng_setup_idx(struct ath
+@@ -2259,6 +2259,12 @@ int ath12k_hal_srng_setup_idx(struct ath
  	memset(srng->ring_base_vaddr, 0,
  	       (srng->entry_size * srng->num_entries) << 2);
  
@@ -1850,7 +1850,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	reg_base = srng->hwreg_base[HAL_SRNG_REG_GRP_R2];
  
  	if (srng->ring_dir == HAL_SRNG_DIR_SRC) {
-@@ -2264,6 +2270,10 @@ int ath12k_hal_srng_setup_idx(struct ath
+@@ -2268,6 +2274,10 @@ int ath12k_hal_srng_setup_idx(struct ath
  		srng->u.src_ring.tp_addr = (void *)(hal->rdp.vaddr + ring_id);
  		srng->u.src_ring.low_threshold = params->low_threshold *
  						 srng->entry_size;
@@ -1861,7 +1861,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		if (srng_config->mac_type == ATH12K_HAL_SRNG_UMAC) {
  			if (!ab->hw_params->supports_shadow_regs) {
  				srng->u.src_ring.hp_addr =
-@@ -2290,6 +2300,10 @@ int ath12k_hal_srng_setup_idx(struct ath
+@@ -2294,6 +2304,10 @@ int ath12k_hal_srng_setup_idx(struct ath
  			idx = ring_id - HAL_SRNG_RING_ID_DMAC_CMN_ID_START;
  			srng->u.src_ring.hp_addr = (void *)(hal->wrp.vaddr +
  						   idx);
@@ -1872,7 +1872,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			srng->flags |= HAL_SRNG_FLAGS_LMAC_RING;
  		}
  	} else {
-@@ -2305,6 +2319,10 @@ int ath12k_hal_srng_setup_idx(struct ath
+@@ -2309,6 +2323,10 @@ int ath12k_hal_srng_setup_idx(struct ath
  		srng->u.dst_ring.tp = 0;
  		srng->u.dst_ring.cached_hp = 0;
  		srng->u.dst_ring.hp_addr = (void *)(hal->rdp.vaddr + ring_id);
@@ -1883,7 +1883,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		if (srng_config->mac_type == ATH12K_HAL_SRNG_UMAC) {
  			if (!ab->hw_params->supports_shadow_regs) {
  				srng->u.dst_ring.tp_addr =
-@@ -2336,6 +2354,10 @@ int ath12k_hal_srng_setup_idx(struct ath
+@@ -2340,6 +2358,10 @@ int ath12k_hal_srng_setup_idx(struct ath
  			idx = ring_id - HAL_SRNG_RING_ID_DMAC_CMN_ID_START;
  			srng->u.dst_ring.tp_addr = (void *)(hal->wrp.vaddr +
  						   idx);
@@ -1906,7 +1906,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  };
 --- a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
-@@ -8145,6 +8145,68 @@ static inline void htt_print_histogram_s
+@@ -8146,6 +8146,68 @@ static inline void htt_print_histogram_s
  	stats_req->buf_len = len;
  }
  
@@ -1975,7 +1975,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  static int ath12k_dbg_htt_ext_stats_parse(struct ath12k_base *ab,
  					  u16 tag, u16 len, const void *tag_buf,
  					  void *user_data)
-@@ -8775,6 +8837,10 @@ static int ath12k_dbg_htt_ext_stats_pars
+@@ -8776,6 +8838,10 @@ static int ath12k_dbg_htt_ext_stats_pars
  		break;
  	case HTT_STATS_TX_PDEV_SAWF_RATE_STATS_TAG:
  		htt_print_histogram_stats_tlv(tag_buf, stats_req);
@@ -1988,7 +1988,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.h
 +++ b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.h
-@@ -193,6 +193,7 @@ enum htt_tlv_tag_t {
+@@ -198,6 +198,7 @@ enum htt_tlv_tag_t {
  	HTT_STATS_PDEV_MBSSID_CTRL_FRAME_STATS_TAG	    = 176,
  	HTT_STATS_TX_PDEV_MLO_ABORT_TAG			    = 177,
  	HTT_STATS_TX_PDEV_MLO_TXOP_ABORT_TAG		    = 178,
@@ -1996,7 +1996,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	HTT_STATS_MAX_TAG,
  };
  
-@@ -4235,4 +4236,30 @@ struct htt_pdev_sched_algo_ofdma_stats_t
+@@ -4246,4 +4247,30 @@ struct htt_pdev_sched_algo_ofdma_stats_t
  	u32 dlofdma_disabled_consec_no_mpdus_success[HTT_NUM_AC_WMM];
  };
  

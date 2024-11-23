@@ -25,7 +25,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  8 files changed, 77 insertions(+), 2 deletions(-)
 
 diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 0aa4e80..ce0f574 100644
+index b6ad750..e12f391 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
 @@ -3462,6 +3462,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
@@ -35,9 +35,9 @@ index 0aa4e80..ce0f574 100644
 +	} else if (os_strcmp(buf, "he_ul_mumimo") == 0) {
 +		 conf->he_phy_capab.he_ul_mumimo = atoi(pos);
  	} else if (os_strcmp(buf, "he_bss_color") == 0) {
-		conf->he_op.he_bss_color = atoi(pos);
-		if (conf->he_op.he_bss_color > 63)
-@@ -4762,6 +4764,14 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+		conf->he_op.he_bss_color = atoi(pos) & 0x3f;
+		conf->he_op.he_bss_color_disabled = 0;
+@@ -4763,6 +4765,14 @@ static int hostapd_config_fill(struct hostapd_config *conf,
  		conf->eht_phy_capab.su_beamformee = atoi(pos);
  	} else if (os_strcmp(buf, "eht_mu_beamformer") == 0) {
  		conf->eht_phy_capab.mu_beamformer = atoi(pos);
@@ -49,11 +49,11 @@ index 0aa4e80..ce0f574 100644
 +		conf->eht_phy_capab.non_ofdma_ulmumimo_160mhz = atoi(pos);
 +	} else if (os_strcmp(buf, "eht_ulmumimo_320mhz") == 0) {
 +		conf->eht_phy_capab.non_ofdma_ulmumimo_320mhz = atoi(pos);
- 	} else if (os_strcmp(buf, "ru_punct_bitmap") == 0) {
+	} else if (os_strcmp(buf, "ru_punct_bitmap") == 0) {
 		conf->ru_punct_bitmap = atoi(pos);
 	} else if (os_strcmp(buf, "ru_punct_ofdma") == 0) {
 diff --git a/hostapd/hostapd.conf b/hostapd/hostapd.conf
-index cda9e35..595212d 100644
+index 136e44f..223f3e7 100644
 --- a/hostapd/hostapd.conf
 +++ b/hostapd/hostapd.conf
 @@ -838,6 +838,11 @@ wmm_ac_vo_acm=0
@@ -65,11 +65,11 @@ index cda9e35..595212d 100644
 +# 0 = not supported
 +# 1 = supported
 +
- # he_bss_color:
- # 0 = disable
- # 1-63 = pre-defined color
+ # he_bss_color: BSS color (1-63)
+ #he_bss_color=1
+
 diff --git a/src/ap/ap_config.c b/src/ap/ap_config.c
-index afc1dd7..3edcddb 100644
+index ae8fc97..36082bb 100644
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
 @@ -274,6 +274,8 @@ struct hostapd_config * hostapd_config_defaults(void)
@@ -82,7 +82,7 @@ index afc1dd7..3edcddb 100644
  	conf->he_op.he_bss_color_partial = 0;
  	conf->he_op.he_bss_color = os_random() % 63 + 1;
 diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index 40937c8..5ca4704 100644
+index 9410a35..225ca33 100644
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
 @@ -963,6 +963,7 @@ struct he_phy_capabilities_info {
@@ -105,7 +105,7 @@ index 40937c8..5ca4704 100644
  
  /**
 diff --git a/src/ap/hw_features.c b/src/ap/hw_features.c
-index 4f78b50..90ae35f 100644
+index 1723e0a..5397d30 100644
 --- a/src/ap/hw_features.c
 +++ b/src/ap/hw_features.c
 @@ -678,8 +678,36 @@ static int ieee80211ac_supported_vht_capab(struct hostapd_iface *iface)
@@ -146,7 +146,7 @@ index 4f78b50..90ae35f 100644
  }
  #endif /* CONFIG_IEEE80211AX */
 diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index 06de837..83e96e8 100644
+index e59f1c6..da04f93 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
 @@ -164,9 +164,21 @@ u8 * hostapd_eid_eht_capab(struct hostapd_data *hapd, u8 *eid,
@@ -173,7 +173,7 @@ index 06de837..83e96e8 100644
  
  	mcs_nss_len = ieee80211_eht_mcs_set_size(mode->mode,
 diff --git a/src/ap/ieee802_11_he.c b/src/ap/ieee802_11_he.c
-index 098711f..c3af932 100644
+index c8d3dae..73e3091 100644
 --- a/src/ap/ieee802_11_he.c
 +++ b/src/ap/ieee802_11_he.c
 @@ -160,6 +160,13 @@ u8 * hostapd_eid_he_capab(struct hostapd_data *hapd, u8 *eid,
@@ -191,7 +191,7 @@ index 098711f..c3af932 100644
  		he_oper_chwidth;
  
 diff --git a/src/common/ieee802_11_defs.h b/src/common/ieee802_11_defs.h
-index c47c0a0..2b3705b 100644
+index 19262de..0432c05 100644
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
 @@ -2374,6 +2374,9 @@ struct ieee80211_spatial_reuse {

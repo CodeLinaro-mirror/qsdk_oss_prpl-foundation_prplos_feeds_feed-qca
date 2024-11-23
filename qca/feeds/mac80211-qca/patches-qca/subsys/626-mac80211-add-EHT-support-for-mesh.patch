@@ -40,7 +40,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  	sband = ieee80211_get_sband(sdata);
  	if (!sband)
-@@ -763,6 +764,18 @@ ieee80211_mesh_update_bss_params(struct
+@@ -763,6 +764,15 @@ ieee80211_mesh_update_bss_params(struct
  		sdata->vif.bss_conf.he_oper.params =
  			__le32_to_cpu(he_oper->he_oper_params);
  
@@ -52,9 +52,6 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 +	cap = cfg80211_find_ext_elem(WLAN_EID_EXT_EHT_OPERATION, ie, ie_len);
 +	if (cap && ieee80211_eht_oper_size_ok(cap, cap->datalen))
 +		eht_oper = (void *)(cap->data + 1);
-+
-+	if (eht_oper)
-+		ieee80211_eht_op_ie_to_bss_conf(&sdata->vif, eht_oper);
 +
  	sdata->vif.bss_conf.eht_support =
  		!!ieee80211_get_eht_iftype_cap(sband, NL80211_IFTYPE_MESH_POINT);

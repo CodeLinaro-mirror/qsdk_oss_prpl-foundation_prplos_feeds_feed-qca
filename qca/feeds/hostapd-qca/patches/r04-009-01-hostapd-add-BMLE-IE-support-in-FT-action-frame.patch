@@ -58,7 +58,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifdef CONFIG_OCV
  static int wpa_channel_info(struct wpa_authenticator *wpa_auth,
  			       struct wpa_channel_info *ci)
-@@ -3529,7 +3553,7 @@ static int wpa_ft_process_auth_req(struc
+@@ -3536,7 +3560,7 @@ static int wpa_ft_process_auth_req(struc
  	struct vlan_description vlan;
  	const u8 *identity, *radius_cui;
  	size_t identity_len = 0, radius_cui_len = 0;
@@ -67,7 +67,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	*resp_ies = NULL;
  	*resp_ies_len = 0;
-@@ -3738,8 +3762,10 @@ pmk_r1_derived:
+@@ -3759,8 +3783,10 @@ pmk_r1_derived:
  	}
  	wpa_ft_set_session_timeout(sm->wpa_auth, wpa_auth_get_spa(sm), session_timeout);
  
@@ -79,7 +79,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	*resp_ies = os_zalloc(buflen);
  	if (*resp_ies == NULL)
  		goto fail;
-@@ -3765,6 +3791,8 @@ pmk_r1_derived:
+@@ -3791,6 +3817,8 @@ pmk_r1_derived:
  		goto fail;
  	pos += ret;
  
@@ -90,11 +90,11 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	return WLAN_STATUS_SUCCESS;
 --- a/src/ap/wpa_auth_glue.c
 +++ b/src/ap/wpa_auth_glue.c
-@@ -1417,6 +1417,21 @@ static int hostapd_wpa_auth_add_tspec(vo
+@@ -1481,6 +1481,21 @@ static int hostapd_wpa_auth_add_tspec(vo
  }
  
  
-+static u8 *hostapd_wpa_ft_add_bmle(void *ctx, u8 *bmle_ie, void *mle_data)
++static u8 *hostapd_wpa_ft_add_bmle(void *ctx, u8 *bmle_ie, u32 arg, void *mle_data)
 +{
 +	struct hostapd_data *hapd = ctx;
 +
@@ -102,7 +102,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +}
 +
 +
-+static size_t hostapd_wpa_ft_add_bmle_len(void *ctx, void *mle_data)
++static size_t hostapd_wpa_ft_add_bmle_len(void *ctx, u32 arg, void *mle_data)
 +{
 +	struct hostapd_data *hapd = ctx;
 +
@@ -112,7 +112,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  static int hostapd_wpa_register_ft_oui(struct hostapd_data *hapd,
  				       const char *ft_iface)
-@@ -1637,6 +1652,8 @@ int hostapd_setup_wpa(struct hostapd_dat
+@@ -1707,6 +1722,8 @@ int hostapd_setup_wpa(struct hostapd_dat
  		.add_sta = hostapd_wpa_auth_add_sta,
  		.add_sta_ft = hostapd_wpa_auth_add_sta_ft,
  		.add_tspec = hostapd_wpa_auth_add_tspec,

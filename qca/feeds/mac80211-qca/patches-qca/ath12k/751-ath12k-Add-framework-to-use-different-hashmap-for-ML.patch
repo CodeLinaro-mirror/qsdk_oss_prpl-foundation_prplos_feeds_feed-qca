@@ -142,7 +142,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  struct hal_tcl_status_ring;
  struct ath12k_ext_irq_grp;
  
-@@ -2065,7 +2066,11 @@ void ath12k_dp_pdev_pre_alloc(struct ath
+@@ -2157,7 +2158,11 @@ void ath12k_dp_pdev_pre_alloc(struct ath
  void ath12k_dp_pdev_free(struct ath12k_base *ab);
  int ath12k_dp_tx_htt_srng_setup(struct ath12k_base *ab, u32 ring_id,
  				int mac_id, enum hal_ring_type ring_type);
@@ -157,7 +157,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  int ath12k_dp_srng_setup(struct ath12k_base *ab, struct dp_srng *ring,
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -6747,7 +6747,7 @@ static int ath12k_mac_station_add(struct
+@@ -6735,7 +6735,7 @@ static int ath12k_mac_station_add(struct
  		}
  	}
  
@@ -166,7 +166,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	if (ret) {
  		ath12k_warn(ab, "failed to setup dp for peer %pM on vdev %i (%d)\n",
  			    arsta->addr, arvif->vdev_id, ret);
-@@ -7028,14 +7028,18 @@ static int ath12k_mac_handle_link_sta_st
+@@ -7017,14 +7017,18 @@ static int ath12k_mac_handle_link_sta_st
  			ath12k_mac_free_unassign_link_sta(arvif->ahvif->ah,
  							  arsta->ahsta, arsta->link_id);
  	} else if (old_state == IEEE80211_STA_AUTH &&
@@ -182,7 +182,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 -		ret = ath12k_station_assoc(ar, arvif, arsta, false);
 -		if (ret)
 -			ath12k_warn(ar->ab, "Failed to associate station: %pM\n",
--					arsta->addr);	
+-					arsta->addr);
 +		    vif->type == NL80211_IFTYPE_ADHOC) {
 +			ret = ath12k_station_assoc(ar, arvif, arsta, false);
 +			if (ret)

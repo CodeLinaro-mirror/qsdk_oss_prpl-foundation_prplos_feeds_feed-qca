@@ -36,8 +36,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA) ||
  	    !hapd->iface->freq)
  		return eid;
--
-+	
+ 
 +	ch_width = hostapd_get_oper_chwidth(hapd->iconf);
  	if (ieee80211_freq_to_channel_ext(hapd->iface->freq,
  					  hapd->iconf->secondary_channel,
@@ -178,19 +177,18 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		if (!len ||
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -93,8 +93,10 @@ static u8 ieee80211_eht_mcs_set_size(enu
+@@ -93,8 +93,9 @@ static u8 ieee80211_eht_mcs_set_size(enu
  
  	if (band6 &&
  	    (eht_phy_cap[EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_IDX] &
 -	     EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_MASK))
 +	     EHT_PHYCAP_320MHZ_IN_6GHZ_SUPPORT_MASK)) {
  		sz += EHT_PHYCAP_MCS_NSS_LEN_20MHZ_PLUS;
-+		sz += EHT_PHYCAP_MCS_NSS_LEN_160MHZ;
 +	}
  
  	return sz;
  }
-@@ -133,7 +135,7 @@ u8 * hostapd_eid_eht_capab(struct hostap
+@@ -133,7 +134,7 @@ u8 * hostapd_eid_eht_capab(struct hostap
  	struct eht_capabilities *eht_cap;
  	struct ieee80211_eht_capabilities *cap;
  	size_t mcs_nss_len, ppe_thresh_len;
@@ -199,7 +197,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  	mode = hapd->iface->current_mode;
  	if (!mode)
-@@ -151,8 +153,10 @@ u8 * hostapd_eid_eht_capab(struct hostap
+@@ -151,8 +152,10 @@ u8 * hostapd_eid_eht_capab(struct hostap
  	os_memset(cap, 0, sizeof(*cap));
  	cap->mac_cap = host_to_le16(eht_cap->mac_cap);
  	os_memcpy(cap->phy_cap, eht_cap->phy_cap, EHT_PHY_CAPAB_LEN);

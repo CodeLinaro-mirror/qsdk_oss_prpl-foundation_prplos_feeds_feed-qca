@@ -30,7 +30,7 @@ define Package/ath12k-wifi-default
   SUBMENU:=ath12k Board-Specific Overrides
   SECTION:=firmware
   CATEGORY:=Firmware
-  DEPENDS:=@TARGET_ipq95xx
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx
   TITLE:=Custom Board
 endef
 

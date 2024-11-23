@@ -292,9 +292,9 @@
 +	 u8 non_pref_chan = 0;
 +	 u8 *pref_pos = NULL;
 +	int i;
-+ 
++
 +	 struct mbo_non_pref_chan_info *info = NULL;
-+ 
++
 +	 if (sta && sta->non_pref_chan)
 +		 info = sta->non_pref_chan;
 +#endif
@@ -321,16 +321,16 @@
 +					 if (nei_pos[i] == WNM_NEIGHBOR_BSS_TRANSITION_CANDIDATE &&
 +					    nei_pos[i + 1] == 0x1) /* length */
 +						 pref_pos = (nei_pos + i + 2);
-+ 
++
 +			 /* If STA had updated MBO non-pref chan report,
 +			 * use the same candidate preference value in the
 +			  * BSS Transition Candidate sub-element.
 +			  */
 +				 for ( ; info ; info = info->next)
 +					 for (i = 0; i < info->num_channels; i++)
-+						if (non_pref_chan == info->channels[i])
++						if (pref_pos && non_pref_chan == info->channels[i])
 +							 *pref_pos = info->pref;
-+ 
++
 +				 info = sta->non_pref_chan;
 +			 }
 +#endif

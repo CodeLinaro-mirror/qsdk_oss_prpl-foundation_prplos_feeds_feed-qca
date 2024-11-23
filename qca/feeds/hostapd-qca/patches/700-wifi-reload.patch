@@ -161,7 +161,7 @@
  		nl80211_set_bss(bss, params->cts_protect, params->preamble,
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -187,7 +187,7 @@ static int hostapd_ctrl_iface_update(str
+@@ -187,7 +187,7 @@ static void hostapd_ctrl_iface_update(str
  	iface->interfaces->config_read_cb = hostapd_ctrl_iface_config_read;
  	reload_opts = txt;
  

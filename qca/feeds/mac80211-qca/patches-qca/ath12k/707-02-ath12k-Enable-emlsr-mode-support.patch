@@ -19,7 +19,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -3125,6 +3125,8 @@ static void ath12k_peer_assoc_h_mlo(stru
+@@ -3130,6 +3130,8 @@ static void ath12k_peer_assoc_h_mlo(stru
  	ml->ml_peer_id = ahsta->ml_peer_id;
  	ml->ieee_link_id = arsta->link_id;
  	ml->num_partner_links = 0;
@@ -96,7 +96,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  
  	peer_legacy_rates_align = roundup(arg->peer_legacy_rates.num_rates,
  					  sizeof(u32));
-@@ -2728,6 +2773,8 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
+@@ -2727,6 +2772,8 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  	}
  
  	/* MLO params */
@@ -105,14 +105,14 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  	tlv = ptr;
  	tlv->header = FIELD_PREP(WMI_TLV_TAG, WMI_TAG_ARRAY_STRUCT) |
  		      FIELD_PREP(WMI_TLV_LEN, sizeof(*ml_params));
-@@ -2746,13 +2793,35 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
- 			   FIELD_PREP(ATH12K_WMI_FLAG_MLO_LOGICAL_LINK_IDX_VALID,
- 				      arg->ml.logical_link_idx_valid) |
- 			   FIELD_PREP(ATH12K_WMI_FLAG_MLO_PEER_ID_VALID,
--				      arg->ml.peer_id_valid);
-+				      arg->ml.peer_id_valid) |
-+			   FIELD_PREP(ATH12K_WMI_FLAG_MLO_EMLSR_SUPPORT,
-+				      emlsr_support);
+@@ -2745,13 +2792,35 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
+ 		FIELD_PREP(ATH12K_WMI_FLAG_MLO_LOGICAL_LINK_IDX_VALID,
+ 			   arg->ml.logical_link_idx_valid) |
+ 		FIELD_PREP(ATH12K_WMI_FLAG_MLO_PEER_ID_VALID,
+-			   arg->ml.peer_id_valid);
++			   arg->ml.peer_id_valid) |
++		FIELD_PREP(ATH12K_WMI_FLAG_MLO_EMLSR_SUPPORT,
++			   emlsr_support);
  
  	ether_addr_copy(ml_params->mld_addr.addr, arg->ml.mld_addr);
  	ml_params->logical_link_idx = arg->ml.logical_link_idx;
@@ -145,7 +145,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  	/* Loop through the EHT rate set.
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -4110,6 +4110,23 @@ struct wmi_rate_set_arg {
+@@ -4115,6 +4115,23 @@ struct wmi_rate_set_arg {
  	u8 rates[WMI_MAX_SUPPORTED_RATES];
  };
  
@@ -169,7 +169,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  struct peer_assoc_mlo_params {
  	bool enabled;
  	bool assoc_link;
-@@ -4122,6 +4139,7 @@ struct peer_assoc_mlo_params {
+@@ -4127,6 +4144,7 @@ struct peer_assoc_mlo_params {
  	u32 ieee_link_id;
  	u8 num_partner_links;
  	struct wmi_ml_partner_info partner_info[ATH12K_WMI_MLO_MAX_LINKS];

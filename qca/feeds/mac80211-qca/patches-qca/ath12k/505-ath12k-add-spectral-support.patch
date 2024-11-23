@@ -123,7 +123,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	bool supports_monitor:1;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -2695,6 +2695,9 @@ static int ath12k_start_scan(struct ath1
+@@ -2691,6 +2691,9 @@ static int ath12k_start_scan(struct ath1
  
  	lockdep_assert_held(&ar->conf_mutex);
  
@@ -355,6 +355,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +	arvif->spectral_enabled = (mode != ATH12K_SPECTRAL_DISABLED);
 +	ar->spectral.mode = mode;
 +
++	if (mode == ATH12K_SPECTRAL_DISABLED)
++		return 0;
++
 +	ret = ath12k_wmi_vdev_spectral_enable(ar, arvif->vdev_id,
 +					      ATH12K_WMI_SPECTRAL_TRIGGER_CMD_CLEAR,
 +					      ATH12K_WMI_SPECTRAL_ENABLE_CMD_DISABLE);
@@ -362,9 +365,6 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +		ath12k_warn(ar->ab, "failed to enable spectral scan: %d\n", ret);
 +		return ret;
 +	}
-+
-+	if (mode == ATH12K_SPECTRAL_DISABLED)
-+		return 0;
 +
 +	if (mode == ATH12K_SPECTRAL_BACKGROUND)
 +		count = ATH12K_WMI_SPECTRAL_COUNT_DEFAULT;
@@ -1252,10 +1252,10 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +#endif /* ATH12K_SPECTRAL_H */
 --- a/local-symbols
 +++ b/local-symbols
-@@ -181,6 +181,7 @@ ATH12K_DEBUGFS=
+@@ -184,6 +184,7 @@ ATH12K_DEBUG=
+ ATH12K_DEBUGFS=
  ATH12K_TRACING=
  ATH12K_PPE_DS_SUPPORT=
- ATH12K_BONDED_DS_SUPPORT=
 +ATH12K_SPECTRAL=
  WLAN_VENDOR_ATMEL=
  ATMEL=
@@ -1280,7 +1280,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  };
  
  struct fft_sample_tlv {
-@@ -126,4 +128,20 @@ struct fft_sample_ath11k {
+@@ -127,4 +129,20 @@ struct fft_sample_ath11k {
  	u8 data[];
  } __packed;
  

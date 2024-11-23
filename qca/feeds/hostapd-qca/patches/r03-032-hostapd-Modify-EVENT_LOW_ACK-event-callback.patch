@@ -39,7 +39,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  {
 -	struct sta_info *sta = ap_get_sta(hapd, addr);
 +	struct sta_info *sta;
-+	struct hostapd_data *hapd, *p_hapd, *tmp_hapd;
++	struct hostapd_data *hapd, *p_hapd;
 +	unsigned int j;
 +
 +	if (sta_ret)
@@ -71,7 +71,8 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +
 +	return NULL;
 +}
-+
+ 
+-	if (!sta || !hapd->conf->disassoc_low_ack || sta->agreed_to_steer)
 +
 +void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr, u32 num_packets)
 +{
@@ -91,8 +92,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +				   addr);
 +		}
 +	}
- 
--	if (!sta || !hapd->conf->disassoc_low_ack || sta->agreed_to_steer)
++
 +	if (!sta || (!hapd->conf->disassoc_low_ack && num_packets != 0xFFFF) ||
 +	    sta->agreed_to_steer)
  		return;
@@ -155,7 +155,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void hostapd_event_eapol_rx(struct hostapd_data *hapd, const u8 *src,
  				   const u8 *data, size_t data_len,
  				   enum frame_encryption encrypted,
-@@ -2303,7 +2322,8 @@ void hostapd_wpa_event(void *ctx, enum w
+@@ -2277,7 +2296,8 @@ void hostapd_wpa_event(void *ctx, enum w
  	case EVENT_STATION_LOW_ACK:
  		if (!data)
  			break;
@@ -205,7 +205,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		return;
  	}
  
-@@ -4248,7 +4249,7 @@ static void do_process_drv_event(struct
+@@ -4262,7 +4263,7 @@ static void do_process_drv_event(struct
  		mlme_event_remain_on_channel(drv, 1, tb);
  		break;
  	case NL80211_CMD_NOTIFY_CQM:

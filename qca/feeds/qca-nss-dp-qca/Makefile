@@ -3,11 +3,11 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-dp-qca
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=ginger_open
+PKG_BRANCH:=NHSS.QSDK.12.5.5
 PKG_RELEASE:=1
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-dp
-PKG_MIRROR_HASH:=6144a1b83a31991f9dda6f6574bc7861aef9ecf0326cd8215c6ae7374a3062ea
-PKG_VERSION:=62669708889a88646b0afd9fd81cecc1feeb88bd
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=fb3311980ad4a8211ca99c82079b2d7c36f6c353
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -59,10 +59,15 @@ ifeq ($(CONFIG_TARGET_ipq95xx_generic_QSDK_MinEnt), y)
 EXTRA_CFLAGS+= -DNSS_DP_POINT_OFFLOAD
 endif
 
+ifneq ($(CONFIG_DEFAULT_kmod-netstandby-eawtp-drv),)
+MAKE_OPTS+=CONFIG_QCA_NSS_DP_EAWTP=y
+endif
+
 ifneq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq54xx),)
 EXTRA_CFLAGS+= -DNSS_DP_NETSTANDBY
 MAKE_OPTS+=dp-net-standby=y
 MAKE_OPTS+=dp-ppe-ds=y
+MAKE_OPTS+=dp-loopback=y
 endif
 
 NSS_DP_HAL_DIR:=$(PKG_BUILD_DIR)/hal
@@ -82,6 +87,8 @@ define KernelPackage/qca-nss-dp-qca/install
 	$(INSTALL_BIN) ./files/qca-nss-dp.init $(1)/etc/init.d/qca-nss-dp
 	$(INSTALL_BIN) ./files/qca-nss-dp.conf $(1)/etc/config/qca_nss_dp
 	$(INSTALL_BIN) ./files/edma_dump $(1)/usr/bin/edma_dump
+	$(INSTALL_BIN) ./files/edma_recover.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/edma_hang_inj.sh $(1)/usr/bin/
 endef
 endif
 

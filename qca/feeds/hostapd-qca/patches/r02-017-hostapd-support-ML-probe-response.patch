@@ -7,17 +7,20 @@ Add support to respond to ML probe requests with ML probe response
 contaitning the sta profiles of the requested links.
 
 Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
+Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
 ---
- src/ap/beacon.c                | 342 ++++++++++++++++++++++++++++++++-
+ src/ap/beacon.c                | 382 ++++++++++++++++++++++++++++++++-
  src/ap/hostapd.h               |   4 +
  src/ap/ieee802_11.c            |   8 +-
  src/ap/ieee802_11.h            |   2 +-
  src/ap/ieee802_11_eht.c        |   4 +-
- src/ap/sta_info.h              |  33 ++--
+ src/ap/sta_info.h              |  33 +--
  src/common/ieee802_11_common.c |  29 +++
  src/common/ieee802_11_common.h |   1 +
- 8 files changed, 390 insertions(+), 33 deletions(-)
+ 8 files changed, 430 insertions(+), 33 deletions(-)
 
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index 17d4aba..e4bccaa 100644
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
 @@ -36,6 +36,12 @@
@@ -33,7 +36,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  static u8 * hostapd_eid_bss_load(struct hostapd_data *hapd, u8 *eid, size_t len)
  {
  	if (len < 2 + 5)
-@@ -593,10 +599,308 @@ static u8 * hostapd_eid_mbssid_config(st
+@@ -593,10 +599,339 @@ static u8 * hostapd_eid_mbssid_config(struct hostapd_data *hapd, u8 *eid,
  }
  
  
@@ -77,12 +80,13 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +	const u8 *oelem_data, *lelem_data;
 +	u8 *own_data, *link_data;
 +	const struct element *oelem, *lelem;
-+	bool is_ext, ie_found;
++	bool is_ext, ie_found, add_vendor_ies = false, is_identical_vendor_ies = true;
 +	/* extra len used in the logic incudes the element id and len */
 +	u8 extra_len = 2;
 +	size_t sta_profile_len = 0;
 +	u8 ninherit_elemlist[254] = {0}, ninherit_elemlist_len = 0;
 +	u8 ninherit_elemextlist[254] = {0}, ninherit_elemextlist_len = 0;
++	u8 no_of_lelem_vendor_ies = 0, no_of_oelem_vendor_ies = 0;
 +
 +	/* include len for capab info */
 +	sta_profile_len += sizeof(le16);
@@ -152,11 +156,18 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +				ie_found = true;
 +				if (oelen != lelen ||
 +				    memcmp(oelem->data, lelem->data, oelen)) {
++					if (oeid == WLAN_EID_VENDOR_SPECIFIC) {
++						is_identical_vendor_ies = false;
++						continue;
++					}
 +					if (sta_profile) {
 +						memcpy(sta_profile, lelem->data - extra_len, lelen + extra_len);
 +						sta_profile += lelen + extra_len;
 +					}
 +					sta_profile_len += lelen + extra_len;
++				} else if (oeid == WLAN_EID_VENDOR_SPECIFIC) {
++					is_identical_vendor_ies =  true;
++					no_of_oelem_vendor_ies++;
 +				}
 +
 +				if (is_ext)
@@ -167,6 +178,9 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +				break;
 +			}
 +		}
++		if (!is_identical_vendor_ies)
++			add_vendor_ies = true;
++
 +		if (!ie_found) {
 +			if (is_ext)
 +				ninherit_elemextlist[ninherit_elemextlist_len++] = oeid;
@@ -179,6 +193,10 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +	for_each_element(lelem, link_data, link_data_len) {
 +		lelem_data = lelem->data;
 +		lelen = lelem->datalen;
++		if (lelem->id == WLAN_EID_VENDOR_SPECIFIC) {
++			no_of_lelem_vendor_ies++;
++			continue;
++		}
 +		if (lelem->id == WLAN_EID_EXTENSION) {
 +			leid = *(lelem_data);
 +			if (parsed_ext_eid_bmap[leid/8] & BIT(leid%8))
@@ -198,6 +216,20 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +			sta_profile += lelen + extra_len;
 +		}
 +		sta_profile_len += lelen + extra_len;
++	}
++
++	/* add vendor elements to sta profile if links have different vendor elements */
++	if (add_vendor_ies == true || (no_of_oelem_vendor_ies != no_of_lelem_vendor_ies)) {
++		for_each_element(lelem, link_data, link_data_len) {
++			if (lelem->id == WLAN_EID_VENDOR_SPECIFIC) {
++				lelen = lelem->datalen;
++				if (sta_profile) {
++					memcpy(sta_profile, lelem->data - extra_len, lelen + extra_len);
++					sta_profile += lelen + extra_len;
++				}
++				sta_profile_len += lelen + extra_len;
++			}
++		}
 +	}
 +
 +	if (sta_profile && (ninherit_elemlist_len || ninherit_elemextlist_len)) {
@@ -251,7 +283,8 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +						   link_data_len,
 +						   NULL, type);
 +
-+	if (!(*sta_profile_len))
++	if (!(*sta_profile_len) ||
++	    (*sta_profile_len > EHT_ML_MAX_STA_PROF_LEN))
 +		return NULL;
 +
 +	sta_profile = os_zalloc(*sta_profile_len);
@@ -290,12 +323,12 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +	own_data_len -= offsetof(struct ieee80211_mgmt, u.probe_resp.variable);
 +
 +	for_each_partner_bss(link_bss, hapd) {
-+		if (link_bss == hapd)
++		if (link_bss == hapd || !link_bss->started)
 +			continue;
 +
 +		link_id = link_bss->mld_link_id;
 +
-+		if (link_id > MAX_NUM_MLD_LINKS)
++		if (link_id >= MAX_NUM_MLD_LINKS)
 +			continue;
 +
 +		sta_profile = NULL;
@@ -317,8 +350,9 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +						      &sta_profile_len,
 +						      WLAN_FC_STYPE_PROBE_RESP);
 +
-+		if (sta_profile == NULL || sta_profile_len > EHT_ML_MAX_STA_PROF_LEN) {
++		if (!sta_profile) {
 +			wpa_printf(MSG_ERROR, "Couldnt generate Link STA profile");
++			os_free(link_data);
 +			continue;
 +		}
 +
@@ -343,7 +377,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  {
  	struct ieee80211_mgmt *resp;
  	u8 *pos, *epos, *csa_pos;
-@@ -656,12 +960,17 @@ static u8 * hostapd_gen_probe_resp(struc
+@@ -656,12 +991,17 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
  		/*
  		 * TODO: Multi-Link element has variable length and can be
  		 * long based on the common info and number of per
@@ -365,7 +399,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		}
  		/* QCN Vendor IE for 240MHz */
  		if (is_5ghz_freq(hapd->iface->freq))
-@@ -836,8 +1145,13 @@ static u8 * hostapd_gen_probe_resp(struc
+@@ -836,8 +1176,13 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
  
  #ifdef CONFIG_IEEE80211BE
  	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
@@ -381,7 +415,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		pos = hostapd_eid_eht_capab(hapd, pos, IEEE80211_MODE_AP);
  		pos = hostapd_eid_eht_operation(hapd, pos, IEEE80211_MODE_AP);
  		pos = hostapd_eid_vendor_240mhz(hapd, pos, IEEE80211_MODE_AP);
-@@ -1118,6 +1432,8 @@ void handle_probe_req(struct hostapd_dat
+@@ -1118,6 +1463,8 @@ void handle_probe_req(struct hostapd_data *hapd,
  		.ssi_signal = ssi_signal,
  		.elems = &elems,
  	};
@@ -390,7 +424,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  	if (hapd->iconf->rssi_ignore_probe_request && ssi_signal &&
  	    ssi_signal < hapd->iconf->rssi_ignore_probe_request)
-@@ -1355,9 +1671,16 @@ void handle_probe_req(struct hostapd_dat
+@@ -1355,9 +1702,16 @@ void handle_probe_req(struct hostapd_data *hapd,
  	wpa_msg_ctrl(hapd->msg_ctx, MSG_INFO, RX_PROBE_REQUEST "sa=" MACSTR
  		     " signal=%d", MAC2STR(mgmt->sa), ssi_signal);
  
@@ -408,7 +442,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	if (resp == NULL)
  		return;
  
-@@ -1427,7 +1750,7 @@ static u8 * hostapd_probe_resp_offloads(
+@@ -1427,7 +1781,7 @@ static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
  			   "this");
  
  	/* Generate a Probe Response template for the non-P2P case */
@@ -417,7 +451,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  }
  
  #endif /* NEED_AP_MLME */
-@@ -1458,7 +1781,7 @@ static u8 * hostapd_unsol_bcast_probe_re
+@@ -1459,7 +1813,7 @@ static u8 * hostapd_unsol_bcast_probe_resp(struct hostapd_data *hapd,
  
  	return hostapd_gen_probe_resp(hapd, NULL, 0,
  				      &params->unsol_bcast_probe_resp_tmpl_len,
@@ -426,16 +460,30 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  }
  #endif /* CONFIG_IEEE80211AX */
  
-@@ -2398,6 +2721,9 @@ int ieee802_11_set_beacon(struct hostapd
+@@ -2355,6 +2709,7 @@ fail:
+ int ieee802_11_set_beacon(struct hostapd_data *hapd)
+ {
+ 	struct hostapd_iface *iface = hapd->iface;
++	struct hostapd_data *bss;
+ 	int ret;
+ 	size_t i, j;
+ 	bool is_6g, hapd_mld = false;
+@@ -2400,6 +2755,13 @@ int ieee802_11_set_beacon(struct hostapd_data *hapd)
  		}
  	}
  
++	if (!hapd->mld)
++		return 0;
++
 +	/* Generate per sta profiles for affiliated APs */
-+	hostapd_gen_per_sta_profiles(hapd);
++	for_each_partner_bss(bss, hapd)
++		hostapd_gen_per_sta_profiles(bss);
 +
  	return 0;
  }
  
+diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
+index 41e35c5..8773196 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
 @@ -36,6 +36,7 @@ struct ieee80211_ht_capabilities;
@@ -456,9 +504,11 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  #endif /* CONFIG_IEEE80211BE */
  };
  
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 670d4f1..3e15c9e 100644
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -4446,10 +4446,10 @@ static void ieee80211_ml_process_link(st
+@@ -4472,10 +4472,10 @@ static void ieee80211_ml_process_link(struct hostapd_data *hapd,
  		goto out;
  
  	if (ieee802_11_parse_link_assoc_req(ies, ies_len, &elems, mlbuf,
@@ -472,7 +522,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		status = WLAN_STATUS_UNSPECIFIED_FAILURE;
  		goto out;
  	}
-@@ -4946,7 +4946,7 @@ rsnxe_done:
+@@ -4972,7 +4972,7 @@ rsnxe_done:
  #ifdef CONFIG_IEEE80211BE
  	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
  		if (hapd->conf->mld_ap)
@@ -481,9 +531,11 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		p = hostapd_eid_eht_capab(hapd, p, IEEE80211_MODE_AP);
  		p = hostapd_eid_eht_operation(hapd, p, IEEE80211_MODE_AP);
  		p = hostapd_eid_vendor_240mhz(hapd, p, IEEE80211_MODE_AP);
+diff --git a/src/ap/ieee802_11.h b/src/ap/ieee802_11.h
+index c0ddf15..2526e16 100644
 --- a/src/ap/ieee802_11.h
 +++ b/src/ap/ieee802_11.h
-@@ -97,7 +97,7 @@ void hostapd_get_eht_capab(struct hostap
+@@ -97,7 +97,7 @@ void hostapd_get_eht_capab(struct hostapd_data *hapd,
  			   struct ieee80211_eht_capabilities *dest,
  			   size_t len);
  u8 * hostapd_eid_eht_basic_ml(struct hostapd_data *hapd, u8 *eid,
@@ -492,9 +544,11 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  size_t hostapd_eid_eht_basic_ml_len(struct hostapd_data *hapd,
  				    struct sta_info *info, bool include_mld_id);
  struct wpabuf * hostapd_ml_auth_resp(struct hostapd_data *hapd);
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index 345ef2f..e74b9b9 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -552,7 +552,7 @@ void hostapd_get_eht_capab(struct hostap
+@@ -552,7 +552,7 @@ void hostapd_get_eht_capab(struct hostapd_data *hapd,
  */
  #define MLE_COMMON_INFO_LEN 13
  u8 * hostapd_eid_eht_basic_ml(struct hostapd_data *hapd, u8 *eid,
@@ -503,7 +557,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  {
  	struct wpabuf *buf;
  	u16 control;
-@@ -617,7 +617,7 @@ u8 * hostapd_eid_eht_basic_ml(struct hos
+@@ -617,7 +617,7 @@ u8 * hostapd_eid_eht_basic_ml(struct hostapd_data *hapd, u8 *eid,
  
  	/* Add link info for the other links */
  	for (link_id = 0; link_id < MAX_NUM_MLD_LINKS; link_id++) {
@@ -512,6 +566,8 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		struct hostapd_data *link_bss;
  
  		/*
+diff --git a/src/ap/sta_info.h b/src/ap/sta_info.h
+index 0c0c922..f849ce7 100644
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
 @@ -54,6 +54,7 @@
@@ -568,9 +624,11 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  };
  
  struct sta_info {
+diff --git a/src/common/ieee802_11_common.c b/src/common/ieee802_11_common.c
+index 56261f8..86a1090 100644
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -976,6 +976,35 @@ void ieee802_11_elems_clear_ext_ids(stru
+@@ -976,6 +976,35 @@ void ieee802_11_elems_clear_ext_ids(struct ieee802_11_elems *elems,
  }
  
  
@@ -606,9 +664,11 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  ParseRes ieee802_11_parse_link_assoc_req(const u8 *start, size_t len,
  					 struct ieee802_11_elems *elems,
  					 struct wpabuf *mlbuf,
+diff --git a/src/common/ieee802_11_common.h b/src/common/ieee802_11_common.h
+index 1afb3d1..3c71afd 100644
 --- a/src/common/ieee802_11_common.h
 +++ b/src/common/ieee802_11_common.h
-@@ -193,6 +193,7 @@ void ieee802_11_elems_clear_ids(struct i
+@@ -193,6 +193,7 @@ void ieee802_11_elems_clear_ids(struct ieee802_11_elems *elems,
  				const u8 *ids, size_t num);
  void ieee802_11_elems_clear_ext_ids(struct ieee802_11_elems *elems,
  				    const u8 *ids, size_t num);
@@ -616,3 +676,6 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  ParseRes ieee802_11_parse_link_assoc_req(const u8 *start, size_t len,
  					 struct ieee802_11_elems *elems,
  					 struct wpabuf *mlbuf,
+-- 
+2.34.1
+

@@ -15,7 +15,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 ---
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -123,7 +123,7 @@ struct ath12k_skb_rxcb {
+@@ -117,7 +117,7 @@ struct ath12k_skb_rxcb {
  	struct hal_rx_desc *rx_desc;
  	u8 err_rel_src;
  	u8 err_code;
@@ -26,7 +26,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	u8 tid;
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3054,7 +3054,7 @@ static void ath12k_dp_rx_process_receive
+@@ -3084,7 +3084,7 @@ static void ath12k_dp_rx_process_receive
  	struct ath12k_skb_rxcb *rxcb;
  	struct sk_buff *msdu;
  	struct ath12k *ar;
@@ -35,20 +35,14 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	int ret;
  	bool fast_rx;
  
-@@ -3070,9 +3070,22 @@ static void ath12k_dp_rx_process_receive
+@@ -3099,9 +3099,16 @@ static void ath12k_dp_rx_process_receive
+                 * and packet type */
  		fast_rx = true;
- 		rxcb->napi = napi;
  
 -		mac_id = rxcb->mac_id;
 -		ar = ab->pdevs[mac_id].ar;
 -		if (!rcu_dereference(ab->pdevs_active[mac_id])) {
 +		hw_link_id = rxcb->hw_link_id;
-+		if (hw_link_id >= ATH12K_GROUP_MAX_RADIO) {
-+			dev_kfree_skb_any(msdu);
-+			ath12k_warn(ab, "invalid hw link id %d\n", hw_link_id);
-+			continue;
-+		}
-+
 +		ar = rcu_dereference(ab->ag->hw_links[hw_link_id]);
 +		if (!ar) {
 +			dev_kfree_skb_any(msdu);
@@ -61,7 +55,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  			dev_kfree_skb_any(msdu);
  			continue;
  		}
-@@ -3085,7 +3098,9 @@ static void ath12k_dp_rx_process_receive
+@@ -3114,7 +3121,9 @@ static void ath12k_dp_rx_process_receive
  		ret = ath12k_dp_rx_process_msdu(ar, msdu, msdu_list, &rx_status, &fast_rx);
  		if (ret) {
  			ath12k_dbg(ab, ATH12K_DBG_DATA,
@@ -72,15 +66,15 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  			dev_kfree_skb_any(msdu);
  			continue;
  		}
-@@ -3111,7 +3126,6 @@ int ath12k_dp_rx_process(struct ath12k_b
+@@ -3141,7 +3150,6 @@ int ath12k_dp_rx_process(struct ath12k_b
  	struct hal_srng *srng;
  	struct sk_buff *msdu;
  	bool done = false;
 -	int mac_id;
-	u64 desc_va;
-	struct ath12k_sta *ahsta = NULL;
-	struct ath12k_link_sta *arsta = NULL;
-@@ -3163,7 +3177,6 @@ try_again:
+ 	u64 desc_va;
+ 	struct ath12k_sta *ahsta = NULL;
+ 	struct ath12k_link_sta *arsta = NULL;
+@@ -3191,7 +3199,6 @@ try_again:
  			continue;
  		}
  
@@ -88,27 +82,27 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  		src_ab = ar->ab;
  		rcu_read_unlock();
  
-@@ -3208,7 +3221,7 @@ try_again:
-					RX_MSDU_DESC_INFO0_LAST_MSDU_IN_MPDU);
-		rxcb->is_continuation = !!(le32_to_cpu(desc->rx_msdu_info.info0) &
-					   RX_MSDU_DESC_INFO0_MSDU_CONTINUATION);
+@@ -3237,7 +3244,7 @@ try_again:
+ 					RX_MSDU_DESC_INFO0_LAST_MSDU_IN_MPDU);
+ 		rxcb->is_continuation = !!(le32_to_cpu(desc->rx_msdu_info.info0) &
+ 					   RX_MSDU_DESC_INFO0_MSDU_CONTINUATION);
 -		rxcb->mac_id = mac_id;
 +		rxcb->hw_link_id = hw_link_id;
-		rxcb->peer_id = le32_get_bits(desc->rx_mpdu_info.peer_meta_data,
-					      RX_MPDU_DESC_META_DATA_PEER_ID);
-		rxcb->tid = le32_get_bits(desc->rx_mpdu_info.info0,
-@@ -4024,6 +4037,11 @@ int ath12k_dp_rx_process_err(struct ath1
-		for (i = 0; i < num_msdus; i++) {
-			mac_id = le32_get_bits(reo_desc->info0,
-					       HAL_REO_DEST_RING_INFO0_SRC_LINK_ID);
+ 		rxcb->peer_id = le32_get_bits(desc->rx_mpdu_info.peer_meta_data,
+ 					      RX_MPDU_DESC_META_DATA_PEER_ID);
+ 		rxcb->tid = le32_get_bits(desc->rx_mpdu_info.info0,
+@@ -4063,6 +4070,11 @@ int ath12k_dp_rx_process_err(struct ath1
+ 		for (i = 0; i < num_msdus; i++) {
+ 			mac_id = le32_get_bits(reo_desc->info0,
+ 					       HAL_REO_DEST_RING_INFO0_SRC_LINK_ID);
 +			if (mac_id >= ab->num_radios) {
 +				tot_n_bufs_reaped++;
 +				ath12k_warn(ab, "invalid mac id %d on err process\n", mac_id);
 +				continue;
 +			}
-
-			ar = ab->pdevs[mac_id].ar;
-
+ 
+ 			ar = ab->pdevs[mac_id].ar;
+ 
 --- a/drivers/net/wireless/ath/ath12k/hal_desc.h
 +++ b/drivers/net/wireless/ath/ath12k/hal_desc.h
 @@ -606,8 +606,7 @@ struct hal_tlv_parsed_hdr {
@@ -120,10 +114,10 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 +#define RX_MPDU_DESC_META_DATA_PEER_ID		GENMASK(13, 0)
  
  struct rx_mpdu_desc {
- 	u32 info0; /* %RX_MPDU_DESC_INFO */
+ 	__le32 info0; /* %RX_MPDU_DESC_INFO */
 --- a/drivers/net/wireless/ath/ath12k/hal.c
 +++ b/drivers/net/wireless/ath/ath12k/hal.c
-@@ -351,7 +351,8 @@ static u8 ath12k_hw_qcn9274_rx_desc_get_
+@@ -396,7 +396,8 @@ static u8 ath12k_hw_qcn9274_rx_desc_get_
  
  static u16 ath12k_hw_qcn9274_rx_desc_get_mpdu_peer_id(struct hal_rx_desc *desc)
  {

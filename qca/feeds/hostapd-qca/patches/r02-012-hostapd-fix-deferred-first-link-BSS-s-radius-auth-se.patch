@@ -16,12 +16,10 @@ first link of that interface.
 
 Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 ---
- src/ap/authsrv.c    |  32 +++++++++++--
- src/ap/authsrv.h    |   2 +-
- src/ap/hostapd.c    | 108 +++++++++++++++++++++++++++++++-------------
- src/ap/ieee802_1x.c |  25 +++++++++-
- src/ap/ieee802_1x.h |   2 +-
- 5 files changed, 128 insertions(+), 41 deletions(-)
+ src/ap/authsrv.c    | 15 +++++--
+ src/ap/hostapd.c    | 97 ++++++++++++++++++++++++++++++---------------
+ src/ap/ieee802_1x.c | 13 +++++-
+ 3 files changed, 88 insertions(+), 37 deletions(-)
 
 --- a/src/ap/authsrv.c
 +++ b/src/ap/authsrv.c
@@ -55,7 +53,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	}
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1295,6 +1295,57 @@ static int hostapd_start_beacon(struct h
+@@ -1310,6 +1310,57 @@ static int hostapd_start_beacon(struct h
  	return 0;
  }
  
@@ -86,7 +84,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +
 +		os_memset(&das_conf, 0, sizeof(das_conf));
 +		das_conf.port = conf->radius_das_port;
-+		das_conf.nas_identifier = conf->nas_identifier;
++		das_conf.nas_identifier = (const u8 *)conf->nas_identifier;
 +		das_conf.shared_secret = conf->radius_das_shared_secret;
 +		das_conf.shared_secret_len =
 +			conf->radius_das_shared_secret_len;
@@ -113,7 +111,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  /**
   * hostapd_setup_bss - Per-BSS setup (initialization)
-@@ -1516,40 +1567,19 @@ setup_mld:
+@@ -1531,44 +1582,25 @@ setup_mld:
  #ifdef CONFIG_IEEE80211BE
  	if (hostapd_mld_is_first_bss(hapd)) {
  #endif /* CONFIG_IEEE80211BE */
@@ -150,7 +148,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 -			if (!hapd->radius_das) {
 -				wpa_printf(MSG_ERROR,
 -					   "RADIUS DAS initialization failed.");
-+		if (!h_hapd->radius) {
++		if(!h_hapd)
++			return -1;
++		if ((!h_hapd->radius) || (!h_hapd->radius_das)) {
 +			wpa_printf(MSG_DEBUG,
 +				   "MLD: First BSS RADIUS client does not exist. nit on its behalf");
 +			if (hostapd_bss_radius_init(h_hapd))
@@ -162,8 +162,14 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +
  		wpa_printf(MSG_DEBUG,
  			   "MLD: Using RADIUS client of the first BSS");
- 		hapd->radius = hostapd_mld_get_first_bss(hapd)->radius;
-@@ -2009,7 +2039,6 @@ static int setup_interface(struct hostap
+-		hapd->radius = hostapd_mld_get_first_bss(hapd)->radius;
+-		hapd->radius_das = hostapd_mld_get_first_bss(hapd)->radius_das;
++		hapd->radius = h_hapd->radius;
++		hapd->radius_das = h_hapd->radius_das;
+ 	}
+ #endif /* CONFIG_IEEE80211BE */
+ #endif /* CONFIG_NO_RADIUS */
+@@ -2024,7 +2056,6 @@ static int setup_interface(struct hostap
  	 */
  	for (i = 1; i < iface->num_bss; i++) {
  		iface->bss[i]->driver = hapd->driver;
@@ -173,13 +179,15 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (hostapd_validate_bssid_configuration(iface))
 --- a/src/ap/ieee802_1x.c
 +++ b/src/ap/ieee802_1x.c
-@@ -2541,11 +2541,20 @@ int ieee802_1x_init(struct hostapd_data
+@@ -2541,11 +2541,22 @@ int ieee802_1x_init(struct hostapd_data
  	struct eapol_auth_cb cb;
  
  #ifdef CONFIG_IEEE80211BE
 +	struct hostapd_data *h_hapd = hostapd_mld_get_first_bss(hapd);
 +
  	if (!hostapd_mld_is_first_bss(hapd)) {
++		if (!h_hapd)
++			return -1;
 +		if (!h_hapd->eapol_auth) {
 +			wpa_printf(MSG_DEBUG,
 +				   "MLD: First BSS IEEE 802.1X state machine does not exist. Init on its behalf");

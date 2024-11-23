@@ -28,7 +28,7 @@ index 4e36369..02a9dbe 100644
 +static int ath12k_core_mlo_teardown(struct ath12k_hw_group *ag)
 +{
 +	struct ath12k_hw *ah;
-+	int ret;
++	int ret = 0;
 +	int i;
 +
 +	if (ag->id == ATH12K_INVALID_GRP_ID)

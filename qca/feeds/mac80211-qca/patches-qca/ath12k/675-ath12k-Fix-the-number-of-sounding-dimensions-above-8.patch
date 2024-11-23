@@ -18,11 +18,9 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  drivers/net/wireless/ath/ath12k/mac.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index c97b098..ca2da30 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -6441,7 +6441,7 @@ static void ath12k_mac_copy_he_cap(struct ath12k *ar,
+@@ -6427,7 +6427,7 @@ static void ath12k_mac_copy_he_cap(struc
  	he_cap_elem->phy_cap_info[0] &=
  		~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G;
  	he_cap_elem->phy_cap_info[5] &=
@@ -31,6 +29,19 @@ index c97b098..ca2da30 100644
  	he_cap_elem->phy_cap_info[5] |= ar->num_tx_chains - 1;
  
  	switch (iftype) {
--- 
-2.17.1
-
+@@ -7897,13 +7897,13 @@ static void ath12k_mac_vif_cache_flush(s
+ }
+ 
+ static struct ath12k *ath12k_mac_assign_vif_to_vdev(struct ieee80211_hw *hw,
+-						    struct ieee80211_vif *vif,
++						    struct ath12k_link_vif *arvif,
+ 						    struct ieee80211_chanctx_conf *ctx)
+ {
+ 	struct ath12k_hw *ah = hw->priv;
+ 	struct ath12k *ar;
+ 	struct ath12k_base *ab;
+-	struct ath12k_vif *arvif = (void *)vif->drv_priv;
++	struct ieee80211_vif *vif = arvif->ahvif->vif;
+ 	int ret;
+ 
+ 	lockdep_assert_held(&ah->conf_mutex);

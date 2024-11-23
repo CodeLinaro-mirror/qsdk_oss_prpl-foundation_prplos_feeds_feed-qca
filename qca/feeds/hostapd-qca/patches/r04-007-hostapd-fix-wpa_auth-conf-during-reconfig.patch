@@ -24,15 +24,13 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/ap/wpa_auth_glue.c | 116 +++++++++++++++++++++++------------------
  1 file changed, 66 insertions(+), 50 deletions(-)
 
-diff --git a/src/ap/wpa_auth_glue.c b/src/ap/wpa_auth_glue.c
-index b7796cb7d35f..331187521622 100644
 --- a/src/ap/wpa_auth_glue.c
 +++ b/src/ap/wpa_auth_glue.c
 @@ -34,6 +34,70 @@
  #include "wpa_auth.h"
  #include "wpa_auth_glue.h"
  
-+static int hostapd_wpa_auth_config_sanitize(struct hostapd_data *hapd,
++static void hostapd_wpa_auth_config_sanitize(struct hostapd_data *hapd,
 +					    struct wpa_auth_config *_conf)
 +{
 +	struct hostapd_data *lhapd = NULL;
@@ -99,7 +97,7 @@ index b7796cb7d35f..331187521622 100644
  
  static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
  				  struct hostapd_config *iconf,
-@@ -1665,59 +1729,10 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
+@@ -1665,59 +1729,10 @@ int hostapd_setup_wpa(struct hostapd_dat
  	};
  	const u8 *wpa_ie;
  	size_t wpa_ie_len;
@@ -160,7 +158,7 @@ index b7796cb7d35f..331187521622 100644
  	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb, hapd);
  	if (hapd->wpa_auth == NULL) {
  		wpa_printf(MSG_ERROR, "WPA initialization failed.");
-@@ -1786,6 +1801,7 @@ void hostapd_reconfig_wpa(struct hostapd_data *hapd)
+@@ -1786,6 +1801,7 @@ void hostapd_reconfig_wpa(struct hostapd
  {
  	struct wpa_auth_config wpa_auth_conf;
  	hostapd_wpa_auth_conf(hapd->conf, hapd->iconf, &wpa_auth_conf);
@@ -168,6 +166,3 @@ index b7796cb7d35f..331187521622 100644
  	wpa_reconfig(hapd->wpa_auth, &wpa_auth_conf);
  }
  
--- 
-2.17.1
-

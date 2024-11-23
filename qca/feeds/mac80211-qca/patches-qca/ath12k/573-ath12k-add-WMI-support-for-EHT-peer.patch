@@ -14,28 +14,31 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h | 20 ++++++++++
  3 files changed, 77 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 496adb6..dbd4e53 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -2148,6 +2148,12 @@ static void ath12k_peer_assoc_h_eht(struct ath12k *ar,
+@@ -2170,6 +2170,19 @@ static void ath12k_peer_assoc_h_eht(stru
  		return;
  
  	arg->eht_flag = true;
-+	if (sta->deflink.bandwidth == IEEE80211_STA_RX_BW_320) {
++
++	if (link_sta->bandwidth >= IEEE80211_STA_RX_BW_40)
 +		arg->bw_40 = true;
++
++	if (link_sta->bandwidth >= IEEE80211_STA_RX_BW_80)
 +		arg->bw_80 = true;
++
++	if (link_sta->bandwidth >= IEEE80211_STA_RX_BW_160)
 +		arg->bw_160 = true;
++
++	if (link_sta->bandwidth == IEEE80211_STA_RX_BW_320)
 +		arg->bw_320 = true;
-+	}
++
  	if (eht_cap->eht_cap_elem.phy_cap_info[5] &
  	    IEEE80211_EHT_PHY_CAP5_PPE_THRESHOLD_PRESENT &&
  	    eht_cap->eht_ppe_thres[0] != 0)
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 3b7d54c..0e785ff 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -1925,6 +1925,8 @@ static void ath12k_wmi_copy_peer_flags(struct wmi_peer_assoc_complete_cmd *cmd,
+@@ -1960,6 +1960,8 @@ static void ath12k_wmi_copy_peer_flags(s
  			cmd->peer_flags |= cpu_to_le32(WMI_PEER_80MHZ);
  		if (arg->bw_160)
  			cmd->peer_flags |= cpu_to_le32(WMI_PEER_160MHZ);
@@ -44,7 +47,7 @@ index 3b7d54c..0e785ff 100644
  
  		/* Typically if STBC is enabled for VHT it should be enabled
  		 * for HT as well
-@@ -1952,6 +1954,8 @@ static void ath12k_wmi_copy_peer_flags(struct wmi_peer_assoc_complete_cmd *cmd,
+@@ -1987,6 +1989,8 @@ static void ath12k_wmi_copy_peer_flags(s
  			cmd->peer_flags |= cpu_to_le32(WMI_PEER_TWT_REQ);
  		if (arg->twt_responder)
  			cmd->peer_flags |= cpu_to_le32(WMI_PEER_TWT_RESP);
@@ -53,7 +56,7 @@ index 3b7d54c..0e785ff 100644
  	}
  
  	/* Suppress authorization for all AUTH modes that need 4-way handshake
-@@ -1996,6 +2000,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2031,6 +2035,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  	struct wmi_peer_assoc_complete_cmd *cmd;
  	struct ath12k_wmi_vht_rate_set_params *mcs;
  	struct ath12k_wmi_he_rate_set_params *he_mcs;
@@ -61,7 +64,7 @@ index 3b7d54c..0e785ff 100644
  	struct sk_buff *skb;
  	struct wmi_tlv *tlv;
  	void *ptr;
-@@ -2012,7 +2017,10 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2047,7 +2052,10 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  	      TLV_HDR_SIZE + (peer_legacy_rates_align * sizeof(u8)) +
  	      TLV_HDR_SIZE + (peer_ht_rates_align * sizeof(u8)) +
  	      sizeof(*mcs) + TLV_HDR_SIZE +
@@ -73,7 +76,7 @@ index 3b7d54c..0e785ff 100644
  
  	skb = ath12k_wmi_alloc_skb(wmi->wmi_ab, len);
  	if (!skb)
-@@ -2059,6 +2067,16 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2094,6 +2102,16 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  		cmd->peer_ppet.ppet16_ppet8_ru3_ru0[i] =
  			cpu_to_le32(arg->peer_ppet.ppet16_ppet8_ru3_ru0[i]);
  
@@ -90,7 +93,7 @@ index 3b7d54c..0e785ff 100644
  	/* Update peer legacy rate information */
  	ptr += sizeof(*cmd);
  
-@@ -2126,7 +2144,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2161,7 +2179,7 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  	}
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_WMI,
@@ -99,7 +102,7 @@ index 3b7d54c..0e785ff 100644
  		   cmd->vdev_id, cmd->peer_associd, arg->peer_mac,
  		   cmd->peer_flags, cmd->peer_rate_caps, cmd->peer_caps,
  		   cmd->peer_listen_intval, cmd->peer_ht_caps,
-@@ -2136,7 +2154,36 @@ int ath12k_wmi_send_peer_assoc_cmd(struct ath12k *ar,
+@@ -2171,7 +2189,36 @@ int ath12k_wmi_send_peer_assoc_cmd(struc
  		   cmd->peer_he_ops, cmd->peer_he_cap_info_ext,
  		   cmd->peer_he_cap_phy[0], cmd->peer_he_cap_phy[1],
  		   cmd->peer_he_cap_phy[2],
@@ -137,11 +140,9 @@ index 3b7d54c..0e785ff 100644
  
  	/* fill ML Partner links Header TAG */
  	len = 0;
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index 093d195..a9e3bc1 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -1945,6 +1945,7 @@ enum wmi_tlv_tag {
+@@ -1946,6 +1946,7 @@ enum wmi_tlv_tag {
  	WMI_TAG_MAC_PHY_CAPABILITIES_EXT = 0x36F,
  	WMI_TAG_REGULATORY_RULE_EXT_STRUCT = 0x3A9,
  	WMI_TAG_REG_CHAN_LIST_CC_EXT_EVENT,
@@ -149,7 +150,7 @@ index 093d195..a9e3bc1 100644
  	WMI_TAG_MAX
  };
  
-@@ -3685,6 +3686,7 @@ struct ath12k_wmi_peer_assoc_arg {
+@@ -3718,6 +3719,7 @@ struct ath12k_wmi_peer_assoc_arg {
  	bool bw_40;
  	bool bw_80;
  	bool bw_160;
@@ -157,7 +158,7 @@ index 093d195..a9e3bc1 100644
  	bool stbc_flag;
  	bool ldpc_flag;
  	bool static_mimops_flag;
-@@ -3750,6 +3752,15 @@ struct wmi_peer_assoc_complete_cmd {
+@@ -3783,6 +3785,15 @@ struct wmi_peer_assoc_complete_cmd {
  	__le32 peer_he_cap_info_internal;
  	__le32 min_data_rate;
  	__le32 peer_he_caps_6ghz;
@@ -173,7 +174,7 @@ index 093d195..a9e3bc1 100644
  } __packed;
  
  struct wmi_stop_scan_cmd {
-@@ -3962,6 +3973,9 @@ struct wmi_unit_test_cmd {
+@@ -4058,6 +4069,9 @@ struct wmi_unit_test_cmd {
  #define WMI_PEER_160MHZ		0x40000000
  #define WMI_PEER_SAFEMODE_EN	0x80000000
  
@@ -183,7 +184,7 @@ index 093d195..a9e3bc1 100644
  struct ath12k_wmi_vht_rate_set_params {
  	__le32 tlv_header;
  	__le32 rx_max_rate;
-@@ -3979,6 +3993,12 @@ struct ath12k_wmi_he_rate_set_params {
+@@ -4075,6 +4089,12 @@ struct ath12k_wmi_he_rate_set_params {
  	__le32 tx_mcs_set;
  } __packed;
  
@@ -196,6 +197,3 @@ index 093d195..a9e3bc1 100644
  #define MAX_REG_RULES 10
  #define REG_ALPHA2_LEN 2
  #define MAX_6G_REG_RULES 5
--- 
-2.17.1
-
