@@ -322,6 +322,7 @@
 		reg = <0 0 0 0 0>;
 
 		wifi@1 {
+			reg = <0 0 0 0 0>;
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
@@ -343,6 +344,7 @@
 		reg = <0 0 0 0 0>;
 
 		wifi@2 {
+			reg = <0 0 0 0 0>;
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
@@ -364,6 +366,7 @@
 		reg = <0 0 0 0 0>;
 
 		wifi@3 {
+			reg = <0 0 0 0 0>;
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
@@ -386,7 +389,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -546,24 +549,10 @@
 	};
 
 	pta_QCC710: pta_QCC710 {
-		pta1_0 {
-			pins = "gpio56";
-			function = "pta1_0";
-			drive-strength = <8>;
-			bias-disable;
-		};
-		pta1_1 {
-			pins = "gpio54";
-			function = "pta1_1";
-			drive-strength = <8>;
-			bias-disable;
-		};
-		pta1_2 {
-			pins = "gpio55";
-			function = "pta1_2";
-			drive-strength = <8>;
-			bias-disable;
-		};
+		pins = "gpio54", "gpio55", "gpio56";
+		function = "pta";
+		drive-strength = <8>;
+		bias-disable;
 	};
 
 	spi_0_pins: spi-0-pins {
@@ -601,7 +590,7 @@
 	status = "okay";
 };
 
-&xo_board_clk {
+&xo {
 	clock-frequency = <24000000>;
 };
 

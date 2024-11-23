@@ -61,7 +61,7 @@
 			#clock-cells = <0>;
 		};
 
-		xo_board_clk: xo-board-clk {
+		xo: xo {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 		};
@@ -222,16 +222,10 @@
 
 	ctx_save: ctx-save {
 		compatible = "qti,ctxt-save-ipq9574";
+		memory-region = <&minidump_mem>;
 	};
 
 	firmware {
-		qfprom {
-			compatible = "qcom,qfprom-sec";
-			img-addr = <0x4a100000>;
-			img-size = <0x500000>;
-			scm-cmd-id = <0x1f>;
-		};
-
 		scm {
 			compatible = "qcom,scm-ipq9574", "qcom,scm";
 			hvc-log-cmd-id = <0xA>;
@@ -358,6 +352,10 @@
 			hwlocks = <&tcsr_mutex 3>;
 			no-map;
 		};
+
+		minidump_mem: minidump_mem@0 {
+			no-map;
+		};
 	};
 
 	wcss: wcss-smp2p {
@@ -402,6 +400,14 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0 0 0 0xffffffff>;
+
+		qfprom {
+			compatible = "qcom,qfprom-ipq9574-sec";
+			img-addr = <0x4a100000>;
+			img-size = <0x500000>;
+			scm-cmd-id = <0x1f>;
+			reg = <0xA6044 0x4>;
+		};
 
 		reg_update: reg-update@400000 {
 			compatible = "ipq,reg-update";
@@ -721,7 +727,7 @@
 		gcc: clock-controller@1800000 {
 			compatible = "qcom,ipq9574-gcc";
 			reg = <0x01800000 0x80000>;
-			clocks = <&xo_board_clk>,
+			clocks = <&xo>,
 				 <&sleep_clk>,
 				 <&bias_pll_ubi_nc_clk>,
 				 <&pcie30_phy0_pipe_clk>,
@@ -741,7 +747,7 @@
 				 <&bias_pll_nss_noc_clk>,
 				 <&bias_pll_ubi_nc_clk>,
 				 <&gcc_gpll0_out_aux>,
-				 <&xo_board_clk>;
+				 <&xo>;
 			clock-names = "bias_pll_cc_clk",
 				      "bias_pll_nss_noc_clk",
 				      "bias_pll_ubi_nc_clk",
@@ -836,7 +842,7 @@
 		};
 
 		wsi: wsi {
-			status = "okay";
+			status = "disabled";
 		};
 
 		pcie1_x1: pci@10000000 {
@@ -2446,7 +2452,7 @@
 			#phy-cells = <0>;
 
 			clocks = <&gcc GCC_USB0_PHY_CFG_AHB_CLK>,
-				<&xo_board_clk>;
+				<&xo>;
 			clock-names = "cfg_ahb", "ref";
 
 			resets = <&gcc GCC_QUSB2_0_PHY_BCR>;
@@ -2580,7 +2586,7 @@
 
 			clocks = <&gcc GCC_SDCC1_AHB_CLK>,
 				 <&gcc GCC_SDCC1_APPS_CLK>,
-				 <&xo_board_clk>,
+				 <&xo>,
 				 <&gcc GCC_SDCC1_ICE_CORE_CLK>;
 			clock-names = "iface", "core", "xo", "ice";
 			non-removable;
@@ -2831,7 +2837,7 @@
 				     "qcom,ipq6018-apcs-apps-global";
 			reg = <0x0b111000 0x1000>;
 			#clock-cells = <1>;
-			clocks = <&a73pll>, <&xo_board_clk>, <&gcc_gpll0_out_aux>;
+			clocks = <&a73pll>, <&xo>, <&gcc_gpll0_out_aux>;
 			clock-names = "pll", "xo", "gpll0";
 			#mbox-cells = <1>;
 		};
@@ -2840,7 +2846,7 @@
 			compatible = "qcom,ipq9574-a73pll";
 			reg = <0x0b116000 0x40>;
 			#clock-cells = <0>;
-			clocks = <&xo_board_clk>;
+			clocks = <&xo>;
 			clock-names = "xo";
 		};
 
@@ -3531,6 +3537,7 @@
 				 <&nsscc NSS_CC_NSSNOC_IMEM_QSB_CLK>,
 				 <&nsscc NSS_CC_IMEM_AHB_CLK>,
 				 <&nsscc NSS_CC_NSSNOC_IMEM_AHB_CLK>,
+				 <&nsscc NSS_CC_PPE_EDMA_CLK>,
 				 <&gcc GCC_MEM_NOC_NSSNOC_CLK>,
 				 <&gcc GCC_NSS_TBU_CLK>,
 				 <&gcc GCC_NSS_TS_CLK>,
@@ -3548,7 +3555,7 @@
 				 <&gcc GCC_NSSNOC_XO_DCD_CLK>;
 			clock-names = "nss-csr-clk", "nss-nssnoc-csr-clk",
 				      "nss-imem-qsb-clk", "nss-nssnoc-imem-qsb-clk",
-				      "nss-imem-ahb-clk", "nss-nssnoc-imem-ahb-clk",
+				      "nss-imem-ahb-clk", "nss-nssnoc-imem-ahb-clk", "nss-edma-clk",
 				      "nss-mem-noc-nssnoc-clk", "nss-tbu-clk", "nss-ts-clk",
 				      "nss-nsscc-clk", "nss-nsscfg-clk", "nss-nsscnoc-atb-clk",
 				      "nss-nssnoc-mem-noc-1-clk", "nss-nssnoc-memnoc-clk", "nss-nssnoc-nsscc-clk",

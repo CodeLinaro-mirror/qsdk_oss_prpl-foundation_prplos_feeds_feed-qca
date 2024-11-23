@@ -1,11 +1,10 @@
-From f6e220171683ed6e284ecd439fb59b37937ca237 Mon Sep 17 00:00:00 2001
+From ba27f9ab4740f3fff1c32b98623025e85b587c3d Mon Sep 17 00:00:00 2001
 From: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
 Date: Wed, 17 Jan 2024 13:25:22 +0530
 Subject: [PATCH] drivers: dm-crypt: Add support for rootfs enc/dec
 
 Change-Id: Id0cb0d533228aabd9c4e2851364b73f1b341dbcf
 Signed-off-by: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
-(cherry picked from commit ba27f9ab4740f3fff1c32b98623025e85b587c3d)
 ---
  drivers/firmware/qcom_scm.c  |  68 +++++++++++++++++-
  drivers/firmware/qcom_scm.h  |   5 ++
@@ -124,7 +123,7 @@ index cb9582f46fdb..525bd7ae7761 100644
  #define QCOM_SCM_INFO_IS_CALL_AVAIL	0x01
  #define QCOM_SCM_IS_FEATURE_AVAIL	0x03
 diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 766a2f9b75d8..8cdf373121ee 100644
+index ac8a99cebae1..ff5905698f5a 100644
 --- a/drivers/md/dm-crypt.c
 +++ b/drivers/md/dm-crypt.c
 @@ -41,10 +41,13 @@
@@ -150,7 +149,7 @@ index 766a2f9b75d8..8cdf373121ee 100644
  
  enum cipher_flags {
  	CRYPT_MODE_INTEGRITY_AEAD,	/* Use authenticated mode for cipher */
-@@ -2691,26 +2694,26 @@ static int crypt_set_key(struct crypt_config *cc, char *key)
+@@ -2695,26 +2698,26 @@ static int crypt_set_key(struct crypt_config *cc, char *key)
  	int key_string_len = strlen(key);
  
  	/* Hyphen (which gives a key_size of zero) means there is no key. */
@@ -194,7 +193,7 @@ index 766a2f9b75d8..8cdf373121ee 100644
  	r = crypt_setkey(cc);
  	if (!r)
  		set_bit(DM_CRYPT_KEY_VALID, &cc->flags);
-@@ -3195,6 +3198,92 @@ static int crypt_ctr_cipher(struct dm_target *ti, char *cipher_in, char *key)
+@@ -3199,6 +3202,92 @@ static int crypt_ctr_cipher(struct dm_target *ti, char *cipher_in, char *key)
  	return ret;
  }
  
@@ -287,7 +286,7 @@ index 766a2f9b75d8..8cdf373121ee 100644
  static int crypt_ctr_optional(struct dm_target *ti, unsigned int argc, char **argv)
  {
  	struct crypt_config *cc = ti->private;
-@@ -3239,6 +3328,9 @@ static int crypt_ctr_optional(struct dm_target *ti, unsigned int argc, char **ar
+@@ -3243,6 +3332,9 @@ static int crypt_ctr_optional(struct dm_target *ti, unsigned int argc, char **ar
  			set_bit(DM_CRYPT_INLINE_ENCRYPTION, &cc->flags);
  		else if (!strcasecmp(opt_string, "hwkey"))
  			set_bit(DM_CRYPT_INLINE_ENCRYPTION_USE_HWKEY, &cc->flags);
@@ -297,7 +296,7 @@ index 766a2f9b75d8..8cdf373121ee 100644
  #endif
  		else if (sscanf(opt_string, "integrity:%u:", &val) == 1) {
  			if (val == 0 || val > MAX_TAG_SIZE) {
-@@ -3374,6 +3466,13 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+@@ -3378,6 +3470,13 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
  	if (ret < 0)
  		goto bad;
  
@@ -312,7 +311,7 @@ index 766a2f9b75d8..8cdf373121ee 100644
  		return 0;
  
 diff --git a/drivers/mmc/host/sdhci-msm.c b/drivers/mmc/host/sdhci-msm.c
-index 2af3c2e921e8..933adfc5c82a 100644
+index 9aa20f2bb7bb..8fdb881160ab 100644
 --- a/drivers/mmc/host/sdhci-msm.c
 +++ b/drivers/mmc/host/sdhci-msm.c
 @@ -288,16 +288,6 @@ struct sdhci_msm_host {
@@ -332,7 +331,7 @@ index 2af3c2e921e8..933adfc5c82a 100644
  enum ice_crpto_key_mode {
  	ICE_CRYPTO_USE_KEY0_HW_KEY = 0x0,
  	ICE_CRYPTO_USE_KEY1_HW_KEY = 0x1,
-@@ -2076,6 +2066,7 @@ static int sdhci_msm_ice_set_hwkey_config(struct cqhci_host *cq_host,
+@@ -2092,6 +2082,7 @@ static int sdhci_msm_ice_set_hwkey_config(struct cqhci_host *cq_host,
  		ice->algo_mode = ICE_CRYPTO_ALGO_MODE_HW_AES_ECB;
  		ice->key_size = ICE_CRYPTO_KEY_SIZE_HW_128;
  		ice->key_mode = ICE_CRYPTO_USE_KEY0_HW_KEY;

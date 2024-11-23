@@ -1,4 +1,4 @@
-From dd6c048b38a917b612a91237f94c1ee85a0ad09e Mon Sep 17 00:00:00 2001
+From 368ba35820224a70c8b764048b9ca2c114640431 Mon Sep 17 00:00:00 2001
 From: Gurumoorthy Santhakumar <quic_gsanthak@quicinc.com>
 Date: Thu, 4 Jan 2024 18:20:49 +0530
 Subject: [PATCH] lib: decompressor: removed init flag.

@@ -1,4 +1,4 @@
-From b5987e44b55d8cb8254bf9421d5c61e122a3f5a1 Mon Sep 17 00:00:00 2001
+From 2cc37b10766358cafc49b822dd9ed9482246921f Mon Sep 17 00:00:00 2001
 From: Hariharan K <quic_harihk@quicinc.com>
 Date: Mon, 22 Jan 2024 11:27:07 +0530
 Subject: [PATCH] drivers: clk: qcom: Print PLL_MODE and PLL_STATUS on failure
@@ -13,7 +13,6 @@ oss/kernel/linux-ipq-5.4 project.
 
 Change-Id: I2d66d4b0e343e655f77edd2c04f38e5623800d2c
 Signed-off-by: Hariharan K <quic_harihk@quicinc.com>
-(cherry picked from commit 2cc37b10766358cafc49b822dd9ed9482246921f)
 ---
  drivers/clk/qcom/clk-alpha-pll.c | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)

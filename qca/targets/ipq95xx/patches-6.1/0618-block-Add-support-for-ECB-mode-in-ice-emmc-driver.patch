@@ -1,11 +1,10 @@
-From 45191a93fb42e42d2632a96fcacbe2dc012cc3d4 Mon Sep 17 00:00:00 2001
+From 9adc29ef773aebe671328070312be87521ccacaf Mon Sep 17 00:00:00 2001
 From: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
 Date: Mon, 11 Dec 2023 12:06:20 +0530
 Subject: [PATCH] block : Add support for ECB mode in ice emmc driver
 
 Change-Id: I7afce461b1f58609df2cb739e9feacf555158b1b
 Signed-off-by: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
-(cherry picked from commit 9adc29ef773aebe671328070312be87521ccacaf)
 ---
  block/blk-crypto.c              | 12 ++++++++++++
  drivers/md/dm-crypt.c           |  8 ++++++--
@@ -38,10 +37,10 @@ index 544a65af7818..772672e14e52 100644
  
  /*
 diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 8cdf373121ee..ff5905698f5a 100644
+index 766a2f9b75d8..ac8a99cebae1 100644
 --- a/drivers/md/dm-crypt.c
 +++ b/drivers/md/dm-crypt.c
-@@ -2393,9 +2393,13 @@ static int crypt_select_inline_crypt_mode(struct dm_target *ti, char *cipher,
+@@ -2390,9 +2390,13 @@ static int crypt_select_inline_crypt_mode(struct dm_target *ti, char *cipher,
  	} else if (strcmp(cipher, "xts(aes256)") == 0) {
  		cc->crypto_mode = BLK_ENCRYPTION_MODE_AES_256_XTS;
  	} else if (strcmp(cipher, "cbc(aes256)") == 0) {
@@ -77,10 +76,10 @@ index ca7295284496..b166ac20c3be 100644
  
  static inline struct cqhci_host *
 diff --git a/drivers/mmc/host/sdhci-msm.c b/drivers/mmc/host/sdhci-msm.c
-index 933adfc5c82a..8fdb881160ab 100644
+index 56df4f95c9c5..ec3580b6cff8 100644
 --- a/drivers/mmc/host/sdhci-msm.c
 +++ b/drivers/mmc/host/sdhci-msm.c
-@@ -2030,6 +2030,22 @@ static int sdhci_msm_get_scm_algo_mode(struct cqhci_host *cq_host,
+@@ -2032,6 +2032,22 @@ static int sdhci_msm_get_scm_algo_mode(struct cqhci_host *cq_host,
  			*key_size = AES_128_CBC_KEY_SIZE;
  		}
  		break;
@@ -103,7 +102,7 @@ index 933adfc5c82a..8fdb881160ab 100644
  	default:
  		dev_err_ratelimited(dev, "Unhandled crypto capability; algorithm_id=%d, key_size=%d\n",
  				    cap.algorithm_id, cap.key_size);
-@@ -2111,7 +2127,7 @@ static int sdhci_msm_program_key(struct cqhci_host *cq_host,
+@@ -2112,7 +2128,7 @@ static int sdhci_msm_program_key(struct cqhci_host *cq_host,
  		return -EINVAL;
  	}
  

@@ -21,8 +21,14 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-ppe kmod-qca-nss-ppe-ds kmod-qca-nss-ppe-vp \
 	kmod-qca-ssdk-qca-nohnat kmod-qca-nss-dp-qca \
 	kmod-qca-nss-ppe-bridge-mgr kmod-qca-nss-ppe-vlan-mgr \
-	iwinfo kmod-ath12k-qca ath12k-firmware-qcn92xx \
-	kmod-leds-gpio swconfig kmod-fs-ext4 losetup
+	iwinfo kmod-ath12k-qca wififw_mount_script qca-wifi-scripts \
+	kmod-leds-gpio swconfig kmod-fs-ext4 losetup wpad-qca-mesh-openssl \
+	kmod-emesh-sp kmod-qca-nss-ecm-wifi-plugin kmod-qca-nss-ecm-premium \
+	kmod-qca-nss-ppe-tunipip6 qca-nss-ppe-tun kmod-l2tp ppp-mod-pppol2tp kmod-vxlan \
+	kmod-qca-nss-ppe-gretap kmod-ipt-conntrack \
+	kmod-qca-nss-ppe-vxlanmgr kmod-iptables-mod-extra kmod-qca-nss-ppe-qdisc kmod-qca-nss-macsec \
+	kmod-qca-nss-ppe-mapt kmod-qca-nss-ppe-rule kmod-qca-nss-sfe qca-nss-ppe-netlink kmod-qca-ovsmgr \
+	kmod-pptp kmod-bootconfig
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
 

@@ -1,4 +1,4 @@
-From 9f66ef7b73af9ae9628f7a1eb0008e01b7d5054b Mon Sep 17 00:00:00 2001
+From 760174066eca951813f578be062d02daa1cf536b Mon Sep 17 00:00:00 2001
 From: Hariharan K <quic_harihk@quicinc.com>
 Date: Tue, 23 Jan 2024 15:32:42 +0530
 Subject: [PATCH] pcie: qcom: Fix KW issue in pci probe
@@ -10,7 +10,6 @@ by fetching the resource and getting the size.
 
 Change-Id: I33cc61987d012641f18f17b326011bd7a5b6ce4a
 Signed-off-by: Hariharan K <quic_harihk@quicinc.com>
-(cherry picked from commit 760174066eca951813f578be062d02daa1cf536b)
 ---
  drivers/pci/controller/dwc/pcie-qcom.c | 1 +
  1 file changed, 1 insertion(+)

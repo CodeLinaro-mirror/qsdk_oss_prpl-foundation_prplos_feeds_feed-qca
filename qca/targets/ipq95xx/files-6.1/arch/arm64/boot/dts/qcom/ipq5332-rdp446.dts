@@ -3,7 +3,7 @@
  * IPQ5332 RDP446 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -65,7 +65,7 @@
 	 * |  CALDB  |  0x50100000  |           5MB           |
 	 * +---------+--------------+-------------------------+
 	 * |         |              |                         |
-	 * |   MLO   |  0x50600000  |          11MB           |
+	 * |   MLO   |  0x50600000  |          12MB           |
 	 * +==================================================+
 	 * |                                                  |
 	 * |                                                  |
@@ -156,7 +156,7 @@
 		};
 
 		mlo_global_mem0: mlo_global_mem_0@50600000 {
-			reg = <0x0 0x50600000 0x0 0xB00000>;
+			reg = <0x0 0x50600000 0x0 0xC00000>;
 			no-map;
 		};
 	};
@@ -201,6 +201,53 @@
 			};
 			phy4: ethernet-phy@4 {
 				reg = <12>;
+			};
+
+			switch0@10 {
+				compatible = "qca,qca8386";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x10>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						label = "cpu";
+						ethernet = <&gmac2>;
+						dsa-tag-protocol = "qca_4b";
+					};
+
+					port@1 {
+						reg = <1>;
+						label = "lan1";
+						phy-handle = <&phy0>;
+						phy-mode = "usxgmii";
+					};
+
+					port@2 {
+						reg = <2>;
+						label = "lan2";
+						phy-handle = <&phy1>;
+						phy-mode = "usxgmii";
+					};
+
+					port@3 {
+						reg = <3>;
+						label = "lan3";
+						phy-handle = <&phy2>;
+						phy-mode = "usxgmii";
+					};
+
+					port@4 {
+						reg = <4>;
+						label = "lan4";
+						phy-handle = <&phy3>;
+						phy-mode = "usxgmii";
+					};
+				};
 			};
 		};
 
@@ -346,7 +393,7 @@
 			phy-mode = "sgmii";
 		};
 
-		dp2 {
+		gmac2:dp2 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
 			qcom,id = <1>;
@@ -356,6 +403,7 @@
 			phy-mode = "sgmii";
 			qcom,mht-dev = <1>;
 			qcom,is_switch_connected = <1>;
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -430,6 +478,10 @@
 		wsi: wsi {
 			id = <0>;
 			num_chip = <3>;
+			status = "okay";
+			chip_info = <0 2 1 2>,
+				    <1 2 2 0>,
+				    <2 2 0 1>;
 		};
 
 		q6v5_wcss: remoteproc@d100000 {
@@ -532,7 +584,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -544,7 +596,7 @@
 	clock-frequency = <32000>;
 };
 
-&xo_board {
+&xo {
 	clock-frequency = <24000000>;
 };
 
@@ -675,6 +727,7 @@
 	mem-region = <&q6_ipq5332_data>;
 	memory-region = <&q6_ipq5332_data>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <0>;
 	status = "okay";
 };
 
@@ -686,12 +739,16 @@
 	qcom,tgt-mem-mode = <1>;
 	qcom,bdf-addr = <0x4D800000 0x4D800000 0x4D800000 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x4EA00000 0x4EA00000 0x4EA00000 0x0 0x0 0x0>;
+	qcom,umac-irq-reset-addr = <0x20000884>;
 	qcom,caldb-size = <0x500000>;
 	qcom,board_id = <0x052>;
 	mem-region = <&q6_qcn6432_data_1>;
 	memory-region = <&q6_qcn6432_data_1>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <1>;
 	status = "okay";
+	interrupts = <GIC_SPI 33 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "umac_reset";
 };
 
 &wifi2 {
@@ -702,10 +759,14 @@
 	qcom,tgt-mem-mode = <1>;
 	qcom,bdf-addr = <0x4EF00000 0x4EF00000 0x4EF00000 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x50100000 0x50100000 0x50100000 0x0 0x0 0x0>;
+	qcom,umac-irq-reset-addr = <0x18000884>;
 	qcom,caldb-size = <0x500000>;
 	qcom,board_id = <0x091>;
 	mem-region = <&q6_qcn6432_data_2>;
 	memory-region = <&q6_qcn6432_data_2>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <2>;
 	status = "okay";
+	interrupts = <GIC_SPI 410 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "umac_reset";
 };

@@ -2,7 +2,7 @@
 /*
  * IPQ5332 device tree source
  *
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <dt-bindings/clock/qcom,apss-ipq.h>
@@ -22,7 +22,7 @@
 			#clock-cells = <0>;
 		};
 
-		xo_board: xo-board-clk {
+		xo: xo {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 		};
@@ -115,13 +115,6 @@
 	};
 
 	firmware {
-		qfprom {
-			compatible = "qcom,qfprom-sec";
-			img-addr = <0x4a100000>;
-			img-size = <0x500000>;
-			scm-cmd-id = <0x1f>;
-		};
-
 		scm {
 			compatible = "qcom,scm-ipq5332", "qcom,scm";
 			qcom,dload-mode = <&tcsr 0x6100>;
@@ -195,6 +188,7 @@
 
 	ctx_save: ctx-save {
 		compatible = "qti,ctxt-save-ipq5332";
+		memory-region = <&minidump_mem>;
 	};
 
 	pmu {
@@ -260,6 +254,10 @@
 
 			hwlocks = <&tcsr_mutex 3>;
 		};
+
+		minidump_mem: minidump_mem@0 {
+			no-map;
+		};
 	};
 
 	soc@0 {
@@ -267,6 +265,14 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0 0 0 0xffffffff>;
+
+		qfprom {
+			compatible = "qcom,qfprom-ipq5332-sec";
+			img-addr = <0x4a100000>;
+			img-size = <0x500000>;
+			scm-cmd-id = <0x1f>;
+			reg = <0xA6044 0x4>;
+		};
 
 		qfprom: efuse@a4000 {
 			compatible = "qcom,qfprom";
@@ -340,6 +346,13 @@
 			reg = <0x000e3000 0x1000>;
 			clocks = <&gcc GCC_PRNG_AHB_CLK>;
 			clock-names = "core";
+		};
+
+		reg_update: reg-update@400000 {
+			compatible = "ipq,53xx-reg-update";
+			reg = <0x00400000 0x6200>, <0x01d80000 0x4000>;
+			reg-names = "memnoc_53xx", "nssnoc";
+			status = "okay";
 		};
 
 		pcie0_phy: phy@4b0000 {
@@ -575,7 +588,7 @@
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 			#power-domain-cells = <1>;
-			clocks = <&xo_board>,
+			clocks = <&xo>,
 				 <&sleep_clk>,
 				 <&pcie_2lane_phy_pipe_clk>,
 				 <&pcie_2lane_phy_pipe_clk_x1>,
@@ -585,7 +598,7 @@
 		nsscc: nsscc@39b00000{
 			compatible = "qcom,nsscc-ipq5332";
 			reg = <0x39b00000 0x80000>;
-			clocks = <&xo_board>,
+			clocks = <&xo>,
 				<&cmn_pll_nss_clk_200m>,
 				<&cmn_pll_nss_clk_300m>,
 				<&gcc_gpll0_out_aux>;
@@ -631,7 +644,7 @@
 
 			clocks = <&gcc GCC_SDCC1_AHB_CLK>,
 				 <&gcc GCC_SDCC1_APPS_CLK>,
-				 <&xo_board>;
+				 <&xo>;
 			clock-names = "iface", "core", "xo";
 			status = "disabled";
 		};
@@ -796,6 +809,10 @@
 			status = "disabled";
 		};
 
+		wsi: wsi {
+			status = "disabled";
+		};
+
 		seccrypt: qcom,seccrypt {
 			compatible = "qcom,seccrypt";
 			status = "okay";
@@ -846,7 +863,7 @@
 				     "qcom,ipq6018-apcs-apps-global";
 			reg = <0x0b111000 0x1000>;
 			#clock-cells = <1>;
-			clocks = <&a53pll>, <&xo_board>, <&gcc_gpll0_out_aux>;
+			clocks = <&a53pll>, <&xo>, <&gcc_gpll0_out_aux>;
 			clock-names = "pll", "xo", "gpll0";
 			#mbox-cells = <1>;
 		};
@@ -855,7 +872,7 @@
 			compatible = "qcom,ipq5332-a53pll";
 			reg = <0x0b116000 0x40>;
 			#clock-cells = <0>;
-			clocks = <&xo_board>;
+			clocks = <&xo>;
 			clock-names = "xo";
 		};
 
@@ -924,6 +941,7 @@
 				<GIC_SPI 500 IRQ_TYPE_EDGE_RISING>, /* host2tcl-input-ring3 */
 				<GIC_SPI 499 IRQ_TYPE_EDGE_RISING>, /* host2tcl-input-ring2 */
 				<GIC_SPI 498 IRQ_TYPE_EDGE_RISING>, /* host2tcl-input-ring1 */
+				<GIC_SPI 458 IRQ_TYPE_EDGE_RISING>, /* wbm2host-tx-completions-ath-ring4 */
 				<GIC_SPI 450 IRQ_TYPE_EDGE_RISING>, /* wbm2host-tx-completions-ring4 */
 				<GIC_SPI 449 IRQ_TYPE_EDGE_RISING>, /* wbm2host-tx-completions-ring3 */
 				<GIC_SPI 448 IRQ_TYPE_EDGE_RISING>, /* wbm2host-tx-completions-ring2 */
@@ -983,6 +1001,7 @@
 				"host2tcl-input-ring3",
 				"host2tcl-input-ring2",
 				"host2tcl-input-ring1",
+				"wbm2host-tx-completions-ath-ring4",
 				"wbm2host-tx-completions-ring4",
 				"wbm2host-tx-completions-ring3",
 				"wbm2host-tx-completions-ring2",
@@ -1036,22 +1055,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4EC00000  |   20MB  |
+			 * | HREMOTE |  0x4ED00000  |   20MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x50000000  |   1MB   |
+			 * | M3 Dump |  0x50100000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x50100000  |   1MB   |
+			 * |   ETR   |  0x50200000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x50200000  |   8MB   |
+			 * |  Caldb  |  0x50300000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x50A00000  |   7MB   |
+			 * |Pageable |  0x50B00000  |   7MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4EC00000>;
-			m3-dump-addr = <0x50000000>;
-			etr-addr = <0x50100000>;
-			caldb-addr = <0x50200000>;
-			pageable-addr = <0x50A00000>;
+			base-addr = <0x4ED00000>;
+			m3-dump-addr = <0x50100000>;
+			etr-addr = <0x50200000>;
+			caldb-addr = <0x50300000>;
+			pageable-addr = <0x50B00000>;
 			hremote-size = <0x1400000>;
 			pageable-size = <0x700000>;
 			tgt-mem-mode = <0x1>;
@@ -1060,22 +1079,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4EC00000  |   28MB  |
+			 * | HREMOTE |  0x4ED00000  |   28MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x50800000  |   1MB   |
+			 * | M3 Dump |  0x50900000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x50900000  |   1MB   |
+			 * |   ETR   |  0x50A00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x50A00000  |   8MB   |
+			 * |  Caldb  |  0x50B00000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x51200000  |  12MB   |
+			 * |Pageable |  0x51300000  |  12MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4EC00000>;
-			m3-dump-addr = <0x50800000>;
-			etr-addr = <0x50900000>;
-			caldb-addr = <0x50A00000>;
-			pageable-addr = <0x51200000>;
+			base-addr = <0x4ED00000>;
+			m3-dump-addr = <0x50900000>;
+			etr-addr = <0x50A00000>;
+			caldb-addr = <0x50B00000>;
+			pageable-addr = <0x51300000>;
 			hremote-size = <0x1C00000>;
 			pageable-size = <0xC00000>;
 			tgt-mem-mode = <0x0>;
@@ -1306,22 +1325,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x51100000  |   20MB  |
+			 * | HREMOTE |  0x51200000  |   20MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x52500000  |   1MB   |
+			 * | M3 Dump |  0x52600000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x52600000  |   1MB   |
+			 * |   ETR   |  0x52700000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x52700000  |   8MB   |
+			 * |  Caldb  |  0x52800000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x52F00000  |   7MB   |
+			 * |Pageable |  0x53000000  |   7MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x51100000>;
-			m3-dump-addr = <0x52500000>;
-			etr-addr = <0x52600000>;
-			caldb-addr = <0x52700000>;
-			pageable-addr = <0x52F00000>;
+			base-addr = <0x51200000>;
+			m3-dump-addr = <0x52600000>;
+			etr-addr = <0x52700000>;
+			caldb-addr = <0x52800000>;
+			pageable-addr = <0x53000000>;
 			hremote-size = <0x1400000>;
 			pageable-size = <0x700000>;
 			tgt-mem-mode = <0x1>;
@@ -1330,22 +1349,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x51E00000  |   28MB  |
+			 * | HREMOTE |  0x51F00000  |   28MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x53A00000  |   1MB   |
+			 * | M3 Dump |  0x53B00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x53B00000  |   1MB   |
+			 * |   ETR   |  0x53C00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x53C00000  |   8MB   |
+			 * |  Caldb  |  0x53D00000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x54400000  |  12MB   |
+			 * |Pageable |  0x54500000  |  12MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x51E00000>;
-			m3-dump-addr = <0x53A00000>;
-			etr-addr = <0x53B00000>;
-			caldb-addr = <0x53C00000>;
-			pageable-addr = <0x54400000>;
+			base-addr = <0x51F00000>;
+			m3-dump-addr = <0x53B00000>;
+			etr-addr = <0x53C00000>;
+			caldb-addr = <0x53D00000>;
+			pageable-addr = <0x54500000>;
 			hremote-size = <0x1C00000>;
 			pageable-size = <0xC00000>;
 			tgt-mem-mode = <0x0>;
@@ -1976,6 +1995,89 @@
 			status = "disabled";
 		};
 
+		/* 1L controller with USB/PCIe combo PHY */
+		pcie0: pcie@20000000 {
+			compatible = "qti,pcie-ipq5332";
+			reg =  <0x20000000 0xf1d>,
+			       <0x20000f20 0xa8>,
+			       <0x20001000 0x1000>,
+			       <0x80000 0x3000>,
+			       <0x20100000 0x1000>,
+			       <0x59C108 0x4>;
+			reg-names = "dbi", "elbi", "atu", "parf", "config", "system_noc";
+			device_type = "pci";
+			linux,pci-domain = <0>;
+			bus-range = <0x00 0xff>;
+			num-lanes = <1>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+			axi-halt-val = <0x1e>; /* increase halt window size to 1GB */
+
+			phys = <&pcie0_phy>;
+			phy-names = "pciephy";
+
+			ranges = <0x81000000 0 0x20200000 0x20200000 0 0x00100000>,   /* downstream I/O */
+				 <0x82000000 0 0x20300000 0x20300000 0 0x0fd00000>; /* non-prefetchable memory */
+
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &intc 0 35 IRQ_TYPE_LEVEL_HIGH>, /* int_a */
+					<0 0 0 2 &intc 0 36 IRQ_TYPE_LEVEL_HIGH>, /* int_b */
+					<0 0 0 3 &intc 0 37 IRQ_TYPE_LEVEL_HIGH>, /* int_c */
+					<0 0 0 4 &intc 0 38 IRQ_TYPE_LEVEL_HIGH>; /* int_d */
+
+			interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "global_irq";
+
+			clocks = <&gcc GCC_PCIE3X1_0_AXI_M_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AHB_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AUX_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>,
+				 <&gcc GCC_PCIE3X1_0_RCHG_CLK>;
+
+			clock-names = "axi_m",
+				      "axi_s",
+				      "ahb",
+				      "aux",
+				      "axi_bridge",
+				      "rchng";
+
+			assigned-clocks = <&gcc GCC_PCIE3X1_0_AUX_CLK>,
+					<&gcc GCC_PCIE3X1_0_AXI_M_CLK>,
+					<&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>,
+					<&gcc GCC_PCIE3X1_0_AXI_S_CLK>,
+					<&gcc GCC_PCIE3X1_0_RCHG_CLK>;
+
+			assigned-clock-rates = <2000000>,
+						<240000000>,
+						<240000000>,
+						<240000000>,
+						<100000000>;
+
+			resets = <&gcc GCC_PCIE3X1_0_PIPE_ARES>,
+				 <&gcc GCC_PCIE3X1_0_CORE_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_M_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_M_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AHB_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AUX_CLK_ARES>;
+
+			reset-names = "pipe",
+				      "sticky",
+				      "axi_m",
+				      "axi_s",
+				      "axi_m_sticky",
+				      "axi_s_sticky",
+				      "ahb",
+				      "aux";
+
+			msi-parent = <&v2m0>;
+			nvmem-cells = <&pcie0_disable>;
+			status = "disabled";
+		};
+
 		/* 2L controller with 2L/2x1L Flexible PHY.
 		 * Connected to the 1st lane of the Flexible PHY in 1L mode
 		 */
@@ -2062,88 +2164,6 @@
 			status = "disabled";
 		};
 
-		/* 1L controller with USB/PCIe combo PHY */
-		pcie0: pcie@20000000 {
-			compatible = "qti,pcie-ipq5332";
-			reg =  <0x20000000 0xf1d>,
-			       <0x20000f20 0xa8>,
-			       <0x20001000 0x1000>,
-			       <0x80000 0x3000>,
-			       <0x20100000 0x1000>,
-			       <0x59C108 0x4>;
-			reg-names = "dbi", "elbi", "atu", "parf", "config", "system_noc";
-			device_type = "pci";
-			linux,pci-domain = <0>;
-			bus-range = <0x00 0xff>;
-			num-lanes = <1>;
-			#address-cells = <3>;
-			#size-cells = <2>;
-			axi-halt-val = <0x1e>; /* increase halt window size to 1GB */
-
-			phys = <&pcie0_phy>;
-			phy-names = "pciephy";
-
-			ranges = <0x81000000 0 0x20200000 0x20200000 0 0x00100000>,   /* downstream I/O */
-				 <0x82000000 0 0x20300000 0x20300000 0 0x0fd00000>; /* non-prefetchable memory */
-
-			#interrupt-cells = <1>;
-			interrupt-map-mask = <0 0 0 0x7>;
-			interrupt-map = <0 0 0 1 &intc 0 35 IRQ_TYPE_LEVEL_HIGH>, /* int_a */
-					<0 0 0 2 &intc 0 36 IRQ_TYPE_LEVEL_HIGH>, /* int_b */
-					<0 0 0 3 &intc 0 37 IRQ_TYPE_LEVEL_HIGH>, /* int_c */
-					<0 0 0 4 &intc 0 38 IRQ_TYPE_LEVEL_HIGH>; /* int_d */
-
-			interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "global_irq";
-
-			clocks = <&gcc GCC_PCIE3X1_0_AXI_M_CLK>,
-				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK>,
-				 <&gcc GCC_PCIE3X1_0_AHB_CLK>,
-				 <&gcc GCC_PCIE3X1_0_AUX_CLK>,
-				 <&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>,
-				 <&gcc GCC_PCIE3X1_0_RCHG_CLK>;
-
-			clock-names = "axi_m",
-				      "axi_s",
-				      "ahb",
-				      "aux",
-				      "axi_bridge",
-				      "rchng";
-
-			assigned-clocks = <&gcc GCC_PCIE3X1_0_AUX_CLK>,
-					<&gcc GCC_PCIE3X1_0_AXI_M_CLK>,
-					<&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>,
-					<&gcc GCC_PCIE3X1_0_AXI_S_CLK>,
-					<&gcc GCC_PCIE3X1_0_RCHG_CLK>;
-
-			assigned-clock-rates = <2000000>,
-						<240000000>,
-						<240000000>,
-						<240000000>,
-						<100000000>;
-
-			resets = <&gcc GCC_PCIE3X1_0_PIPE_ARES>,
-				 <&gcc GCC_PCIE3X1_0_CORE_STICKY_ARES>,
-				 <&gcc GCC_PCIE3X1_0_AXI_M_CLK_ARES>,
-				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK_ARES>,
-				 <&gcc GCC_PCIE3X1_0_AXI_M_STICKY_ARES>,
-				 <&gcc GCC_PCIE3X1_0_AXI_S_STICKY_ARES>,
-				 <&gcc GCC_PCIE3X1_0_AHB_CLK_ARES>,
-				 <&gcc GCC_PCIE3X1_0_AUX_CLK_ARES>;
-
-			reset-names = "pipe",
-				      "sticky",
-				      "axi_m",
-				      "axi_s",
-				      "axi_m_sticky",
-				      "axi_s_sticky",
-				      "ahb",
-				      "aux";
-
-			msi-parent = <&v2m0>;
-			nvmem-cells = <&pcie0_disable>;
-			status = "disabled";
-		};
 
 		ssuniphy_0: ssuniphy@4b0000 {
 			compatible = "qca,ipq5332-uni-ssphy";
@@ -2244,6 +2264,7 @@
 			       <&nsscc NSS_CC_CE_AXI_CLK>,
 			       <&nsscc NSS_CC_NSSNOC_CE_APB_CLK>,
 			       <&nsscc NSS_CC_NSSNOC_CE_AXI_CLK>,
+			       <&nsscc NSS_CC_PPE_EDMA_CLK>,
 			       <&gcc GCC_NSS_TS_CLK>,
 			       <&gcc GCC_NSSCC_CLK>,
 			       <&gcc GCC_NSSCFG_CLK>,
@@ -2258,7 +2279,7 @@
 			       <&gcc GCC_SNOC_NSSNOC_CLK>,
 			       <&gcc GCC_SNOC_NSSNOC_1_CLK>;
 			clock-names = "nss-csr-clk", "nss-nssnoc-csr-clk", "nss-ce-ahb-clk",
-				"nss-ce-axi-clk", "nss-nssnoc-ce-ahb-clk", "nss-nssnoc-ce-axi-clk",
+				"nss-ce-axi-clk", "nss-nssnoc-ce-ahb-clk", "nss-nssnoc-ce-axi-clk", "nss-edma-clk",
 				"nss-ts-clk", "nss-nsscc-clk", "nss-nsscfg-clk", "nss-nssnoc-atb-clk",
 				"nss-nssnoc-nsscc-clk", "nss-nssnoc-pcnoc-1-clk", "nss-nssnoc-qosgen-ref-clk",
 				"nss-nssnoc-snoc-1-clk", "nss-nssnoc-snoc-clk", "nss-nssnoc-timeout-ref-clk",

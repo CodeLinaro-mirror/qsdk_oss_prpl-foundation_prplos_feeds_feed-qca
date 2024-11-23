@@ -1,5 +1,7 @@
 #!/bin/sh
 
+CFG=/etc/board.json
+
 . /lib/functions/uci-defaults.sh
 
 ipq95xx_setup_interfaces()
@@ -7,11 +9,21 @@ ipq95xx_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
-	qcom,rdp433)
+	qcom,ipq9574-ap-al02-c4 |\
+	qcom,ipq9574-ap-al02-c7)
 		ucidef_set_interfaces_lan_wan "eth1 eth2 eth3 eth4 eth5" "eth0"
+		;;
+	qcom,ipq9574-ap-al05)
+		ucidef_set_interfaces_lan_wan "eth0 eth1 eth2 eth3 eth4" "eth5"
+		;;
+	qcom,ipq9574-ap-al06)
+		ucidef_set_interfaces_lan_wan "eth0 eth1 eth2 eth3 eth5" "eth4"
 		;;
 	prpl,freedom)
 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
+		;;
+	*)
+		echo "Unsupported hardware. Network interfaces not intialized"
 		;;
 	esac
 }

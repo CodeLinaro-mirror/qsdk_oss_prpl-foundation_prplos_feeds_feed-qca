@@ -1,4 +1,4 @@
-From c3c25f5a361b1157c6b37f4846a583da83d84057 Mon Sep 17 00:00:00 2001
+From 280c8837a316a513749ecd65a58ca4cfc0081a88 Mon Sep 17 00:00:00 2001
 From: Hariharan K <quic_harihk@quicinc.com>
 Date: Mon, 5 Feb 2024 15:01:42 +0530
 Subject: [PATCH] drivers: firmware: qcom: Updating owner id
@@ -15,7 +15,7 @@ Signed-off-by: Hariharan K <quic_harihk@quicinc.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
-index 9d67c5762603..044b41b6713e 100644
+index 6ef1404bb313..adda3c542aa4 100644
 --- a/drivers/firmware/qcom_scm.c
 +++ b/drivers/firmware/qcom_scm.c
 @@ -280,7 +280,11 @@ static bool __qcom_scm_is_call_available(struct device *dev, u32 svc_id,

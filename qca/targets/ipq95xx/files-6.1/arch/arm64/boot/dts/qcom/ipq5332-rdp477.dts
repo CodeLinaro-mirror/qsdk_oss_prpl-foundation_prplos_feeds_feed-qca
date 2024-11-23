@@ -3,7 +3,7 @@
  * IPQ5332 RDP477 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -275,6 +275,53 @@
 				reg = <4>;
 				fixup;
 			};
+
+			switch0@10 {
+				compatible = "qca,qca8386";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x10>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						label = "cpu";
+						ethernet = <&gmac2>;
+						dsa-tag-protocol = "qca_4b";
+					};
+
+					port@1 {
+						reg = <1>;
+						label = "lan1";
+						phy-handle = <&phy0>;
+						phy-mode = "usxgmii";
+					};
+
+					port@2 {
+						reg = <2>;
+						label = "lan2";
+						phy-handle = <&phy1>;
+						phy-mode = "usxgmii";
+					};
+
+					port@3 {
+						reg = <3>;
+						label = "lan3";
+						phy-handle = <&phy2>;
+						phy-mode = "usxgmii";
+					};
+
+					port@4 {
+						reg = <4>;
+						label = "lan4";
+						phy-handle = <&phy3>;
+						phy-mode = "usxgmii";
+					};
+				};
+			};
 		};
 
 		leds {
@@ -415,7 +462,7 @@
 			phy-mode = "sgmii";
 		};
 
-		dp2 {
+		gmac2:dp2 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
 			qcom,id = <1>;
@@ -498,6 +545,9 @@
 		wsi: wsi {
 			id = <0>;
 			num_chip = <2>;
+			status = "okay";
+			chip_info = <0 1 1>,
+                                    <1 1 0>;
 		};
 
 		q6v5_wcss: remoteproc@d100000 {
@@ -557,7 +607,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -580,7 +630,7 @@
 	clock-frequency = <32000>;
 };
 
-&xo_board {
+&xo {
 	clock-frequency = <24000000>;
 };
 
@@ -747,6 +797,7 @@
 	qcom,board_id = <0x1b>;
 	memory-region = <&q6_ipq5332_data>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <0>;
 	status = "ok";
 };
 
@@ -757,6 +808,7 @@
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,bdf-addr = <0x4D900000 0x4D300000 0x0 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x4F000000 0x4E500000 0x0 0x0 0x0 0x0>;
+	qcom,umac-irq-reset-addr = <0x20000884>;
 	qcom,caldb-size = <0x500000>;
 #ifdef __IPQ_MEM_PROFILE_512_MB__
 	qcom,tgt-mem-mode = <1>;
@@ -766,5 +818,8 @@
 	qcom,board_id = <0x060>;
 	memory-region = <&q6_qcn6432_data_1>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <1>;
 	status = "ok";
+	interrupts = <GIC_SPI 33 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "umac_reset";
 };

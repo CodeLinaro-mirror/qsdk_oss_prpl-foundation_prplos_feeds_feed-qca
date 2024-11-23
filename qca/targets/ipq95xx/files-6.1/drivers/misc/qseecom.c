@@ -133,35 +133,6 @@ static int qtidbg_register_qsee_log_buf(struct device *dev)
 	return 0;
 }
 
-static ssize_t
-show_qsee_app_log_buf(struct device *dev, struct device_attribute *attr,
-		     char *buf)
-{
-	ssize_t count = 0;
-
-	if (app_state) {
-		if (g_qsee_log->log_pos.wrap != 0) {
-			memcpy(buf, g_qsee_log->log_buf +
-			      g_qsee_log->log_pos.offset, QSEE_LOG_BUF_SIZE -
-			      g_qsee_log->log_pos.offset - 4);
-			count = QSEE_LOG_BUF_SIZE -
-				g_qsee_log->log_pos.offset - 4;
-			memcpy(buf + count, g_qsee_log->log_buf,
-			      g_qsee_log->log_pos.offset);
-			count = count + g_qsee_log->log_pos.offset;
-		} else {
-			memcpy(buf, g_qsee_log->log_buf,
-			      g_qsee_log->log_pos.offset);
-			count = g_qsee_log->log_pos.offset;
-		}
-	} else {
-		pr_err("load app and then view log..\n");
-		return -EINVAL;
-	}
-
-	return count;
-}
-
 /*
  * store_aes_derive_key()
  * Function to store aes derive key
@@ -193,7 +164,7 @@ static ssize_t show_aes_derive_key(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	int rc = 0, i = 0;
-	struct qti_storage_service_derive_key_cmd_t *req_ptr;
+	struct qti_storage_service_derive_key_cmd_t_v1 *req_ptr;
 	size_t req_size = 0;
 	size_t dma_buf_size = 0;
 	dma_addr_t dma_req_addr = 0;
@@ -207,9 +178,14 @@ static ssize_t show_aes_derive_key(struct device *dev,
 
 	dev = qdev;
 
-	req_size = sizeof(struct qti_storage_service_derive_key_cmd_t);
+	if (context_data_len > MAX_CONTEXT_BUFFER_LEN_V1) {
+	    pr_err("Context data length must be less than %d bytes\n",
+		    MAX_CONTEXT_BUFFER_LEN_V1);
+	    return -EINVAL;
+	}
+	req_size = sizeof(struct qti_storage_service_derive_key_cmd_t_v1);
 	dma_buf_size = PAGE_SIZE * (1 << get_order(req_size));
-	req_ptr = (struct qti_storage_service_derive_key_cmd_t *)
+	req_ptr = (struct qti_storage_service_derive_key_cmd_t_v1 *)
 					dma_alloc_coherent(dev, dma_buf_size,
 					&dma_req_addr, GFP_KERNEL);
 	if (!req_ptr)
@@ -222,11 +198,76 @@ static ssize_t show_aes_derive_key(struct device *dev,
 	req_ptr->key = (u64) dma_key_handle;
 	req_ptr->mixing_key = 0;
 
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V1; i++)
 		req_ptr->hw_key_bindings.context[i] = context_data[i];
 	req_ptr->hw_key_bindings.context_len = context_data_len;
 
 	rc = qti_scm_aes(dma_req_addr, req_size, QTI_CMD_AES_DERIVE_KEY);
+	if (rc == KEY_HANDLE_OUT_OF_SLOT)
+		pr_info("Key handle out of slot. Clear a key and try again!\n");
+	if (!rc) {
+		message = "AES Key derive successful\n\0";
+	} else {
+		pr_err("SCM call failed..return value = %d\n", rc);
+		message = "AES Key derive failed\n\0";
+	}
+
+	pr_info("key_handle is: %lu\n", (unsigned long)*key_handle);
+
+	message_len = strlen(message) + 1;
+	memcpy(buf, message, message_len);
+
+	dma_free_coherent(dev, dma_buf_size, req_ptr, dma_req_addr);
+	return message_len;
+}
+
+/*
+ * show_aes_derive_128_key()
+ * Function to derive aes_key and get key_handle
+ */
+static ssize_t show_aes_derive_128_byte_key(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int rc = 0, i = 0;
+	struct qti_storage_service_derive_key_cmd_t_v2 *req_ptr;
+	size_t req_size = 0;
+	size_t dma_buf_size = 0;
+	dma_addr_t dma_req_addr = 0;
+	const char *message = NULL;
+	int message_len = 0;
+
+	if (!source_data || !context_data_len || !bindings_data) {
+		pr_info("Provide the required src data, bindings data and context data before encrypt/decrypt\n");
+		return -EINVAL;
+	}
+
+	dev = qdev;
+
+	if (context_data_len > MAX_CONTEXT_BUFFER_LEN_V2) {
+		pr_err("Context data length must be less than %d bytes\n",
+				MAX_CONTEXT_BUFFER_LEN_V2);
+		return -EINVAL;
+	}
+	req_size = sizeof(struct qti_storage_service_derive_key_cmd_t_v2);
+	dma_buf_size = PAGE_SIZE * (1 << get_order(req_size));
+	req_ptr = (struct qti_storage_service_derive_key_cmd_t_v2 *)
+					dma_alloc_coherent(dev, dma_buf_size,
+					&dma_req_addr, GFP_KERNEL);
+	if (!req_ptr)
+		return -ENOMEM;
+
+	req_ptr->policy.key_type = DEFAULT_KEY_TYPE;
+	req_ptr->policy.destination = DEFAULT_POLICY_DESTINATION;
+	req_ptr->hw_key_bindings.bindings = bindings_data;
+	req_ptr->source = source_data;
+	req_ptr->key = (u64) dma_key_handle;
+	req_ptr->mixing_key = 0;
+
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V2; i++)
+		req_ptr->hw_key_bindings.context[i] = context_data[i];
+	req_ptr->hw_key_bindings.context_len = context_data_len;
+
+	rc = qti_scm_aes(dma_req_addr, req_size, QTI_CMD_AES_DERIVE_128_KEY);
 	if (rc == KEY_HANDLE_OUT_OF_SLOT)
 		pr_info("Key handle out of slot. Clear a key and try again!\n");
 	if (!rc) {
@@ -605,7 +646,7 @@ store_context_data(struct device *dev, struct device_attribute *attr,
 	int i = 0;
 	int num_bytes = count / 2 ;
 
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V2; i++)
 		context_data[i] = 0;
 
 	if(count % 2 != 0) {
@@ -619,11 +660,12 @@ store_context_data(struct device *dev, struct device_attribute *attr,
 
 	context_data_len = num_bytes;
 
-	if (count > (MAX_CONTEXT_BUFFER_LEN * 2)) {
+	if (count > (MAX_CONTEXT_BUFFER_LEN_V2 * 2)) {
 		pr_info("Invalid input\n");
 		pr_info("Context data length is %lu bytes\n",
 		       (unsigned long)count);
-		pr_info("Context data length must be less than 64 bytes\n");
+		pr_info("Context data length must be less than %d bytes\n",
+				MAX_CONTEXT_BUFFER_LEN_V2);
 		context_data_len = 0;
 		return -EINVAL;
 	}
@@ -698,11 +740,11 @@ store_context_data_qtiapp(struct device *dev, struct device_attribute *attr,
 {
 	int i = 0;
 
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V1; i++)
 		aes_context_data[i] = 0;
-	aes_context_data_len = MAX_CONTEXT_BUFFER_LEN;
+	aes_context_data_len = MAX_CONTEXT_BUFFER_LEN_V1;
 
-	if (count > ((MAX_CONTEXT_BUFFER_LEN * 2) + 1)) {
+	if (count > ((MAX_CONTEXT_BUFFER_LEN_V1 * 2) + 1)) {
 		pr_info("Invalid input\n");
 		pr_info("Context data length is %lu bytes\n",
 		       (unsigned long)count);
@@ -710,13 +752,13 @@ store_context_data_qtiapp(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	}
 
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++) {
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V1; i++) {
 		sscanf(buf, "%2hhx", &aes_context_data[i]);
 		buf += 2;
 	}
 
 	pr_debug("context_data is :\n");
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V1; i++)
 		pr_debug("0x%02x\n", (unsigned int)aes_context_data[i]);
 
 	return count;
@@ -2648,7 +2690,7 @@ static ssize_t show_aes_derive_key_qtiapp(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	int rc = 0, i = 0;
-	struct qti_storage_service_derive_key_cmd_t *req_ptr;
+	struct qti_storage_service_derive_key_cmd_t_v1 *req_ptr;
 	size_t req_size = 0;
 	size_t dma_buf_size = 0;
 	dma_addr_t dma_req_addr = 0;
@@ -2662,9 +2704,9 @@ static ssize_t show_aes_derive_key_qtiapp(struct device *dev,
 
 	dev = qdev;
 
-	req_size = sizeof(struct qti_storage_service_derive_key_cmd_t);
+	req_size = sizeof(struct qti_storage_service_derive_key_cmd_t_v1);
 	dma_buf_size = PAGE_SIZE * (1 << get_order(req_size));
-	req_ptr = (struct qti_storage_service_derive_key_cmd_t *)
+	req_ptr = (struct qti_storage_service_derive_key_cmd_t_v1 *)
 					dma_alloc_coherent(dev, dma_buf_size,
 					&dma_req_addr, GFP_KERNEL);
 	if (!req_ptr)
@@ -2677,7 +2719,7 @@ static ssize_t show_aes_derive_key_qtiapp(struct device *dev,
 	req_ptr->key = (u64) dma_aes_key_handle;
 	req_ptr->mixing_key = 0;
 
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
+	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN_V1; i++)
 		req_ptr->hw_key_bindings.context[i] = aes_context_data[i];
 	req_ptr->hw_key_bindings.context_len = aes_context_data_len;
 
@@ -3098,8 +3140,6 @@ static int load_request(struct device *dev, uint32_t smc_id,
 		return -EFAULT;
 	}
 
-	pr_info("Successfully loaded app and services!!!!!\n");
-
 	qsee_app_id = resp.data;
 	return 0;
 }
@@ -3233,6 +3273,46 @@ store_decrypt_input(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static int tzapp_log_open(struct inode *inode, struct file *file)
+{
+	ssize_t count = 0;
+
+	if (!app_state) {
+		pr_err("load app and then view log..\n");
+		return -EINVAL;
+	}
+
+	if (g_qsee_log->log_pos.wrap != 0) {
+		memcpy(tzapp_log, g_qsee_log->log_buf +
+		       g_qsee_log->log_pos.offset, QSEE_LOG_BUF_SIZE -
+		       g_qsee_log->log_pos.offset - 4);
+		count = QSEE_LOG_BUF_SIZE - g_qsee_log->log_pos.offset - 4;
+		memcpy(tzapp_log + count, g_qsee_log->log_buf,
+		       g_qsee_log->log_pos.offset);
+		count = count + g_qsee_log->log_pos.offset;
+	} else {
+		memcpy(tzapp_log, g_qsee_log->log_buf,
+		       g_qsee_log->log_pos.offset);
+		count = g_qsee_log->log_pos.offset;
+	}
+
+	tzapp_log_len = count;
+
+	return 0;
+}
+
+static ssize_t tzapp_log_read(struct file *fp, char __user *buf, size_t count,
+			      loff_t *position)
+{
+	return simple_read_from_buffer(buf, count, position, tzapp_log,
+				       tzapp_log_len);
+}
+
+static const struct file_operations fops_tzapp_log = {
+	.open = tzapp_log_open,
+	.read = tzapp_log_read,
+};
+
 static ssize_t
 store_load_start(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
@@ -3241,6 +3321,7 @@ store_load_start(struct device *dev, struct device_attribute *attr,
 	uint32_t smc_id = 0;
 	uint32_t cmd_id = 0;
 	size_t req_size = 0;
+	struct dentry *ret;
 
 	dev = qdev;
 
@@ -3259,8 +3340,10 @@ store_load_start(struct device *dev, struct device_attribute *attr,
 			req_size = sizeof(struct qseecom_load_lib_ireq);
 			if (load_request(dev, smc_id, cmd_id, req_size))
 				pr_info("Loading app libs failed\n");
-			else
+			else {
+				pr_info("Successfully loaded app libraries\n");
 				app_libs_state = 1;
+			}
 			if (props->logging_support_enabled) {
 				if (qtidbg_register_qsee_log_buf(dev))
 					pr_info("Registering log buf failed\n");
@@ -3278,8 +3361,24 @@ store_load_start(struct device *dev, struct device_attribute *attr,
 				req_size = sizeof(struct qseecom_load_app_ireq);
 				if (load_request(dev, smc_id, cmd_id, req_size))
 					pr_info("Loading app failed\n");
-				else
+				else {
+					if (props->logging_support_enabled) {
+						ret = debugfs_create_file("tzapp_log",
+									      0444,
+									      NULL,
+									      NULL,
+									      &fops_tzapp_log);
+						if (IS_ERR_OR_NULL(ret)) {
+							pr_err("unable to \
+								create tzapp_log \
+								debugfs\n");
+							return -EIO;
+						}
+					}
+
+					pr_info("Successfully loaded TZApp and services\n");
 					app_state = 1;
+				}
 			} else {
 				pr_info("App already loaded...\n");
 			}
@@ -3891,9 +3990,6 @@ static int __init qtiapp_init(struct device *dev)
 	if (props->function & MISC)
 		qtiapp_attrs[i++] = &dev_attr_misc.attr;
 
-	if (props->logging_support_enabled)
-		qtiapp_attrs[i++] = &dev_attr_log_buf.attr;
-
 	qtiapp_attrs[i] = NULL;
 
 	qtiapp_attr_grp.attrs = qtiapp_attrs;
@@ -4135,7 +4231,7 @@ static int __init qseecom_probe(struct platform_device *pdev)
 		return -1;
 	}
 	pr_info("QSEECom: Notify App Region Successful\n");
-	pr_info("QSEECom: TZApp using Memory Region of size 0x%llx from:0x%llx to 0x%llx\n",
+	pr_info("QSEECom: Memory reserved for TZApp region of size 0x%llx from:0x%llx to 0x%llx\n",
 		(long long unsigned int) notify_app.applications_region_size,
 		(long long unsigned int) notify_app.applications_region_addr,
 		(long long unsigned int) notify_app.applications_region_addr +
@@ -4163,9 +4259,7 @@ load:
 		}
 	}
 
-	if (!qtiapp_init(qdev))
-		pr_info("Loaded tzapp successfully!\n");
-	else
+	if (qtiapp_init(qdev))
 		pr_info("Failed to load tzapp module\n");
 
 	if (props->function & AES_SEC_KEY) {

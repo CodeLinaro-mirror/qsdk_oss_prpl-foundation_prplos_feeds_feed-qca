@@ -1,4 +1,4 @@
-From 676aa075ce55be0f0d45c89d9ca18a6d86197c17 Mon Sep 17 00:00:00 2001
+From c48cc020346e00fc8d911feecbb030d505d79a7b Mon Sep 17 00:00:00 2001
 From: Saahil Tomar <quic_saahtoma@quicinc.com>
 Date: Tue, 20 Feb 2024 11:21:01 +0530
 Subject: [PATCH] soc: qcom: smem: Add boundary checks for partitions

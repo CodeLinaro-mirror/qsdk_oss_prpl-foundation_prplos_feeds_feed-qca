@@ -85,6 +85,53 @@
 				reg = <4>;
 				fixup;
 			};
+
+			switch0@10 {
+				compatible = "qca,qca8386";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x10>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						label = "cpu";
+						ethernet = <&gmac2>;
+						dsa-tag-protocol = "qca_4b";
+					};
+
+					port@1 {
+						reg = <1>;
+						label = "lan1";
+						phy-handle = <&phy0>;
+						phy-mode = "usxgmii";
+					};
+
+					port@2 {
+						reg = <2>;
+						label = "lan2";
+						phy-handle = <&phy1>;
+						phy-mode = "usxgmii";
+					};
+
+					port@3 {
+						reg = <3>;
+						label = "lan3";
+						phy-handle = <&phy2>;
+						phy-mode = "usxgmii";
+					};
+
+					port@4 {
+						reg = <4>;
+						label = "lan4";
+						phy-handle = <&phy3>;
+						phy-mode = "usxgmii";
+					};
+				};
+			};
 		};
 
 		ess-instance {
@@ -193,7 +240,7 @@
 			phy-mode = "sgmii";
 		};
 
-		dp2 {
+		gmac2:dp2 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
 			qcom,id = <1>;
@@ -333,7 +380,7 @@
 	clock-frequency = <32000>;
 };
 
-&xo_board {
+&xo {
 	clock-frequency = <24000000>;
 };
 
@@ -355,17 +402,6 @@
 		nand-ecc-step-size = <512>;
 		nand-bus-width = <8>;
 	};
-};
-
-&pcie0_phy {
-	status = "okay";
-};
-
-&pcie0 {
-	pinctrl-0 = <&pcie0_default_state>;
-	pinctrl-names = "default";
-	perst-gpios = <&tlmm 38 GPIO_ACTIVE_LOW>;
-	status = "okay";
 };
 
 &pcie1_phy_x2 {
@@ -454,14 +490,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-	};
-
-	pcie0_default_state: pcie0-default-state {
-		pins = "gpio38";
-		function = "gpio";
-		drive-strength = <8>;
-		bias-pull-up;
-		output-low;
 	};
 
 	pcie1_default_state: pcie1-default-state {

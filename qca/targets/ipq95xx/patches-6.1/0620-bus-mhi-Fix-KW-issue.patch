@@ -1,4 +1,4 @@
-From 555c1919bf06032f6840a6e061f636ab4213cb58 Mon Sep 17 00:00:00 2001
+From aafa03b88a1c790139db5abe90bd836dad346810 Mon Sep 17 00:00:00 2001
 From: Saahil Tomar <quic_saahtoma@quicinc.com>
 Date: Tue, 23 Jan 2024 12:15:19 +0530
 Subject: [PATCH] bus: mhi: Fix KW issue
@@ -8,7 +8,6 @@ mhi_download_rddm_image function.
 
 Change-Id: I2bcdc57b8156467ee47722b5be9c7e5ce588cff2
 Signed-off-by: Saahil Tomar <quic_saahtoma@quicinc.com>
-(cherry picked from commit aafa03b88a1c790139db5abe90bd836dad346810)
 ---
  drivers/bus/mhi/host/boot.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

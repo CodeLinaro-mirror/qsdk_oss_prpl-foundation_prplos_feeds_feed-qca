@@ -1,4 +1,4 @@
-From 27c27cf08489c37ab36014e3dbb0713deaa6bdd0 Mon Sep 17 00:00:00 2001
+From 4ec3c4aed07dd14c4c5345d0bd3e65566db2ac22 Mon Sep 17 00:00:00 2001
 From: Timple Raj M <quic_timple@quicinc.com>
 Date: Fri, 2 Feb 2024 17:40:41 +0530
 Subject: [PATCH] soc: qcom: socinfo: Add new SKU IPQ53xx socinfo support

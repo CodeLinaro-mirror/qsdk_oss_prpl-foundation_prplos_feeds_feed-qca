@@ -339,7 +339,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -367,7 +367,7 @@
 &blsp1_uart3 {
 	pinctrl-0 = <&gps_pins>;
 	pinctrl-names = "default";
-	status = "okay";
+	status = "disabled";
 };
 
 &blsp1_uart4 {
@@ -388,6 +388,7 @@
 	mmc-hs400-1_8v;
 	mmc-hs400-enhanced-strobe;
 	max-frequency = <384000000>;
+	bus-width = <8>;
 	status = "okay";
 };
 
@@ -477,24 +478,10 @@
 	};
 
 	pta_QCC710: pta_QCC710 {
-		pta1_0 {
-			pins = "gpio56";
-			function = "pta1_0";
-			drive-strength = <8>;
-			bias-disable;
-		};
-		pta1_1 {
-			pins = "gpio54";
-			function = "pta1_1";
-			drive-strength = <8>;
-			bias-disable;
-		};
-		pta1_2 {
-			pins = "gpio55";
-			function = "pta1_2";
-			drive-strength = <8>;
-			bias-disable;
-		};
+		pins = "gpio54", "gpio55", "gpio56";
+		function = "pta";
+		drive-strength = <8>;
+		bias-disable;
 	};
 
 	gpio_leds_default: gpio-leds-default-state {
@@ -549,7 +536,7 @@
 	status = "okay";
 };
 
-&xo_board_clk {
+&xo {
 	clock-frequency = <24000000>;
 };
 

@@ -3,7 +3,7 @@
  * IPQ9574 AL02-C4 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -148,6 +148,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <16>;
 			phy-mode = "sgmii";
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		dp2 {
@@ -160,6 +161,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <17>;
 			phy-mode = "sgmii";
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		dp3 {
@@ -172,6 +174,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <18>;
 			phy-mode = "sgmii";
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		dp4 {
@@ -184,6 +187,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <19>;
 			phy-mode = "sgmii";
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		dp5 {
@@ -333,6 +337,10 @@
 &wsi {
 	id = <0>;
 	num_chip = <3>;
+	status = "okay";
+	chip_info = <0 2 1 2>,
+		    <1 2 2 0>,
+		    <2 2 0 1>;
 };
 
 &pcie1_x1 {
@@ -349,6 +357,7 @@
 			memory-region = <&qcn9224_pcie1>, <&mhi_region1>;
 			qcom,board_id = <0x01>;
 			qcom,wsi = <&wsi>;
+			qcom,wsi_index = <2>;
 			qcom,pta-num = <0>;
 			qcom,coex-mode = <0x2>;
 			qcom,bt-active-time = <0x18>;
@@ -377,6 +386,7 @@
 			memory-region = <&qcn9224_pcie2>, <&mhi_region2>;
 			qcom,board_id = <0x04>;
 			qcom,wsi = <&wsi>;
+			qcom,wsi_index = <0>;
 		};
 	};
 };
@@ -399,6 +409,7 @@
 			memory-region = <&qcn9224_pcie3>, <&mhi_region3>;
 			qcom,board_id = <0x02>;
 			qcom,wsi = <&wsi>;
+			qcom,wsi_index = <1>;
 		};
 	};
 };
@@ -435,7 +446,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -448,6 +459,13 @@
 	pinctrl-names = "default";
 	cs-select = <0>;
 	status = "disabled";
+
+	spi@0 {
+		compatible = "qti,spidev";
+		reg = <0>;
+		spi-max-frequency = <9600000>;
+	};
+
 };
 
 &sdhc_1 {
@@ -625,24 +643,10 @@
 	};
 
 	pta_QCC710: pta_QCC710 {
-		pta1_0 {
-			pins = "gpio56";
-			function = "pta1_0";
-			drive-strength = <8>;
-			bias-disable;
-		};
-		pta1_1 {
-			pins = "gpio54";
-			function = "pta1_1";
-			drive-strength = <8>;
-			bias-disable;
-		};
-		pta1_2 {
-			pins = "gpio55";
-			function = "pta1_2";
-			drive-strength = <8>;
-			bias-disable;
-		};
+		pins = "gpio54", "gpio55", "gpio56";
+		function = "pta";
+		drive-strength = <8>;
+		bias-disable;
 	};
 
 	pwm_pins: pwm-state {
@@ -708,7 +712,7 @@
 	status = "okay";
 };
 
-&xo_board_clk {
+&xo {
 	clock-frequency = <24000000>;
 };
 

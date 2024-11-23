@@ -119,6 +119,7 @@
 			qcom,link-poll = <1>;
 			phy-mode = "sgmii";
 			qcom,mht-dev = <1>;
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -204,7 +205,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -234,7 +235,7 @@
 	clock-frequency = <32000>;
 };
 
-&xo_board {
+&xo {
 	clock-frequency = <24000000>;
 };
 

@@ -3,7 +3,7 @@
  * IPQ5332 RDP481 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -52,10 +52,10 @@
      * | LINUX   |  0x4F500000  |           5MB           |
      * +---------+--------------+-------------------------+
      * |         |              |                         |
-     * |   MLO   |  0x4FA00000  |          17MB           |
+     * |   MLO   |  0x4FA00000  |          18MB           |
      * +---------+--------------+-------------------------+
      * |         |              |                         |
-     * |  WKK1   |  0x50B00000  |          50MB           |
+     * |  WKK1   |  0x50C00000  |          50MB           |
      * |         |              |                         |
      * +==================================================+
      * |                                                  |
@@ -79,7 +79,7 @@
 		/delete-node/ mlo_global_mem_0@0x4db00000;
 		/delete-node/ wcnss@4a900000;
 		/delete-node/ q6_caldb_region@4ce00000;
-		/delete-node/ qcn9224_pcie1@51e00000;
+		/delete-node/ qcn9224_pcie1@51f00000;
 		q6_mem_regions: q6_mem_regions@4A900000  {
 			no-map;
 			reg = <0x0 0x4a900000 0x0 0x4C00000>;
@@ -132,12 +132,12 @@
 
 		mlo_global_mem0: mlo_global_mem_0@4FA00000 {
 			no-map;
-			reg = <0x0 0x4FA00000 0x0 0x1100000>;
+			reg = <0x0 0x4FA00000 0x0 0x1200000>;
 		};
 
-		qcn9224_pcie1: qcn9224_pcie1@50B00000 {
+		qcn9224_pcie1: qcn9224_pcie1@50C00000 {
 			no-map;
-			reg = <0x0 0x50B00000 0x0 0x03200000>;
+			reg = <0x0 0x50C00000 0x0 0x03200000>;
 		};
 	};
 
@@ -178,6 +178,53 @@
 			phy3: ethernet-phy@3 {
 				reg = <4>;
 				fixup;
+			};
+
+			switch0@10 {
+				compatible = "qca,qca8386";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x10>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						label = "cpu";
+						ethernet = <&gmac2>;
+						dsa-tag-protocol = "qca_4b";
+					};
+
+					port@1 {
+						reg = <1>;
+						label = "lan1";
+						phy-handle = <&phy0>;
+						phy-mode = "usxgmii";
+					};
+
+					port@2 {
+						reg = <2>;
+						label = "lan2";
+						phy-handle = <&phy1>;
+						phy-mode = "usxgmii";
+					};
+
+					port@3 {
+						reg = <3>;
+						label = "lan3";
+						phy-handle = <&phy2>;
+						phy-mode = "usxgmii";
+					};
+
+					port@4 {
+						reg = <4>;
+						label = "lan4";
+						phy-handle = <&phy3>;
+						phy-mode = "usxgmii";
+					};
+				};
 			};
 		};
 
@@ -319,7 +366,7 @@
 			phy-mode = "sgmii";
 		};
 
-		dp2 {
+		gmac2:dp2 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
 			qcom,id = <1>;
@@ -402,6 +449,10 @@
 		wsi: wsi {
 			id = <0>;
 			num_chip = <3>;
+			status = "okay";
+			chip_info = <0 2 1 2>,
+				    <1 2 2 0>,
+				    <2 2 0 1>;
 		};
 
 		q6v5_wcss: remoteproc@d100000 {
@@ -468,7 +519,7 @@
 	status = "okay";
 
 	flash@0 {
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "n25q128a11", "micron,n25q128a11", "jedec,spi-nor";
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -491,7 +542,7 @@
 	clock-frequency = <32000>;
 };
 
-&xo_board {
+&xo {
 	clock-frequency = <24000000>;
 };
 
@@ -535,6 +586,7 @@
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 			memory-region = <&qcn9224_pcie1>;
 			qcom,wsi = <&wsi>;
+			qcom,wsi_index = <2>;
 			qcom,board_id = <0x16>;
 		};
 	};
@@ -696,6 +748,7 @@
 	qcom,board_id = <0x13>;
 	memory-region = <&q6_ipq5332_data>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <0>;
 	status = "okay";
 };
 
@@ -706,6 +759,7 @@
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,bdf-addr = <0x4D900000 0x4D900000 0x4D900000 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x4F000000 0x4F000000 0x4F000000 0x0 0x0 0x0>;
+	qcom,umac-irq-reset-addr = <0x20000884>;
 	qcom,caldb-size = <0x500000>;
 #ifdef __IPQ_MEM_PROFILE_512_MB__
 	qcom,tgt-mem-mode = <1>;
@@ -715,7 +769,10 @@
 	qcom,board_id = <0x060>;
 	memory-region = <&q6_qcn6432_data_1>;
 	qcom,wsi = <&wsi>;
+	qcom,wsi_index = <1>;
 	status = "okay";
+	interrupts = <GIC_SPI 33 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "umac_reset";
 };
 
 &qcn9224_pcie1 {

@@ -1,4 +1,4 @@
-From 7201d37ebceab26e9a6031e561fbf36b20ac4aee Mon Sep 17 00:00:00 2001
+From 5142e17314dbb3f0f2919bfe9d31c2a5ef5e2d4e Mon Sep 17 00:00:00 2001
 From: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
 Date: Tue, 30 Jan 2024 15:54:36 +0530
 Subject: [PATCH] Enable QTI_HW_KEY kernel config option
@@ -7,7 +7,6 @@ Enable QTI_HW_KEY kernel config option for IPQ53xx platforms
 
 Change-Id: Ife19bc05e08a2a47143ef82f78cdca6486732646
 Signed-off-by: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
-(cherry picked from commit 5142e17314dbb3f0f2919bfe9d31c2a5ef5e2d4e)
 ---
  drivers/firmware/qcom_scm.c | 58 +++++++++++++++++++++++++++++++++++++
  drivers/soc/qcom/Kconfig    |  7 +++++
@@ -16,10 +15,10 @@ Signed-off-by: Poovendhan Selvaraj <quic_poovendh@quicinc.com>
  4 files changed, 72 insertions(+)
 
 diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
-index 9d67c5762603..582f3107f461 100644
+index 6ef1404bb313..6731b2289915 100644
 --- a/drivers/firmware/qcom_scm.c
 +++ b/drivers/firmware/qcom_scm.c
-@@ -382,6 +382,64 @@ int qcom_config_sec_ice(void *buf, int size)
+@@ -318,6 +318,64 @@ int qcom_config_sec_ice(void *buf, int size)
  }
  EXPORT_SYMBOL(qcom_config_sec_ice);
  
@@ -115,7 +114,7 @@ index 4f7268260fbf..639b27d653b6 100644
  obj-$(CONFIG_QTI_LICENSE_MANAGER)	+= qwes.o
  obj-$(CONFIG_QTI_APSS_ACC) += cpu_ops.o cpu_pwr_ctl.o
 diff --git a/include/linux/qcom_scm.h b/include/linux/qcom_scm.h
-index 84d1aecd928c..fbdd26dd7343 100644
+index 6c7b52a4c221..5401f3d4c97d 100644
 --- a/include/linux/qcom_scm.h
 +++ b/include/linux/qcom_scm.h
 @@ -15,6 +15,9 @@
@@ -128,7 +127,7 @@ index 84d1aecd928c..fbdd26dd7343 100644
  #define QTI_TZ_DIAG_LOG_ENCR_ID		0x0
  #define QTI_TZ_QSEE_LOG_ENCR_ID		0x1
  #define QTI_TZ_LOG_NO_UPDATE		-6
-@@ -231,6 +234,9 @@ extern int qcom_scm_set_cold_boot_addr(void *entry);
+@@ -221,6 +224,9 @@ extern int qcom_scm_set_cold_boot_addr(void *entry);
  extern int qcom_scm_set_warm_boot_addr(void *entry);
  extern void qcom_scm_cpu_power_down(u32 flags);
  extern int qcom_scm_set_remote_state(u32 state, u32 id);
