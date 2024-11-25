@@ -1,0 +1,37 @@
+Subject: [PATCH] hostapd: fix non-MLO bring-up using single driver context
+
+wpa_driver_nl80211_can_share_drv() has the logic to re-use already
+running wpa driver context in case of single WiPHY architecture to
+avoid multiple drivers created for single radio interface.
+
+For non-MLO case, this logic applies to different radio interfaces
+by removing the existing interfaces and re-creating again.
+
+Fix this redundancy by setting use_existing flag to 1 in
+wpa_driver_nl80211_if_add() so that already created interfaces are
+re-used for single driver context handling.
+
+This also helps in not removing the interfaces created manually
+during hostapd deinit.
+
+Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
+---
+ src/drivers/driver_nl80211.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+index 0b218fd4396a..7d9a20e558c0 100644
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -14278,7 +14278,7 @@ static int wpa_driver_nl80211_can_share_drv(void *ctx,
+ 				      params->ifname, addr, ctx, drv_priv,
+ 				      force_ifname, if_addr,
+ 				      params->num_bridge && params->bridge[0] ? params->bridge[0] : NULL,
+-				      0, 1)) {
++				      1, 1)) {
+ 		wpa_printf(MSG_DEBUG, "nl80211: Failed to add BSS. Expect issues!");
+ 		goto free_all;
+ 	}
+-- 
+2.25.1
+
