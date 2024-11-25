@@ -1,0 +1,66 @@
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index bda894e..cf768cc 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -388,9 +388,21 @@ int hostapd_reload_config(struct hostapd_iface *iface, int reconf)
+ 
+ 	for (i = 0; iface->hw_features && i < iface->num_hw_features; i++) {
+ 		struct hostapd_hw_modes *mode = &iface->hw_features[i];
++		wpa_printf(MSG_INFO, "mode: %d and iface mode %d", mode->mode, iface->conf->hw_mode);
+ 		if (mode->mode == iface->conf->hw_mode) {
+-			iface->current_mode = mode;
+-			break;
++			if (skip_mode(iface, mode)) {
++				wpa_printf(MSG_INFO, "iface mode skip mode and continue");
++				continue;
++			}
++
++			if ((is_6ghz_op_class(iface->conf->op_class) &&
++			     is_6ghz_freq(mode->channels[0].freq)) ||
++			    (!is_6ghz_op_class(iface->conf->op_class) &&
++			     !is_6ghz_freq(mode->channels[0].freq))) {
++				wpa_printf(MSG_INFO, "updating current mode for 6G");
++				iface->current_mode = mode;
++				break;
++			}
+ 		}
+ 	}
+ 
+diff --git a/src/ap/hw_features.c b/src/ap/hw_features.c
+index c82324b..6c97634 100644
+--- a/src/ap/hw_features.c
++++ b/src/ap/hw_features.c
+@@ -1170,7 +1170,7 @@ static int hostapd_is_usable_chans(struct hostapd_iface *iface)
+ }
+ 
+ 
+-static bool skip_mode(struct hostapd_iface *iface,
++bool skip_mode(struct hostapd_iface *iface,
+ 		      struct hostapd_hw_modes *mode)
+ {
+ 	int chan;
+diff --git a/src/ap/hw_features.h b/src/ap/hw_features.h
+index c7d39d9..a926f52 100644
+--- a/src/ap/hw_features.h
++++ b/src/ap/hw_features.h
+@@ -32,6 +32,7 @@ void hostapd_determine_mode(struct hostapd_iface *iface);
+ void hostapd_free_multi_hw_info(struct hostapd_multi_hw_info *multi_macs,
+ 				size_t num_multi_hws);
+ int hostapd_set_current_hw_info(struct hostapd_iface *iface, u32 oper_freq);
++bool skip_mode(struct hostapd_iface *iface, struct hostapd_hw_modes *mode);
+ #else /* NEED_AP_MLME */
+ static inline void
+ hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,
+@@ -110,6 +111,12 @@ static inline int hostapd_set_current_hw_info(struct hostapd_iface *iface,
+ {
+ 	return 0;
+ }
++
++static inline bool skip_mode(struct hostapd_iface *iface,
++			     struct hostapd_hw_modes *mode)
++{
++	return false;
++}
+ #endif /* NEED_AP_MLME */
+ 
+ #endif /* HW_FEATURES_H */
