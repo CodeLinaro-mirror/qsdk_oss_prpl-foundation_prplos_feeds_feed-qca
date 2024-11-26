@@ -1,0 +1,50 @@
+From 44a5ef95f5e732e5e497bb3d46c79b16dd3bde3e Mon Sep 17 00:00:00 2001
+From: Ajith C <quic_ajithc@quicinc.com>
+Date: Mon, 12 Aug 2024 16:05:25 +0530
+Subject: [PATCH] hostapd: fix crash during non-ML to ML config reload
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Currently, when an Access Point (AP) switches from a non-ML
+configuration to an ML configuration, it causes a hostapd
+crash.
+
+This occurs because the memory allocation for the 'mld'
+structure only happens during the AP’s startup if the
+‘mld_ap’ option is enabled in the configuration.
+Consequently, when hostapd transitions from a non-ML to
+an ML configuration, the MLD structure’s memory remains
+unallocated, and attempting to access this unassigned
+pointer leads to a crash.
+
+To resolve this issue, initiate hostapd_init() whenever
+the AP transitions from ML to non-ML configuration, or
+vice versa. This action will ensure that the memory
+allocation for the MLD structure is properly executed.
+
+Patch-work: none
+Patch-dependency: none
+
+Signed-off-by: Ajith C <quic_ajithc@quicinc.com>
+---
+ src/ap/hostapd.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 3ba6834..a874b4e 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -278,6 +278,9 @@ static int hostapd_iface_conf_changed(struct hostapd_config *newconf,
+ 		if (os_strcmp(newconf->bss[i]->iface,
+ 			      oldconf->bss[i]->iface) != 0)
+ 			return 1;
++
++		if (newconf->bss[i]->mld_ap != oldconf->bss[i]->mld_ap)
++			return 1;
+ 	}
+ 
+ 	return 0;
+-- 
+2.34.1
+
