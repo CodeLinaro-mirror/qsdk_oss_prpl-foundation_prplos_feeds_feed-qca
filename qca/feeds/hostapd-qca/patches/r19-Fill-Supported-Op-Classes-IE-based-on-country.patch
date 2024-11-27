@@ -21,13 +21,11 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  wpa_supplicant/op_classes.c    | 145 +++++++++++++++++++----
  3 files changed, 265 insertions(+), 131 deletions(-)
 
-diff --git a/src/common/ieee802_11_common.c b/src/common/ieee802_11_common.c
-index 87c263d..8506dc0 100644
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -16,6 +16,101 @@
- #include "ieee802_11_defs.h"
- #include "ieee802_11_common.h"
+@@ -229,6 +229,101 @@ static int ieee802_11_parse_vendor_speci
+ 	return 0;
+ }
  
 +struct country_op_class us_op_class[] = {
 +	{ 1, 115 },
@@ -125,9 +123,9 @@ index 87c263d..8506dc0 100644
 +	{ 130, 130 },
 +};
  
- static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
- 					    struct ieee802_11_elems *elems,
-@@ -1706,28 +1801,7 @@ int ieee80211_chaninfo_to_channel(unsigned int freq, enum chan_width chanwidth,
+ static int ieee802_11_parse_mle(const u8 *pos, size_t elen, size_t **total_len,
+ 				struct ieee802_11_elems *elems,
+@@ -1685,28 +1780,7 @@ int ieee80211_chaninfo_to_channel(unsign
  	return 0;
  }
  
@@ -157,7 +155,7 @@ index 87c263d..8506dc0 100644
  {
  	int i;
  
-@@ -2656,82 +2730,6 @@ size_t add_multi_ap_ie(u8 *buf, size_t len, u8 value)
+@@ -2769,82 +2843,6 @@ size_t add_multi_ap_ie(u8 *buf, size_t l
  	return pos - buf;
  }
  
@@ -240,7 +238,7 @@ index 87c263d..8506dc0 100644
  static u8
  global_op_class_from_country_array(u8 op_class, size_t array_size,
  				   const struct country_op_class *country_array)
-@@ -2755,16 +2753,16 @@ u8 country_to_global_op_class(const char *country, u8 op_class)
+@@ -2868,16 +2866,16 @@ u8 country_to_global_op_class(const char
  
  	if (country_match(us_op_class_cc, country)) {
  		country_array = us_op_class;
@@ -261,9 +259,9 @@ index 87c263d..8506dc0 100644
  	} else {
  		/*
  		 * Countries that do not match any of the above countries use
-@@ -3441,3 +3439,11 @@ struct wpabuf * ieee802_11_defrag_mle(struct ieee802_11_elems *elems, u8 type)
+@@ -3527,3 +3525,11 @@ const u8 * get_basic_mle_mld_addr(const
  
- 	return ieee802_11_defrag_data(data, len, true);
+ 	return &buf[mld_addr_pos];
  }
 +
 +size_t get_country_op_class_size(struct country_op_class *op_class)
@@ -273,11 +271,9 @@ index 87c263d..8506dc0 100644
 +
 +	return 0;
 +}
-diff --git a/src/common/ieee802_11_common.h b/src/common/ieee802_11_common.h
-index ff5f96b..9d1f658 100644
 --- a/src/common/ieee802_11_common.h
 +++ b/src/common/ieee802_11_common.h
-@@ -186,6 +186,41 @@ struct ieee802_11_elems {
+@@ -193,6 +193,41 @@ struct ieee802_11_elems {
  
  typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
  
@@ -319,7 +315,7 @@ index ff5f96b..9d1f658 100644
  ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
  				struct ieee802_11_elems *elems,
  				int show_errors);
-@@ -228,6 +263,7 @@ int hostapd_config_tx_queue(struct hostapd_tx_queue_params queue[],
+@@ -234,6 +269,7 @@ int hostapd_config_tx_queue(struct hosta
  			    const char *name, const char *val);
  enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel);
  int ieee80211_chan_to_freq(const char *country, u8 op_class, u8 chan);
@@ -327,9 +323,9 @@ index ff5f96b..9d1f658 100644
  enum hostapd_hw_mode
  ieee80211_freq_to_channel_ext(unsigned int freq, int sec_channel,
  			      enum oper_chan_width chanwidth,
-@@ -271,11 +307,6 @@ size_t mbo_add_ie(u8 *buf, size_t len, const u8 *attr, size_t attr_len);
- 
- size_t add_multi_ap_ie(u8 *buf, size_t len, u8 value);
+@@ -281,11 +317,6 @@ u16 check_multi_ap_ie(const u8 *multi_ap
+ size_t add_multi_ap_ie(u8 *buf, size_t len,
+ 		       const struct multi_ap_params *multi_ap);
  
 -struct country_op_class {
 -	u8 country_op_class;
@@ -339,11 +335,9 @@ index ff5f96b..9d1f658 100644
  u8 country_to_global_op_class(const char *country, u8 op_class);
  
  const struct oper_class_map * get_oper_class(const char *country, u8 op_class);
-diff --git a/wpa_supplicant/op_classes.c b/wpa_supplicant/op_classes.c
-index 5285d8b..8659991 100644
 --- a/wpa_supplicant/op_classes.c
 +++ b/wpa_supplicant/op_classes.c
-@@ -266,14 +266,15 @@ enum chan_allowed verify_channel(struct hostapd_hw_modes *mode, u8 op_class,
+@@ -269,14 +269,15 @@ enum chan_allowed verify_channel(struct
  {
  	unsigned int flag = 0;
  	enum chan_allowed res, res2;
@@ -361,54 +355,30 @@ index 5285d8b..8659991 100644
  			return NOT_ALLOWED;
  		res2 = allow_channel(mode, op_class, channel + 4, NULL);
  	} else if (is_6ghz_op_class(op_class) && bw == BW40) {
-@@ -323,10 +324,11 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
- 	int chan;
- 	size_t i;
- 	struct hostapd_hw_modes *mode;
--	int found;
-+	int found = 0;
- 	int z;
--	int freq2 = 0;
--	int freq5 = 0;
-+	bool freq2 = 0;
-+	bool freq5 = 0;
-+	bool freq6 = 0;
- 
- 	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, op_class->mode,
- 			is_6ghz_op_class(op_class->op_class));
-@@ -341,20 +343,27 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
- 
- 			if (f == 0)
+@@ -352,7 +353,7 @@ static int wpas_op_class_supported(struc
  				break; /* end of list */
--			if (f > 4000 && f < 6000)
-+			if (f > 4000 && f < 5935)
+ 			if (is_6ghz_freq(f))
+ 				freq6 = true;
+-			else if (f > 4000 && f < 6000)
++			else if (f > 4000 && f < 5935)
  				freq5 = 1;
  			else if (f > 2400 && f < 2500)
  				freq2 = 1;
-+			else if (f >= 5935 && f <= 7115)
-+				freq6 = 1;
- 		}
- 	} else {
- 		/* No frequencies specified, can use anything hardware supports.
- 		 */
--		freq2 = freq5 = 1;
-+		freq2 = freq5 = freq6 = 1;
- 	}
+@@ -366,9 +367,11 @@ static int wpas_op_class_supported(struc
  
+ 	if (is_6ghz_op_class(op_class->op_class) && !freq6)
+ 		return 0;
 -	if (op_class->op_class >= 115 && op_class->op_class <= 130 && !freq5)
-+	if ((op_class->op_class >= 115) &&
-+	    (op_class->op_class <= 130) && !freq5)
++	if (op_class->op_class >= 115 &&
++	    op_class->op_class <= 130 && !freq5)
  		return 0;
 -	if (op_class->op_class >= 81 && op_class->op_class <= 84 && !freq2)
-+	if ((op_class->op_class >= 81) &&
-+	    (op_class->op_class <= 84) && !freq2)
-+		return 0;
-+	if ((op_class->op_class >= 131) &&
-+	    (op_class->op_class <= 136) && !freq6)
++	if (op_class->op_class >= 81 &&
++	    op_class->op_class <= 84 && !freq2)
  		return 0;
  
  #ifdef CONFIG_HT_OVERRIDES
-@@ -390,10 +399,25 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
+@@ -404,10 +407,25 @@ static int wpas_op_class_supported(struc
  	}
  #endif /* CONFIG_VHT_OVERRIDES */
  
@@ -437,7 +407,7 @@ index 5285d8b..8659991 100644
  			if (verify_channel(mode, op_class->op_class,
  					   channels[i], op_class->bw) !=
  			    NOT_ALLOWED)
-@@ -403,14 +427,31 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
+@@ -417,14 +435,31 @@ static int wpas_op_class_supported(struc
  		return 0;
  	}
  
@@ -477,7 +447,7 @@ index 5285d8b..8659991 100644
  	}
  
  	if (op_class->op_class == 130) {
-@@ -490,9 +531,19 @@ static int wpas_op_class_supported(struct wpa_supplicant *wpa_s,
+@@ -504,9 +539,19 @@ static int wpas_op_class_supported(struc
  		return 0;
  	}
  
@@ -498,24 +468,47 @@ index 5285d8b..8659991 100644
  		if (verify_channel(mode, op_class->op_class, chan,
  				   op_class->bw) != NOT_ALLOWED) {
  			found = 1;
-@@ -527,8 +578,13 @@ size_t wpas_supp_op_class_ie(struct wpa_supplicant *wpa_s,
- {
+@@ -542,8 +587,13 @@ size_t wpas_supp_op_class_ie(struct wpa_
  	struct wpabuf *buf;
  	u8 op, current, chan;
+ 	u8 *ie_len;
 +	char country[2];
 +	struct country_op_class *country_array = NULL;
- 	u8 *ie_len;
-+	const u8 *country_ie;
  	size_t res;
+ 	bool op128 = false, op130 = false, op133 = false, op135 = false;
++	const u8 *country_ie;
 +	size_t size = 0;
 +	const struct oper_class_map *g_op_idx = NULL;
  
  	/*
  	 * Determine the current operating class correct mode based on
-@@ -554,10 +610,51 @@ size_t wpas_supp_op_class_ie(struct wpa_supplicant *wpa_s,
+@@ -568,35 +618,76 @@ size_t wpas_supp_op_class_ie(struct wpa_
+ 	wpabuf_put_u8(buf, WLAN_EID_SUPPORTED_OPERATING_CLASSES);
  	/* Will set the length later, putting a placeholder */
  	ie_len = wpabuf_put(buf, 1);
- 	wpabuf_put_u8(buf, current);
+-	wpabuf_put_u8(buf, current);
+ 
+-	for (op = 0; global_op_class[op].op_class; op++) {
+-		bool supp;
+-		u8 op_class = global_op_class[op].op_class;
+-
+-		supp = wpas_op_class_supported(wpa_s, ssid,
+-					       &global_op_class[op]);
+-		if (!supp)
+-			continue;
+-		switch (op_class) {
+-		case 128:
+-			op128 = true;
+-			break;
+-		case 130:
+-			op130 = true;
+-			break;
+-		case 133:
+-			op133 = true;
+-			break;
+-		case 135:
+-			op135 = true;
+-			break;
 +	country_ie = wpa_bss_get_ie(bss, WLAN_EID_COUNTRY);
 +	if (country_ie) {
 +		memcpy(country, country_ie + 2, 2);
@@ -532,41 +525,63 @@ index 5285d8b..8659991 100644
 +		} else if (country_match(cn_op_class_cc, country)) {
 +			country_array = cn_op_class;
 +			size = get_country_op_class_size(cn_op_class);
-+		}
+ 		}
+-		if (is_80plus_op_class(op_class))
+-			continue;
++	} else {
++		wpabuf_put_u8(buf, current);
 +	}
  
--	for (op = 0; global_op_class[op].op_class; op++) {
--		if (wpas_op_class_supported(wpa_s, ssid, &global_op_class[op]))
--			wpabuf_put_u8(buf, global_op_class[op].op_class);
-+	/*
-+	 * For 6G channels use global operating class table.
-+	 * For non-6G use country specific operating class table.
-+	 * For countries not in the list of countries, use global
-+	 * operating class table.
-+	 */
+-		/* Add a 1-octet operating class to the Operating Class field */
+-		wpabuf_put_u8(buf, global_op_class[op].op_class);
++       /*
++        * For 6G channels use global operating class table.
++        * For non-6G use country specific operating class table.
++        * For countries not in the list of countries, use global
++        * operating class table.
++        */
 +#define SIXG_FIRST_CFREQ 5935
 +	if (country_array && bss->freq < SIXG_FIRST_CFREQ) {
 +		for (op = 0; op < size; op++) {
 +			g_op_idx = get_oper_class(country,
 +					country_array[op].country_op_class);
 +			if (g_op_idx &&
-+			    wpas_op_class_supported(wpa_s, ssid,
-+						    g_op_idx)) {
++					wpas_op_class_supported(wpa_s, ssid,
++						g_op_idx)) {
 +				wpabuf_put_u8(buf,
-+					      country_array[op].global_op_class);
++						country_array[op].global_op_class);
 +			}
 +		}
 +	} else {
++
 +		for (op = 0; global_op_class[op].op_class; op++) {
-+			if (wpas_op_class_supported(wpa_s, ssid,
-+						    &global_op_class[op])) {
-+				wpabuf_put_u8(buf,
-+					      global_op_class[op].op_class);
++			bool supp;
++			u8 op_class = global_op_class[op].op_class;
++
++			supp = wpas_op_class_supported(wpa_s, ssid,
++					&global_op_class[op]);
++			if (!supp)
++				continue;
++			switch (op_class) {
++				case 128:
++					op128 = true;
++					break;
++				case 130:
++					op130 = true;
++					break;
++				case 133:
++					op133 = true;
++					break;
++				case 135:
++					op135 = true;
++					break;
 +			}
++			if (is_80plus_op_class(op_class))
++				continue;
++
++			/* Add a 1-octet operating class to the Operating Class field */
++			wpabuf_put_u8(buf, global_op_class[op].op_class);
 +		}
  	}
  
- 	*ie_len = wpabuf_len(buf) - 2;
--- 
-2.17.1
-
+ 	/* Add the 2-octet operating classes (i.e., 80+80 MHz cases), if any */

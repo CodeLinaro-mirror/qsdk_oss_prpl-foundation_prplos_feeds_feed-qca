@@ -24,11 +24,9 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  wpa_supplicant/mesh.c | 29 +++++++++++++++++++++++++++--
  1 file changed, 27 insertions(+), 2 deletions(-)
 
-diff --git a/wpa_supplicant/mesh.c b/wpa_supplicant/mesh.c
-index fd93997..52fc12b 100644
 --- a/wpa_supplicant/mesh.c
 +++ b/wpa_supplicant/mesh.c
-@@ -393,6 +393,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
+@@ -393,6 +393,7 @@ static int wpa_supplicant_mesh_init(stru
  	int basic_rates_erp[] = { 10, 20, 55, 60, 110, 120, 240, -1 };
  	int rate_len;
  	int frequency;
@@ -36,7 +34,7 @@ index fd93997..52fc12b 100644
  
  	if (!wpa_s->conf->user_mpm) {
  		/* not much for us to do here */
-@@ -484,8 +485,32 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
+@@ -484,8 +485,32 @@ static int wpa_supplicant_mesh_init(stru
  	bss->conf->ap_max_inactivity = wpa_s->conf->mesh_max_inactivity;
  	bss->conf->mesh_fwding = wpa_s->conf->mesh_fwding;
  

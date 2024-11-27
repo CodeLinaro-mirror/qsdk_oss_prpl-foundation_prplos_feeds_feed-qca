@@ -154,7 +154,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	struct ieee80211_hw *hw;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -10660,6 +10660,7 @@ static void ath12k_update_obss_color_not
+@@ -10684,6 +10684,7 @@ static void ath12k_update_obss_color_not
  		link_ndev = vif->link_ndev[link_id];
  		if (link_ndev) {
  			link_ndev_pvt = netdev_priv(link_ndev);
@@ -162,3 +162,17 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  			link_ndev_pvt->arvif = arvif;
  			arvif->ndev_pvt = link_ndev_pvt;
  		}
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+@@ -2036,6 +2036,11 @@ static void ath12k_core_pre_reconfigure_
+ 			if (arvif->is_started)
+ 				ath12k_debugfs_remove_interface(arvif);
+ 
++		list_for_each_entry(arvif, &ar->arvifs, list) {
++			arvif->is_started = false;
++			arvif->is_created = false;
++		}
++
+ 		ath12k_mac_radio_drain_tx(ar);
+ 		complete(&ar->scan.started);
+ 		complete(&ar->scan.completed);

@@ -75,7 +75,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  	if (params->flags) {
  		if (ieee80211_sdata_running(sdata)) {
-@@ -929,14 +933,27 @@ static int ieee80211_set_monitor_channel
+@@ -932,14 +936,27 @@ static int ieee80211_set_monitor_channel
  {
  	struct ieee80211_local *local = wiphy_priv(wiphy);
  	struct ieee80211_sub_if_data *sdata;
@@ -106,7 +106,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		if (sdata) {
  			sdata_lock(sdata);
  			mutex_lock(&local->mtx);
-@@ -957,11 +974,87 @@ static int ieee80211_set_monitor_channel
+@@ -960,11 +977,87 @@ static int ieee80211_set_monitor_channel
  	}
  
  	if (ret == 0)
@@ -195,7 +195,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  static int
  ieee80211_set_probe_resp(struct ieee80211_sub_if_data *sdata,
  			 const u8 *resp, size_t resp_len,
-@@ -3227,6 +3320,7 @@ static int ieee80211_set_tx_power(struct
+@@ -3213,6 +3306,7 @@ static int ieee80211_set_tx_power(struct
  	bool update_txp_type = false;
  	bool has_monitor = false;
  	struct ieee80211_link_data *link_data;
@@ -203,7 +203,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  	if (wdev) {
  		sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
-@@ -3236,8 +3330,14 @@ static int ieee80211_set_tx_power(struct
+@@ -3222,8 +3316,14 @@ static int ieee80211_set_tx_power(struct
  			return -ENOLINK;
  
  		if (sdata->vif.type == NL80211_IFTYPE_MONITOR) {
@@ -219,7 +219,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  			if (!sdata)
  				return -EOPNOTSUPP;
  		}
-@@ -3279,7 +3379,6 @@ static int ieee80211_set_tx_power(struct
+@@ -3265,7 +3365,6 @@ static int ieee80211_set_tx_power(struct
  		break;
  	}
  
@@ -227,7 +227,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	mutex_lock(&local->iflist_mtx);
  	list_for_each_entry(sdata, &local->interfaces, list) {
  		if (sdata->vif.type == NL80211_IFTYPE_MONITOR) {
-@@ -3299,16 +3398,19 @@ static int ieee80211_set_tx_power(struct
+@@ -3285,16 +3384,19 @@ static int ieee80211_set_tx_power(struct
  	mutex_unlock(&local->iflist_mtx);
  
  	if (has_monitor) {
@@ -256,7 +256,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	}
  
  	return 0;
-@@ -4538,30 +4640,45 @@ static int ieee80211_cfg_get_channel(str
+@@ -4515,30 +4617,45 @@ static int ieee80211_cfg_get_channel(str
  	struct ieee80211_local *local = wiphy_priv(wiphy);
  	struct ieee80211_chanctx_conf *chanctx_conf;
  	struct ieee80211_link_data *link;
@@ -314,7 +314,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  	return ret;
  }
-@@ -5497,6 +5614,8 @@ const struct cfg80211_ops mac80211_confi
+@@ -5486,6 +5603,8 @@ const struct cfg80211_ops mac80211_confi
  	.inform_bss = ieee80211_inform_bss,
  	.set_txq_params = ieee80211_set_txq_params,
  	.set_monitor_channel = ieee80211_set_monitor_channel,
@@ -379,7 +379,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		rx_chains_dynamic = rx_chains_static = local->rx_chains;
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -1630,8 +1630,9 @@ struct ieee80211_local {
+@@ -1624,8 +1624,9 @@ struct ieee80211_local {
  	struct ieee80211_sub_if_data __rcu *p2p_sdata;
  
  	/* virtual monitor interface */
@@ -629,7 +629,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  #ifdef CPTCFG_MAC80211_NSS_SUPPORT
 --- a/net/mac80211/main.c
 +++ b/net/mac80211/main.c
-@@ -993,7 +993,8 @@ int ieee80211_register_hw(struct ieee802
+@@ -987,7 +987,8 @@ int ieee80211_register_hw(struct ieee802
  	enum nl80211_band band;
  	int channels, max_bitrates;
  	bool supp_ht, supp_vht, supp_he, supp_eht;
@@ -639,7 +639,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  	if (ieee80211_hw_check(hw, QUEUE_CONTROL) &&
  	    (local->hw.offchannel_tx_hw_queue == IEEE80211_INVAL_HW_QUEUE ||
-@@ -1139,35 +1140,56 @@ int ieee80211_register_hw(struct ieee802
+@@ -1133,36 +1134,57 @@ int ieee80211_register_hw(struct ieee802
  	supp_vht = false;
  	supp_he = false;
  	supp_eht = false;
@@ -661,6 +661,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +	}
 +
  	for (band = 0; band < NUM_NL80211_BANDS; band++) {
+ 		const struct ieee80211_sband_iftype_data *iftd;
  		struct ieee80211_supported_band *sband;
 +		struct cfg80211_chan_def dflt_chandef = {};
  
@@ -676,7 +677,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 -			for (i = 0; i < sband->n_channels; i++)
 -				if (!(sband->channels[i].flags &
 +		/*
-+		 * Assign the first enabled channel to dflt_chandef
++ 		 * Assign the first enabled channel to dflt_chandef
 +		 * from the list of channels
 +		 */
 +		for (i = 0; i < sband->n_channels; i++)
@@ -712,11 +713,11 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +			/* Resetting to use first index for non-MLO case */
 +			hw_idx = 0;
 +
-+		local->monitor_chandef[hw_idx] = dflt_chandef;
++		local->monitor_chandef = dflt_chandef;
  
  		channels += sband->n_channels;
  
-@@ -1197,12 +1219,16 @@ int ieee80211_register_hw(struct ieee802
+@@ -1188,12 +1210,16 @@ int ieee80211_register_hw(struct ieee802
  
  		/* HT, VHT, HE, EHT require QoS, thus >= 4 queues */
  		if (WARN_ON(local->hw.queues < IEEE80211_NUM_ACS &&
@@ -737,7 +738,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  		if (!sband->ht_cap.ht_supported)
  			continue;
-@@ -1236,8 +1262,10 @@ int ieee80211_register_hw(struct ieee802
+@@ -1227,8 +1253,10 @@ int ieee80211_register_hw(struct ieee802
  
  		for (j = 0; j < c->n_limits; j++)
  			if ((c->limits[j].types & BIT(NL80211_IFTYPE_ADHOC)) &&
@@ -750,7 +751,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	}
  
  	local->int_scan_req = kzalloc(sizeof(*local->int_scan_req) +
-@@ -1536,6 +1564,9 @@ int ieee80211_register_hw(struct ieee802
+@@ -1509,6 +1537,9 @@ int ieee80211_register_hw(struct ieee802
  		local->wiphy_ciphers_allocated = false;
  	}
  	kfree(local->int_scan_req);
@@ -760,7 +761,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	return result;
  }
  EXPORT_SYMBOL(ieee80211_register_hw);
-@@ -1585,6 +1616,9 @@ void ieee80211_unregister_hw(struct ieee
+@@ -1560,6 +1591,9 @@ void ieee80211_unregister_hw(struct ieee
  	destroy_workqueue(local->workqueue);
  	ieee80211_led_exit(local);
  	kfree(local->int_scan_req);
@@ -805,7 +806,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	list_for_each_entry_rcu(sdata, &local->mon_list, u.mntr.list) {
 --- a/net/mac80211/tx.c
 +++ b/net/mac80211/tx.c
-@@ -1801,7 +1801,10 @@ static bool __ieee80211_tx(struct ieee80
+@@ -1802,7 +1802,10 @@ static bool __ieee80211_tx(struct ieee80
  			vif = &sdata->vif;
  			break;
  		}
@@ -817,7 +818,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		if (sdata) {
  			vif = &sdata->vif;
  			info->hw_queue =
-@@ -2407,7 +2410,7 @@ netdev_tx_t ieee80211_monitor_start_xmit
+@@ -2408,7 +2411,7 @@ netdev_tx_t ieee80211_monitor_start_xmit
  
  	chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
  	if (!chanctx_conf) {
@@ -826,7 +827,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		if (tmp_sdata)
  			chanctx_conf =
  				rcu_dereference(tmp_sdata->vif.bss_conf.chanctx_conf);
-@@ -3986,7 +3989,7 @@ begin:
+@@ -3987,7 +3990,7 @@ begin:
  			vif = &tx.sdata->vif;
  			break;
  		}

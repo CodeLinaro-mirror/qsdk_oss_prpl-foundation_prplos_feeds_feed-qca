@@ -18,7 +18,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -3373,7 +3373,8 @@ static int hostapd_5ghz_vht_80_channel_b
+@@ -3537,7 +3537,8 @@ static int hostapd_5ghz_vht_80_channel_b
  {
  	int k, m, ok, allowed[][4] = {{36, 40, 44, 48}, {52, 56, 60, 64},
  				      {100, 104, 108, 112}, {116, 120, 124, 128},
@@ -28,7 +28,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	struct hostapd_channel_data *chan = &mode->channels[channel_idx];
  
  	ok = 0;
-@@ -3405,7 +3406,8 @@ static bool hostapd_5ghz_vht_160_channel
+@@ -3569,7 +3570,8 @@ static bool hostapd_5ghz_vht_160_channel
  					    int channel_idx)
  {
  	int k, m, ok, allowed[][8] = {{36, 40, 44, 48, 52, 56, 60, 64},
@@ -38,7 +38,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	struct hostapd_channel_data *chan = &mode->channels[channel_idx];
  
  	ok = 0;
-@@ -3437,7 +3439,7 @@ static int hostapd_5ghz_ht_40_channel_bw
+@@ -3602,7 +3604,7 @@ static int hostapd_5ghz_ht_40_channel_bw
  {
  
  	int  k, ok, allowed[] = {36, 44, 52, 60, 100, 108, 116, 124, 132, 140,
@@ -47,7 +47,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	struct hostapd_channel_data *chan = &mode->channels[channel_idx];
  
  	if (!((chan->flag & HOSTAPD_CHAN_HT40MINUS) ||
-@@ -3524,6 +3526,251 @@ static int hostapd_5ghz_channel_bw(struc
+@@ -3689,6 +3691,251 @@ static int hostapd_5ghz_channel_bw(struc
  	return len;
  }
  
@@ -299,7 +299,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  static int hostapd_ctrl_iface_channel_bw(struct hostapd_iface *iface,
  					 char *buf, size_t buflen)
  {
-@@ -3531,15 +3778,35 @@ static int hostapd_ctrl_iface_channel_bw
+@@ -3696,15 +3943,35 @@ static int hostapd_ctrl_iface_channel_bw
  	struct hostapd_hw_modes *mode;
  	int len = 0;
  	u16 num_modes, flags;
@@ -339,4 +339,4 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 +	}
  
  	return len;
- 
+ }

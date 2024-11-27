@@ -12,11 +12,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  src/drivers/driver_nl80211.c | 22 ++++++++++++++++++++++
  1 file changed, 22 insertions(+)
 
-diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
-index 759c692..bfe3842 100644
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -4485,6 +4485,7 @@ static int nl80211_put_beacon_rate(struct nl_msg *msg, u64 flags, u64 flags2,
+@@ -4575,6 +4575,7 @@ static int nl80211_put_beacon_rate(struc
  	struct nlattr *bands, *band;
  	struct nl80211_txrate_vht vht_rate;
  	struct nl80211_txrate_he he_rate;
@@ -24,7 +22,7 @@ index 759c692..bfe3842 100644
  
  	if (!params->freq ||
  	    (params->beacon_rate == 0 &&
-@@ -4518,6 +4519,7 @@ static int nl80211_put_beacon_rate(struct nl_msg *msg, u64 flags, u64 flags2,
+@@ -4608,6 +4609,7 @@ static int nl80211_put_beacon_rate(struc
  
  	os_memset(&vht_rate, 0, sizeof(vht_rate));
  	os_memset(&he_rate, 0, sizeof(he_rate));
@@ -32,7 +30,7 @@ index 759c692..bfe3842 100644
  
  	switch (params->rate_type) {
  	case BEACON_RATE_LEGACY:
-@@ -4586,6 +4588,26 @@ static int nl80211_put_beacon_rate(struct nl_msg *msg, u64 flags, u64 flags2,
+@@ -4676,6 +4678,26 @@ static int nl80211_put_beacon_rate(struc
  		wpa_printf(MSG_DEBUG, " * beacon_rate = HE-MCS %u",
  			   params->beacon_rate);
  		break;

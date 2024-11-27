@@ -30,7 +30,7 @@ Signed-off-by: John Crispin <john@phrozen.org>
  
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
-@@ -1792,6 +1792,9 @@ static void ath11k_control_beaconing(str
+@@ -1793,6 +1793,9 @@ static void ath11k_control_beaconing(str
  	struct ath11k_vif *tx_arvif = NULL;
  	int ret = 0;
  
@@ -40,7 +40,7 @@ Signed-off-by: John Crispin <john@phrozen.org>
  	lockdep_assert_held(&arvif->ar->conf_mutex);
  
  	if (!info->enable_beacon) {
-@@ -1806,6 +1809,9 @@ static void ath11k_control_beaconing(str
+@@ -1807,6 +1810,9 @@ static void ath11k_control_beaconing(str
  				    arvif->vdev_id, ret);
  
  		arvif->is_up = false;
@@ -50,7 +50,7 @@ Signed-off-by: John Crispin <john@phrozen.org>
  		return;
  	}
  
-@@ -1829,6 +1835,13 @@ static void ath11k_control_beaconing(str
+@@ -1830,6 +1836,13 @@ static void ath11k_control_beaconing(str
  	params.vdev_id = arvif->vdev_id;
  	params.aid = arvif->aid;
  	params.bssid = arvif->bssid;
@@ -64,28 +64,19 @@ Signed-off-by: John Crispin <john@phrozen.org>
  	ret = ath11k_wmi_vdev_up(arvif->ar, &params);
  	if (ret) {
  		ath11k_warn(ar->ab, "failed to bring up vdev %d: %i\n",
-@@ -3364,7 +3377,7 @@ static void ath11k_bss_disassoc(struct i
- 				struct ieee80211_vif *vif)
- {
- 	struct ath11k *ar = hw->priv;
--	struct ath11k_vif *arvif = (void *)vif->drv_priv;
-+	struct ath11k_vif *arvif = (void *)vif->drv_priv, *tx_arvif;
- 	int ret;
- 
- 	lockdep_assert_held(&ar->conf_mutex);
-@@ -3382,6 +3395,11 @@ static void ath11k_bss_disassoc(struct i
- 			    arvif->vdev_id, ret);
+@@ -3384,6 +3397,11 @@ static void ath11k_bss_disassoc(struct i
  
  	arvif->is_up = false;
+ 
 +	if (arvif->vif->mbssid_tx_vif) {
 +		tx_arvif = (void *)arvif->vif->mbssid_tx_vif->drv_priv;
 +		if (tx_arvif != arvif)
 +			tx_arvif->nontransmitting_vif_count--;
 +	}
- 
  	memset(&arvif->rekey_data, 0, sizeof(arvif->rekey_data));
  
-@@ -3983,6 +4001,8 @@ static void ath11k_mac_op_bss_info_chang
+ 	cancel_delayed_work_sync(&arvif->connection_loss_work);
+@@ -3984,6 +4002,8 @@ static void ath11k_mac_op_bss_info_chang
  			ret = ath11k_wmi_send_obss_color_collision_cfg_cmd(
  				ar, arvif->vdev_id, info->he_bss_color.color,
  				ATH11K_BSS_COLOR_COLLISION_DETECTION_AP_PERIOD_MS,
@@ -94,10 +85,11 @@ Signed-off-by: John Crispin <john@phrozen.org>
  				(info->he_bss_color.enabled & color_collision_enable));
  			if (ret)
  				ath11k_warn(ar->ab, "failed to set bss color collision on vdev %i: %d\n",
-@@ -9084,6 +9104,12 @@ ath11k_mac_update_vif_chan(struct ath11k
+@@ -9046,6 +9066,13 @@ ath11k_mac_update_vif_chan(struct ath11k
  		params.vdev_id = arvif->vdev_id;
  		params.aid = arvif->aid;
  		params.bssid = arvif->bssid;
++
 +		if (arvif->vif->mbssid_tx_vif) {
 +			tx_arvif = (void *)arvif->vif->mbssid_tx_vif->drv_priv;
 +			params.tx_bssid = tx_arvif->bssid;
@@ -107,3 +99,12 @@ Signed-off-by: John Crispin <john@phrozen.org>
  		ret = ath11k_wmi_vdev_up(arvif->ar, &params);
  		if (ret) {
  			ath11k_warn(ab, "failed to bring vdev up %d: %d\n",
+@@ -11881,7 +11908,7 @@ ath11k_mac_op_config_mesh_offload_path(s
+ 				       struct ieee80211_mesh_path_offld *path)
+ {
+ 	struct ath11k *ar = hw->priv;
+-	struct ath11k_vif *arvif = (void *)vif->drv_priv;
++	struct ath11k_vif *arvif = (void *)vif->drv_priv, *tx_arvif;
+ 	int ret;
+ 
+ 	if (arvif->ar->ab->nss.debug_mode) {

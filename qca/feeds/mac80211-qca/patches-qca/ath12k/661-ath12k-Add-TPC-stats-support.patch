@@ -75,7 +75,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  #define ATH12K_EHT_MCS_MAX	15
  
  enum ath12k_crypt_mode {
-@@ -741,6 +742,12 @@ struct ath12k {
+@@ -740,6 +741,12 @@ struct ath12k {
  	struct cfg80211_chan_def awgn_chandef;
  	u32 chan_bw_interference_bitmap;
  	bool awgn_intf_handling_in_prog;
@@ -90,7 +90,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  struct ath12k_hw {
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -1559,6 +1559,741 @@ static const struct file_operations fops
+@@ -1571,6 +1571,741 @@ static const struct file_operations fops
  	.open = simple_open
  };
  
@@ -832,7 +832,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  static ssize_t ath12k_write_simulate_awgn(struct file *file,
                                            const char __user *user_buf,
                                            size_t count, loff_t *ppos)
-@@ -1616,6 +2351,8 @@ int ath12k_debugfs_register(struct ath12
+@@ -1628,6 +2363,8 @@ int ath12k_debugfs_register(struct ath12
  	ath12k_debugfs_fw_stats_init(ar);
  	ath12k_init_pktlog(ar);
  
@@ -841,7 +841,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	debugfs_create_file("ext_tx_stats", 0644,
  			    ar->debug.debugfs_pdev, ar,
  			    &fops_extd_tx_stats);
-@@ -1641,6 +2378,15 @@ int ath12k_debugfs_register(struct ath12
+@@ -1653,6 +2390,15 @@ int ath12k_debugfs_register(struct ath12
                                      &fops_simulate_awgn);
          }
  
@@ -929,16 +929,16 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	bool override_cfg_param;
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -98,6 +98,8 @@ struct wmi_tlv_mgmt_rx_parse {
+@@ -113,6 +113,8 @@ struct wmi_tlv_mgmt_rx_parse {
  static const struct ath12k_wmi_tlv_policy ath12k_wmi_tlv_policies[] = {
  	[WMI_TAG_ARRAY_BYTE] = { .min_len = 0 },
  	[WMI_TAG_ARRAY_UINT32] = { .min_len = 0 },
 +	[WMI_TAG_ARRAY_STRUCT] = { .min_len = 0 },
-+	[WMI_TAG_ARRAY_INT16] = { .min_len = 0 },	
++	[WMI_TAG_ARRAY_INT16] = { .min_len = 0 },
  	[WMI_TAG_SERVICE_READY_EVENT] = {
  		.min_len = sizeof(struct wmi_service_ready_event) },
  	[WMI_TAG_SERVICE_READY_EXT_EVENT] = {
-@@ -154,6 +156,8 @@ static const struct ath12k_wmi_tlv_polic
+@@ -169,6 +171,8 @@ static const struct ath12k_wmi_tlv_polic
  		.min_len = sizeof(struct wmi_twt_add_dialog_event) },
  	[WMI_TAG_OBSS_COLOR_COLLISION_EVT]
  		= { .min_len = sizeof(struct wmi_obss_color_collision_event) },
@@ -947,7 +947,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  };
  
  static __le32 ath12k_wmi_tlv_hdr(u32 cmd, u32 len)
-@@ -8236,6 +8240,459 @@ static void ath12k_probe_resp_tx_status_
+@@ -8394,6 +8398,458 @@ static void ath12k_probe_resp_tx_status_
  	kfree(tb);
  }
  
@@ -1122,14 +1122,10 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 +	s8 *dst_ptr_ctl;
 +	int ret = 0;
 +
-+	if (tag == WMI_TAG_ARRAY_INT16)
-+		reg_rates_src = (s16 *)ptr;
-+	else
-+		ctl_src = (s8 *)ptr;
-+
 +	switch (tpc_stats->event_count) {
 +	case ATH12K_TPC_STATS_CONFIG_REG_PWR_EVENT:
 +		if (tpc_stats->tlvs_rcvd & WMI_TPC_REG_PWR_ALLOWED) {
++			reg_rates_src = (s16 *)ptr;
 +			dst_ptr = tpc_stats->max_reg_allowed_power.reg_pwr_array;
 +			memcpy(dst_ptr, reg_rates_src,
 +			       tpc_stats->max_reg_allowed_power.tpc_reg_pwr.reg_array_len);
@@ -1138,6 +1134,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 +		break;
 +	case ATH12K_TPC_STATS_RATES_EVENT1:
 +		if (tpc_stats->tlvs_rcvd & WMI_TPC_RATES_ARRAY1) {
++			reg_rates_src = (s16 *)ptr;
 +			dst_ptr = tpc_stats->rates_array1.rate_array;
 +			memcpy(dst_ptr, reg_rates_src,
 +			       tpc_stats->rates_array1.tpc_rates_array.rate_array_len);
@@ -1146,6 +1143,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 +		break;
 +	case ATH12K_TPC_STATS_RATES_EVENT2:
 +		if (tpc_stats->tlvs_rcvd & WMI_TPC_RATES_ARRAY2) {
++			reg_rates_src = (s16 *)ptr;
 +			dst_ptr = tpc_stats->rates_array2.rate_array;
 +			memcpy(dst_ptr, reg_rates_src,
 +			       tpc_stats->rates_array2.tpc_rates_array.rate_array_len);
@@ -1154,6 +1152,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 +		break;
 +	case ATH12K_TPC_STATS_CTL_TABLE_EVENT:
 +		if (tpc_stats->tlvs_rcvd & WMI_TPC_CTL_PWR_ARRAY) {
++			ctl_src = (s8 *)ptr;
 +			dst_ptr_ctl = tpc_stats->ctl_array.ctl_pwr_table;
 +			memcpy(dst_ptr_ctl, ctl_src,
 +			       tpc_stats->ctl_array.tpc_ctl_pwr.ctl_array_len);
@@ -1407,7 +1406,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  static void ath12k_wmi_diag_event(struct ath12k_base *ab, struct sk_buff *skb)
  {
  	const struct wmi_tlv *tlv;
-@@ -8621,6 +9078,9 @@ static void ath12k_wmi_op_rx(struct ath1
+@@ -8779,6 +9235,9 @@ static void ath12k_wmi_op_rx(struct ath1
  	case WMI_OBSS_COLOR_COLLISION_DETECTION_EVENTID:
  		ath12k_wmi_obss_color_collision_event(ab, skb);
  		break;
@@ -1449,7 +1448,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	WMI_NLO_MATCH_EVENTID = WMI_TLV_CMD(WMI_GRP_NLO_OFL),
  	WMI_NLO_SCAN_COMPLETE_EVENTID,
  	WMI_APFIND_EVENTID,
-@@ -1287,6 +1296,7 @@ enum wmi_tlv_tag {
+@@ -1286,6 +1295,7 @@ enum wmi_tlv_tag {
  	WMI_TAG_ARRAY_BYTE,
  	WMI_TAG_ARRAY_STRUCT,
  	WMI_TAG_ARRAY_FIXED_STRUCT,
@@ -1457,7 +1456,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	WMI_TAG_LAST_ARRAY_ENUM = 31,
  	WMI_TAG_SERVICE_READY_EVENT,
  	WMI_TAG_HAL_REG_CAPABILITIES,
-@@ -2049,6 +2059,14 @@ enum wmi_tlv_tag {
+@@ -2048,6 +2058,14 @@ enum wmi_tlv_tag {
  	WMI_TAG_EHT_RATE_SET = 0x3C4,
  	WMI_TAG_DCS_AWGN_INT_TYPE = 0x3C5,
  	WMI_TAG_PDEV_PKTLOG_DECODE_INFO = 0x414,
@@ -1472,7 +1471,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  	WMI_TAG_MAX
  };
  
-@@ -5512,6 +5530,234 @@ struct wmi_probe_tmpl_cmd {
+@@ -5561,6 +5579,234 @@ struct wmi_probe_tmpl_cmd {
  	__le32 buf_len;
  } __packed;
  
@@ -1707,7 +1706,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  enum wmi_dblog_param {
  	WMI_DEBUG_LOG_PARAM_LOG_LEVEL = 0x1,
  	WMI_DEBUG_LOG_PARAM_VDEV_ENABLE,
-@@ -5720,4 +5966,6 @@ int ath12k_wmi_send_vdev_set_tpc_power(s
+@@ -5770,4 +6016,6 @@ int ath12k_wmi_send_vdev_set_tpc_power(s
  int ath12k_wmi_dbglog_cfg(struct ath12k *ar, u32 param, u64 value);
  int ath12k_wmi_pdev_ap_ps_cmd_send(struct ath12k *ar, u8 pdev_id, u32 value);
  int ath12k_wmi_pdev_m3_dump_enable(struct ath12k *ar, u32 enable);

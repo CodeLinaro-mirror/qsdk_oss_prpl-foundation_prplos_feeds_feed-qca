@@ -91,10 +91,10 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	struct sk_buff *skb;
 -	int i, j;
 +	int i, j, k;
- 	u32  pool_id, tx_spt_page;
+ 	u32 pool_id, tx_spt_page;
  
  	if (!dp->spt_info)
-@@ -1731,24 +1738,29 @@ static void ath12k_dp_cc_cleanup(struct
+@@ -1732,24 +1739,29 @@ static void ath12k_dp_cc_cleanup(struct
  	for (i = 0; i < ATH12K_HW_MAX_QUEUES; i++) {
  		spin_lock_bh(&dp->tx_desc_lock[i]);
  
@@ -175,7 +175,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	spin_unlock_bh(&dp->tx_desc_lock[pool_id]);
  
  	return desc;
-@@ -1526,6 +1528,7 @@ int ath12k_dp_tx_completion_handler(stru
+@@ -1537,6 +1539,7 @@ int ath12k_dp_tx_completion_handler(stru
  	int hal_ring_id = dp->tx_ring[ring_id].tcl_comp_ring.ring_id;
  	struct hal_srng *status_ring = &ab->hal.srng_list[hal_ring_id];
  	struct ath12k_tx_desc_info *tx_desc = NULL;
@@ -183,7 +183,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	struct sk_buff *msdu, *skb_ext_desc;
  	struct ath12k_skb_cb *skb_cb;
  	struct dp_tx_ring *tx_ring = &dp->tx_ring[ring_id];
-@@ -1544,6 +1547,8 @@ int ath12k_dp_tx_completion_handler(stru
+@@ -1555,6 +1558,8 @@ int ath12k_dp_tx_completion_handler(stru
  	int recycler_fast_xmit;
  
  
@@ -192,7 +192,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	ath12k_hal_srng_access_dst_ring_begin_nolock(ab, status_ring);
  
  	valid_entries = ath12k_hal_srng_dst_num_free(ab, status_ring, false);
-@@ -1589,7 +1594,7 @@ int ath12k_dp_tx_completion_handler(stru
+@@ -1600,7 +1605,7 @@ int ath12k_dp_tx_completion_handler(stru
  		/* Release descriptor as soon as extracting necessary info
  		 * to reduce contention
  		 */
@@ -201,9 +201,9 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  
  		if (unlikely(!msdu)) {
  			ab->soc_stats.null_tx_complete[tx_ring->tcl_data_ring_id]++;
-@@ -1679,6 +1684,17 @@ int ath12k_dp_tx_completion_handler(stru
- 						   tx_ring->tcl_data_ring_id, timestamp);
- 		}
+@@ -1693,6 +1698,17 @@ int ath12k_dp_tx_completion_handler(stru
+ 
+ 
  	}
 +
 +	spin_lock_bh(&dp->tx_desc_lock[ring_id]);

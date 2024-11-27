@@ -39,11 +39,9 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.c | 2 +-
  2 files changed, 2 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/reg.c b/drivers/net/wireless/ath/ath12k/reg.c
-index 5e45a0f..4332c27 100644
 --- a/drivers/net/wireless/ath/ath12k/reg.c
 +++ b/drivers/net/wireless/ath/ath12k/reg.c
-@@ -414,11 +414,7 @@ int ath12k_regd_update(struct ath12k *ar, bool init)
+@@ -411,11 +411,7 @@ int ath12k_regd_update(struct ath12k *ar
  		goto err;
  	}
  
@@ -56,20 +54,3 @@ index 5e45a0f..4332c27 100644
  
  	kfree(regd_copy);
  
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 2118b82..d3bf7ce 100644
---- a/drivers/net/wireless/ath/ath12k/wmi.c
-+++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7988,8 +7988,8 @@ static int ath12k_reg_handle_chan_list(struct ath12k_base *ab,
- 		ar = ab->pdevs[pdev_idx].ar;
- 		kfree(ab->new_regd[pdev_idx]);
- 		ab->new_regd[pdev_idx] = regd;
-+		queue_work(ab->workqueue, &ar->regd_update_work);
- 
--		ieee80211_queue_work(ar->ah->hw, &ar->regd_update_work);
- 	} else {
- 		/* Multiple events for the same *ar is not expected. But we
- 		 * can still clear any previously stored default_regd if we
--- 
-2.17.1
-

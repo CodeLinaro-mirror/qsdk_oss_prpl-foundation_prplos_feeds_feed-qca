@@ -21,11 +21,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  src/drivers/nl80211_copy.h        | 12 ++++++++++++
  5 files changed, 37 insertions(+)
 
-diff --git a/hostapd/main.c b/hostapd/main.c
-index 46aa151..b155a5f 100644
 --- a/hostapd/main.c
 +++ b/hostapd/main.c
-@@ -309,6 +309,7 @@ setup_mld:
+@@ -302,6 +302,7 @@ setup_mld:
  		iface->extended_capa_mask = capa.extended_capa_mask;
  		iface->extended_capa_len = capa.extended_capa_len;
  		iface->drv_max_acl_mac_addrs = capa.max_acl_mac_addrs;
@@ -33,11 +31,9 @@ index 46aa151..b155a5f 100644
  
  		/*
  		 * Override extended capa with per-interface type (AP), if
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index fc3fe6e..d3aaf40 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -682,6 +682,9 @@ struct hostapd_iface {
+@@ -732,6 +732,9 @@ struct hostapd_iface {
  	/* Maximum profile periodicity for enhanced MBSSID advertisement */
  	unsigned int ema_max_periodicity;
  
@@ -47,11 +43,9 @@ index fc3fe6e..d3aaf40 100644
  	int (*enable_iface_cb)(struct hostapd_iface *iface);
  	int (*disable_iface_cb)(struct hostapd_iface *iface);
  
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index a9c8e9c..aaf04ab 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2443,6 +2443,9 @@ struct wpa_driver_capa {
+@@ -2502,6 +2502,9 @@ struct wpa_driver_capa {
  	unsigned int mbssid_max_interfaces;
  	/* Maximum profile periodicity for enhanced MBSSID advertisement */
  	unsigned int ema_max_periodicity;
@@ -61,11 +55,9 @@ index a9c8e9c..aaf04ab 100644
  };
  
  
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index 8693d7f..b4f1f5e 100644
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -1155,6 +1155,24 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
+@@ -1186,6 +1186,24 @@ static int wiphy_info_handler(struct nl_
  	if (tb[NL80211_ATTR_MBSSID_CONFIG])
  		wiphy_info_mbssid(capa, tb[NL80211_ATTR_MBSSID_CONFIG]);
  
@@ -90,33 +82,3 @@ index 8693d7f..b4f1f5e 100644
  	if (tb[NL80211_ATTR_MLO_SUPPORT])
  		capa->flags2 |= WPA_DRIVER_FLAGS2_MLO;
  
-diff --git a/src/drivers/nl80211_copy.h b/src/drivers/nl80211_copy.h
-index 8bd1f69..ce325cf 100644
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -3378,7 +3378,11 @@ enum nl80211_attrs {
- 
-        NL80211_ATTR_AWGN_INTERFERENCE_BITMAP,
- 
--	/* add attributes here, update the policy in nl80211.c */
-+	NL80211_ATTR_RU_PUNCT_SUPP_BW,
-+	NL80211_ATTR_RU_PUNCT_SUPP_HE,
-+	NL80211_ATTR_RU_PUNCT_BITMAP,
-+
-+/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
- 	NUM_NL80211_ATTR = __NL80211_ATTR_AFTER_LAST,
-@@ -7901,4 +7905,12 @@ enum nl80211_beacon_tx_mode {
-        NL80211_BEACON_STAGGERED_MODE = 1,
-        NL80211_BEACON_BURST_MODE = 2,
- };
-+
-+enum nl80211_ru_punct_supp_bw {
-+	NL80211_RU_PUNCT_NOT_SUPP,
-+	NL80211_RU_PUNCT_SUPP_BW_80,
-+	NL80211_RU_PUNCT_SUPP_BW_160,
-+	NL80211_RU_PUNCT_SUPP_BW_320,
-+};
-+
- #endif /* __LINUX_NL80211_H */

@@ -12,11 +12,9 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
  wpa_supplicant/wpa_supplicant.c | 30 ++++++++++++++++++++++++++++++
  1 file changed, 30 insertions(+)
 
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index d3cf414..59d445f 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1318,6 +1318,11 @@ struct wpa_driver_associate_params {
+@@ -1358,6 +1358,11 @@ struct wpa_driver_associate_params {
  	enum sae_pwe sae_pwe;
  
  	/**
@@ -28,51 +26,43 @@ index d3cf414..59d445f 100644
  	 * disable_eht - Disable EHT for this connection
  	 */
  	int disable_eht;
-diff --git a/wpa_supplicant/config.c b/wpa_supplicant/config.c
-index 0cb727e..44f85d3 100644
 --- a/wpa_supplicant/config.c
 +++ b/wpa_supplicant/config.c
-@@ -2878,6 +2878,7 @@ static const struct parse_data ssid_fields[] = {
+@@ -2853,6 +2853,7 @@ static const struct parse_data ssid_fiel
  	{ INT_RANGE(beacon_prot, 0, 1) },
  	{ INT_RANGE(transition_disable, 0, 255) },
  	{ INT_RANGE(sae_pk, 0, 2) },
 +	{ INT_RANGE(disable_40mhz_scan, 0, 1)},
  	{ INT_RANGE(disable_eht, 0, 1)},
  	{ INT_RANGE(enable_4addr_mode, 0, 1)},
- };
-diff --git a/wpa_supplicant/config_file.c b/wpa_supplicant/config_file.c
-index 8615ca4..b758789 100644
+ 	{ INT_RANGE(max_idle, 0, 65535)},
 --- a/wpa_supplicant/config_file.c
 +++ b/wpa_supplicant/config_file.c
-@@ -898,6 +898,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
+@@ -904,6 +904,7 @@ static void wpa_config_write_network(FIL
  	INT(disable_he);
  #endif /* CONFIG_HE_OVERRIDES */
  	INT(disable_eht);
 +	INT(disable_40mhz_scan);
  	INT(enable_4addr_mode);
+ 	INT(max_idle);
  
- #undef STR
-diff --git a/wpa_supplicant/config_ssid.h b/wpa_supplicant/config_ssid.h
-index 507d838..e3ee84f 100644
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
-@@ -1261,6 +1261,11 @@ struct wpa_ssid {
+@@ -1262,6 +1262,11 @@ struct wpa_ssid {
  	enum sae_pwe sae_pwe;
  
  	/**
 +	  * disable_40mhz_scan - Disable 40MHz coex scan
 +	  */
-+	 int disable_40mhz_scan;
-+ 
++	int disable_40mhz_scan;
++
 +	 /**
  	 * disable_eht - Disable EHT (IEEE 802.11be) for this network
  	 *
  	 * By default, use it if it is available, but this can be configured
-diff --git a/wpa_supplicant/wpa_cli.c b/wpa_supplicant/wpa_cli.c
-index 7ba7955..105a669 100644
 --- a/wpa_supplicant/wpa_cli.c
 +++ b/wpa_supplicant/wpa_cli.c
-@@ -1503,7 +1503,8 @@ static const char *network_fields[] = {
+@@ -1510,7 +1510,8 @@ static const char *network_fields[] = {
  #ifdef CONFIG_HS20
  	"update_identifier",
  #endif /* CONFIG_HS20 */
@@ -82,11 +72,9 @@ index 7ba7955..105a669 100644
  };
  
  
-diff --git a/wpa_supplicant/wpa_supplicant.c b/wpa_supplicant/wpa_supplicant.c
-index 73418a4..0fe7fa1 100644
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -2692,6 +2692,56 @@ static int drv_supports_vht(struct wpa_supplicant *wpa_s,
+@@ -2698,6 +2698,56 @@ static int drv_supports_vht(struct wpa_s
  	return mode->vht_capab != 0;
  }
  
@@ -124,7 +112,7 @@ index 73418a4..0fe7fa1 100644
 +		return;
 +	}
 +
-+	scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL, 0);
++	scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL, 0, NULL);
 +	if (scan_res == NULL)
 +		goto HE20;
 +
@@ -143,37 +131,16 @@ index 73418a4..0fe7fa1 100644
  
  static bool ibss_mesh_is_80mhz_avail(int channel, struct hostapd_hw_modes *mode, bool dfs_enabled)
  {
-@@ -3090,7 +3140,7 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
- 	struct hostapd_hw_modes *mode = NULL;
- 	int i, obss_scan = !(ssid->noscan);
- 	u8 channel;
--	bool is_6ghz;
-+	bool is_6ghz, is_24ghz;
- 	bool dfs_enabled = wpa_s->conf->country[0] && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_RADAR);
- 
- 	freq->freq = ssid->frequency;
-@@ -3124,6 +3174,9 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
- 	if (!mode)
- 		return;
- 
-+	 is_24ghz = hw_mode == HOSTAPD_MODE_IEEE80211G ||
-+		  hw_mode == HOSTAPD_MODE_IEEE80211B;
-+
- 	is_6ghz = is_6ghz_freq(freq->freq);
- 
- 	freq->ht_enabled = 0;
-@@ -3138,6 +3191,9 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
- 	if (freq->vht_enabled || is_6ghz)
+@@ -3148,6 +3198,9 @@ void ibss_mesh_setup_freq(struct wpa_sup
+ 	if (freq->vht_enabled || (freq->ht_enabled && is_24ghz) || is_6ghz)
  		freq->he_enabled = ibss_mesh_can_use_he(wpa_s, ssid, mode,
  							ieee80211_mode);
 +	 if(is_24ghz)
 +		ibss_mesh_setup_2G_he40(freq, mode, wpa_s,
 +					 ssid, ieee80211_mode);
  	freq->channel = channel;
- 	/* Setup higher BW only for 5 GHz */
- 	if (mode->mode == HOSTAPD_MODE_IEEE80211A) {
-diff --git a/wpa_supplicant/wpa_supplicant.conf b/wpa_supplicant/wpa_supplicant.conf
-index 5996217..41eb114 100644
+ 	if (mode->mode == HOSTAPD_MODE_IEEE80211G && ssid->noscan)
+ 		ibss_mesh_select_40mhz(wpa_s, ssid, mode, freq, obss_scan, dfs_enabled);
 --- a/wpa_supplicant/wpa_supplicant.conf
 +++ b/wpa_supplicant/wpa_supplicant.conf
 @@ -158,6 +158,9 @@ ap_scan=1
@@ -186,7 +153,7 @@ index 5996217..41eb114 100644
  # Accept/deny lists are read from separate files (containing list of
  # MAC addresses, one per line). Use absolute path name to make sure that the
  # files can be read on SIGHUP configuration reloads.
-@@ -2038,6 +2041,15 @@ network={
+@@ -2063,6 +2066,15 @@ network={
  	psk="very secret passphrase"
  }
  

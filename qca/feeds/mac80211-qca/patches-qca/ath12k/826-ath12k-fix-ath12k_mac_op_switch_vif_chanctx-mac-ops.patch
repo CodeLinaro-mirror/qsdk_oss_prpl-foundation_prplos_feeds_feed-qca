@@ -25,13 +25,15 @@ currently not supported, handle it accordingly and return operation not supporte
 to upper layer.
 
 Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
+Co-developed-by: Aloka Dixit <quic_alokad@quicinc.com>
+Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 ---
  drivers/net/wireless/ath/ath12k/mac.c | 92 +++++++++++++++++++++++----
  1 file changed, 79 insertions(+), 13 deletions(-)
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -12365,6 +12365,10 @@ ath12k_mac_process_update_vif_chan(struc
+@@ -12491,6 +12491,10 @@ ath12k_mac_process_update_vif_chan(struc
  
  	lockdep_assert_held(&ar->conf_mutex);
  
@@ -42,15 +44,15 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (ath12k_wmi_is_mvr_supported(ab))
  		ath12k_mac_update_vif_chan_mvr(ar, vifs, n_vifs);
  	else
-@@ -13332,36 +13336,82 @@ ath12k_mac_op_switch_vif_chanctx(struct
+@@ -13552,36 +13556,78 @@ ath12k_mac_op_switch_vif_chanctx(struct
  				 int n_vifs,
  				 enum ieee80211_chanctx_switch_mode mode)
  {
 -	struct ath12k *ar;
 +	struct ath12k_hw *ah = hw->priv;
 +	struct ath12k *curr_ar, *new_ar, *ar;
-+	struct ieee80211_chanctx_conf *prev_ctx, *curr_ctx;
-+	int i, ret = 0, idx;
++	struct ieee80211_chanctx_conf *curr_ctx;
++	int i, ret = 0, next_ctx_idx = 0;
  
 -	/* TODO Swiching a vif between two radios require deleting of vdev
 +	mutex_lock(&ah->conf_mutex);
@@ -65,6 +67,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 -	if (vifs->old_ctx->def.chan->band != vifs->new_ctx->def.chan->band) {
 -		WARN_ON(1);
 -		return -EINVAL;
+-	}
 +	for (i = 0; i < n_vifs; i++) {
 +		if (vifs[i].old_ctx->def.chan->band !=
 +		    vifs[i].new_ctx->def.chan->band) {
@@ -72,7 +75,12 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +			ret = -EINVAL;
 +			break;
 +		}
-+
+ 
+-	ar = ath12k_get_ar_by_ctx(hw, vifs->old_ctx);
+-	if (!ar) {
+-		ath12k_err(NULL,
+-			   "unable to determine device for the passed channel ctx\n");
+-		return -EINVAL;
 +		curr_ar = ath12k_get_ar_by_ctx(hw, vifs[i].old_ctx);
 +		new_ar = ath12k_get_ar_by_ctx(hw, vifs[i].new_ctx);
 +		if (!curr_ar || !new_ar) {
@@ -97,46 +105,39 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +		}
  	}
  
--	ar = ath12k_get_ar_by_ctx(hw, vifs->old_ctx);
--	if (!ar) {
--		ath12k_err(NULL,
--			   "unable to determine device for the passed channel ctx\n");
--		return -EINVAL;
+-	mutex_lock(&ar->conf_mutex);
 +	if (ret)
 +		goto unlock;
-+
-+	prev_ctx = vifs[0].old_ctx;
-+	idx = 0;
-+
-+	for (i = 1; i < n_vifs; i++) {
-+		curr_ctx = vifs[i].old_ctx;
-+
-+		if (curr_ctx != prev_ctx) {
-+			ar = ath12k_get_ar_by_ctx(hw, prev_ctx);
-+			mutex_lock(&ar->conf_mutex);
-+			ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
-+				   "mac chanctx switch n_vifs %d mode %d\n",
-+				   i - idx, mode);
-+			ath12k_mac_process_update_vif_chan(ar, vifs + idx, i - idx);
-+			mutex_unlock(&ar->conf_mutex);
-+			prev_ctx = curr_ctx;
-+			idx = i;
-+		}
- 	}
  
-+	ar = ath12k_get_ar_by_ctx(hw, prev_ctx);
- 	mutex_lock(&ar->conf_mutex);
--
- 	ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
- 		   "mac chanctx switch n_vifs %d mode %d\n",
+-	ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
+-		   "mac chanctx switch n_vifs %d mode %d\n",
 -		   n_vifs, mode);
 -	ath12k_mac_process_update_vif_chan(ar, vifs, n_vifs);
--
-+		   i - idx, mode);
-+	ath12k_mac_process_update_vif_chan(ar, vifs + idx, i - idx);
- 	mutex_unlock(&ar->conf_mutex);
++	/* List of vifs contains data grouped by the band, example: All 2 GHz vifs
++	 * ready to be switched to new context followed by all 5 GHz. The order of
++	 * bands is not fixed. Send MVR when the loop processes the last vif
++	 * for a particular band.
++	 */
++	for (i = 0; i < n_vifs; i++) {
++		curr_ctx = vifs[i].old_ctx;
++		ar = ath12k_get_ar_by_ctx(hw, curr_ctx);
+ 
+-	mutex_unlock(&ar->conf_mutex);
++		if ((i + 1 < n_vifs) && (vifs[i + 1].old_ctx == curr_ctx))
++			continue;
  
 -	return 0;
++		mutex_lock(&ar->conf_mutex);
++		ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
++			   "mac chanctx switch n_vifs %d mode %d\n",
++			   i - next_ctx_idx + 1, mode);
++		ath12k_mac_process_update_vif_chan(ar, vifs + next_ctx_idx,
++						   i - next_ctx_idx + 1);
++		mutex_unlock(&ar->conf_mutex);
++
++		next_ctx_idx = i + 1;
++	}
++
 +unlock:
 +	mutex_unlock(&ah->conf_mutex);
 +	return ret;

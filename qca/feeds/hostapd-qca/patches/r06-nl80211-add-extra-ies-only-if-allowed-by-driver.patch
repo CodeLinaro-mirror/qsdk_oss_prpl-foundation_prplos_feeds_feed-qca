@@ -31,27 +31,11 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  src/drivers/driver_nl80211_scan.c | 2 +-
  3 files changed, 8 insertions(+), 1 deletion(-)
 
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index a5f002c..5f94a3d 100644
---- a/src/drivers/driver.h
-+++ b/src/drivers/driver.h
-@@ -2414,6 +2414,9 @@ struct wpa_driver_capa {
- 	/** Maximum number of iterations in a single scan plan */
- 	u32 max_sched_scan_plan_iterations;
- 
-+	/** Maximum number of extra IE bytes for scans */
-+	u16 max_scan_ie_len;
-+
- 	/** Whether sched_scan (offloaded scanning) is supported */
- 	int sched_scan_supported;
- 
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index 179efe0..864778e 100644
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -953,6 +953,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
- 			nla_get_u32(tb[NL80211_ATTR_MAX_SCAN_PLAN_ITERATIONS]);
- 	}
+@@ -984,6 +984,10 @@ static int wiphy_info_handler(struct nl_
+ 		capa->max_scan_ie_len =
+ 			nla_get_u16(tb[NL80211_ATTR_MAX_SCAN_IE_LEN]);
  
 +	if (tb[NL80211_ATTR_MAX_SCAN_IE_LEN])
 +		capa->max_scan_ie_len =
@@ -60,19 +44,14 @@ index 179efe0..864778e 100644
  	if (tb[NL80211_ATTR_MAX_MATCH_SETS])
  		capa->max_match_sets =
  			nla_get_u8(tb[NL80211_ATTR_MAX_MATCH_SETS]);
-diff --git a/src/drivers/driver_nl80211_scan.c b/src/drivers/driver_nl80211_scan.c
-index ad3b899..71971f2 100644
 --- a/src/drivers/driver_nl80211_scan.c
 +++ b/src/drivers/driver_nl80211_scan.c
-@@ -231,7 +231,7 @@ nl80211_scan_common(struct i802_bss *bss, u8 cmd,
- 		wpa_printf(MSG_DEBUG, "nl80211: Passive scan requested");
+@@ -1233,7 +1233,7 @@ int wpa_driver_nl80211_vendor_scan(struc
+ 		nla_nest_end(msg, ssids);
  	}
  
 -	if (params->extra_ies) {
 +	if (params->extra_ies && drv->capa.max_scan_ie_len >= params->extra_ies_len) {
  		wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan extra IEs",
  			    params->extra_ies, params->extra_ies_len);
- 		wpa_printf(MSG_DEBUG,
--- 
-2.17.1
-
+ 		if (nla_put(msg, QCA_WLAN_VENDOR_ATTR_SCAN_IE,

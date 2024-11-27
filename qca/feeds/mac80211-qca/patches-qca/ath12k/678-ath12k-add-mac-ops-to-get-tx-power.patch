@@ -89,7 +89,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 @@ -819,6 +816,12 @@ struct ath12k {
  
  	struct completion mlo_setup_done;
- 	u32 mlo_setup_status;	
+ 	u32 mlo_setup_status;
 +
 +	struct ath12k_fw_stats fw_stats;
 +	struct completion fw_stats_complete;
@@ -99,7 +99,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  };
  
  struct ath12k_hw {
-@@ -1246,6 +1249,11 @@ void ath12k_core_put_hw_group(struct ath
+@@ -1290,6 +1293,11 @@ void ath12k_core_put_hw_group(struct ath
  
  const struct firmware *ath12k_core_firmware_request(struct ath12k_base *ab,
  						    const char *filename);
@@ -270,9 +270,9 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 -	reinit_completion(&ar->debug.fw_stats_complete);
 +	reinit_completion(&ar->fw_stats_complete);
  
- 	ret = ath12k_wmi_send_stats_request_cmd(ar, req_param);
- 
-@@ -213,7 +146,7 @@ static int ath12k_debugfs_fw_stats_reque
+ 	ret = ath12k_wmi_send_stats_request_cmd(ar, req_param->stats_id,
+ 						req_param->vdev_id, req_param->pdev_id);
+@@ -214,7 +147,7 @@ static int ath12k_debugfs_fw_stats_reque
  	}
  
  	time_left =
@@ -281,7 +281,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  				    1 * HZ);
  	if (!time_left)
  		return -ETIMEDOUT;
-@@ -223,7 +156,7 @@ static int ath12k_debugfs_fw_stats_reque
+@@ -224,7 +157,7 @@ static int ath12k_debugfs_fw_stats_reque
  			break;
  
  		spin_lock_bh(&ar->data_lock);
@@ -290,7 +290,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  			spin_unlock_bh(&ar->data_lock);
  			break;
  		}
-@@ -263,7 +196,7 @@ static int ath12k_open_pdev_stats(struct
+@@ -264,7 +197,7 @@ static int ath12k_open_pdev_stats(struct
  		goto err_free;
  	}
  
@@ -299,7 +299,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  				 buf);
  
  	file->private_data = buf;
-@@ -335,7 +268,7 @@ static int ath12k_open_vdev_stats(struct
+@@ -336,7 +269,7 @@ static int ath12k_open_vdev_stats(struct
  		goto err_free;
  	}
  
@@ -308,7 +308,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  				 buf);
  
  	file->private_data = buf;
-@@ -413,14 +346,14 @@ static int ath12k_open_bcn_stats(struct
+@@ -414,14 +347,14 @@ static int ath12k_open_bcn_stats(struct
  		}
  	}
  
@@ -325,7 +325,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	spin_unlock_bh(&ar->data_lock);
  
  	file->private_data = buf;
-@@ -474,12 +407,12 @@ static ssize_t ath12k_write_enable_vdev_
+@@ -475,12 +408,12 @@ static ssize_t ath12k_write_enable_vdev_
  
  	mutex_lock(&ar->conf_mutex);
  
@@ -340,7 +340,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	ret = count;
  
  out:
-@@ -498,7 +431,7 @@ static ssize_t ath12k_read_enable_vdev_s
+@@ -499,7 +432,7 @@ static ssize_t ath12k_read_enable_vdev_s
  
  	mutex_lock(&ar->conf_mutex);
  	len = scnprintf(buf, sizeof(buf) - len, "%u\n",
@@ -349,7 +349,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	mutex_unlock(&ar->conf_mutex);
  
  	return simple_read_from_buffer(ubuf, count, ppos, buf, len);
-@@ -1301,7 +1234,7 @@ void ath12k_debugfs_fw_stats_init(struct
+@@ -1302,7 +1235,7 @@ void ath12k_debugfs_fw_stats_init(struct
  	struct dentry *fwstats_dir = debugfs_create_dir("fw_stats",
  							ar->debug.debugfs_pdev);
  
@@ -358,7 +358,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  	/* all stats debugfs files created are under "fw_stats" directory
  	 * created per PDEV
-@@ -1315,11 +1248,6 @@ void ath12k_debugfs_fw_stats_init(struct
+@@ -1316,11 +1249,6 @@ void ath12k_debugfs_fw_stats_init(struct
  	debugfs_create_file("en_vdev_stats_ol", 0600, fwstats_dir, ar,
  			    &fops_vdev_stats_offload);
  
@@ -372,7 +372,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  static int ath12k_pktlog_enable_hybrid_mode(struct ath12k *ar, u32 filter,
 --- a/drivers/net/wireless/ath/ath12k/debugfs.h
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.h
-@@ -200,7 +200,8 @@ int ath12k_debugfs_register(struct ath12
+@@ -208,7 +208,8 @@ int ath12k_debugfs_register(struct ath12
  void ath12k_debugfs_unregister(struct ath12k *ar);
  int ath12k_debugfs_create(void);
  void ath12k_debugfs_destroy(void);
@@ -382,7 +382,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  void ath12k_debugfs_fw_stats_init(struct ath12k *ar);
  
-@@ -275,8 +276,8 @@ static inline void ath12k_debugfs_unregi
+@@ -283,8 +284,8 @@ static inline void ath12k_debugfs_unregi
  {
  }
  
@@ -395,7 +395,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -8251,6 +8251,7 @@ static int ath12k_mac_radio_start(struct
+@@ -8220,6 +8220,7 @@ static int ath12k_mac_radio_start(struct
  	ar->num_created_vdevs = 0;
  	ar->num_peers = 0;
  	ar->allocated_vdev_map = 0;
@@ -403,7 +403,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
  	spin_lock_bh(&ar->data_lock);
          ar->awgn_intf_handling_in_prog = false;
-@@ -8679,7 +8680,7 @@ static int ath12k_mac_vdev_create(struct
+@@ -8648,7 +8649,7 @@ static int ath12k_mac_vdev_create(struct
  	/* Send vdev stats offload commands to firmware before first vdev
  	 * creation. ie., when num_created_vdevs = 0
  	 */
@@ -412,7 +412,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		ret = ath12k_dp_tx_htt_h2t_vdev_stats_ol_req(ar, 0);
  		if (ret) {
  			ath12k_warn(ar->ab, "failed to request vdev stats offload: %d\n", ret);
-@@ -9339,6 +9340,7 @@ static int ath12k_mac_op_add_chanctx(str
+@@ -9308,6 +9309,7 @@ static int ath12k_mac_op_add_chanctx(str
  	ar->rx_channel = ctx->def.chan;
  	spin_unlock_bh(&ar->data_lock);
  
@@ -420,7 +420,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	mutex_unlock(&ar->conf_mutex);
  
  	return 0;
-@@ -9370,6 +9372,7 @@ static void ath12k_mac_op_remove_chanctx
+@@ -9339,6 +9341,7 @@ static void ath12k_mac_op_remove_chanctx
  	ar->rx_channel = NULL;
  	spin_unlock_bh(&ar->data_lock);
  
@@ -428,7 +428,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	mutex_unlock(&ar->conf_mutex);
  }
  
-@@ -9960,6 +9963,7 @@ static void ath12k_mac_update_rx_channel
+@@ -9930,6 +9933,7 @@ static void ath12k_mac_update_rx_channel
                  ar->rx_channel = NULL;
          }
          rcu_read_unlock();
@@ -436,7 +436,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  }
  
  static void
-@@ -12234,6 +12238,128 @@ static void ath12k_mac_op_sta_statistics
+@@ -12298,6 +12302,128 @@ static void ath12k_mac_op_sta_statistics
  	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL);
  }
  
@@ -565,7 +565,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  static const struct ieee80211_ops ath12k_ops = {
  	.tx				= ath12k_mac_op_tx,
  	.wake_tx_queue			= ieee80211_handle_wake_tx_queue,
-@@ -12276,6 +12402,7 @@ static const struct ieee80211_ops ath12k
+@@ -12340,6 +12466,7 @@ static const struct ieee80211_ops ath12k
  #ifdef CPTCFG_ATH12K_DEBUGFS
  	.sta_add_debugfs		= ath12k_debugfs_sta_op_add,
  #endif
@@ -573,7 +573,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  };
  
  static void ath12k_mac_update_ch_list(struct ath12k *ar,
-@@ -13011,6 +13138,11 @@ static int ath12k_mac_hw_register(struct
+@@ -13065,6 +13192,11 @@ static int ath12k_mac_hw_register(struct
  			goto err_unregister_hw;
  		}
  
@@ -599,7 +599,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  void ath12k_mac_ap_ps_recalc(struct ath12k *ar);
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7995,7 +7995,52 @@ static void ath12k_peer_assoc_conf_event
+@@ -8166,7 +8166,52 @@ static void ath12k_peer_assoc_conf_event
  
  static void ath12k_update_stats_event(struct ath12k_base *ab, struct sk_buff *skb)
  {
@@ -655,8 +655,8 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  /* PDEV_CTL_FAILSAFE_CHECK_EVENT is received from FW when the frequency scanned
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -4211,6 +4211,12 @@ struct wmi_peer_assoc_complete_cmd {
- 	struct wmi_ppe_threshold peer_eht_ppet;
+@@ -4244,6 +4244,12 @@ struct wmi_peer_assoc_complete_cmd {
+ 	struct ath12k_wmi_ppe_threshold_params peer_eht_ppet;
  } __packed;
  
 +struct stats_request_params {
@@ -668,3 +668,12 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  struct wmi_stop_scan_cmd {
  	__le32 tlv_header;
  	__le32 requestor;
+@@ -6173,6 +6179,8 @@ int ath12k_wmi_vdev_install_key(struct a
+ 				struct wmi_vdev_install_key_arg *arg);
+ int ath12k_wmi_pdev_bss_chan_info_request(struct ath12k *ar,
+ 					  enum wmi_bss_chan_info_req_type type);
++int ath12k_wmi_send_stats_request_cmd(struct ath12k *ar, u32 stats_id,
++				      u32 vdev_id, u32 pdev_id);
+ int ath12k_wmi_send_pdev_temperature_cmd(struct ath12k *ar);
+ int ath12k_wmi_send_peer_flush_tids_cmd(struct ath12k *ar,
+ 					u8 peer_addr[ETH_ALEN],

@@ -91,7 +91,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	u32 aid;
  	u8 bssid[ETH_ALEN];
  	struct cfg80211_bitrate_mask bitrate_mask;
-@@ -621,6 +623,9 @@ struct ath12k {
+@@ -622,6 +624,9 @@ struct ath12k {
  	struct ath12k_debug debug;
  #endif
  
@@ -123,7 +123,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	bool supports_monitor:1;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -2695,6 +2695,9 @@ static int ath12k_start_scan(struct ath1
+@@ -2906,6 +2906,9 @@ static int ath12k_start_scan(struct ath1
  
  	lockdep_assert_held(&ar->conf_mutex);
  
@@ -355,6 +355,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +	arvif->spectral_enabled = (mode != ATH12K_SPECTRAL_DISABLED);
 +	ar->spectral.mode = mode;
 +
++	if (mode == ATH12K_SPECTRAL_DISABLED)
++		return 0;
++
 +	ret = ath12k_wmi_vdev_spectral_enable(ar, arvif->vdev_id,
 +					      ATH12K_WMI_SPECTRAL_TRIGGER_CMD_CLEAR,
 +					      ATH12K_WMI_SPECTRAL_ENABLE_CMD_DISABLE);
@@ -362,9 +365,6 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +		ath12k_warn(ar->ab, "failed to enable spectral scan: %d\n", ret);
 +		return ret;
 +	}
-+
-+	if (mode == ATH12K_SPECTRAL_DISABLED)
-+		return 0;
 +
 +	if (mode == ATH12K_SPECTRAL_BACKGROUND)
 +		count = ATH12K_WMI_SPECTRAL_COUNT_DEFAULT;
@@ -1250,16 +1250,6 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +
 +#endif /* CPTCFG_ATH12K_SPECTRAL */
 +#endif /* ATH12K_SPECTRAL_H */
---- a/local-symbols
-+++ b/local-symbols
-@@ -181,6 +181,7 @@ ATH12K_DEBUGFS=
- ATH12K_TRACING=
- ATH12K_PPE_DS_SUPPORT=
- ATH12K_BONDED_DS_SUPPORT=
-+ATH12K_SPECTRAL=
- WLAN_VENDOR_ATMEL=
- ATMEL=
- PCI_ATMEL=
 --- a/drivers/net/wireless/ath/spectral_common.h
 +++ b/drivers/net/wireless/ath/spectral_common.h
 @@ -24,6 +24,7 @@
@@ -1280,7 +1270,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  };
  
  struct fft_sample_tlv {
-@@ -126,4 +128,20 @@ struct fft_sample_ath11k {
+@@ -127,4 +129,20 @@ struct fft_sample_ath11k {
  	u8 data[];
  } __packed;
  
@@ -1301,3 +1291,13 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +} __packed;
 +
  #endif /* SPECTRAL_COMMON_H */
+--- a/local-symbols
++++ b/local-symbols
+@@ -184,6 +184,7 @@ ATH12K_DEBUG=
+ ATH12K_DEBUGFS=
+ ATH12K_TRACING=
+ ATH12K_PPE_DS_SUPPORT=
++ATH12K_SPECTRAL=
+ WLAN_VENDOR_ATMEL=
+ ATMEL=
+ PCI_ATMEL=

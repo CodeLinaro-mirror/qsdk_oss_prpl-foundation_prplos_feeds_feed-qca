@@ -115,7 +115,7 @@
  #endif /* _ATH11K_DEBUGFS_H_ */
 --- a/drivers/net/wireless/ath/ath11k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath11k/dp_rx.c
-@@ -1585,8 +1585,10 @@ static int ath11k_htt_pull_ppdu_stats(st
+@@ -1582,8 +1582,10 @@ static int ath11k_htt_pull_ppdu_stats(st
  		goto out;
  	}
  
@@ -127,15 +127,16 @@
  
  	spin_lock_bh(&ar->data_lock);
  	ppdu_info = ath11k_dp_htt_get_ppdu_desc(ar, ppdu_id);
-@@ -1629,6 +1631,7 @@ static void ath11k_htt_pktlog(struct ath
+@@ -1629,7 +1631,7 @@ static void ath11k_htt_pktlog(struct ath
  
  	trace_ath11k_htt_pktlog(ar, data->payload, hdr->size,
  				ar->ab->pktlog_defs_checksum);
+-
 +	ath11k_htt_pktlog_process(ar, (u8 *)data->payload);
+ out:
+ 	rcu_read_unlock();
  }
- 
- static void ath11k_htt_backpressure_event_handler(struct ath11k_base *ab,
-@@ -5217,6 +5220,8 @@ int ath11k_dp_rx_process_mon_status(stru
+@@ -5210,6 +5212,8 @@ int ath11k_dp_rx_process_mon_status(stru
  		} else if (ath11k_debugfs_is_pktlog_rx_stats_enabled(ar)) {
  			log_type = ATH11K_PKTLOG_TYPE_RX_STATBUF;
  			rx_buf_sz = DP_RX_BUFFER_SIZE;
@@ -144,8 +145,8 @@
  		} else {
  			log_type = ATH11K_PKTLOG_TYPE_INVALID;
  			rx_buf_sz = 0;
-@@ -5258,8 +5263,11 @@ int ath11k_dp_rx_process_mon_status(stru
- 		arsta = (struct ath11k_sta *)peer->sta->drv_priv;
+@@ -5251,8 +5255,11 @@ int ath11k_dp_rx_process_mon_status(stru
+ 		arsta = ath11k_sta_to_arsta(peer->sta);
  		ath11k_dp_rx_update_peer_stats(arsta, ppdu_info);
  
 -		if (ath11k_debugfs_is_pktlog_peer_valid(ar, peer->addr))

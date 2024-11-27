@@ -17,11 +17,9 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  net/wireless/nl80211.c       | 13 +++++++++++++
  3 files changed, 21 insertions(+)
 
-diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index 0c62d08..25367da 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -1209,11 +1209,13 @@ struct cfg80211_crypto_settings {
+@@ -1303,11 +1303,13 @@ struct cfg80211_crypto_settings {
   * struct cfg80211_mbssid_config - AP settings for multi bssid
   *
   * @tx_wdev: pointer to the transmitted interface in the MBSSID set
@@ -35,35 +33,9 @@ index 0c62d08..25367da 100644
  	u8 index;
  	bool ema;
  };
-diff --git a/include/uapi/linux/nl80211.h b/include/uapi/linux/nl80211.h
-index 40917db..cb637e3 100644
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -7919,6 +7919,11 @@ enum nl80211_sar_specs_attrs {
-  *	Setting this flag is permitted only if the driver advertises EMA support
-  *	by setting wiphy->ema_max_profile_periodicity to non-zero.
-  *
-+ * @NL80211_MBSSID_CONFIG_ATTR_TX_LINK_ID: Mandatory parameter for a non-transmitted profile
-+ *	which provides the interface index (u32) of the transmitted profile which
-+ * 	is an MLD. The link id must be valid in the wdev of given Transmitting interface
-+ * 	index.
-+ *
-  * @__NL80211_MBSSID_CONFIG_ATTR_LAST: Internal
-  * @NL80211_MBSSID_CONFIG_ATTR_MAX: highest attribute
-  */
-@@ -7930,6 +7935,7 @@ enum nl80211_mbssid_config_attributes {
- 	NL80211_MBSSID_CONFIG_ATTR_INDEX,
- 	NL80211_MBSSID_CONFIG_ATTR_TX_IFINDEX,
- 	NL80211_MBSSID_CONFIG_ATTR_EMA,
-+	NL80211_MBSSID_CONFIG_ATTR_TX_LINK_ID,
- 
- 	/* keep last */
- 	__NL80211_MBSSID_CONFIG_ATTR_LAST,
-diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-index 06cbfba..2fac612 100644
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -476,6 +476,8 @@ nl80211_mbssid_config_policy[NL80211_MBSSID_CONFIG_ATTR_MAX + 1] = {
+@@ -470,6 +470,8 @@ nl80211_mbssid_config_policy[NL80211_MBS
  	[NL80211_MBSSID_CONFIG_ATTR_INDEX] = { .type = NLA_U8 },
  	[NL80211_MBSSID_CONFIG_ATTR_TX_IFINDEX] = { .type = NLA_U32 },
  	[NL80211_MBSSID_CONFIG_ATTR_EMA] = { .type = NLA_FLAG },
@@ -72,7 +44,7 @@ index 06cbfba..2fac612 100644
  };
  
  static const struct nla_policy
-@@ -5855,6 +5857,7 @@ static int nl80211_parse_mbssid_config(struct wiphy *wiphy,
+@@ -5918,6 +5920,7 @@ static int nl80211_parse_mbssid_config(s
  				       u8 num_elems)
  {
  	struct nlattr *tb[NL80211_MBSSID_CONFIG_ATTR_MAX + 1];
@@ -80,7 +52,7 @@ index 06cbfba..2fac612 100644
  
  	if (!wiphy->mbssid_max_interfaces)
  		return -EOPNOTSUPP;
-@@ -5864,6 +5867,7 @@ static int nl80211_parse_mbssid_config(struct wiphy *wiphy,
+@@ -5927,6 +5930,7 @@ static int nl80211_parse_mbssid_config(s
  	    !tb[NL80211_MBSSID_CONFIG_ATTR_INDEX])
  		return -EINVAL;
  
@@ -88,7 +60,7 @@ index 06cbfba..2fac612 100644
  	config->ema = nla_get_flag(tb[NL80211_MBSSID_CONFIG_ATTR_EMA]);
  	if (config->ema) {
  		if (!wiphy->ema_max_profile_periodicity)
-@@ -5908,6 +5912,15 @@ static int nl80211_parse_mbssid_config(struct wiphy *wiphy,
+@@ -5971,6 +5975,15 @@ static int nl80211_parse_mbssid_config(s
  		return -EINVAL;
  	}
  
@@ -104,6 +76,3 @@ index 06cbfba..2fac612 100644
  	return 0;
  }
  
--- 
-2.17.1
-

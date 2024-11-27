@@ -21,7 +21,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
 
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -2534,7 +2534,8 @@ struct ieee80211_channel
+@@ -2594,7 +2594,8 @@ struct ieee80211_channel
  bool ieee80211_chandef_he_6ghz_oper(struct ieee80211_sub_if_data *sdata,
  				    const struct ieee80211_he_operation *he_oper,
  				    const struct ieee80211_eht_operation *eht_oper,
@@ -33,7 +33,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  ieee80211_conn_flags_t ieee80211_chandef_downgrade(struct cfg80211_chan_def *c);
 --- a/net/mac80211/mesh.c
 +++ b/net/mac80211/mesh.c
-@@ -105,7 +105,7 @@ bool mesh_matches_local(struct ieee80211
+@@ -108,7 +108,7 @@ bool mesh_matches_local(struct ieee80211
  				   ie->vht_operation, ie->ht_operation,
  				   &sta_chan_def);
  	ieee80211_chandef_he_6ghz_oper(sdata, ie->he_operation, ie->eht_operation,
@@ -44,7 +44,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  	 * Peers advertising different puncturing pattern.
 --- a/net/mac80211/mlme.c
 +++ b/net/mac80211/mlme.c
-@@ -163,6 +163,7 @@ ieee80211_determine_chantype(struct ieee
+@@ -237,6 +237,7 @@ ieee80211_determine_chantype(struct ieee
  	const struct ieee80211_sta_eht_cap *eht_cap;
  	const struct ieee80211_sta_he_cap *he_cap;
  	enum nl80211_iftype iftype = ieee80211_vif_type_p2p(&sdata->vif);
@@ -52,7 +52,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  
  	memset(chandef, 0, sizeof(struct cfg80211_chan_def));
  	chandef->chan = channel;
-@@ -171,8 +172,10 @@ ieee80211_determine_chantype(struct ieee
+@@ -245,8 +246,10 @@ ieee80211_determine_chantype(struct ieee
  	chandef->freq1_offset = channel->freq_offset;
  
  	if (channel->band == NL80211_BAND_6GHZ) {
@@ -80,13 +80,13 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
 +	struct ieee80211_eht_operation_info *eht_oper_info;
  	int secondary_channel_offset = -1;
  	u8 new_seg0, new_seg1, new_chan_width;
- 
-@@ -153,50 +153,57 @@ int ieee80211_parse_ch_switch_ie(struct
+ 	struct ieee80211_he_6ghz_oper *csa_he_6ghz_oper;
+@@ -154,64 +154,72 @@ int ieee80211_parse_ch_switch_ie(struct
  		new_seg1 = wide_bw_chansw_ie->new_center_freq_seg1;
  		new_chan_width = wide_bw_chansw_ie->new_channel_width;
  		if (new_band == NL80211_BAND_6GHZ) {
 -			he_6ghz_oper.primary = new_chan_no;
-+			he_oper = kmalloc(sizeof(*he_oper) +
++			he_oper = kzalloc(sizeof(*he_oper) +
 +					  sizeof(*he_6ghz_oper), GFP_KERNEL);
 +			if (!he_oper)
 +				return -ENOMEM;
@@ -100,15 +100,13 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  			else if (new_chan_width == IEEE80211_CHANWIDTH_80MHZ)
 -				he_6ghz_oper.control = IEEE80211_HE_6GHZ_OPER_CTRL_CHANWIDTH_80MHZ;
 +				he_6ghz_oper->control = IEEE80211_HE_6GHZ_OPER_CTRL_CHANWIDTH_80MHZ;
-+
-+			he_6ghz_oper->ccfs0 = new_seg0;
-+			he_6ghz_oper->ccfs1 = new_seg1;
- 
+ 			csa_he_6ghz_oper = ieee80211_he_6ghz_oper(elems->he_operation);
+ 			if (csa_he_6ghz_oper)
+-				he_6ghz_oper.control |= (csa_he_6ghz_oper->control &
+-							 IEEE80211_HE_6GHZ_OPER_CTRL_REG_INFO);
 -			he_6ghz_oper.ccfs0 = new_seg0;
 -			he_6ghz_oper.ccfs1 = new_seg1;
-+			he_oper->he_oper_params =
-+				u32_encode_bits(1, IEEE80211_HE_OPERATION_6GHZ_OP_INFO);
- 
+-
 -			he_oper.he_oper_params = u32_encode_bits(1,
 -					IEEE80211_HE_OPERATION_6GHZ_OP_INFO);
 -			he_oper.optional[0] = he_6ghz_oper.primary;
@@ -119,7 +117,15 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
 -			eht_oper.params |= IEEE80211_EHT_OPER_INFO_PRESENT;
 -			eht_oper_info.ccfs0 = new_seg0;
 -			eht_oper_info.ccfs1 = new_seg1;
-+			eht_oper = kmalloc(sizeof(*eht_oper) +
++				he_6ghz_oper->control |= (csa_he_6ghz_oper->control &
++							  IEEE80211_HE_6GHZ_OPER_CTRL_REG_INFO);
++			he_6ghz_oper->ccfs0 = new_seg0;
++			he_6ghz_oper->ccfs1 = new_seg1;
++
++			he_oper->he_oper_params = u32_encode_bits(1,
++								  IEEE80211_HE_OPERATION_6GHZ_OP_INFO);
++
++			eht_oper = kzalloc(sizeof(*eht_oper) +
 +					   sizeof(*eht_oper_info), GFP_KERNEL);
 +			if (!eht_oper) {
 +				kfree(he_oper);
@@ -150,7 +156,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
 -				eht_oper_info.control = IEEE80211_EHT_OPER_CHAN_WIDTH_80MHZ;
 +				eht_oper_info->control = IEEE80211_EHT_OPER_CHAN_WIDTH_80MHZ;
  			}
--
+ 
 -			eht_oper.optional[0] = eht_oper_info.control;
 -			eht_oper.optional[1] = eht_oper_info.ccfs0;
 -			eht_oper.optional[2] = eht_oper_info.ccfs1;
@@ -160,17 +166,32 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  
 -			if (!ieee80211_chandef_he_6ghz_oper(sdata, &he_oper,
 -							    &eht_oper, &new_chandef))
+-					new_chandef.chan = NULL;
 +			if (!ieee80211_chandef_he_6ghz_oper(sdata, he_oper,
 +							    eht_oper, &new_chandef, -1))
- 					new_chandef.chan = NULL;
++				new_chandef.chan = NULL;
 +			kfree(he_oper);
 +			kfree(eht_oper);
  		} else {
  			vht_oper.chan_width = wide_bw_chansw_ie->new_channel_width;
  			vht_oper.center_freq_seg0_idx = wide_bw_chansw_ie->new_center_freq_seg0;
+ 			vht_oper.center_freq_seg1_idx = new_seg1;
+ 			/* .basic_mcs_set doesn't matter */
+ 			ht_oper.operation_mode = cpu_to_le16(new_seg1 <<
+-						     	     IEEE80211_HT_OP_MODE_CCFS2_SHIFT);
++							     IEEE80211_HT_OP_MODE_CCFS2_SHIFT);
+ 
+ 			/* default, for the case of IEEE80211_VHT_CHANWIDTH_USE_HT,
+-		 	* to the previously parsed chandef
+-		 	*/
++			 * to the previously parsed chandef
++			 */
+ 			new_chandef = csa_ie->chandef;
+ 
+ 			/* ignore if parsing fails */
 --- a/net/mac80211/util.c
 +++ b/net/mac80211/util.c
-@@ -3924,7 +3924,8 @@ struct ieee80211_channel
+@@ -3915,7 +3915,8 @@ struct ieee80211_channel
  bool ieee80211_chandef_he_6ghz_oper(struct ieee80211_sub_if_data *sdata,
  				    const struct ieee80211_he_operation *he_oper,
  				    const struct ieee80211_eht_operation *eht_oper,
@@ -180,7 +201,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  {
  	struct ieee80211_local *local = sdata->local;
  	struct ieee80211_supported_band *sband;
-@@ -3933,7 +3934,7 @@ bool ieee80211_chandef_he_6ghz_oper(stru
+@@ -3924,7 +3925,7 @@ bool ieee80211_chandef_he_6ghz_oper(stru
  	const struct ieee80211_sta_eht_cap *eht_cap;
  	struct cfg80211_chan_def he_chandef = *chandef;
  	const struct ieee80211_he_6ghz_oper *he_6ghz_oper;
@@ -189,7 +210,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  	enum nl80211_regulatory_power_modes mode;
  	bool support_80_80, support_160, support_320;
  	u8 he_phy_cap, eht_phy_cap;
-@@ -4010,6 +4011,11 @@ bool ieee80211_chandef_he_6ghz_oper(stru
+@@ -3999,6 +4000,11 @@ bool ieee80211_chandef_he_6ghz_oper(stru
  	he_chandef.chan = ieee80211_get_6g_channel_khz(sdata->local->hw.wiphy,
  						       MHZ_TO_KHZ(freq), mode);
  

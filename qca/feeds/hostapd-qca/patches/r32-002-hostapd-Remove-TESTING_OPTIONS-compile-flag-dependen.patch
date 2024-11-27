@@ -1,0 +1,128 @@
+From af0f7cfdce0c190ed17562efd713a14662eab1eb Mon Sep 17 00:00:00 2001
+From: Manish Dharanenthiran <quic_mdharane@quicinc.com>
+Date: Mon, 12 Aug 2024 10:21:12 +0530
+Subject: [PATCH] hostapd: Remove TESTING_OPTIONS compile flag dependency
+
+In-order to leverage the existing ML link removal support for offloaded
+drivers remove the CONFIG_TESTING_OPTIONS compile flag dependency.
+
+Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
+---
+ hostapd/ctrl_iface.c    | 4 ----
+ src/ap/hostapd.c        | 5 -----
+ src/ap/hostapd.h        | 2 --
+ src/ap/ieee802_11_eht.c | 4 ----
+ 4 files changed, 15 deletions(-)
+
+diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+index 6ccc40a..919a26d 100644
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -4323,7 +4323,6 @@ static int hostapd_ctrl_iface_disable_mld(struct hostapd_iface *iface)
+ }
+ 
+ 
+-#ifdef CONFIG_TESTING_OPTIONS
+ static int hostapd_ctrl_iface_link_remove(struct hostapd_data *hapd, char *cmd,
+ 					  char *buf, size_t buflen)
+ {
+@@ -4344,7 +4343,6 @@ static int hostapd_ctrl_iface_link_remove(struct hostapd_data *hapd, char *cmd,
+ 
+ 	return ret;
+ }
+-#endif /* CONFIG_TESTING_OPTIONS */
+ #endif /* CONFIG_IEEE80211BE */
+ 
+ 
+@@ -5237,12 +5235,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
+ 	} else if (os_strcmp(buf, "DISABLE_MLD") == 0) {
+ 		if (hostapd_ctrl_iface_disable_mld(hapd->iface))
+ 			reply_len = -1;
+-#ifdef CONFIG_TESTING_OPTIONS
+ 	} else if (os_strncmp(buf, "LINK_REMOVE ", 12) == 0) {
+ 		if (hostapd_ctrl_iface_link_remove(hapd, buf + 12,
+ 						   reply, reply_size))
+ 			reply_len = -1;
+-#endif /* CONFIG_TESTING_OPTIONS */
+ #endif /* CONFIG_IEEE80211BE */
+ 	} else {
+ 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index fbd2885..1a87642 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -425,7 +425,6 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
+ 
+ 
+ #ifdef CONFIG_IEEE80211BE
+-#ifdef CONFIG_TESTING_OPTIONS
+ 
+ #define TU_TO_USEC(_val) ((_val) * 1024)
+ 
+@@ -466,7 +465,6 @@ int hostapd_link_remove(struct hostapd_data *hapd, u32 count)
+ 		   hapd->mld_link_id, count);
+ 
+ 	hapd->eht_mld_link_removal_count = count;
+-	hapd->eht_mld_bss_param_change++;
+ 
+ 	eloop_register_timeout(0, TU_TO_USEC(hapd->iconf->beacon_int),
+ 			       hostapd_link_remove_timeout_handler,
+@@ -476,7 +474,6 @@ int hostapd_link_remove(struct hostapd_data *hapd, u32 count)
+ 	return 0;
+ }
+ 
+-#endif /* CONFIG_TESTING_OPTIONS */
+ #endif /* CONFIG_IEEE80211BE */
+ 
+ 
+@@ -632,11 +629,9 @@ void hostapd_free_hapd_data(struct hostapd_data *hapd)
+ 
+ #ifdef CONFIG_IEEE80211AX
+ 	eloop_cancel_timeout(hostapd_switch_color_timeout_handler, hapd, NULL);
+-#ifdef CONFIG_TESTING_OPTIONS
+ #ifdef CONFIG_IEEE80211BE
+ 	eloop_cancel_timeout(hostapd_link_remove_timeout_handler, hapd, NULL);
+ #endif /* CONFIG_IEEE80211BE */
+-#endif /* CONFIG_TESTING_OPTIONS */
+ 
+ #endif /* CONFIG_IEEE80211AX */
+ }
+diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
+index 2d7accd..d9b3e20 100644
+--- a/src/ap/hostapd.h
++++ b/src/ap/hostapd.h
+@@ -538,9 +538,7 @@ struct hostapd_data {
+ 	struct dl_list link;
+ 	u8 mld_link_id;
+ 	char ctrl_sock_iface[IFNAMSIZ + 1];
+-#ifdef CONFIG_TESTING_OPTIONS
+ 	u8 eht_mld_link_removal_count;
+-#endif /* CONFIG_TESTING_OPTIONS */
+ #endif /* CONFIG_IEEE80211BE */
+ 
+ #ifdef CONFIG_NAN_USD
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index 0ae91ef..9d943eb 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -801,7 +801,6 @@ out:
+ 
+ static u8 * hostapd_eid_eht_reconf_ml(struct hostapd_data *hapd, u8 *eid)
+ {
+-#ifdef CONFIG_TESTING_OPTIONS
+ 	struct hostapd_data *other_hapd;
+ 	u16 control;
+ 	u8 *pos = eid;
+@@ -866,9 +865,6 @@ static u8 * hostapd_eid_eht_reconf_ml(struct hostapd_data *hapd, u8 *eid)
+ 
+ 	wpa_hexdump(MSG_DEBUG, "MLD: Reconfiguration ML", eid, eid[1] + 2);
+ 	return pos;
+-#else /* CONFIG_TESTING_OPTIONS */
+-	return eid;
+-#endif /* CONFIG_TESTING_OPTIONS */
+ }
+ 
+ 
+-- 
+2.34.1
+

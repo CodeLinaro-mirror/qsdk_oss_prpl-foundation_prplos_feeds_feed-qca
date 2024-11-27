@@ -14,11 +14,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/common/hw_features_common.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/src/common/hw_features_common.c b/src/common/hw_features_common.c
-index 3e43d82..186b4b5 100644
 --- a/src/common/hw_features_common.c
 +++ b/src/common/hw_features_common.c
-@@ -685,9 +685,9 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
+@@ -775,9 +775,9 @@ int hostapd_set_freq_params(struct hosta
  		break;
  	case CONF_OPER_CHWIDTH_320MHZ:
  		data->bandwidth = 320;
@@ -30,6 +28,3 @@ index 3e43d82..186b4b5 100644
  			return -1;
  		}
  		if (center_segment1) {
--- 
-2.17.1
-

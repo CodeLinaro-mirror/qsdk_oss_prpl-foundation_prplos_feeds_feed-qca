@@ -6,13 +6,6 @@ PKG_NAME:=qca-ssdk-qca
 PKG_SOURCE_PROTO:=git
 PKG_BRANCH:=master
 PKG_RELEASE:=1
-PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ssdk
-PKG_MIRROR_HASH:=097f2998aec53fbf5bcbca83616c39834ae5052d8fd4b75de5e95c89e90752ff
-PKG_VERSION:=a5a744ea747d989b749645af67587957206b27ca
-
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 ifeq ($(CONFIG_TARGET_ipq),y)
 	subtarget:=$(SUBTARGET)
@@ -28,10 +21,9 @@ else
 	hal_arch:=$(subtarget)
 endif
 
-ifdef KERNEL_PATCHVER
-  LINUX_VERSION_NUMBERS:=$(KERNEL_PATCHVER)$(strip $(LINUX_VERSION-$(KERNEL_PATCHVER)))
-else
-  LINUX_VERSION_NUMBERS:=$(LINUX_VERSION)
+include $(INCLUDE_DIR)/local-development.mk
+ifeq ($(DUMP)$(PKG_VERSION),)
+	PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
 endif
 
 LOCAL_VARIANT=$(patsubst qca-ssdk-qca-%,%,$(patsubst qca-ssdk-qca-%,%,$(BUILD_VARIANT)))
@@ -49,12 +41,13 @@ endef
 
 define KernelPackage/qca-ssdk-qca-nohnat
 $(call KernelPackage/qca-ssdk-qca/default-nohnat)
-  DEPENDS:=@!(TARGET_ipq_ipq40xx||TARGET_ipq40xx)||TARGET_ar71xx
+  DEPENDS:=@!(TARGET_ipq_ipq40xx||TARGET_ipq40xx)||TARGET_ar71xx \
+	+kmod-qca-nss-phy
   VARIANT:=nohnat
 
   ifneq (, $(findstring $(hal_arch), "ipq50xx"))
     ifeq (, $(CONFIG_LOWMEM_FLASH))
-      ifneq ($(LINUX_VERSION_NUMBERS),$(filter 5.4%,$(LINUX_VERSION_NUMBERS)))
+      ifneq ($(LINUX_VERSION),$(filter 5.4%,$(LINUX_VERSION)))
       DEPENDS+=kmod-ipt-filter +kmod-ppp
       QCASSDK_CONFIG_OPTS+= HNAT_FEATURE=enable
       endif
@@ -100,12 +93,12 @@ endif
 QCASSDK_CONFIG_OPTS+= TOOL_PATH=$(TOOLCHAIN_BIN_PATH) \
                 SYS_PATH=$(LINUX_DIR) \
                 TOOLPREFIX=$(TARGET_CROSS) \
-                KVER=$(LINUX_VERSION_NUMBERS) \
+                KVER=$(LINUX_VERSION) \
                 ARCH=$(LINUX_KARCH) \
 		TARGET_SUFFIX=$(CONFIG_TARGET_SUFFIX) \
 		GCC_VERSION=$(GCC_VERSION) \
 		SoC=$(hal_arch) \
-		CFLAGS="-I$(STAGING_DIR)/usr/include -fno-PIE"
+		CFLAGS=-I$(STAGING_DIR)/usr/include
 
 ifeq ($(LOCAL_VARIANT),hnat)
     QCASSDK_CONFIG_OPTS+= HNAT_FEATURE=enable
@@ -128,21 +121,10 @@ else ifneq (, $(findstring $(hal_arch), "ipq54xx"))
 	QCASSDK_CONFIG_OPTS+= CHIP_TYPE=MRPPE
 endif
 
-ifneq (, $(findstring $(CONFIG_KERNEL_IPQ_MEM_PROFILE), 256 512)$(CONFIG_LOWMEM_FLASH))
+ifneq (, $(findstring $(CONFIG_KERNEL_IPQ_MEM_PROFILE), 256)$(CONFIG_LOWMEM_FLASH))
 	QCASSDK_CONFIG_OPTS+= MINI_SSDK=enable
-	#Disable MINI_SSDK on MP 512 profile
-	ifneq (, $(findstring $(hal_arch), "ipq50xx"))
-		ifneq (, $(findstring $(CONFIG_KERNEL_IPQ_MEM_PROFILE), 512))
-			QCASSDK_CONFIG_OPTS+= MINI_SSDK=disable
-		endif
-	endif
 	ifeq ($(CONFIG_LOWMEM_FLASH),y)
 		QCASSDK_CONFIG_OPTS+= LOWMEM_FLASH=enable
-	endif
-	ifneq (, $(findstring $(hal_arch), "ipq53xx"))
-		ifneq (, $(findstring $(CONFIG_KERNEL_IPQ_MEM_PROFILE), 256))
-			QCASSDK_CONFIG_OPTS += LOWMEM_256=enable
-		endif
 	endif
 endif
 
@@ -168,19 +150,21 @@ define Build/InstallDev
 	$(CP) -rf $(PKG_BUILD_DIR)/include/common/*.h $(1)/usr/include/qca-ssdk
 	$(CP) -rf $(PKG_BUILD_DIR)/include/sal/os/linux/*.h $(1)/usr/include/qca-ssdk
 	$(CP) -rf $(PKG_BUILD_DIR)/include/sal/os/*.h $(1)/usr/include/qca-ssdk
-	touch $(PKG_BUILD_DIR)/.built
+
 endef
 
 LNX_CONFIG_OPTS :=
 
-ifneq (, $(findstring $(hal_arch), "ipq53xx"))
+ifneq (, $(findstring $(hal_arch), "ipq807x" "ipq60xx" "ipq95xx" "ipq53xx"))
 LNX_CONFIG_OPTS += LNX_MAKEOPTS='$(KERNEL_MAKEOPTS)' MODULE_TYPE=KSLIB modules
 else ifeq ($(LINUX_VERSION), $(filter 6.1%, $(LINUX_VERSION)))
+LNX_CONFIG_OPTS += LNX_MAKEOPTS='$(KERNEL_MAKEOPTS)' MODULE_TYPE=KSLIB modules
+else ifeq ($(LINUX_VERSION), $(filter 6.6%, $(LINUX_VERSION)))
 LNX_CONFIG_OPTS += LNX_MAKEOPTS='$(KERNEL_MAKEOPTS)' MODULE_TYPE=KSLIB modules
 endif
 
 define Build/Compile
-	$(MAKE) -C $(PKG_BUILD_DIR) $(strip $(QCASSDK_CONFIG_OPTS)) $(LNX_CONFIG_OPTS)
+	$(MAKE) -C $(PKG_BUILD_DIR)/mk $(strip $(QCASSDK_CONFIG_OPTS)) $(LNX_CONFIG_OPTS)
 endef
 
 define KernelPackage/qca-ssdk-qca-nohnat/install

@@ -16,11 +16,9 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h |  12 +-
  2 files changed, 140 insertions(+), 82 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 181d0d1..6adaf08 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -2052,6 +2052,122 @@ static int ath12k_setup_peer_smps(struct ath12k *ar, struct ath12k_vif *arvif,
+@@ -2265,6 +2265,122 @@ static int ath12k_setup_peer_smps(struct
  					 ath12k_smps_map[smps]);
  }
  
@@ -143,7 +141,7 @@ index 181d0d1..6adaf08 100644
  static void ath12k_bss_assoc(struct ieee80211_hw *hw,
  			     struct ieee80211_vif *vif,
  			     struct ieee80211_bss_conf *bss_conf)
-@@ -2061,6 +2177,7 @@ static void ath12k_bss_assoc(struct ieee80211_hw *hw,
+@@ -2274,6 +2390,7 @@ static void ath12k_bss_assoc(struct ieee
  	struct ath12k_wmi_peer_assoc_arg peer_arg;
  	struct ieee80211_sta *ap_sta;
  	struct ath12k_peer *peer;
@@ -151,7 +149,7 @@ index 181d0d1..6adaf08 100644
  	bool is_auth = false;
  	int ret;
  
-@@ -2078,6 +2195,8 @@ static void ath12k_bss_assoc(struct ieee80211_hw *hw,
+@@ -2291,6 +2408,8 @@ static void ath12k_bss_assoc(struct ieee
  		rcu_read_unlock();
  		return;
  	}
@@ -160,7 +158,7 @@ index 181d0d1..6adaf08 100644
  
  	ath12k_peer_assoc_prepare(ar, vif, ap_sta, &peer_arg, false);
  
-@@ -2104,6 +2223,12 @@ static void ath12k_bss_assoc(struct ieee80211_hw *hw,
+@@ -2317,6 +2436,12 @@ static void ath12k_bss_assoc(struct ieee
  		return;
  	}
  
@@ -173,7 +171,7 @@ index 181d0d1..6adaf08 100644
  	WARN_ON(arvif->is_up);
  
  	arvif->aid = vif->cfg.aid;
-@@ -2362,6 +2487,8 @@ static void ath12k_mac_op_bss_info_changed(struct ieee80211_hw *hw,
+@@ -2575,6 +2700,8 @@ static void ath12k_mac_op_bss_info_chang
  		ether_addr_copy(arvif->bssid, info->bssid);
  
  	if (changed & BSS_CHANGED_BEACON_ENABLED) {
@@ -182,21 +180,20 @@ index 181d0d1..6adaf08 100644
  		ath12k_control_beaconing(arvif, info);
  
  		if (arvif->is_up && vif->bss_conf.he_support &&
-@@ -4263,9 +4390,10 @@ static int ath12k_mac_copy_he_cap(struct ath12k *ar,
+@@ -4476,8 +4603,10 @@ static void ath12k_mac_copy_he_cap(struc
+ 	he_cap_elem->mac_cap_info[1] &=
+ 		IEEE80211_HE_MAC_CAP1_TF_MAC_PAD_DUR_MASK;
  
- 		he_cap_elem->mac_cap_info[1] &=
- 			IEEE80211_HE_MAC_CAP1_TF_MAC_PAD_DUR_MASK;
--
--		he_cap_elem->phy_cap_info[5] &=
--			~IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_UNDER_80MHZ_MASK;
-+		he_cap_elem->phy_cap_info[0] &=
-+			~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G;
-+		he_cap_elem->phy_cap_info[0] &=
-+			~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G;
- 		he_cap_elem->phy_cap_info[5] &=
- 			~IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_ABOVE_80MHZ_MASK;
- 		he_cap_elem->phy_cap_info[5] |= ar->num_tx_chains - 1;
-@@ -4875,71 +5003,6 @@ static void ath12k_mac_setup_vdev_create_arg(struct ath12k_vif *arvif,
+-	he_cap_elem->phy_cap_info[5] &=
+-		~IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_UNDER_80MHZ_MASK;
++	he_cap_elem->phy_cap_info[0] &=
++		~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G;
++	he_cap_elem->phy_cap_info[0] &=
++		~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G;
+ 	he_cap_elem->phy_cap_info[5] &=
+ 		~IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_ABOVE_80MHZ_MASK;
+ 	he_cap_elem->phy_cap_info[5] |= num_tx_chains - 1;
+@@ -5218,71 +5347,6 @@ static void ath12k_mac_setup_vdev_create
  	arg->if_stats_id = ath12k_mac_get_vdev_stats_id(arvif);
  }
  
@@ -268,7 +265,7 @@ index 181d0d1..6adaf08 100644
  static void ath12k_mac_op_update_vif_offload(struct ieee80211_hw *hw,
  					     struct ieee80211_vif *vif)
  {
-@@ -5482,7 +5545,6 @@ ath12k_mac_vdev_start_restart(struct ath12k_vif *arvif,
+@@ -5825,7 +5889,6 @@ ath12k_mac_vdev_start_restart(struct ath
  	struct ath12k *ar = arvif->ar;
  	struct ath12k_base *ab = ar->ab;
  	struct wmi_vdev_start_req_arg arg = {};
@@ -276,7 +273,7 @@ index 181d0d1..6adaf08 100644
  	int ret;
  
  	lockdep_assert_held(&ar->conf_mutex);
-@@ -5519,16 +5581,6 @@ ath12k_mac_vdev_start_restart(struct ath12k_vif *arvif,
+@@ -5865,16 +5928,6 @@ ath12k_mac_vdev_start_restart(struct ath
  		spin_lock_bh(&ab->base_lock);
  		arg.regdomain = ar->ab->dfs_region;
  		spin_unlock_bh(&ab->base_lock);
@@ -292,12 +289,10 @@ index 181d0d1..6adaf08 100644
 -		}
  	}
  
- 	arg.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index d89c12b..4ec894f 100644
+ 	arg.channel.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2844,9 +2844,11 @@ struct ath12k_wmi_rx_reorder_queue_remove_arg {
+@@ -2938,9 +2938,11 @@ struct ath12k_wmi_rx_reorder_queue_remov
  #define WMI_VDEV_PARAM_TXBF_SU_TX_BFER BIT(2)
  #define WMI_VDEV_PARAM_TXBF_MU_TX_BFER BIT(3)
  
@@ -312,7 +307,7 @@ index d89c12b..4ec894f 100644
  
  #define HECAP_PHY_SU_BFER		BIT(31)
  #define HECAP_PHY_SU_BFEE		BIT(0)
-@@ -2880,8 +2882,12 @@ struct ath12k_wmi_rx_reorder_queue_remove_arg {
+@@ -2974,8 +2976,12 @@ struct ath12k_wmi_rx_reorder_queue_remov
  #define HE_DL_MUOFDMA_ENABLE	1
  #define HE_UL_MUOFDMA_ENABLE	1
  #define HE_DL_MUMIMO_ENABLE	1
@@ -325,6 +320,3 @@ index d89c12b..4ec894f 100644
  
  #define HE_VHT_SOUNDING_MODE_ENABLE		1
  #define HE_SU_MU_SOUNDING_MODE_ENABLE		1
--- 
-2.17.1
-

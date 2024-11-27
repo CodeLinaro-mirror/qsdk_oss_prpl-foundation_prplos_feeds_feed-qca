@@ -17,11 +17,9 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  src/ap/wpa_auth_ie.c | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/src/ap/wpa_auth_ie.c b/src/ap/wpa_auth_ie.c
-index 43ccec9..50e1c35 100644
 --- a/src/ap/wpa_auth_ie.c
 +++ b/src/ap/wpa_auth_ie.c
-@@ -1198,11 +1198,9 @@ bool wpa_auth_write_fd_rsn_info(struct wpa_authenticator *wpa_auth,
+@@ -1237,11 +1237,9 @@ bool wpa_auth_write_fd_rsn_info(struct w
  
  	/* Group Management Cipher Suite Selector (B22..B27) */
  	cipher = 63; /* Default to no cipher suite selected */

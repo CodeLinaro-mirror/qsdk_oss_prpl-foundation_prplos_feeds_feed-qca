@@ -18,12 +18,10 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  src/ap/ieee802_11.c | 6 ++----
  1 file changed, 2 insertions(+), 4 deletions(-)
 
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index 3b1af9f..b05c7c4 100644
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7424,8 +7424,7 @@ repeat_rnr_len:
- 			ap_mld = !!bss->conf->mld_ap;
+@@ -7901,8 +7901,7 @@ repeat_rnr_len:
+ 			ap_mld = bss->conf->mld_ap;
  #endif /* CONFIG_IEEE80211BE */
  
 -			if (bss == reporting_hapd ||
@@ -31,17 +29,13 @@ index 3b1af9f..b05c7c4 100644
 +			if (bss == reporting_hapd)
  				continue;
  
- 			if (!mld_update && skip_profiles &&
-@@ -7761,8 +7760,7 @@ repeat_rnr:
- 			ap_mld = !!bss->conf->mld_ap;
+ 			if (hostapd_skip_rnr(i, skip_profiles, ap_mld,
+@@ -8169,7 +8168,7 @@ static bool hostapd_eid_rnr_bss(struct h
  #endif /* CONFIG_IEEE80211BE */
  
--			if (bss == reporting_hapd ||
--			    bss->conf->ignore_broadcast_ssid)
-+			if (bss == reporting_hapd)
- 				continue;
+ 	if (!bss || !bss->conf || !bss->started ||
+-	    bss == reporting_hapd || bss->conf->ignore_broadcast_ssid)
++	    bss == reporting_hapd)
+ 		return false;
  
- 			if (!mld_update && skip_profiles &&
--- 
-2.34.1
-
+ 	if (hostapd_skip_rnr(i, skip_profiles, ap_mld, tbtt_info_len,

@@ -14,21 +14,19 @@ diff --git a/wpa_supplicant/bss.c b/wpa_supplicant/bss.c
 index 3bfcf7e..884181f 100644
 --- a/wpa_supplicant/bss.c
 +++ b/wpa_supplicant/bss.c
-@@ -740,8 +740,8 @@ wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
- 		struct wpa_bss *nbss;
- 		struct dl_list *prev = bss->list_id.prev;
+@@ -756,7 +756,7 @@ wpa_bss_update(struct wpa_supplicant *wp
+ 		}
+ 
  		dl_list_del(&bss->list_id);
 -		nbss = os_realloc(bss, sizeof(*bss) + res->ie_len +
--				  res->beacon_ie_len);
 +		nbss = os_malloc(sizeof(*bss) + res->ie_len +
-+				 res->beacon_ie_len);
+ 				  res->beacon_ie_len);
  		if (nbss) {
- 			unsigned int i;
- 			for (i = 0; i < wpa_s->last_scan_res_used; i++) {
-@@ -753,6 +753,8 @@ wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
- 			if (wpa_s->current_bss == bss)
- 				wpa_s->current_bss = nbss;
- 			wpa_bss_update_pending_connect(wpa_s, bss, nbss);
+ 			if (i != wpa_s->last_scan_res_used)
+@@ -771,6 +771,8 @@ wpa_bss_update(struct wpa_supplicant *wp
+ 			if (cwork)
+ 				wpa_bss_update_pending_connect(cwork, nbss);
+ 
 +			os_memcpy(nbss, bss, sizeof(*bss));
 +			os_free(bss);
  			bss = nbss;

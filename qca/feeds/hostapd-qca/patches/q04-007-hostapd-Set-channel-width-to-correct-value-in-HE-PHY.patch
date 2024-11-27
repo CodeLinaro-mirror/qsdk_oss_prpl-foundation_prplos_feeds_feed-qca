@@ -20,7 +20,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
 
 --- a/src/ap/ieee802_11_he.c
 +++ b/src/ap/ieee802_11_he.c
-@@ -228,7 +228,7 @@ u8 * hostapd_eid_he_operation(struct hos
+@@ -229,7 +229,7 @@ u8 * hostapd_eid_he_operation(struct hos
  
  	if (is_6ghz_op_class(hapd->iconf->op_class)) {
  		enum oper_chan_width oper_chwidth =
@@ -29,27 +29,3 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		u8 seg0 = hapd->iconf->he_oper_centr_freq_seg0_idx;
  		u8 seg1 = hapd->iconf->he_oper_centr_freq_seg1_idx;
  		u8 control;
-@@ -242,19 +242,16 @@ u8 * hostapd_eid_he_operation(struct hos
- #endif /* CONFIG_IEEE80211BE */
- 
- 		if (hapd->iconf->ru_punct_bitmap) {
--			hapd->iconf->he_oper_chwidth =
--				hostapd_get_oper_chwidth(hapd->iconf);
-+			oper_chwidth = hapd->iface->conf->he_oper_chwidth;
- 			hapd->iconf->he_oper_centr_freq_seg0_idx = seg0;
- 			hapd->iconf->he_oper_centr_freq_seg1_idx = seg1;
- 
- 			punct_update_legacy_bw(hapd->iconf->ru_punct_bitmap,
- 					   hapd->iconf->channel,
--					   &hapd->iconf->he_oper_chwidth,
--					   &hapd->iconf->he_oper_centr_freq_seg0_idx,
--					   &hapd->iconf->he_oper_centr_freq_seg1_idx);
-+					   &oper_chwidth,
-+					   &seg0,
-+					   &seg1);
- 
--			seg0 = hapd->iconf->he_oper_centr_freq_seg0_idx;
--			seg1 = hapd->iconf->he_oper_centr_freq_seg1_idx;
- 		}
- 
- 		if (!seg0)

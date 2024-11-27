@@ -31,11 +31,9 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  wpa_supplicant/ctrl_iface.c        |  2 ++
  17 files changed, 98 insertions(+), 4 deletions(-)
 
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index 45245f1..c8d219b 100644
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1238,7 +1238,8 @@ hostapd_set_oper_chwidth(struct hostapd_config *conf,
+@@ -1288,7 +1288,8 @@ hostapd_set_oper_chwidth(struct hostapd_
  		oper_chwidth = CONF_OPER_CHWIDTH_160MHZ;
  #endif /* CONFIG_IEEE80211BE */
  #ifdef CONFIG_IEEE80211AX
@@ -45,24 +43,20 @@ index 45245f1..c8d219b 100644
  		conf->he_oper_chwidth = oper_chwidth;
  #endif /* CONFIG_IEEE80211AX */
  	conf->vht_oper_chwidth = oper_chwidth;
-diff --git a/src/ap/ieee802_11_he.c b/src/ap/ieee802_11_he.c
-index c3af932..8543101 100644
 --- a/src/ap/ieee802_11_he.c
 +++ b/src/ap/ieee802_11_he.c
-@@ -230,7 +230,7 @@ u8 * hostapd_eid_he_operation(struct hostapd_data *hapd, u8 *eid)
+@@ -231,7 +231,7 @@ u8 * hostapd_eid_he_operation(struct hos
  		enum oper_chan_width oper_chwidth =
  			hostapd_get_oper_chwidth(hapd->iconf);
  		u8 seg0 = hapd->iconf->he_oper_centr_freq_seg0_idx;
 -		u8 seg1 = hostapd_get_oper_centr_freq_seg1_idx(hapd->iconf);
 +		u8 seg1 = hapd->iconf->he_oper_centr_freq_seg1_idx;
  		u8 control;
- 
  #ifdef CONFIG_IEEE80211BE
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index b4f1f5e..841e327 100644
+ 		u16 punct_bitmap = hostapd_get_punct_bitmap(hapd);
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -1708,6 +1708,8 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
+@@ -1740,6 +1740,8 @@ static void phy_info_freq(struct hostapd
  		chan->allowed_bw &= ~HOSTAPD_CHAN_WIDTH_80;
  	if (tb_freq[NL80211_FREQUENCY_ATTR_NO_160MHZ])
  		chan->allowed_bw &= ~HOSTAPD_CHAN_WIDTH_160;
@@ -71,15 +65,3 @@ index b4f1f5e..841e327 100644
  
  	if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) {
  		enum nl80211_dfs_state state =
-diff --git a/src/drivers/nl80211_copy.h b/src/drivers/nl80211_copy.h
-index ce325cf..c7353a6 100644
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -4282,6 +4282,7 @@ enum nl80211_frequency_attr {
- 	NL80211_FREQUENCY_ATTR_16MHZ,
- 	NL80211_FREQUENCY_ATTR_NO_320MHZ,
- 	NL80211_FREQUENCY_ATTR_NO_EHT,
-+	NL80211_FREQUENCY_ATTR_PSD,
- 
- 	/* keep last */
- 	__NL80211_FREQUENCY_ATTR_AFTER_LAST,

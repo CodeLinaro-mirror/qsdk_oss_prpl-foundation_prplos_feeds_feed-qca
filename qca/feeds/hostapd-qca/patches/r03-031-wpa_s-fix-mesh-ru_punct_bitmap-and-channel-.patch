@@ -21,14 +21,13 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  wpa_supplicant/wpa_supplicant.c | 571 +++++++++++++++++---------------
  1 file changed, 306 insertions(+), 265 deletions(-)
 
-diff --git a/wpa_supplicant/wpa_supplicant.c b/wpa_supplicant/wpa_supplicant.c
-index ea6a6eb..0c05c2b 100644
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -2761,143 +2761,157 @@ static bool ibss_mesh_is_80mhz_avail(int channel, struct hostapd_hw_modes *mode,
- 	return true;
+@@ -2749,6 +2749,28 @@ HE20:
+ 	freq->center_freq1 = freq->freq + freq->sec_channel_offset * 10;
  }
  
++
 +static int ibss_get_center_320mhz(int channel)
 +{
 +	int seg0;
@@ -49,6 +48,13 @@ index ea6a6eb..0c05c2b 100644
 +	return seg0;
 +}
 +
++
+ static bool ibss_mesh_is_80mhz_avail(int channel, struct hostapd_hw_modes *mode, bool dfs_enabled)
+ {
+ 	int i;
+@@ -2769,163 +2791,160 @@ static bool ibss_mesh_is_80mhz_avail(int
+ }
+ 
  
 -static struct wpa_bss * ibss_find_existing_bss(struct wpa_supplicant *wpa_s,
 -					       const struct wpa_ssid *ssid)
@@ -62,11 +68,11 @@ index ea6a6eb..0c05c2b 100644
 +	struct hostapd_hw_modes *mode = NULL;
 +	int ht40plus[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157,
 +			   165, 173, 184, 192 };
-+	/* bw_80_160 array members are 80MHz start freq, 80MHz end freq and so on
-+	 */
++		/* bw_80_160 array members are 80MHz start freq, 80MHz end freq and so on
++		 */
 +	unsigned int bw_80_160[] = { 5180, 5240, 5260, 5320,
 +				     5500, 5560, 5580, 5640,
-+				     5660, 5720,    0,	  0,
++				     5660, 5720,    0,    0,
 +				     /* Adding dummy sec80 after channel #144 to keep remining 160MHz array intact */
 +				     5745, 5805, 5825, 5885,
 +				     5955, 6015, 6035, 6095,
@@ -76,12 +82,12 @@ index ea6a6eb..0c05c2b 100644
 +				     6595, 6655, 6675, 6735,
 +				     6755, 6815, 6835, 6895,
 +				     6915, 6975, 6995, 7055 };
-+	  unsigned int bw_320[] = { 5500, 5720, 5955, 6255, 6115,
-+				    6415, 6275, 6575, 6435, 6735,
-+				    6595, 6895, 6755, 7055};
++	unsigned int bw_320[] = { 5500, 5720, 5955, 6255, 6115,
++				  6415, 6275, 6575, 6435, 6735,
++				  6595, 6895, 6755, 7055};
 +	struct hostapd_channel_data *pri_chan = NULL, *sec_chan = NULL;
 +	u8 channel,  chan_80mhz;
-+	int i, chan_idx, ht40 = -1, res, obss_scan = 1;
++	int i, chan_idx, ht40 = -1, res, obss_scan = (!ssid->noscan);
 +	unsigned int j, k;
 +	struct hostapd_freq_params vht_freq;
 +	int chwidth, seg0, seg1;
@@ -112,7 +118,6 @@ index ea6a6eb..0c05c2b 100644
 +				   "IBSS already found in scan results, adjust control freq: %d",
 +				   bss->freq);
 +			freq->freq = bss->freq;
-+			obss_scan = 0;
 +			break;
 +		}
  	}
@@ -134,8 +139,9 @@ index ea6a6eb..0c05c2b 100644
  	    wpa_s->group_cipher == WPA_CIPHER_WEP104 ||
  	    wpa_s->pairwise_cipher == WPA_CIPHER_TKIP) {
  		wpa_printf(MSG_DEBUG,
- 			   "IBSS: WEP/TKIP detected, do not try to enable HT");
+-			   "IBSS: WEP/TKIP detected, do not try to enable HT");
 -		return false;
++				"IBSS: WEP/TKIP detected, do not try to enable HT");
 +		return;
  	}
  
@@ -157,25 +163,30 @@ index ea6a6eb..0c05c2b 100644
 -{
 -	if (mode->mode != HOSTAPD_MODE_IEEE80211A && !(ssid->noscan))
 -		return false;
-+	hw_mode = ieee80211_freq_to_chan(freq->freq, &channel);
-+	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes,
-+			hw_mode, is_6ghz_freq(ssid->frequency));
-+	if (!mode)
-+		return;
- 
+-
 -	if (!drv_supports_vht(wpa_s, ssid))
 -		return false;
-+	freq->channel = channel;
++	hw_mode = ieee80211_freq_to_chan(freq->freq, &channel);
++	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes,
++		hw_mode, is_6ghz_freq(ssid->frequency));
++	if (!mode)
++		return;
  
 -	/* For IBSS check VHT_IBSS flag */
 -	if (ssid->mode == WPAS_MODE_IBSS &&
 -	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_VHT_IBSS))
 -		return false;
-+	is_24ghz = hw_mode == HOSTAPD_MODE_IEEE80211G ||
-+		   hw_mode == HOSTAPD_MODE_IEEE80211B;
++	freq->channel = channel;
  
 -	if (!vht_supported(mode))
 -		return false;
++	is_24ghz = hw_mode == HOSTAPD_MODE_IEEE80211G ||
++	hw_mode == HOSTAPD_MODE_IEEE80211B;
+ 
+-#ifdef CONFIG_VHT_OVERRIDES
+-	if (ssid->disable_vht)
+-		return false;
+-#endif /* CONFIG_VHT_OVERRIDES */
 +	/* HT/VHT and corresponding overrides are not applicable to 6 GHz.
 +	 * However, HE is mandatory for 6 GHz.
 +	 */
@@ -183,10 +194,8 @@ index ea6a6eb..0c05c2b 100644
 +	if (is_6ghz)
 +		goto skip_to_6ghz;
  
--#ifdef CONFIG_VHT_OVERRIDES
--	if (ssid->disable_vht)
--		return false;
--#endif /* CONFIG_VHT_OVERRIDES */
+-	return true;
+-}
 +#ifdef CONFIG_HT_OVERRIDES
 +	if (ssid->disable_ht) {
 +		freq->ht_enabled = 0;
@@ -194,12 +203,15 @@ index ea6a6eb..0c05c2b 100644
 +	}
 +#endif /* CONFIG_HT_OVERRIDES */
  
--	return true;
--}
 +	freq->ht_enabled = ht_supported(mode);
 +	if (!freq->ht_enabled)
 +		return;
  
+-static bool ibss_mesh_can_use_he(struct wpa_supplicant *wpa_s,
+-				 const struct wpa_ssid *ssid,
+-				 const struct hostapd_hw_modes *mode,
+-				 int ieee80211_mode)
+-{
 +	/* Allow HE on 2.4 GHz without VHT: see nl80211_put_freq_params() */
 +	if (is_24ghz) {
 +#ifdef CONFIG_EHT_OVERRIDES
@@ -208,12 +220,6 @@ index ea6a6eb..0c05c2b 100644
 +		else
 +#endif /* CONFIG_EHT_OVERRIDES */
 +			freq->eht_enabled = mode->eht_capab[ieee80211_mode].eht_supported;
- 
--static bool ibss_mesh_can_use_he(struct wpa_supplicant *wpa_s,
--				 const struct wpa_ssid *ssid,
--				 const struct hostapd_hw_modes *mode,
--				 int ieee80211_mode)
--{
  #ifdef CONFIG_HE_OVERRIDES
 -	if (ssid->disable_he)
 -		return false;
@@ -250,7 +256,11 @@ index ea6a6eb..0c05c2b 100644
 -		return mode->eht_capab[ieee80211_mode].eht_supported;
 -	default:
 -		return false;
--	}
++           	if (freq->he_enabled)
++                	       ibss_mesh_setup_2G_he40(freq, mode, wpa_s,
++                        	                       ssid, ieee80211_mode);
++			return;
+ 	}
 -}
 -
 -
@@ -264,17 +274,13 @@ index ea6a6eb..0c05c2b 100644
 -	int i, res;
 -	unsigned int j;
 -	static const int ht40plus[] = {
--		1, 2, 3, 4, 5, 6, 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157, 165, 173,
--		184, 192
+-		1, 2, 3, 4, 5, 6, 7, 36, 44, 52, 60, 100, 108, 116, 124, 132, 140,
+-		149, 157, 165, 173, 184, 192
 -	};
 -	int ht40 = -1;
 -
 -	if (!freq->ht_enabled)
-+		if (freq->he_enabled)
-+			ibss_mesh_setup_2G_he40(freq, mode, wpa_s,
-+						ssid, ieee80211_mode);
- 		return;
-+	}
+-		return;
  
  	for (chan_idx = 0; chan_idx < mode->num_channels; chan_idx++) {
  		pri_chan = &mode->channels[chan_idx];
@@ -283,7 +289,8 @@ index ea6a6eb..0c05c2b 100644
  			break;
  		pri_chan = NULL;
  	}
-@@ -2905,20 +2919,24 @@ static void ibss_mesh_select_40mhz(struct wpa_supplicant *wpa_s,
++
+ 	if (!pri_chan)
  		return;
  
  	/* Check primary channel flags */
@@ -316,7 +323,7 @@ index ea6a6eb..0c05c2b 100644
  			ht40 = 1;
  			break;
  		}
-@@ -2927,7 +2945,7 @@ static void ibss_mesh_select_40mhz(struct wpa_supplicant *wpa_s,
+@@ -2934,7 +2953,7 @@ static void ibss_mesh_select_40mhz(struc
  	/* Find secondary channel */
  	for (i = 0; i < mode->num_channels; i++) {
  		sec_chan = &mode->channels[i];
@@ -325,7 +332,7 @@ index ea6a6eb..0c05c2b 100644
  			break;
  		sec_chan = NULL;
  	}
-@@ -2935,11 +2953,8 @@ static void ibss_mesh_select_40mhz(struct wpa_supplicant *wpa_s,
+@@ -2942,11 +2961,8 @@ static void ibss_mesh_select_40mhz(struc
  		return;
  
  	/* Check secondary channel flags */
@@ -338,7 +345,7 @@ index ea6a6eb..0c05c2b 100644
  
  	if (ht40 == -1) {
  		if (!(pri_chan->flag & HOSTAPD_CHAN_HT40MINUS))
-@@ -2983,95 +2998,157 @@ static void ibss_mesh_select_40mhz(struct wpa_supplicant *wpa_s,
+@@ -2991,95 +3007,157 @@ static void ibss_mesh_select_40mhz(struc
  		wpa_scan_results_free(scan_res);
  	}
  
@@ -445,12 +452,13 @@ index ea6a6eb..0c05c2b 100644
 -	if (j == ARRAY_SIZE(bw80) ||
 -	    ieee80211_freq_to_chan(bw80[j], &channel) == NUM_HOSTAPD_MODES)
 -		goto skip_80mhz;
-+	if (j == ARRAY_SIZE(bw_80_160))
-+		return;
- 
+-
 -	/* Use 40 MHz if channel not usable */
 -	if (!ibss_mesh_is_80mhz_avail(channel, mode, dfs_enabled))
 -		goto skip_80mhz;
++	if (j == ARRAY_SIZE(bw_80_160))
++		return;
++
 +	/* Back to HT configuration if channel not usable */
 +	if (!ibss_mesh_is_80mhz_avail(chan_80mhz, mode, dfs_enabled))
 +		return;
@@ -522,7 +530,7 @@ index ea6a6eb..0c05c2b 100644
 +		} else {
 +			/* There is only one 320MHz(240+80 Punctured) in 5 GHz Band */
 +			u8 start_chan_idx = 100;
-+			if (freq->channel >= 100 && freq->channel <= 144 && (ssid->ru_punct_bitmap & 0xF000) == 0xF000) {
++			if (freq->channel >= 100 && freq->channel <= 144 && (ssid->punct_bitmap & 0xF000) == 0xF000) {
 +				for (i = start_chan_idx; i <= start_chan_idx + 44; i += 4) {
 +					struct hostapd_channel_data *chan;
 +					chan = hw_get_channel_chan(mode, i, NULL);
@@ -556,7 +564,7 @@ index ea6a6eb..0c05c2b 100644
  
  			for (i = channel; i < channel + 16; i += 4) {
  				struct hostapd_channel_data *chan;
-@@ -3080,12 +3157,10 @@ static bool ibss_mesh_select_80_160mhz(struct wpa_supplicant *wpa_s,
+@@ -3088,12 +3166,10 @@ static bool ibss_mesh_select_80_160mhz(s
  				if (!chan)
  					continue;
  
@@ -572,7 +580,7 @@ index ea6a6eb..0c05c2b 100644
  
  				/* Found a suitable second segment for 80+80 */
  				chwidth = CONF_OPER_CHWIDTH_80P80MHZ;
-@@ -3108,99 +3183,65 @@ static bool ibss_mesh_select_80_160mhz(struct wpa_supplicant *wpa_s,
+@@ -3116,100 +3192,44 @@ static bool ibss_mesh_select_80_160mhz(s
  			vht_caps |= VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
  			seg0 = 114;
  		}
@@ -580,11 +588,12 @@ index ea6a6eb..0c05c2b 100644
 +		chwidth = CONF_OPER_CHWIDTH_USE_HT;
 +		seg0 = channel + 2;
 +#ifdef CONFIG_HT_OVERRIDES
-+		if (ssid->disable_ht40)
-+			seg0 = 0;
++	if (ssid->disable_ht40)
++		seg0 = 0;
 +#endif /* CONFIG_HT_OVERRIDES */
-+	}
-+
+ 	}
+ 
+-skip_80mhz:
 +#ifdef CONFIG_HE_OVERRIDES
 +	if (ssid->disable_he) {
 +		vht_freq.he_enabled = 0;
@@ -597,28 +606,7 @@ index ea6a6eb..0c05c2b 100644
 +		freq->eht_enabled = 0;
 +	}
 +#endif /* CONFIG_EHT_OVERRIDES */
-+	freq->ru_punct_bitmap = ssid->ru_punct_bitmap;
-+	freq->ru_punct_ofdma = 0; /* Default to disabled for mesh. */
 +
-+	if (ssid->ru_punct_bitmap && wpa_s->drv_capa_known) {
-+		switch (chwidth) {
-+		case CONF_OPER_CHWIDTH_320MHZ:
-+			 break;
-+		case CONF_OPER_CHWIDTH_160MHZ:
-+			if (wpa_s->ru_punct_supp_bw == CONF_OPER_CHWIDTH_320MHZ)
-+				freq->ru_punct_bitmap = 0;
-+			break;
-+		case CONF_OPER_CHWIDTH_80MHZ:
-+			if ((wpa_s->ru_punct_supp_bw == CONF_OPER_CHWIDTH_160MHZ) ||
-+			    (wpa_s->ru_punct_supp_bw == CONF_OPER_CHWIDTH_320MHZ))
-+				freq->ru_punct_bitmap = 0;
-+			break;
-+		default:
-+			freq->ru_punct_bitmap = 0;
-+		}
- 	}
- 
--skip_80mhz:
  	if (hostapd_set_freq_params(&vht_freq, mode->mode, freq->freq,
  				    freq->channel, ssid->enable_edmg,
  				    ssid->edmg_channel, freq->ht_enabled,
@@ -630,14 +618,15 @@ index ea6a6eb..0c05c2b 100644
  				    chwidth, seg0, seg1, vht_caps,
  				    &mode->he_capab[ieee80211_mode],
  				    &mode->eht_capab[ieee80211_mode], 0,
- 				    freq->ru_punct_bitmap,
- 				    freq->ru_punct_ofdma) != 0)
+ 				    freq->he_6ghz_reg_pwr_type) != 0)
 -		return false;
--
++		return;
+ 
 -	*freq = vht_freq;
--
--	wpa_printf(MSG_DEBUG, "IBSS: VHT setup freq cf1 %d, cf2 %d, bw %d",
--		   freq->center_freq1, freq->center_freq2, freq->bandwidth);
++	memcpy(freq, &vht_freq, sizeof(vht_freq));
+ 
+ 	wpa_printf(MSG_DEBUG, "IBSS: VHT setup freq cf1 %d, cf2 %d, bw %d",
+ 		   freq->center_freq1, freq->center_freq2, freq->bandwidth);
 -	return true;
 -}
 -
@@ -649,7 +638,7 @@ index ea6a6eb..0c05c2b 100644
 -	int ieee80211_mode = wpas_mode_to_ieee80211_mode(ssid->mode);
 -	enum hostapd_hw_mode hw_mode;
 -	struct hostapd_hw_modes *mode = NULL;
--	int obss_scan = !(ssid->noscan);
+-	int i, obss_scan = !(ssid->noscan);
 -	u8 channel;
 -	bool is_6ghz, is_24ghz;
 -	bool dfs_enabled = wpa_s->conf->country[0] && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_RADAR);
@@ -677,10 +666,10 @@ index ea6a6eb..0c05c2b 100644
 -			hw_mode, is_6ghz_freq(ssid->frequency));
 -
 -	if (!mode)
- 		return;
- 
--	 is_24ghz = hw_mode == HOSTAPD_MODE_IEEE80211G ||
--		  hw_mode == HOSTAPD_MODE_IEEE80211B;
+-		return;
+-
+-	is_24ghz = hw_mode == HOSTAPD_MODE_IEEE80211G ||
+-		hw_mode == HOSTAPD_MODE_IEEE80211B;
 -
 -	is_6ghz = is_6ghz_freq(freq->freq);
 -
@@ -693,13 +682,15 @@ index ea6a6eb..0c05c2b 100644
 -		freq->ht_enabled = ibss_mesh_can_use_ht(wpa_s, ssid, mode);
 -	if (freq->ht_enabled)
 -		freq->vht_enabled = ibss_mesh_can_use_vht(wpa_s, ssid, mode);
--	if (freq->vht_enabled || is_6ghz)
+-	if (freq->vht_enabled || (freq->ht_enabled && is_24ghz) || is_6ghz)
 -		freq->he_enabled = ibss_mesh_can_use_he(wpa_s, ssid, mode,
 -							ieee80211_mode);
 -	 if(is_24ghz)
 -		ibss_mesh_setup_2G_he40(freq, mode, wpa_s,
 -					 ssid, ieee80211_mode);
 -	freq->channel = channel;
+-	if (mode->mode == HOSTAPD_MODE_IEEE80211G && ssid->noscan)
+-		ibss_mesh_select_40mhz(wpa_s, ssid, mode, freq, obss_scan, dfs_enabled);
 -	/* Setup higher BW only for 5 GHz */
 -	if (mode->mode == HOSTAPD_MODE_IEEE80211A) {
 -		ibss_mesh_select_40mhz(wpa_s, ssid, mode, freq, obss_scan, dfs_enabled);
@@ -707,17 +698,14 @@ index ea6a6eb..0c05c2b 100644
 -						ieee80211_mode, is_6ghz, dfs_enabled))
 -			freq->he_enabled = freq->vht_enabled = false;
 -	}
-+	*freq = vht_freq;
- 
+-
 -	if (freq->he_enabled)
 -		freq->eht_enabled = ibss_mesh_can_use_eht(wpa_s, ssid, mode,
 -							  ieee80211_mode);
-+	wpa_printf(MSG_DEBUG, "IBSS: VHT setup freq cf1 %d, cf2 %d, bw %d ru_punct_bitmap 0x%x",
-+		   freq->center_freq1, freq->center_freq2, freq->bandwidth, freq->ru_punct_bitmap);
  }
  
  
-@@ -6450,13 +6491,13 @@ void fst_wpa_supplicant_fill_iface_obj(struct wpa_supplicant *wpa_s,
+@@ -6551,13 +6571,13 @@ void fst_wpa_supplicant_fill_iface_obj(s
  				       struct fst_wpa_obj *iface_obj)
  {
  	os_memset(iface_obj, 0, sizeof(*iface_obj));
@@ -736,16 +724,16 @@ index ea6a6eb..0c05c2b 100644
  	iface_obj->update_mb_ie     = wpas_fst_update_mb_ie_cb;
  	iface_obj->get_peer_first   = wpas_fst_get_peer_first;
  	iface_obj->get_peer_next    = wpas_fst_get_peer_next;
-@@ -7614,7 +7655,7 @@ extern void supplicant_event(void *ctx, enum wpa_event_type event,
+@@ -7716,7 +7736,7 @@ extern void supplicant_event(void *ctx,
  			     union wpa_event_data *data);
  
  extern void supplicant_event_global(void *ctx, enum wpa_event_type event,
 - 				 union wpa_event_data *data);
-+				 union wpa_event_data *data);
++ 				    union wpa_event_data *data);
  
  /**
   * wpa_supplicant_add_iface - Add a new network interface
-@@ -7778,8 +7819,8 @@ const char * wpa_supplicant_get_eap_mode(struct wpa_supplicant *wpa_s)
+@@ -7882,8 +7902,8 @@ const char * wpa_supplicant_get_eap_mode
  {
  	const char *eapol_method;
  
@@ -756,6 +744,3 @@ index ea6a6eb..0c05c2b 100644
  		return "NO-EAP";
  	}
  
--- 
-2.17.1
-

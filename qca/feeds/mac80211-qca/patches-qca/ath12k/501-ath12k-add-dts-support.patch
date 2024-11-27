@@ -12,11 +12,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  drivers/net/wireless/ath/ath12k/qmi.c  | 111 +++++++++++++++++++++----
  3 files changed, 129 insertions(+), 17 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/core.c b/drivers/net/wireless/ath/ath12k/core.c
-index 18566ef..3cc0aaa 100644
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -83,6 +83,29 @@ int ath12k_core_resume(struct ath12k_base *ab)
+@@ -93,6 +93,29 @@ int ath12k_core_resume(struct ath12k_bas
  	return 0;
  }
  
@@ -46,8 +44,6 @@ index 18566ef..3cc0aaa 100644
  static int ath12k_core_create_board_name(struct ath12k_base *ab, char *name,
  					 size_t name_len)
  {
-diff --git a/drivers/net/wireless/ath/ath12k/pci.c b/drivers/net/wireless/ath/ath12k/pci.c
-index 489b78b..23e1d65 100644
 --- a/drivers/net/wireless/ath/ath12k/pci.c
 +++ b/drivers/net/wireless/ath/ath12k/pci.c
 @@ -7,6 +7,7 @@
@@ -58,7 +54,7 @@ index 489b78b..23e1d65 100644
  
  #include "pci.h"
  #include "core.h"
-@@ -617,6 +618,7 @@ static int ath12k_pci_config_irq(struct ath12k_base *ab)
+@@ -617,6 +618,7 @@ static int ath12k_pci_config_irq(struct
  static void ath12k_pci_init_qmi_ce_config(struct ath12k_base *ab)
  {
  	struct ath12k_qmi_ce_cfg *cfg = &ab->qmi.ce_cfg;
@@ -66,7 +62,7 @@ index 489b78b..23e1d65 100644
  
  	cfg->tgt_ce = ab->hw_params->target_ce_config;
  	cfg->tgt_ce_len = ab->hw_params->target_ce_count;
-@@ -624,6 +626,9 @@ static void ath12k_pci_init_qmi_ce_config(struct ath12k_base *ab)
+@@ -624,6 +626,9 @@ static void ath12k_pci_init_qmi_ce_confi
  	cfg->svc_to_ce_map = ab->hw_params->svc_to_ce_map;
  	cfg->svc_to_ce_map_len = ab->hw_params->svc_to_ce_map_len;
  	ab->qmi.service_ins_id = ab->hw_params->qmi_service_ins_id;
@@ -76,7 +72,7 @@ index 489b78b..23e1d65 100644
  }
  
  static void ath12k_pci_ce_irqs_enable(struct ath12k_base *ab)
-@@ -1182,6 +1187,7 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
+@@ -1184,6 +1189,7 @@ static int ath12k_pci_probe(struct pci_d
  	struct ath12k_base *ab;
  	struct ath12k_pci *ab_pci;
  	u32 soc_hw_version_major, soc_hw_version_minor;
@@ -84,7 +80,7 @@ index 489b78b..23e1d65 100644
  	int ret;
  
  	ab = ath12k_core_alloc(&pdev->dev, sizeof(*ab_pci), ATH12K_BUS_PCI,
-@@ -1201,6 +1207,12 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
+@@ -1203,6 +1209,12 @@ static int ath12k_pci_probe(struct pci_d
  	pci_set_drvdata(pdev, ab);
  	spin_lock_init(&ab_pci->window_lock);
  
@@ -97,11 +93,9 @@ index 489b78b..23e1d65 100644
  	ret = ath12k_pci_claim(ab_pci, pdev);
  	if (ret) {
  		ath12k_err(ab, "failed to claim device: %d\n", ret);
-diff --git a/drivers/net/wireless/ath/ath12k/qmi.c b/drivers/net/wireless/ath/ath12k/qmi.c
-index 9f355e6..6af4bc0 100644
 --- a/drivers/net/wireless/ath/ath12k/qmi.c
 +++ b/drivers/net/wireless/ath/ath12k/qmi.c
-@@ -2084,7 +2084,7 @@ static int ath12k_qmi_respond_fw_mem_request(struct ath12k_base *ab)
+@@ -2096,7 +2096,7 @@ static int ath12k_qmi_respond_fw_mem_req
  	 * failure to firmware and firmware then request multiple blocks of
  	 * small chunk size memory.
  	 */
@@ -110,7 +104,7 @@ index 9f355e6..6af4bc0 100644
  		delayed = true;
  		ath12k_dbg(ab, ATH12K_DBG_QMI, "qmi delays mem_request %d\n",
  			   ab->qmi.mem_seg_count);
-@@ -2147,13 +2147,20 @@ static void ath12k_qmi_free_target_mem_chunk(struct ath12k_base *ab)
+@@ -2159,13 +2159,20 @@ static void ath12k_qmi_free_target_mem_c
  	int i;
  
  	for (i = 0; i < ab->qmi.mem_seg_count; i++) {
@@ -138,7 +132,7 @@ index 9f355e6..6af4bc0 100644
  	}
  }
  
-@@ -2206,14 +2213,68 @@ static int ath12k_qmi_alloc_target_mem_chunk(struct ath12k_base *ab)
+@@ -2218,14 +2225,68 @@ static int ath12k_qmi_alloc_target_mem_c
  	return 0;
  }
  
@@ -209,7 +203,7 @@ index 9f355e6..6af4bc0 100644
  
  	memset(&req, 0, sizeof(req));
  	memset(&resp, 0, sizeof(resp));
-@@ -2251,10 +2312,13 @@ static int ath12k_qmi_request_target_cap(struct ath12k_base *ab)
+@@ -2263,10 +2324,13 @@ static int ath12k_qmi_request_target_cap
  		ab->qmi.target.chip_family = resp.chip_info.chip_family;
  	}
  
@@ -225,7 +219,7 @@ index 9f355e6..6af4bc0 100644
  
  	if (resp.soc_info_valid)
  		ab->qmi.target.soc_id = resp.soc_info.soc_id;
-@@ -2297,6 +2361,10 @@ static int ath12k_qmi_request_target_cap(struct ath12k_base *ab)
+@@ -2309,6 +2373,10 @@ static int ath12k_qmi_request_target_cap
  		    ab->qmi.target.fw_build_timestamp,
  		    ab->qmi.target.fw_build_id);
  
@@ -236,7 +230,7 @@ index 9f355e6..6af4bc0 100644
  out:
  	return ret;
  }
-@@ -2902,11 +2970,20 @@ static void ath12k_qmi_msg_mem_request_cb(struct qmi_handle *qmi_hdl,
+@@ -2940,11 +3008,20 @@ static void ath12k_qmi_msg_mem_request_c
  			   msg->mem_seg[i].type, msg->mem_seg[i].size);
  	}
  
@@ -262,6 +256,14 @@ index 9f355e6..6af4bc0 100644
  	}
  
  	ath12k_qmi_driver_event_post(qmi, ATH12K_QMI_EVENT_REQUEST_MEM, NULL);
--- 
-2.17.1
-
+--- a/drivers/net/wireless/ath/ath12k/core.h
++++ b/drivers/net/wireless/ath/ath12k/core.h
+@@ -962,6 +962,8 @@ int ath12k_core_fetch_bdf(struct ath12k_
+ 			  struct ath12k_board_data *bd);
+ void ath12k_core_free_bdf(struct ath12k_base *ab, struct ath12k_board_data *bd);
+ 
++int ath12k_core_check_dt(struct ath12k_base *ath12k);
++
+ void ath12k_core_halt(struct ath12k *ar);
+ int ath12k_core_resume(struct ath12k_base *ab);
+ int ath12k_core_suspend(struct ath12k_base *ab);

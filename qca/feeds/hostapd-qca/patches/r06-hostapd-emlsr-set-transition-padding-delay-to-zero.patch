@@ -13,7 +13,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 ---
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -616,6 +616,12 @@ u8 * hostapd_eid_eht_basic_ml(struct hos
+@@ -630,6 +630,12 @@ static u8 * hostapd_eid_eht_basic_ml_com
  	wpabuf_put_u8(buf, hapd->rx_cu_param.bpcc);
  
  	if (!hapd->conf->disable_eml_cap) {
@@ -26,6 +26,3 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		wpa_printf(MSG_DEBUG, "MLD: EML Capabilities=0x%x",
  			   hapd->iface->mld_eml_capa);
  		wpabuf_put_le16(buf, hapd->iface->mld_eml_capa);
--- 
-2.17.1
-

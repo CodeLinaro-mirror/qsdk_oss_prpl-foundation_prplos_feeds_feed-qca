@@ -63,22 +63,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  static u8 * hostapd_eid_supported_op_classes(struct hostapd_data *hapd, u8 *eid)
  {
-@@ -629,8 +658,11 @@ static u8 * hostapd_gen_probe_resp(struc
- 		 * long based on the common info and number of per
- 		 * station profiles. For now use 256.
- 		 */
--		if (hapd->conf->mld_ap)
-+		if (hapd->conf->mld_ap) {
- 			buflen += 256;
-+			/* inclusion on MCST IE is mandatory */
-+			buflen += 6;
-+		}
- 		/* QCN Vendor IE for 240MHz */
- 		if (is_5ghz_freq(hapd->iface->freq))
- 			buflen += (6 + 2 + 4 +
-@@ -731,6 +763,9 @@ static u8 * hostapd_gen_probe_resp(struc
- 		hapd->cs_c_off_ecsa_proberesp = csa_pos - (u8 *) resp - 1;
- 	pos = csa_pos;
+@@ -777,6 +806,9 @@ static u8 * hostapd_probe_resp_fill_elem
+ 		pos = csa_pos;
+ 	}
  
 +	/* MCST IE */
 +	pos = hostapd_eid_mcst(hapd, pos);
@@ -86,7 +73,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	pos = hostapd_eid_supported_op_classes(hapd, pos);
  	pos = hostapd_eid_ht_capabilities(hapd, pos);
  	pos = hostapd_eid_ht_operation(hapd, pos);
-@@ -1823,8 +1858,11 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2263,8 +2295,11 @@ int ieee802_11_build_ap_params(struct ho
  		 * long based on the common info and number of per
  		 * station profiles. For now use 256.
  		 */
@@ -97,9 +84,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +			tail_len += 6;
 +		}
  
- 		if (hapd->iconf->ru_punct_bitmap)
+ 		if (hapd->iconf->punct_bitmap)
  			tail_len +=  DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
-@@ -1920,6 +1958,9 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2362,6 +2397,9 @@ int ieee802_11_build_ap_params(struct ho
  		hapd->cs_c_off_ecsa_beacon = csa_pos - tail - 1;
  	tailpos = csa_pos;
  
@@ -111,7 +98,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	tailpos = hostapd_eid_ht_operation(hapd, tailpos);
 --- a/src/common/defs.h
 +++ b/src/common/defs.h
-@@ -530,4 +530,9 @@ enum sae_pwe {
+@@ -537,4 +537,9 @@ enum sae_pwe {
  	SAE_PWE_NOT_SET = 4,
  };
  
@@ -123,7 +110,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  #endif /* DEFS_H */
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -483,6 +483,7 @@
+@@ -504,6 +504,7 @@
  #define WLAN_EID_EXT_HE_MU_EDCA_PARAMS 38
  #define WLAN_EID_EXT_SPATIAL_REUSE 39
  #define WLAN_EID_EXT_COLOR_CHANGE_ANNOUNCEMENT 42

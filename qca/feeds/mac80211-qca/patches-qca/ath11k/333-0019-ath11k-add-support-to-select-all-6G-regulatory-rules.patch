@@ -15,6 +15,7 @@ its configured power mode and can update its rules accordingly.
 Even during concurrency, two rules can be fetched and updated.
 
 Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
+Signed-off-by: Aishwarya R <quic_aisr@quicinc.com>
 ---
  drivers/net/wireless/ath/ath11k/reg.c | 121 +++++++++++++++++++++++-----------
  drivers/net/wireless/ath/ath11k/reg.h |   1 -
@@ -192,10 +193,25 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  static int ath11k_pull_reg_chan_list_ext_update_ev(struct ath11k_base *ab,
  						   struct sk_buff *skb,
  						   struct cur_regulatory_info *reg_info)
-@@ -8143,7 +8164,7 @@ static int ath11k_reg_handle_chan_list(s
- 		   "wmi handle chan list power type %d vdev type %d intersect %d\n",
- 		   power_type, vdev_type, intersect);
+@@ -8090,7 +8111,6 @@ static int ath11k_reg_handle_chan_list(s
+ 	struct ieee80211_regdomain *regd;
+ 	struct ath11k *ar;
+ 	int pdev_idx;
+-	enum wmi_vdev_type vdev_type;
  
+ 	ath11k_dbg(ab, ATH11K_DBG_WMI, "event reg chan list id %d", id);
+ 
+@@ -8136,14 +8156,7 @@ static int ath11k_reg_handle_chan_list(s
+ 		    (char *)reg_info->alpha2, 2))
+ 		goto retfail;
+ 
+-	ar = ab->pdevs[pdev_idx].ar;
+-	vdev_type = ath11k_mac_get_ar_vdev_type(ar);
+-
+-	ath11k_dbg(ab, ATH11K_DBG_WMI,
+-		   "wmi handle chan list power type %d vdev type %d intersect %d\n",
+-		   power_type, vdev_type, intersect);
+-
 -	regd = ath11k_reg_build_regd(ab, reg_info, intersect, vdev_type, power_type);
 +	regd = ath11k_reg_build_regd(ab, reg_info, intersect, power_type);
  

@@ -1,0 +1,75 @@
+From 83ed91e4e709609532b62b406319fc2d5da0a362 Mon Sep 17 00:00:00 2001
+From: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
+Date: Thu, 5 Sep 2024 11:24:39 +0530
+Subject: [PATCH] hostapd: Include EHT basic ML info for critical update
+
+Add critical update check for EHT basic ML info when
+number of simultaneous links get modified on link addition.
+
+Patch-depdendency: r04-007-hostapd-Add-NL-attribute-to-set-critical-update-para.patch
+
+Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
+---
+ src/ap/beacon.c  | 11 ++++++++---
+ src/ap/hostapd.h |  1 +
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -2206,7 +2206,7 @@ int ieee802_11_build_ap_params(struct ho
+ 	u8 *pos, *tailpos, *tailend, *csa_pos;
+ 	bool complete = false;
+ 	u8 *startpos;
+-	u8 elemid_modified = 0;
++	u16 elemid_modified = 0;
+ 	struct hostapd_data *tx_bss;
+ #endif /* NEED_AP_MLME */
+ 	struct hostapd_data *lhapd;
+@@ -2480,9 +2480,14 @@ int ieee802_11_build_ap_params(struct ho
+ 
+ #ifdef CONFIG_IEEE80211BE
+ 	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
+-		if (hapd->conf->mld_ap)
++		if (hapd->conf->mld_ap) {
++			startpos = tailpos;
+ 			tailpos = hostapd_eid_eht_ml_beacon(hapd, NULL,
+ 							    tailpos, false);
++			hostapd_eid_update_cu_info(hapd, &elemid_modified, startpos,
++						   tailpos-startpos, ELEMID_CU_PARAM_EXT_ML);
++		}
++
+ 		tailpos = hostapd_eid_eht_capab(hapd, tailpos,
+ 						IEEE80211_MODE_AP);
+ 		startpos = tailpos;
+--- a/src/ap/hostapd.h
++++ b/src/ap/hostapd.h
+@@ -206,6 +206,7 @@ enum elemid_cu {
+ 	ELEMID_CU_PARAM_WMM,
+ 	ELEMID_CU_PARAM_MU_EDCA,
+ 	ELEMID_CU_PARAM_SPATIAL_REUSE,
++	ELEMID_CU_PARAM_EXT_ML,
+ 
+ 	ELEMID_CU_PARAM_MAX,
+ };
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -9151,7 +9151,7 @@ size_t hostapd_eid_mbssid_len(struct hos
+ }
+ 
+ #ifdef CONFIG_IEEE80211BE
+-void hostapd_eid_update_cu_info(struct hostapd_data *hapd, u8 *elemid_modified,
++void hostapd_eid_update_cu_info(struct hostapd_data *hapd, u16 *elemid_modified,
+ 				       const u8 *eid_pos, size_t eid_len,
+ 				       enum elemid_cu eid_cu)
+ {
+--- a/src/ap/ieee802_11.h
++++ b/src/ap/ieee802_11.h
+@@ -280,7 +280,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
+ 			u32 *elemid_modified_bmap);
+ u16 hostapd_critical_update_capab(struct hostapd_data *hapd);
+ bool hostapd_is_mld_ap(struct hostapd_data *hapd);
+-void hostapd_eid_update_cu_info(struct hostapd_data *hapd, u8 *elemid_modified,
++void hostapd_eid_update_cu_info(struct hostapd_data *hapd, u16 *elemid_modified,
+ 				const u8 *eid_pos, size_t eid_len,
+ 				enum elemid_cu eid_cu);
+ const char * sae_get_password(struct hostapd_data *hapd,

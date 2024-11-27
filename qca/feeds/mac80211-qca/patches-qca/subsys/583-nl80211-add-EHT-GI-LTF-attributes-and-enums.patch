@@ -16,7 +16,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -793,6 +793,8 @@ struct cfg80211_bitrate_mask {
+@@ -850,6 +850,8 @@ struct cfg80211_bitrate_mask {
  		enum nl80211_he_ltf he_ltf;
  		u16 he_ul_mcs[NL80211_HE_NSS_MAX];
  		u16 eht_mcs[NL80211_EHT_NSS_MAX];
@@ -25,50 +25,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	} control[NUM_NL80211_BANDS];
  };
  
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -3460,6 +3460,18 @@ enum nl80211_eht_gi {
- };
- 
- /**
-+ * enum nl80211_eht_ltf - EHT long training field
-+ * @NL80211_RATE_INFO_EHT_1xLTF: 3.2 usec
-+ * @NL80211_RATE_INFO_EHT_2xLTF: 6.4 usec
-+ * @NL80211_RATE_INFO_EHT_4xLTF: 12.8 usec
-+ */
-+enum nl80211_eht_ltf {
-+	NL80211_RATE_INFO_EHT_1XLTF,
-+	NL80211_RATE_INFO_EHT_2XLTF,
-+	NL80211_RATE_INFO_EHT_4XLTF,
-+};
-+
-+/**
-  * enum nl80211_eht_ru_alloc - EHT RU allocation values
-  * @NL80211_RATE_INFO_EHT_RU_ALLOC_26: 26-tone RU allocation
-  * @NL80211_RATE_INFO_EHT_RU_ALLOC_52: 52-tone RU allocation
-@@ -5123,7 +5135,9 @@ enum nl80211_key_attributes {
-  * @NL80211_TXRATE_HE_LTF: configure HE LTF, 1XLTF, 2XLTF and 4XLTF.
-  * @NL80211_TXRATE_HE_UL: HE MCS rates of connected HE STA for uplink traffic.
-  * @NL80211_TXRATE_EHT: EHT rates allowed for TX rate selection,
-- * see &struct nl80211_txrate_eht
-+ * 	see &struct nl80211_txrate_eht
-+ * @NL80211_TXRATE_EHT_GI: configure EHT GI, 0.8us, 1.6us and 3.2us.
-+ * @NL80211_TXRATE_EHT_LTF: configure EHT LTF, 1XLTF, 2XLTF and 4XLTF.
-  * @__NL80211_TXRATE_AFTER_LAST: internal
-  * @NL80211_TXRATE_MAX: highest TX rate attribute
-  */
-@@ -5138,6 +5152,8 @@ enum nl80211_tx_rate_attributes {
- 	NL80211_TXRATE_HE_LTF,
- 	NL80211_TXRATE_HE_UL,
- 	NL80211_TXRATE_EHT,
-+	NL80211_TXRATE_EHT_GI,
-+	NL80211_TXRATE_EHT_LTF,
- 
- 	/* keep last */
- 	__NL80211_TXRATE_AFTER_LAST,
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -392,6 +392,12 @@ static const struct nla_policy nl80211_t
+@@ -402,6 +402,12 @@ static const struct nla_policy nl80211_t
  	},
  	[NL80211_TXRATE_EHT] =
  		NLA_POLICY_EXACT_LEN(sizeof(struct nl80211_txrate_eht)),
@@ -81,7 +40,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  };
  
  static const struct nla_policy
-@@ -5087,6 +5093,9 @@ static int nl80211_parse_tx_bitrate_mask
+@@ -5385,6 +5391,9 @@ static int nl80211_parse_tx_bitrate_mask
  
  		mask->control[i].he_gi = 0xFF;
  		mask->control[i].he_ltf = 0xFF;
@@ -91,7 +50,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	}
  
  	/* if no rates are given set it back to the defaults */
-@@ -5171,6 +5180,14 @@ static int nl80211_parse_tx_bitrate_mask
+@@ -5471,6 +5480,14 @@ static int nl80211_parse_tx_bitrate_mask
  				      mask->control[band].eht_mcs))
  			return -EINVAL;
  

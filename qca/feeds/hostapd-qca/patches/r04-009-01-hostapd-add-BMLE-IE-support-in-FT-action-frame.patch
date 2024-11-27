@@ -16,12 +16,12 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/src/ap/wpa_auth.h
 +++ b/src/ap/wpa_auth.h
-@@ -385,6 +385,8 @@ struct wpa_auth_callbacks {
+@@ -389,6 +389,8 @@ struct wpa_auth_callbacks {
  			      const u8 *data, size_t data_len);
  	int (*add_tspec)(void *ctx, const u8 *sta_addr, u8 *tspec_ie,
  			 size_t tspec_ielen);
-+	u8* (*add_bmle)(void *ctx, u8 *bmle_ie, u32 type, void *ml_data);
-+	size_t (*add_bmle_len)(void *ctx, u32 type, void *ml_data);
++	u8* (*add_bmle)(void *ctx, u8 *bmle_ie, u8 type, void *ml_data);
++	size_t (*add_bmle_len)(void *ctx, u8 type, void *ml_data);
  #endif /* CONFIG_IEEE80211R_AP */
  #ifdef CONFIG_MESH
  	int (*start_ampe)(void *ctx, const u8 *sta_addr);
@@ -33,7 +33,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
 +static u8 *wpa_ft_add_bmle(struct wpa_authenticator *wpa_auth,
 +			   u8 *bmle_ie, u32 type,
-+			   struct multi_link_data *ml_data)
++			   void *ml_data)
 +{
 +	if (wpa_auth->cb->add_bmle == NULL) {
 +		wpa_printf(MSG_DEBUG, "FT: add_bmle is not initialized");
@@ -45,7 +45,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +
 +static size_t wpa_ft_add_bmle_len(struct wpa_authenticator *wpa_auth,
 +				  u32 type,
-+				  struct multi_link_data *ml_data)
++				  void *ml_data)
 +{
 +	if (wpa_auth->cb->add_bmle_len == NULL) {
 +		wpa_printf(MSG_DEBUG, "FT: add_bmle_len is not initialized");
@@ -58,16 +58,16 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifdef CONFIG_OCV
  static int wpa_channel_info(struct wpa_authenticator *wpa_auth,
  			       struct wpa_channel_info *ci)
-@@ -3529,7 +3553,7 @@ static int wpa_ft_process_auth_req(struc
+@@ -3541,7 +3565,7 @@ static int wpa_ft_process_auth_req(struc
  	struct vlan_description vlan;
  	const u8 *identity, *radius_cui;
  	size_t identity_len = 0, radius_cui_len = 0;
 -	size_t pmk_r1_len, kdk_len, len;
 +	size_t pmk_r1_len, kdk_len, len, bmle_len;
+ 	int retval = WLAN_STATUS_UNSPECIFIED_FAILURE;
  
  	*resp_ies = NULL;
- 	*resp_ies_len = 0;
-@@ -3738,8 +3762,10 @@ pmk_r1_derived:
+@@ -3762,8 +3786,10 @@ pmk_r1_derived:
  	}
  	wpa_ft_set_session_timeout(sm->wpa_auth, wpa_auth_get_spa(sm), session_timeout);
  
@@ -79,7 +79,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	*resp_ies = os_zalloc(buflen);
  	if (*resp_ies == NULL)
  		goto fail;
-@@ -3765,6 +3791,8 @@ pmk_r1_derived:
+@@ -3789,6 +3815,8 @@ pmk_r1_derived:
  		goto fail;
  	pos += ret;
  
@@ -87,32 +87,32 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +
  	*resp_ies_len = pos - *resp_ies;
  
- 	return WLAN_STATUS_SUCCESS;
+ 	retval = WLAN_STATUS_SUCCESS;
 --- a/src/ap/wpa_auth_glue.c
 +++ b/src/ap/wpa_auth_glue.c
-@@ -1417,6 +1417,21 @@ static int hostapd_wpa_auth_add_tspec(vo
+@@ -1517,6 +1517,21 @@ static int hostapd_wpa_auth_add_tspec(vo
  }
  
  
-+static u8 *hostapd_wpa_ft_add_bmle(void *ctx, u8 *bmle_ie, void *mle_data)
++static u8 *hostapd_wpa_ft_add_bmle(void *ctx, u8 *bmle_ie, u8 type, void *mle_data)
 +{
 +	struct hostapd_data *hapd = ctx;
 +
-+	return hostapd_eid_eht_basic_ml(hapd, bmle_ie, NULL, true);
++	return hostapd_eid_eht_ml_beacon(hapd, NULL, bmle_ie, true);
 +}
 +
 +
-+static size_t hostapd_wpa_ft_add_bmle_len(void *ctx, void *mle_data)
++static size_t hostapd_wpa_ft_add_bmle_len(void *ctx, u8 type, void *mle_data)
 +{
 +	struct hostapd_data *hapd = ctx;
 +
-+	return hostapd_eid_eht_basic_ml_len(hapd, NULL, true);
++	return hostapd_eid_eht_ml_beacon_len(hapd, NULL, true);
 +}
 +
  
  static int hostapd_wpa_register_ft_oui(struct hostapd_data *hapd,
  				       const char *ft_iface)
-@@ -1637,6 +1652,8 @@ int hostapd_setup_wpa(struct hostapd_dat
+@@ -1706,6 +1721,8 @@ int hostapd_setup_wpa(struct hostapd_dat
  		.add_sta = hostapd_wpa_auth_add_sta,
  		.add_sta_ft = hostapd_wpa_auth_add_sta_ft,
  		.add_tspec = hostapd_wpa_auth_add_tspec,

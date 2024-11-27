@@ -16,7 +16,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath11k/core.c
 +++ b/drivers/net/wireless/ath/ath11k/core.c
-@@ -147,7 +147,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -148,7 +148,7 @@ static struct ath11k_hw_params ath11k_hw
  		.num_peers = 512,
  		.supports_suspend = false,
  		.hal_desc_sz = sizeof(struct hal_rx_desc_ipq8074),
@@ -25,7 +25,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		.fix_l1ss = true,
  		.credit_flow = false,
  		.hal_params = &ath11k_hw_hal_params_ipq8074,
-@@ -238,7 +238,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -240,7 +240,7 @@ static struct ath11k_hw_params ath11k_hw
  		.num_peers = 512,
  		.supports_suspend = false,
  		.hal_desc_sz = sizeof(struct hal_rx_desc_ipq8074),
@@ -34,7 +34,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		.fix_l1ss = true,
  		.credit_flow = false,
  		.max_tx_ring = DP_TCL_NUM_RING_MAX,
-@@ -417,7 +417,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -421,7 +421,7 @@ static struct ath11k_hw_params ath11k_hw
  		.num_peers = 128,
  		.supports_suspend = false,
  		.hal_desc_sz = sizeof(struct hal_rx_desc_qcn9074),
@@ -43,7 +43,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		.fix_l1ss = true,
  		.credit_flow = false,
  		.hal_params = &ath11k_hw_hal_params_ipq8074,
-@@ -774,7 +774,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -781,7 +781,7 @@ static struct ath11k_hw_params ath11k_hw
  		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE,
  		.num_vdevs = 16 + 1,
  		.num_peers = 512,
@@ -52,7 +52,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		.idle_ps = false,
  		.supports_suspend = false,
  		.hal_params = &ath11k_hw_hal_params_ipq8074,
-@@ -860,6 +860,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -868,6 +868,7 @@ static struct ath11k_hw_params ath11k_hw
  		.idle_ps = false,
  		.supports_suspend = false,
  		.host_ce_config = ath11k_host_ce_config_qcn9074,
@@ -60,7 +60,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		.ce_count = 6,
  		.target_ce_config = ath11k_target_ce_config_wlan_ipq5018,
  		.target_ce_count = 9,
-@@ -926,6 +927,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -934,6 +935,7 @@ static struct ath11k_hw_params ath11k_hw
  		.regs = &ipq8074_regs,
  		.qmi_service_ins_id = ATH11K_QMI_WLFW_SERVICE_INS_ID_V01_IPQ8074,
  		.host_ce_config = ath11k_host_ce_config_ipq9574,
@@ -68,15 +68,15 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		.ce_count = 10,
  		.target_ce_config = ath11k_target_ce_config_wlan_ipq9574,
  		.target_ce_count = 10,
-@@ -1336,14 +1338,13 @@ int ath11k_core_check_dt(struct ath11k_b
- 	return 0;
- }
+@@ -1313,14 +1315,13 @@ enum ath11k_bdf_name_type {
+ 	ATH11K_BDF_NAME_CHIP_ID,
+ };
  
 -static int __ath11k_core_create_board_name(struct ath11k_base *ab, char *name,
 -					   size_t name_len, bool with_variant,
--					   bool bus_type_mode)
+-					   enum ath11k_bdf_name_type name_type)
 +static int ath11k_core_create_board_name(struct ath11k_base *ab, char *name,
-+                                         char *defaultname, size_t name_len)
++										 char *defaultname, size_t name_len)
  {
  	/* strlen(',variant=') + strlen(ab->qmi.target.bdf_ext) */
  	char variant[9 + ATH11K_QMI_BDF_EXT_STR_LENGTH] = { 0 };
@@ -86,7 +86,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		scnprintf(variant, sizeof(variant), ",variant=%s",
  			  ab->qmi.target.bdf_ext);
  
-@@ -1370,6 +1371,12 @@ static int __ath11k_core_create_board_na
+@@ -1357,6 +1358,12 @@ static int __ath11k_core_create_board_na
  			  ath11k_bus_str(ab->hif.bus),
  			  ab->qmi.target.chip_id,
  			  ab->qmi.target.board_id, variant);
@@ -99,32 +99,42 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		break;
  	}
  
-@@ -1378,24 +1385,6 @@ static int __ath11k_core_create_board_na
+@@ -1365,34 +1372,6 @@ static int __ath11k_core_create_board_na
  	return 0;
  }
  
 -static int ath11k_core_create_board_name(struct ath11k_base *ab, char *name,
 -					 size_t name_len)
 -{
--	return __ath11k_core_create_board_name(ab, name, name_len, true, false);
+-	return __ath11k_core_create_board_name(ab, name, name_len, true,
+-					       ATH11K_BDF_NAME_FULL);
 -}
 -
 -static int ath11k_core_create_fallback_board_name(struct ath11k_base *ab, char *name,
 -						  size_t name_len)
 -{
--	return __ath11k_core_create_board_name(ab, name, name_len, false, false);
+-	return __ath11k_core_create_board_name(ab, name, name_len, false,
+-					       ATH11K_BDF_NAME_FULL);
 -}
 -
 -static int ath11k_core_create_bus_type_board_name(struct ath11k_base *ab, char *name,
 -						  size_t name_len)
 -{
--	return __ath11k_core_create_board_name(ab, name, name_len, false, true);
+-	return __ath11k_core_create_board_name(ab, name, name_len, false,
+-					       ATH11K_BDF_NAME_BUS_NAME);
+-}
+-
+-static int ath11k_core_create_chip_id_board_name(struct ath11k_base *ab, char *name,
+-						 size_t name_len)
+-{
+-	return __ath11k_core_create_board_name(ab, name, name_len, false,
+-					       ATH11K_BDF_NAME_CHIP_ID);
 -}
 -
  const struct firmware *ath11k_core_firmware_request(struct ath11k_base *ab,
  						    const char *file)
  {
-@@ -1597,6 +1586,7 @@ static int ath11k_core_fetch_board_data_
+@@ -1594,6 +1573,7 @@ static int ath11k_core_fetch_board_data_
  			/* either found or error, so stop searching */
  			goto out;
  		}
@@ -132,40 +142,45 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  next:
  		/* jump over the padding */
  		ie_len = ALIGN(ie_len, 4);
-@@ -1637,16 +1627,13 @@ int ath11k_core_fetch_board_data_api_1(s
+@@ -1634,21 +1614,18 @@ int ath11k_core_fetch_board_data_api_1(s
  	return 0;
  }
  
 -#define BOARD_NAME_SIZE 200
  int ath11k_core_fetch_bdf(struct ath11k_base *ab, struct ath11k_board_data *bd)
  {
- 	char boardname[BOARD_NAME_SIZE], fallback_boardname[BOARD_NAME_SIZE];
+ 	char *boardname = NULL, *fallback_boardname = NULL, *chip_id_boardname = NULL;
 -	char *filename, filepath[100];
- 	int ret;
+ 	int ret = 0;
  
 -	filename = ATH11K_BOARD_API2_FILE;
+ 	boardname = kzalloc(BOARD_NAME_SIZE, GFP_KERNEL);
+ 	if (!boardname) {
+ 		ret = -ENOMEM;
+ 		goto exit;
+ 	}
 -
--	ret = ath11k_core_create_board_name(ab, boardname, sizeof(boardname));
+-	ret = ath11k_core_create_board_name(ab, boardname, BOARD_NAME_SIZE);
 +	ret = ath11k_core_create_board_name(ab, boardname, fallback_boardname,
-+					    BOARD_NAME_SIZE);
++										BOARD_NAME_SIZE);
  	if (ret) {
  		ath11k_err(ab, "failed to create board name: %d", ret);
- 		return ret;
-@@ -1660,13 +1647,6 @@ int ath11k_core_fetch_bdf(struct ath11k_
- 	if (!ret)
- 		goto success;
+ 		goto exit;
+@@ -1668,13 +1645,6 @@ int ath11k_core_fetch_bdf(struct ath11k_
+ 		goto exit;
+ 	}
  
 -	ret = ath11k_core_create_fallback_board_name(ab, fallback_boardname,
--						     sizeof(fallback_boardname));
+-						     BOARD_NAME_SIZE);
 -	if (ret) {
 -		ath11k_err(ab, "failed to create fallback board name: %d", ret);
--		return ret;
+-		goto exit;
 -	}
 -
  	ret = ath11k_core_fetch_board_data_api_n(ab, bd, fallback_boardname,
  						 ATH11K_BD_IE_BOARD,
  						 ATH11K_BD_IE_BOARD_NAME,
-@@ -1677,16 +1657,13 @@ int ath11k_core_fetch_bdf(struct ath11k_
+@@ -1706,21 +1676,20 @@ int ath11k_core_fetch_bdf(struct ath11k_
  	ab->bd_api = 1;
  	ret = ath11k_core_fetch_board_data_api_1(ab, bd, ATH11K_DEFAULT_BOARD_FILE);
  	if (ret) {
@@ -177,17 +192,24 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 -			ath11k_err(ab, "failed to fetch board data for %s from %s\n",
 -				   fallback_boardname, filepath);
 -
+ 		ath11k_err(ab, "failed to fetch board data for %s from %s\n",
+ 			   chip_id_boardname, filepath);
+ 
  		ath11k_err(ab, "failed to fetch board.bin from %s\n",
  			   ab->hw_params.fw.dir);
 +	} else {
 +		ret = ath11k_core_fetch_board_data_api_1(ab, bd, ATH11K_BOARD_API2_FILE);
 +		if (ret)
 +			ath11k_err(ab, "failed to fetch board-2.bin from %s\n",
-+				   ab->hw_params.fw.dir);
- 		return ret;
++					   ab->hw_params.fw.dir);
++		return ret;
  	}
  
-@@ -1697,48 +1674,44 @@ success:
++
+ exit:
+ 	kfree(boardname);
+ 	kfree(fallback_boardname);
+@@ -1734,48 +1703,44 @@ exit:
  
  int ath11k_core_fetch_regdb(struct ath11k_base *ab, struct ath11k_board_data *bd)
  {
@@ -255,7 +277,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  static void ath11k_core_stop(struct ath11k_base *ab)
 --- a/drivers/net/wireless/ath/ath11k/core.h
 +++ b/drivers/net/wireless/ath/ath11k/core.h
-@@ -1098,6 +1098,9 @@ struct ath11k_pdev {
+@@ -1094,6 +1094,9 @@ struct ath11k_pdev {
  	u8 mac_addr[ETH_ALEN];
  };
  
@@ -265,7 +287,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  struct ath11k_board_data {
  	const struct firmware *fw;
  	const void *data;
-@@ -1610,7 +1613,8 @@ void ath11k_core_free(struct ath11k_base
+@@ -1598,7 +1601,8 @@ void ath11k_core_free(struct ath11k_base
  int ath11k_core_fetch_bdf(struct ath11k_base *ath11k,
  			  struct ath11k_board_data *bd);
  int ath11k_config_qdss(struct ath11k_base *ab);
@@ -288,7 +310,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  #define ATH11K_CE_OFFSET(ab)	(ab->mem_ce - ab->mem)
 --- a/drivers/net/wireless/ath/ath11k/qmi.c
 +++ b/drivers/net/wireless/ath/ath11k/qmi.c
-@@ -1415,6 +1415,24 @@ static const struct qmi_elem_info qmi_wl
+@@ -1414,6 +1414,24 @@ static const struct qmi_elem_info qmi_wl
  					   eeprom_read_timeout),
  	},
  	{

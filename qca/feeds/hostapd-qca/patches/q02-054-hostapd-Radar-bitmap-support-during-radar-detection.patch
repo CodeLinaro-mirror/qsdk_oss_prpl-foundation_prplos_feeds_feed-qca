@@ -26,7 +26,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -764,7 +764,7 @@ static int set_dfs_state_freq(struct hos
+@@ -767,7 +767,7 @@ static int set_dfs_state_freq(struct hos
  
  static int set_dfs_state(struct hostapd_iface *iface, int freq, int ht_enabled,
  			 int chan_offset, int chan_width, int cf1,
@@ -35,7 +35,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  {
  	int n_chans = 1, i;
  	struct hostapd_hw_modes *mode;
-@@ -819,12 +819,25 @@ static int set_dfs_state(struct hostapd_
+@@ -822,12 +822,25 @@ static int set_dfs_state(struct hostapd_
  	wpa_printf(MSG_DEBUG, "DFS freq: %dMHz, n_chans: %d", frequency,
  		   n_chans);
  	for (i = 0; i < n_chans; i++) {
@@ -47,7 +47,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 -			frequency2 = frequency2 + 20;
 +		if (radar_bitmap && state == HOSTAPD_CHAN_DFS_UNAVAILABLE)
 +		{
-+			if (radar_bitmap & 1<<i)		
++			if (radar_bitmap & 1<<i)
 +				ret += set_dfs_state_freq(iface, frequency, state);
 +			frequency = frequency + 20;
 +
@@ -66,7 +66,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		}
  	}
  
-@@ -1349,7 +1362,7 @@ int hostapd_dfs_complete_cac(struct host
+@@ -1369,7 +1382,7 @@ int hostapd_dfs_complete_cac(struct host
  		} else {
  			set_dfs_state(iface, freq, ht_enabled, chan_offset,
  				      chan_width, cf1, cf2,
@@ -75,7 +75,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  			/*
  			 * Radar event from background chain for the selected
-@@ -1406,7 +1419,7 @@ int hostapd_dfs_pre_cac_expired(struct h
+@@ -1427,7 +1440,7 @@ int hostapd_dfs_pre_cac_expired(struct h
  		return 0;
  
  	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
@@ -84,7 +84,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	return 0;
  }
-@@ -1636,7 +1649,7 @@ static int hostapd_dfs_start_channel_swi
+@@ -1657,7 +1670,7 @@ static int hostapd_dfs_start_channel_swi
  
  int hostapd_dfs_radar_detected(struct hostapd_iface *iface, int freq,
  			       int ht_enabled, int chan_offset, int chan_width,
@@ -93,7 +93,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  {
  	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_RADAR_DETECTED
  		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
-@@ -1651,13 +1664,13 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1674,13 +1687,13 @@ int hostapd_dfs_radar_detected(struct ho
  
  	/* mark radar frequency as invalid */
  	if (!set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
@@ -109,7 +109,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	 }
  
  	if (!hostapd_dfs_is_background_event(iface, freq)) {
-@@ -1697,7 +1710,7 @@ int hostapd_dfs_nop_finished(struct host
+@@ -1720,7 +1733,7 @@ int hostapd_dfs_nop_finished(struct host
  
  	/* TODO add correct implementation here */
  	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
@@ -131,7 +131,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			     int chan_offset, int chan_width, int cf1, int cf2);
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -1856,7 +1856,7 @@ static void hostapd_event_dfs_radar_dete
+@@ -2196,7 +2196,7 @@ static void hostapd_event_dfs_radar_dete
  	wpa_printf(MSG_DEBUG, "DFS radar detected on %d MHz", radar->freq);
  	hostapd_dfs_radar_detected(hapd->iface, radar->freq, radar->ht_enabled,
  				   radar->chan_offset, radar->chan_width,
@@ -140,36 +140,28 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  }
  
  static void hostapd_event_awgn_detected(struct hostapd_data *hapd,
---- a/src/drivers/driver.h
-+++ b/src/drivers/driver.h
-@@ -6573,6 +6573,7 @@ union wpa_event_data {
- 		enum chan_width chan_width;
- 		int cf1;
- 		int cf2;
-+		u16 radar_bitmap;
- 	} dfs_event;
- 
- 	/**
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2431,11 +2431,13 @@ static void nl80211_radar_event(struct w
+@@ -2514,13 +2514,15 @@ static void nl80211_radar_event(struct w
  		data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
  	if (tb[NL80211_ATTR_CENTER_FREQ2])
  		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
 +	if (tb[NL80211_ATTR_RADAR_BITMAP])
 +		data.dfs_event.radar_bitmap = nla_get_u16(tb[NL80211_ATTR_RADAR_BITMAP]);
  
--	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz",
+ 	wpa_printf(MSG_DEBUG,
+-		   "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz, link_id=%d",
 -		   data.dfs_event.freq, data.dfs_event.ht_enabled,
-+	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz"
-+		   "radar_bitmap: %0x ", data.dfs_event.freq, data.dfs_event.ht_enabled,
++		   "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz, link_id=%d"
++		   "radar_bitmap: %0x ",data.dfs_event.freq, data.dfs_event.ht_enabled,
  		   data.dfs_event.chan_offset, data.dfs_event.chan_width,
--		   data.dfs_event.cf1, data.dfs_event.cf2);
-+		   data.dfs_event.cf1, data.dfs_event.cf2, data.dfs_event.radar_bitmap);
+ 		   data.dfs_event.cf1, data.dfs_event.cf2,
+-		   data.dfs_event.link_id);
++		   data.dfs_event.link_id, data.dfs_event.radar_bitmap);
  
  	switch (event_type) {
  	case NL80211_RADAR_DETECTED:
-@@ -2831,12 +2833,14 @@ static void qca_nl80211_dfs_offload_rada
+@@ -2933,12 +2935,14 @@ static void qca_nl80211_dfs_offload_rada
  		data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
  	if (tb[NL80211_ATTR_CENTER_FREQ2])
  		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
@@ -186,32 +178,9 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	switch (subcmd) {
  	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED:
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -2835,6 +2835,11 @@ enum nl80211_commands {
-  * This attribute type is u8 and valid range is 0 to 1.
-  * 0 for disable AP power save mode.
-  * 1 for enable AP power save mode.
-+ * @NL80211_ATTR_RADAR_BITMAP: (u16) RADAR bitmap where the lowest bit
-+ *     corresponds to the lowest 20MHZ channel. Each bit set to 1
-+ *     indicates that radar is detected in that sub-channel.
-+ *
-+
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3386,6 +3391,8 @@ enum nl80211_attrs {
- 	NL80211_ATTR_RU_PUNCT_BITMAP,
- 
- 	NL80211_ATTR_AP_PS,
-+	NL80211_ATTR_MULTI_HW_MACS,
-+	NL80211_ATTR_RADAR_BITMAP,
- /* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
 --- a/wpa_supplicant/ap.c
 +++ b/wpa_supplicant/ap.c
-@@ -2128,7 +2128,8 @@ void wpas_ap_event_dfs_radar_detected(st
+@@ -2146,7 +2146,8 @@ void wpas_ap_event_dfs_radar_detected(st
  	hostapd_dfs_radar_detected(iface, radar->freq,
  				   radar->ht_enabled, radar->chan_offset,
  				   radar->chan_width,
@@ -221,3 +190,13 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  }
  
  
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -6756,6 +6756,7 @@ union wpa_event_data {
+ 		int cf1;
+ 		int cf2;
+ 		int link_id;
++		u16 radar_bitmap;
+ 	} dfs_event;
+ 
+ 	/**

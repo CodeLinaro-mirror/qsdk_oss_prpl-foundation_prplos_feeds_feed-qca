@@ -16,7 +16,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -785,6 +785,7 @@ struct ath12k_wmm_stats {
+@@ -738,6 +738,7 @@ struct ath12k_wmm_stats {
  	u64 total_wmm_tx_pkts[WME_NUM_AC];
  	u64 total_wmm_rx_pkts[WME_NUM_AC];
  	u64 total_wmm_tx_drop[WME_NUM_AC];
@@ -26,7 +26,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  #define ATH12K_DSCP_PRIORITY 7
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -1356,6 +1356,7 @@ static ssize_t ath12k_read_wmm_stats(str
+@@ -1357,6 +1357,7 @@ static ssize_t ath12k_read_wmm_stats(str
  	u64 total_wmm_sent_pkts = 0;
  	u64 total_wmm_received_pkts = 0;
  	u64 total_wmm_fail_sent = 0;
@@ -34,7 +34,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  
  	buf = kzalloc(size, GFP_KERNEL);
  	if (!buf) {
-@@ -1368,6 +1369,7 @@ static ssize_t ath12k_read_wmm_stats(str
+@@ -1369,6 +1370,7 @@ static ssize_t ath12k_read_wmm_stats(str
  		total_wmm_sent_pkts += ar->wmm_stats.total_wmm_tx_pkts[count];
  		total_wmm_received_pkts += ar->wmm_stats.total_wmm_rx_pkts[count];
  		total_wmm_fail_sent += ar->wmm_stats.total_wmm_tx_drop[count];
@@ -42,7 +42,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  	}
  
  	len += scnprintf(buf + len, size - len, "Total number of wmm_sent: %llu\n",
-@@ -1376,6 +1378,8 @@ static ssize_t ath12k_read_wmm_stats(str
+@@ -1377,6 +1379,8 @@ static ssize_t ath12k_read_wmm_stats(str
  			 total_wmm_received_pkts);
  	len += scnprintf(buf + len, size - len, "total number of wmm_fail_sent: %llu\n",
  			 total_wmm_fail_sent);
@@ -51,7 +51,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  	len += scnprintf(buf + len, size - len, "Num of BE wmm_sent: %llu\n",
  			 ar->wmm_stats.total_wmm_tx_pkts[WME_AC_BE]);
  	len += scnprintf(buf + len, size - len, "Num of BK wmm_sent: %llu\n",
-@@ -1400,6 +1404,14 @@ static ssize_t ath12k_read_wmm_stats(str
+@@ -1401,6 +1405,14 @@ static ssize_t ath12k_read_wmm_stats(str
  			 ar->wmm_stats.total_wmm_tx_drop[WME_AC_VI]);
  	len += scnprintf(buf + len, size - len, "num of vo wmm_tx_dropped: %llu\n",
  			 ar->wmm_stats.total_wmm_tx_drop[WME_AC_VO]);
@@ -68,23 +68,23 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -4121,8 +4121,7 @@ int ath12k_dp_rx_process_err(struct ath1
-	int mac_id;
-	struct ath12k *ar;
-	dma_addr_t paddr;
+@@ -4120,8 +4120,7 @@ int ath12k_dp_rx_process_err(struct ath1
+ 	int mac_id;
+ 	struct ath12k *ar;
+ 	dma_addr_t paddr;
 -	bool is_frag;
 -	bool drop = false;
 +	bool is_frag, drop = false;
+ 	int pdev_id;
  
  	tot_n_bufs_reaped = 0;
- 	quota = budget;
 @@ -4186,6 +4185,9 @@ int ath12k_dp_rx_process_err(struct ath1
-
-			ar = ab->pdevs[mac_id].ar;
-
+ 			pdev_id = ath12k_hw_mac_id_to_pdev_id(ab->hw_params, mac_id);
+ 			ar = ab->pdevs[pdev_id].ar;
+ 
 +			if (drop)
 +				ar->wmm_stats.total_wmm_rx_drop[ar->wmm_stats.rx_type]++;
 +
-			if (!ath12k_dp_process_rx_err_buf(ar, reo_desc, drop,
-							  msdu_cookies[i]))
-				tot_n_bufs_reaped++;
+ 			if (!ath12k_dp_process_rx_err_buf(ar, reo_desc, drop,
+ 							  msdu_cookies[i]))
+ 				tot_n_bufs_reaped++;

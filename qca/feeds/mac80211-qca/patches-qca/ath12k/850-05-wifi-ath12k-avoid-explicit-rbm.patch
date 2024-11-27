@@ -17,7 +17,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -1413,8 +1413,7 @@ int ath12k_dp_service_srng(struct ath12k
+@@ -1417,8 +1417,7 @@ int ath12k_dp_service_srng(struct ath12k
  		struct ath12k_dp *dp = &ab->dp;
  		struct dp_rxdma_ring *rx_ring = &dp->rx_refill_buf_ring;
  
@@ -27,7 +27,21 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	}
  
  	/* TODO: Implement handler for other interrupts */
-@@ -2463,8 +2462,7 @@ int ath12k_dp_rxdma_ring_setup(struct at
+@@ -1638,11 +1637,11 @@ void ath12k_dp_vdev_tx_attach(struct ath
+ 
+ void ath12k_dp_umac_txrx_desc_cleanup(struct ath12k_base *ab)
+ {
+-	struct ath12k_rx_desc_info *desc_info, *tmp;
++	struct ath12k_rx_desc_info *desc_info;
+ 	struct ath12k_tx_desc_info *tx_desc_info, *tmp1;
+ 	struct ath12k_dp *dp = &ab->dp;
+ 	struct sk_buff *skb;
+-	int i;
++	int i, j;
+ 
+ 	/* RX Descriptor cleanup */
+ 	spin_lock_bh(&dp->rx_desc_lock);
+@@ -2524,8 +2523,7 @@ int ath12k_dp_rxdma_ring_setup(struct at
  		return ret;
  	}
  
@@ -67,7 +81,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	return 0;
  }
  
-@@ -3684,9 +3683,7 @@ try_again:
+@@ -3660,9 +3659,7 @@ try_again:
  
  		rx_ring = &src_ab->dp.rx_refill_buf_ring;
  
@@ -78,7 +92,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	}
  
  	ath12k_dp_rx_process_received_packets(ab, napi, &msdu_list,
-@@ -4550,8 +4547,7 @@ exit:
+@@ -4528,8 +4525,7 @@ exit:
  
  		rx_ring = &src_ab->dp.rx_refill_buf_ring;
  
@@ -88,7 +102,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	}
  
  	return tot_n_bufs_reaped;
-@@ -5035,8 +5031,7 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -5013,8 +5009,7 @@ int ath12k_dp_rx_process_wbm_err(struct
  
  		rx_ring = &src_ab->dp.rx_refill_buf_ring;
  
@@ -100,7 +114,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	rcu_read_lock();
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
-@@ -200,8 +200,7 @@ int ath12k_dp_rx_process(struct ath12k_b
+@@ -203,8 +203,7 @@ int ath12k_dp_rx_process(struct ath12k_b
  			 int budget);
  int ath12k_dp_rx_bufs_replenish(struct ath12k_base *ab,
  				struct dp_rxdma_ring *rx_ring,

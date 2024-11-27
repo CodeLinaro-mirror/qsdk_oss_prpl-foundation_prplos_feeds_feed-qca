@@ -17,7 +17,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -949,11 +949,17 @@ int ath12k_dp_service_srng(struct ath12k
+@@ -954,11 +954,17 @@ int ath12k_dp_service_srng(struct ath12k
  
  	while (i < ab->hw_params->max_tx_ring) {
  		if (tx_mask &
@@ -40,7 +40,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		budget -= work_done;
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
-@@ -975,7 +975,8 @@ static inline bool ath12k_dp_tx_completi
+@@ -1016,7 +1016,8 @@ static inline bool ath12k_dp_tx_completi
  	return true;
  }
  
@@ -50,15 +50,15 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  {
  	struct ath12k *ar;
  	struct ath12k_dp *dp = &ab->dp;
-@@ -988,6 +989,7 @@ void ath12k_dp_tx_completion_handler(str
- 	u8 mac_id;
+@@ -1030,6 +1031,7 @@ void ath12k_dp_tx_completion_handler(str
  	u64 desc_va;
+ 	u32 desc_id;
  	int valid_entries;
 +	int workdone = 0;
  	struct hal_wbm_completion_ring_tx tx_status = { 0 };
  	enum hal_wbm_rel_src_module buf_rel_source;
  
-@@ -997,12 +999,12 @@ void ath12k_dp_tx_completion_handler(str
+@@ -1039,12 +1041,12 @@ void ath12k_dp_tx_completion_handler(str
  	valid_entries = ath12k_hal_srng_dst_num_free(ab, status_ring, false);
  	if (!valid_entries) {
  		ath12k_hal_srng_access_umac_dst_ring_end_nolock(ab->mem, status_ring);
@@ -73,16 +73,15 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		if (!ath12k_dp_tx_completion_valid(desc))
  			continue;
  
-@@ -1046,7 +1048,7 @@ void ath12k_dp_tx_completion_handler(str
- 							     tx_desc);
+@@ -1087,6 +1089,7 @@ void ath12k_dp_tx_completion_handler(str
  			continue;
  		}
--
-+		workdone++;
- 		ar = ab->pdevs[mac_id].ar;
  
- 		if (atomic_dec_and_test(&ar->dp.num_tx_pending))
-@@ -1055,9 +1057,11 @@ void ath12k_dp_tx_completion_handler(str
++		workdone++;
+ 		pdev_id = ath12k_hw_mac_id_to_pdev_id(ab->hw_params, mac_id);
+ 		ar = ab->pdevs[pdev_id].ar;
+ 
+@@ -1096,9 +1099,11 @@ void ath12k_dp_tx_completion_handler(str
  		ath12k_dp_tx_complete_msdu(ar, msdu, &tx_status,
  					   buf_rel_source, skb_ext_desc,
  					   tx_ring->tcl_data_ring_id);
@@ -108,7 +107,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  int
 --- a/drivers/net/wireless/ath/ath12k/pci.c
 +++ b/drivers/net/wireless/ath/ath12k/pci.c
-@@ -45,6 +45,10 @@
+@@ -30,6 +30,10 @@
  #define TCSR_SOC_HW_VERSION		0x1B00000
  #define TCSR_SOC_HW_VERSION_MAJOR_MASK	GENMASK(11, 8)
  #define TCSR_SOC_HW_VERSION_MINOR_MASK	GENMASK(7, 4)
@@ -116,10 +115,10 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
 + * to give priority for enqueue */
 +#define ATH12K_TX_COMP_NAPI_BUDGET 0x5F
 +
-
+ 
  /* BAR0 + 4k is always accessible, and no
- * need to force wakeup.
-@@ -524,6 +528,11 @@ static int ath12k_pci_ext_irq_config(str
+  * need to force wakeup.
+@@ -545,6 +549,11 @@ static int ath12k_pci_ext_irq_config(str
  		else
  			budget = ath12k_napi_poll_budget;
  

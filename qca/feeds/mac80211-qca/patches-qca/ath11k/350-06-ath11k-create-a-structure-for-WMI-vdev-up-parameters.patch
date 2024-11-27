@@ -17,7 +17,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
-@@ -1106,6 +1106,7 @@ static int ath11k_mac_monitor_vdev_start
+@@ -1107,6 +1107,7 @@ static int ath11k_mac_monitor_vdev_start
  	struct ieee80211_channel *channel;
  	struct wmi_vdev_start_req_arg arg = {};
  	int ret;
@@ -25,7 +25,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	lockdep_assert_held(&ar->conf_mutex);
  
-@@ -1146,7 +1147,9 @@ static int ath11k_mac_monitor_vdev_start
+@@ -1147,7 +1148,9 @@ static int ath11k_mac_monitor_vdev_start
  		return ret;
  	}
  
@@ -36,7 +36,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (ret) {
  		ath11k_warn(ar->ab, "failed to put up monitor vdev %i: %d\n",
  			    vdev_id, ret);
-@@ -1476,6 +1479,7 @@ static int ath11k_mac_op_config(struct i
+@@ -1477,6 +1480,7 @@ static int ath11k_mac_op_config(struct i
  	struct ath11k *ar = hw->priv;
  	struct ieee80211_conf *conf = &hw->conf;
  	int ret = 0;
@@ -44,9 +44,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	mutex_lock(&ar->conf_mutex);
  
-@@ -1822,11 +1826,10 @@ static void ath11k_control_beaconing(str
+@@ -1823,11 +1827,10 @@ static void ath11k_control_beaconing(str
  	if (arvif->vif->mbssid_tx_vif)
- 		tx_arvif = (struct ath11k_vif *)arvif->vif->mbssid_tx_vif->drv_priv;
+ 		tx_arvif = ath11k_vif_to_arvif(arvif->vif->mbssid_tx_vif);
  
 -	ret = ath11k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
 -				 arvif->bssid,
@@ -60,7 +60,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (ret) {
  		ath11k_warn(ar->ab, "failed to bring up vdev %d: %i\n",
  			    arvif->vdev_id, ret);
-@@ -3243,6 +3246,7 @@ static void ath11k_bss_assoc(struct ieee
+@@ -3244,6 +3247,7 @@ static void ath11k_bss_assoc(struct ieee
  	struct ieee80211_sta_he_cap  he_cap;
  	int ret;
  	bool debug;
@@ -68,7 +68,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	lockdep_assert_held(&ar->conf_mutex);
  
-@@ -3300,8 +3304,10 @@ static void ath11k_bss_assoc(struct ieee
+@@ -3301,8 +3305,10 @@ static void ath11k_bss_assoc(struct ieee
  	arvif->aid = vif->cfg.aid;
  	ether_addr_copy(arvif->bssid, bss_conf->bssid);
  
@@ -81,18 +81,18 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (ret) {
  		ath11k_warn(ar->ab, "failed to set vdev %d up: %d\n",
  			    arvif->vdev_id, ret);
-@@ -9025,6 +9031,8 @@ ath11k_mac_update_vif_chan(struct ath11k
+@@ -8987,6 +8993,8 @@ ath11k_mac_update_vif_chan(struct ath11k
  	ath11k_mac_update_rx_channel(ar, NULL, vifs, n_vifs);
  
  	for (i = 0; i < n_vifs; i++) {
 +		struct vdev_up_params params = { 0 };
 +
- 		arvif = (void *)vifs[i].vif->drv_priv;
+ 		arvif = ath11k_vif_to_arvif(vifs[i].vif);
  
  		if (WARN_ON(!arvif->is_started))
-@@ -9073,11 +9081,10 @@ ath11k_mac_update_vif_chan(struct ath11k
+@@ -9035,11 +9043,10 @@ ath11k_mac_update_vif_chan(struct ath11k
  		if (mbssid_tx_vif)
- 			tx_arvif = (struct ath11k_vif *)mbssid_tx_vif->drv_priv;
+ 			tx_arvif = ath11k_vif_to_arvif(mbssid_tx_vif);
  
 -		ret = ath11k_wmi_vdev_up(arvif->ar, arvif->vdev_id, arvif->aid,
 -					 arvif->bssid,
@@ -106,15 +106,15 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		if (ret) {
  			ath11k_warn(ab, "failed to bring vdev up %d: %d\n",
  				    arvif->vdev_id, ret);
-@@ -9209,6 +9216,7 @@ static int ath11k_start_vdev_delay(struc
+@@ -9171,6 +9178,7 @@ static int ath11k_start_vdev_delay(struc
  	struct ath11k_base *ab = ar->ab;
- 	struct ath11k_vif *arvif = (void *)vif->drv_priv;
+ 	struct ath11k_vif *arvif = ath11k_vif_to_arvif(vif);
  	int ret;
 +	struct vdev_up_params params = { 0 };
  
  	if (WARN_ON(arvif->is_started))
  		return -EBUSY;
-@@ -9236,8 +9244,9 @@ static int ath11k_start_vdev_delay(struc
+@@ -9198,8 +9206,9 @@ static int ath11k_start_vdev_delay(struc
  	}
  
  	if (arvif->vdev_type == WMI_VDEV_TYPE_MONITOR) {
@@ -183,7 +183,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  struct wmi_vdev_up_cmd {
  	u32 tlv_header;
  	u32 vdev_id;
-@@ -7524,9 +7533,7 @@ int ath11k_wmi_bcn_tmpl(struct ath11k *a
+@@ -7522,9 +7531,7 @@ int ath11k_wmi_bcn_tmpl(struct ath11k *a
  			struct ieee80211_mutable_offsets *offs,
  			struct sk_buff *bcn, u32 ema_param);
  int ath11k_wmi_vdev_down(struct ath11k *ar, u8 vdev_id);

@@ -15,60 +15,9 @@ Signed-off-by: Tamizh Chelvam <tamizhr@codeaurora.org>
  drivers/net/wireless/ath/ath11k/pktlog.c   |  8 +++++
  drivers/net/wireless/ath/ath11k/qmi.c      | 14 ++++----
  9 files changed, 46 insertions(+), 98 deletions(-)
-
---- a/drivers/net/wireless/ath/ath11k/ahb.c
-+++ b/drivers/net/wireless/ath/ath11k/ahb.c
-@@ -777,17 +777,39 @@ static int ath11k_core_get_rproc(struct
- 	struct device *dev = ab->dev;
- 	struct rproc *prproc;
- 	phandle rproc_phandle;
-+#if LINUX_VERSION_IS_LESS(5,4,0)
-+	bool multi_pd_arch;
-+ 	const char *name;
-+#endif
- 
--	if (of_property_read_u32(dev->of_node, "qcom,rproc", &rproc_phandle)) {
--		ath11k_err(ab, "failed to get q6_rproc handle\n");
--		return -ENOENT;
--	}
-+#if LINUX_VERSION_IS_LESS(5,4,0)
-+	multi_pd_arch = of_property_read_bool(dev->of_node, "qcom,multipd_arch");
-+	if (multi_pd_arch) {
-+		if (of_property_read_string(dev->of_node, "qcom,userpd-subsys-name",
-+					&name))
-+			return -EINVAL;
-+
-+		prproc = rproc_get_by_name(name);
-+		if (!prproc) {
-+			ath11k_err(ab, "failed to get rproc\n");
-+			return -EINVAL;
-+		}
-+	} else {
-+#endif
-+		if (of_property_read_u32(dev->of_node, "qcom,rproc", &rproc_phandle)) {
-+			ath11k_err(ab, "failed to get q6_rproc handle\n");
-+			return -ENOENT;
-+		}
- 
--	prproc = rproc_get_by_phandle(rproc_phandle);
--	if (!prproc) {
--		ath11k_err(ab, "failed to get rproc\n");
--		return -EINVAL;
-+		prproc = rproc_get_by_phandle(rproc_phandle);
-+		if (!prproc) {
-+			ath11k_err(ab, "failed to get rproc\n");
-+			return -EINVAL;
-+		}
-+#if LINUX_VERSION_IS_LESS(5,4,0)
- 	}
-+#endif
-+
- 	ab_ahb->tgt_rproc = prproc;
- 
- 	return 0;
 --- a/drivers/net/wireless/ath/ath11k/ce.c
 +++ b/drivers/net/wireless/ath/ath11k/ce.c
-@@ -1110,10 +1110,17 @@ void ce_update_tasklet_time_duration_sta
+@@ -1114,10 +1114,17 @@ void ce_update_tasklet_time_duration_sta
  {
  	s64 sched_us, exec_us;
  
@@ -102,7 +51,7 @@ Signed-off-by: Tamizh Chelvam <tamizhr@codeaurora.org>
  	fw_img = mhi_ctrl->fbc_image;
 --- a/drivers/net/wireless/ath/ath11k/pci.c
 +++ b/drivers/net/wireless/ath/ath11k/pci.c
-@@ -443,7 +443,11 @@ static int ath11k_pci_alloc_msi(struct a
+@@ -413,7 +413,11 @@ static int ath11k_pci_alloc_msi(struct a
  	num_vectors = pci_alloc_irq_vectors(pci_dev,
  					    msi_config->total_vectors,
  					    msi_config->total_vectors,
@@ -143,8 +92,8 @@ Signed-off-by: Tamizh Chelvam <tamizhr@codeaurora.org>
  static struct vm_operations_struct pktlog_vmops = {
 --- a/drivers/net/wireless/ath/ath11k/mhi.c
 +++ b/drivers/net/wireless/ath/ath11k/mhi.c
-@@ -441,8 +441,10 @@ int ath11k_mhi_register(struct ath11k_pc
- 		return ret;
+@@ -434,8 +434,10 @@ int ath11k_mhi_register(struct ath11k_pc
+ 		goto free_controller;
  	}
  
 +#if LINUX_VERSION_IS_GEQ(5,15,0)
@@ -154,3 +103,51 @@ Signed-off-by: Tamizh Chelvam <tamizhr@codeaurora.org>
  
  	if (test_bit(ATH11K_FLAG_FIXED_MEM_RGN, &ab->dev_flags)) {
  		ret = ath11k_mhi_read_addr_from_dt(mhi_ctrl);
+--- a/drivers/net/wireless/ath/ath11k/ahb.c
++++ b/drivers/net/wireless/ath/ath11k/ahb.c
+@@ -871,17 +871,36 @@ static int ath11k_core_get_rproc(struct
+ 	struct device *dev = ab->dev;
+ 	struct rproc *prproc;
+ 	phandle rproc_phandle;
++#if LINUX_VERSION_IS_LESS(5,4,0)
++	bool multi_pd_arch;
++	const char *name;
++#endif
+ 
+-	if (of_property_read_u32(dev->of_node, "qcom,rproc", &rproc_phandle)) {
+-		ath11k_err(ab, "failed to get q6_rproc handle\n");
+-		return -ENOENT;
+-	}
+-
+-	prproc = rproc_get_by_phandle(rproc_phandle);
+-	if (!prproc) {
+-		ath11k_dbg(ab, ATH11K_DBG_AHB, "failed to get rproc, deferring\n");
+-		return -EPROBE_DEFER;
++#if LINUX_VERSION_IS_LESS(5,4,0)
++	multi_pd_arch = of_property_read_bool(dev->of_node, "qcom,multipd_arch");
++	if (multi_pd_arch) {
++		if (of_property_read_string(dev->of_node, "qcom,userpd-subsys-name",
++					&name))
++			return -EINVAL;
++		prproc = rproc_get_by_name(name);
++		if (!prproc) {
++			ath11k_err(ab, "failed to get rproc\n");
++			return -EINVAL;
++		}
++	} else {
++#endif
++		if (of_property_read_u32(dev->of_node, "qcom,rproc", &rproc_phandle)) {
++			ath11k_err(ab, "failed to get q6_rproc handle\n");
++			return -ENOENT;
++		}
++		prproc = rproc_get_by_phandle(rproc_phandle);
++		if (!prproc) {
++			ath11k_dbg(ab, ATH11K_DBG_AHB, "failed to get rproc, deferring\n");
++			return -EPROBE_DEFER;
++		}
++#if LINUX_VERSION_IS_LESS(5,4,0)
+ 	}
++#endif
+ 	ab_ahb->tgt_rproc = prproc;
+ 
+ 	return 0;

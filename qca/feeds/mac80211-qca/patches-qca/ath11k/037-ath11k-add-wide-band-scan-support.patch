@@ -1,8 +1,6 @@
-diff --git a/drivers/net/wireless/ath/ath11k/mac.c b/drivers/net/wireless/ath/ath11k/mac.c
-index 22e3978..cde7834 100644
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
-@@ -3926,6 +3926,28 @@ static int ath11k_start_scan(struct ath11k *ar,
+@@ -3925,6 +3925,28 @@ static int ath11k_start_scan(struct ath1
  	return 0;
  }
  
@@ -31,7 +29,7 @@ index 22e3978..cde7834 100644
  static int ath11k_mac_op_hw_scan(struct ieee80211_hw *hw,
  				 struct ieee80211_vif *vif,
  				 struct ieee80211_scan_request *hw_req)
-@@ -4004,15 +4026,17 @@ static int ath11k_mac_op_hw_scan(struct ieee80211_hw *hw,
+@@ -4003,15 +4025,17 @@ static int ath11k_mac_op_hw_scan(struct
  		arg->scan_flags |= WMI_SCAN_FLAG_PASSIVE;
  	}
  
@@ -56,7 +54,7 @@ index 22e3978..cde7834 100644
  
  		for (i = 0; i < arg->num_chan; i++) {
  			if (test_bit(WMI_TLV_SERVICE_SCAN_CONFIG_PER_CHANNEL,
-@@ -4037,7 +4061,6 @@ static int ath11k_mac_op_hw_scan(struct ieee80211_hw *hw,
+@@ -4036,7 +4060,6 @@ static int ath11k_mac_op_hw_scan(struct
  				arg->chan_list[i] = req->channels[i]->center_freq;
  			}
  		}
@@ -64,7 +62,7 @@ index 22e3978..cde7834 100644
  
  	if (req->flags & NL80211_SCAN_FLAG_RANDOM_ADDR) {
  		arg->scan_f_add_spoofed_mac_in_probe = 1;
-@@ -4078,7 +4101,6 @@ static int ath11k_mac_op_hw_scan(struct ieee80211_hw *hw,
+@@ -4077,7 +4100,6 @@ static int ath11k_mac_op_hw_scan(struct
  
  exit:
  	if (arg) {
@@ -72,7 +70,7 @@ index 22e3978..cde7834 100644
  		kfree(arg->extraie.ptr);
  		kfree(arg);
  	}
-@@ -8950,6 +8972,8 @@ static int ath11k_mac_op_cancel_remain_on_channel(struct ieee80211_hw *hw,
+@@ -8955,6 +8977,8 @@ static int ath11k_mac_op_cancel_remain_o
  	return 0;
  }
  
@@ -81,27 +79,27 @@ index 22e3978..cde7834 100644
  static int ath11k_mac_op_remain_on_channel(struct ieee80211_hw *hw,
  					   struct ieee80211_vif *vif,
  					   struct ieee80211_channel *chan,
-@@ -8992,17 +9016,11 @@ static int ath11k_mac_op_remain_on_channel(struct ieee80211_hw *hw,
- 
- 	memset(&arg, 0, sizeof(arg));
- 	ath11k_wmi_start_scan_init(ar, &arg);
--	arg.num_chan = 1;
--	arg.chan_list = kcalloc(arg.num_chan, sizeof(*arg.chan_list),
--				GFP_KERNEL);
--	if (!arg.chan_list) {
+@@ -9001,17 +9025,10 @@ static int ath11k_mac_op_remain_on_chann
+ 		goto exit;
+ 	}
+ 	ath11k_wmi_start_scan_init(ar, arg);
+-	arg->num_chan = 1;
+-	arg->chan_list = kcalloc(arg->num_chan, sizeof(*arg->chan_list),
+-				 GFP_KERNEL);
+-	if (!arg->chan_list) {
 -		ret = -ENOMEM;
--		goto exit;
+-		goto free_arg;
 -	}
+-
 +	arg.chan_list.num_chan = 1;
- 
- 	arg.vdev_id = arvif->vdev_id;
- 	arg.scan_id = ATH11K_SCAN_ID;
--	arg.chan_list[0] = chan->center_freq;
+ 	arg->vdev_id = arvif->vdev_id;
+ 	arg->scan_id = ATH11K_SCAN_ID;
+-	arg->chan_list[0] = chan->center_freq;
 +	arg.chan_list = chan->center_freq;
- 	arg.dwell_time_active = scan_time_msec;
- 	arg.dwell_time_passive = scan_time_msec;
- 	arg.max_scan_time = scan_time_msec;
-@@ -9017,7 +9035,7 @@ static int ath11k_mac_op_remain_on_channel(struct ieee80211_hw *hw,
+ 	arg->dwell_time_active = scan_time_msec;
+ 	arg->dwell_time_passive = scan_time_msec;
+ 	arg->max_scan_time = scan_time_msec;
+@@ -9026,7 +9043,7 @@ static int ath11k_mac_op_remain_on_chann
  		spin_lock_bh(&ar->data_lock);
  		ar->scan.state = ATH11K_SCAN_IDLE;
  		spin_unlock_bh(&ar->data_lock);
@@ -110,7 +108,7 @@ index 22e3978..cde7834 100644
  	}
  
  	ret = wait_for_completion_timeout(&ar->scan.on_channel, 3 * HZ);
-@@ -9027,7 +9045,7 @@ static int ath11k_mac_op_remain_on_channel(struct ieee80211_hw *hw,
+@@ -9036,7 +9053,7 @@ static int ath11k_mac_op_remain_on_chann
  		if (ret)
  			ath11k_warn(ar->ab, "failed to stop scan: %d\n", ret);
  		ret = -ETIMEDOUT;
@@ -119,12 +117,14 @@ index 22e3978..cde7834 100644
  	}
  
  	ieee80211_queue_delayed_work(ar->hw, &ar->scan.timeout,
-@@ -9035,12 +9053,11 @@ static int ath11k_mac_op_remain_on_channel(struct ieee80211_hw *hw,
+@@ -9044,14 +9061,13 @@ static int ath11k_mac_op_remain_on_chann
  
  	ret = 0;
  
 -free_chan_list:
--	kfree(arg.chan_list);
+-	kfree(arg->chan_list);
+ free_arg:
+ 	kfree(arg);
  exit:
  	mutex_unlock(&ar->conf_mutex);
  	return ret;
@@ -133,7 +133,7 @@ index 22e3978..cde7834 100644
  
  static int ath11k_fw_stats_request(struct ath11k *ar,
  				   struct stats_request_params *req_param)
-@@ -9270,7 +9287,7 @@ static const struct ieee80211_ops ath11k_ops = {
+@@ -9297,7 +9313,7 @@ static const struct ieee80211_ops ath11k
  	.get_txpower                    = ath11k_mac_op_get_txpower,
  
  	.set_sar_specs			= ath11k_mac_op_set_bios_sar_specs,
@@ -142,7 +142,7 @@ index 22e3978..cde7834 100644
  	.cancel_remain_on_channel	= ath11k_mac_op_cancel_remain_on_channel,
  };
  
-@@ -9739,6 +9756,11 @@ static int __ath11k_mac_register(struct ath11k *ar)
+@@ -9766,6 +9782,11 @@ static int __ath11k_mac_register(struct
  		ieee80211_hw_set(ar->hw, DETECTS_COLOR_COLLISION);
  	}
  
@@ -154,11 +154,9 @@ index 22e3978..cde7834 100644
  	ar->hw->wiphy->cipher_suites = cipher_suites;
  	ar->hw->wiphy->n_cipher_suites = ARRAY_SIZE(cipher_suites);
  
-diff --git a/drivers/net/wireless/ath/ath11k/reg.c b/drivers/net/wireless/ath/ath11k/reg.c
-index 97e5043..721d7d1 100644
 --- a/drivers/net/wireless/ath/ath11k/reg.c
 +++ b/drivers/net/wireless/ath/ath11k/reg.c
-@@ -105,14 +105,7 @@ ath11k_reg_notifier(struct wiphy *wiphy, struct regulatory_request *request)
+@@ -105,14 +105,7 @@ ath11k_reg_notifier(struct wiphy *wiphy,
  
  int ath11k_reg_update_chan_list(struct ath11k *ar, bool wait)
  {
@@ -174,7 +172,7 @@ index 97e5043..721d7d1 100644
  
  	if (wait && ar->state_11d != ATH11K_11D_IDLE) {
  		left = wait_for_completion_timeout(&ar->completed_11d_scan,
-@@ -142,87 +135,7 @@ int ath11k_reg_update_chan_list(struct ath11k *ar, bool wait)
+@@ -142,87 +135,7 @@ int ath11k_reg_update_chan_list(struct a
  	if (ar->state == ATH11K_STATE_RESTARTING)
  		return 0;
  
@@ -263,11 +261,9 @@ index 97e5043..721d7d1 100644
  }
  
  static void ath11k_copy_regd(struct ieee80211_regdomain *regd_orig,
-diff --git a/drivers/net/wireless/ath/ath11k/wmi.c b/drivers/net/wireless/ath/ath11k/wmi.c
-index 327ede2..dac38fb 100644
 --- a/drivers/net/wireless/ath/ath11k/wmi.c
 +++ b/drivers/net/wireless/ath/ath11k/wmi.c
-@@ -2171,6 +2171,110 @@ int ath11k_wmi_send_peer_assoc_cmd(struct ath11k *ar,
+@@ -2171,6 +2171,110 @@ int ath11k_wmi_send_peer_assoc_cmd(struc
  	return ret;
  }
  
@@ -378,7 +374,7 @@ index 327ede2..dac38fb 100644
  void ath11k_wmi_start_scan_init(struct ath11k *ar,
  				struct scan_req_params *arg)
  {
-@@ -2301,15 +2405,17 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2301,15 +2405,17 @@ int ath11k_wmi_send_scan_start_cmd(struc
  	void *ptr;
  	int i, ret, len;
  	u32 *tmp_ptr;
@@ -398,7 +394,7 @@ index 327ede2..dac38fb 100644
  
  	len += TLV_HDR_SIZE;
  	if (params->num_ssids)
-@@ -2333,6 +2439,19 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2333,6 +2439,19 @@ int ath11k_wmi_send_scan_start_cmd(struc
  		len += TLV_HDR_SIZE +
  		       params->num_hint_s_ssid * sizeof(struct hint_short_ssid);
  
@@ -418,7 +414,7 @@ index 327ede2..dac38fb 100644
  	skb = ath11k_wmi_alloc_skb(wmi->wmi_ab, len);
  	if (!skb)
  		return -ENOMEM;
-@@ -2364,7 +2483,7 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2364,7 +2483,7 @@ int ath11k_wmi_send_scan_start_cmd(struc
  	cmd->max_scan_time = params->max_scan_time;
  	cmd->probe_delay = params->probe_delay;
  	cmd->burst_duration = params->burst_duration;
@@ -427,7 +423,7 @@ index 327ede2..dac38fb 100644
  	cmd->num_bssid = params->num_bssid;
  	cmd->num_ssids = params->num_ssids;
  	cmd->ie_len = params->extraie.len;
-@@ -2374,7 +2493,7 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2374,7 +2493,7 @@ int ath11k_wmi_send_scan_start_cmd(struc
  
  	ptr += sizeof(*cmd);
  
@@ -436,9 +432,9 @@ index 327ede2..dac38fb 100644
  
  	tlv = ptr;
  	tlv->header = FIELD_PREP(WMI_TLV_TAG, WMI_TAG_ARRAY_UINT32) |
-@@ -2382,8 +2501,8 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2382,8 +2501,8 @@ int ath11k_wmi_send_scan_start_cmd(struc
  	ptr += TLV_HDR_SIZE;
- 	tmp_ptr = (u32 *)ptr;
+ 	tmp_ptr = ptr;
  
 -	for (i = 0; i < params->num_chan; ++i)
 -		tmp_ptr[i] = params->chan_list[i];
@@ -447,7 +443,7 @@ index 327ede2..dac38fb 100644
  
  	ptr += len;
  
-@@ -2424,6 +2543,7 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2424,6 +2543,7 @@ int ath11k_wmi_send_scan_start_cmd(struc
  	ptr += params->num_bssid * sizeof(*bssid);
  
  	len = extraie_len_with_pad;
@@ -455,7 +451,7 @@ index 327ede2..dac38fb 100644
  	tlv = ptr;
  	tlv->header = FIELD_PREP(WMI_TLV_TAG, WMI_TAG_ARRAY_BYTE) |
  		      FIELD_PREP(WMI_TLV_LEN, len);
-@@ -2435,6 +2555,36 @@ int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
+@@ -2435,6 +2555,36 @@ int ath11k_wmi_send_scan_start_cmd(struc
  
  	ptr += extraie_len_with_pad;
  
@@ -492,7 +488,7 @@ index 327ede2..dac38fb 100644
  	if (params->num_hint_s_ssid) {
  		len = params->num_hint_s_ssid * sizeof(struct hint_short_ssid);
  		tlv = ptr;
-@@ -2565,7 +2715,7 @@ int ath11k_wmi_send_scan_chan_list_cmd(struct ath11k *ar,
+@@ -2565,7 +2715,7 @@ int ath11k_wmi_send_scan_chan_list_cmd(s
  			FIELD_PREP(WMI_TLV_LEN, sizeof(*cmd) - TLV_HDR_SIZE);
  		cmd->pdev_id = chan_list->pdev_id;
  		cmd->num_scan_chans = num_send_chans;
@@ -501,8 +497,6 @@ index 327ede2..dac38fb 100644
  			cmd->flags |= WMI_APPEND_TO_EXISTING_CHAN_LIST_FLAG;
  
  		ath11k_dbg(ar->ab, ATH11K_DBG_WMI,
-diff --git a/drivers/net/wireless/ath/ath11k/wmi.h b/drivers/net/wireless/ath/ath11k/wmi.h
-index bee6f77..527ca5f 100644
 --- a/drivers/net/wireless/ath/ath11k/wmi.h
 +++ b/drivers/net/wireless/ath/ath11k/wmi.h
 @@ -67,8 +67,6 @@ struct wmi_tlv {
@@ -598,7 +592,7 @@ index bee6f77..527ca5f 100644
  struct wmi_scan_chan_list_cmd {
  	u32 tlv_header;
  	u32 num_scan_chans;
-@@ -6450,6 +6478,8 @@ int ath11k_wmi_vdev_delete(struct ath11k *ar, u8 vdev_id);
+@@ -6450,6 +6478,8 @@ int ath11k_wmi_vdev_delete(struct ath11k
  void ath11k_wmi_start_scan_init(struct ath11k *ar, struct scan_req_params *arg);
  int ath11k_wmi_send_scan_start_cmd(struct ath11k *ar,
  				   struct scan_req_params *params);

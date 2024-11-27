@@ -11,11 +11,9 @@ Signed-off-by: Feng Pei <quic_fpei@quicinc.com>
  wpa_supplicant/Makefile | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
-index 57620fe79..43b09733b 100644
 --- a/wpa_supplicant/Makefile
 +++ b/wpa_supplicant/Makefile
-@@ -961,6 +961,7 @@ OBJS += ../src/ap/ieee802_11_he.o
+@@ -1046,6 +1046,7 @@ OBJS += ../src/ap/ieee802_11_he.o
  endif
  ifdef CONFIG_IEEE80211BE
  OBJS += ../src/ap/ieee802_11_eht.o
@@ -23,6 +21,3 @@ index 57620fe79..43b09733b 100644
  endif
  ifdef CONFIG_WNM_AP
  CFLAGS += -DCONFIG_WNM_AP
--- 
-2.42.0
-

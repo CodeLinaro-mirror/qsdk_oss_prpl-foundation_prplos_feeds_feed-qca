@@ -16,7 +16,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -6278,7 +6278,11 @@ void wiphy_delayed_work_cancel(struct wi
+@@ -6362,7 +6362,11 @@ void wiphy_delayed_work_flush(struct wip
   * @links[].cac_started: true if DFS channel availability check has been started
   * @links[].cac_start_time: timestamp (jiffies) when the dfs state was entered.
   * @links[].cac_time_ms: CAC time in ms
@@ -28,7 +28,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
   */
  struct wireless_dev {
  	struct wiphy *wiphy;
-@@ -6392,10 +6396,14 @@ struct wireless_dev {
+@@ -6476,10 +6480,14 @@ struct wireless_dev {
  		bool cac_started;
  		unsigned long cac_start_time;
  		unsigned int cac_time_ms;
@@ -43,7 +43,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  };
  
  static inline const u8 *wdev_address(struct wireless_dev *wdev)
-@@ -8476,6 +8484,7 @@ struct cfg80211_rx_info {
+@@ -8560,6 +8568,7 @@ struct cfg80211_rx_info {
  	u32 flags;
  	u64 rx_tstamp;
  	u64 ack_tstamp;
@@ -51,100 +51,9 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  };
  
  /**
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -2875,6 +2875,10 @@ enum nl80211_commands {
-  * @NL80211_ATTR_DEL_MULTI_CHAN: Delete channel from the radio, this is used
-  *  for monitor interface (u32).
-  *
-+ * @NL80211_ATTR_RXMGMT_CRITICAL_UPDATE: Nested attribute listing the critical
-+ *	update for each MLD. In each nested item, it contains attributes
-+ *	defined in &enum nl80211_cu_attrs.
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3441,6 +3445,7 @@ enum nl80211_attrs {
- 
- 	NL80211_ATTR_ADD_MULTI_CHAN,
- 	NL80211_ATTR_DEL_MULTI_CHAN,
-+	NL80211_ATTR_RXMGMT_CRITICAL_UPDATE,
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
-@@ -8140,4 +8145,69 @@ enum nl80211_multi_hw_mac_chan_list_attr
-        NL80211_MULTI_HW_MAC_CHAN_LIST_ATTR_MAX =
-                                __NL80211_MULTI_HW_MAC_CHAN_LIST_ATTR_LAST - 1
- };
-+
-+/**
-+ * nl80211_cu_attrs - critical update attributes
-+ *
-+ *
-+ * @__NL80211_CU_ATTR_INVALID: invalid
-+ * @NL80211_CU_ATTR_MLD_LIST: nested attribute specifying list of mld,
-+ * see &enum nl80211_mld_list_cu_attrs
-+ * @__NL80211_CU_ATTR_LAST: internal use
-+ * @NL80211_CU_ATTR_MAX: maximum critical update attribute
-+ */
-+enum nl80211_cu_attrs {
-+	__NL80211_CU_ATTR_INVALID,
-+
-+	NL80211_CU_ATTR_MLD_LIST,
-+
-+	/* keep last */
-+	__NL80211_CU_ATTR_LAST,
-+	NL80211_CU_ATTR_MAX = __NL80211_CU_ATTR_LAST - 1
-+};
-+
-+/**
-+ * nl80211_cu_mld_attrs - per mld critical update attributes
-+ *
-+ * @__NL80211_CU_MLD_ATTR_INVALID: invalid
-+ * @NL80211_CU_MLD_ATTR_IFINDEX: network interface index of the device to operate on
-+ * @NL80211_CU_MLD_ATTR_LINK_LIST: nested attribute specifying list of links
-+ * on each mld, see &enum nl80211_cu_mld_link_attrs
-+ * @__NL80211_CU_MLD_ATTR_LAST: internal use
-+ * @NL80211_CU_MLD_ATTR_MAX: maximum per mld critical update attribute
-+ */
-+enum nl80211_cu_mld_attrs {
-+	__NL80211_CU_MLD_ATTR_INVALID,
-+
-+	NL80211_CU_MLD_ATTR_IFINDEX,
-+	NL80211_CU_MLD_ATTR_LINK_LIST,
-+
-+	/* keep last */
-+	__NL80211_CU_MLD_ATTR_LAST,
-+	NL80211_CU_MLD_ATTR_MAX = __NL80211_CU_MLD_ATTR_LAST - 1
-+};
-+
-+/**
-+ * nl80211_cu_mld_link_attrs - per link critical update attributes
-+ *
-+ * @__NL80211_CU_MLD_LINK_ATTR_INVALID: invalid
-+ * @NL80211_CU_MLD_LINK_ATTR_ID: Link Id
-+ * @NL80211_CU_MLD_LINK_ATTR_CRITICAL_FLAG: critical flag value
-+ * @NL80211_CU_MLD_LINK_ATTR_BPCC: BSS parameter change count value
-+ * @NL80211_CU_MLD_LINK_ATTR_SWITCH_COUNT: CSA/CCA switch count
-+ * @__NL80211_CU_MLD_LINK_ATTR_LAST: internal use
-+ * @NL80211_CU_MLD_LINK ATTR_MAX: maximum per link critical update attribute
-+ */
-+enum nl80211_cu_mld_link_attrs {
-+	__NL80211_CU_MLD_LINK_ATTR_INVALID,
-+
-+	NL80211_CU_MLD_LINK_ATTR_ID,
-+	NL80211_CU_MLD_LINK_ATTR_CRITICAL_FLAG,
-+	NL80211_CU_MLD_LINK_ATTR_BPCC,
-+	NL80211_CU_MLD_LINK_ATTR_SWITCH_COUNT,
-+
-+	/* keep last */
-+	__NL80211_CU_MLD_LINK_ATTR_LAST,
-+	NL80211_CU_MLD_LINK_ATTR_MAX = __NL80211_CU_MLD_LINK_ATTR_LAST - 1
-+};
- #endif /* __LINUX_NL80211_H */
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -484,6 +484,25 @@ nl80211_sta_wme_policy[NL80211_STA_WME_M
+@@ -485,6 +485,25 @@ nl80211_sta_wme_policy[NL80211_STA_WME_M
  	[NL80211_STA_WME_MAX_SP] = { .type = NLA_U8 },
  };
  
@@ -170,7 +79,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  static struct netlink_range_validation nl80211_punct_bitmap_range = {
  	.min = 0,
  	.max = 0xffff,
-@@ -868,6 +887,7 @@ static const struct nla_policy nl80211_p
+@@ -867,6 +886,7 @@ static const struct nla_policy nl80211_p
  #endif
  	[NL80211_ATTR_ADD_MULTI_CHAN] = { .type = NLA_U32 },
  	[NL80211_ATTR_DEL_MULTI_CHAN] = { .type = NLA_U32 },
@@ -178,7 +87,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  };
  
  /* policy for the key attributes */
-@@ -19818,6 +19838,110 @@ bool cfg80211_rx_unexpected_4addr_frame(
+@@ -19816,6 +19836,110 @@ bool cfg80211_rx_unexpected_4addr_frame(
  }
  EXPORT_SYMBOL(cfg80211_rx_unexpected_4addr_frame);
  
@@ -289,7 +198,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  int nl80211_send_mgmt(struct cfg80211_registered_device *rdev,
  		      struct wireless_dev *wdev, u32 nlportid,
  		      struct cfg80211_rx_info *info, gfp_t gfp)
-@@ -19825,8 +19949,12 @@ int nl80211_send_mgmt(struct cfg80211_re
+@@ -19823,8 +19947,12 @@ int nl80211_send_mgmt(struct cfg80211_re
  	struct net_device *netdev = wdev->netdev;
  	struct sk_buff *msg;
  	void *hdr;
@@ -303,7 +212,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	if (!msg)
  		return -ENOMEM;
  
-@@ -19860,6 +19988,11 @@ int nl80211_send_mgmt(struct cfg80211_re
+@@ -19858,6 +19986,11 @@ int nl80211_send_mgmt(struct cfg80211_re
  						   NL80211_ATTR_PAD)))
  		goto nla_put_failure;
  

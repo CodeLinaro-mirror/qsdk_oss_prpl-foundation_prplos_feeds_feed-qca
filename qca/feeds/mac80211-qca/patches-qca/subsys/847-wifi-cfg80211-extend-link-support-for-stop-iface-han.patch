@@ -25,11 +25,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  net/wireless/util.c                           |  3 ++-
  9 files changed, 31 insertions(+), 18 deletions(-)
 
-diff --git a/drivers/net/wireless/microchip/wilc1000/cfg80211.c b/drivers/net/wireless/microchip/wilc1000/cfg80211.c
-index b545d93c6e37..7e14f2e49d16 100644
 --- a/drivers/net/wireless/microchip/wilc1000/cfg80211.c
 +++ b/drivers/net/wireless/microchip/wilc1000/cfg80211.c
-@@ -1611,7 +1611,7 @@ static int del_virtual_intf(struct wiphy *wiphy, struct wireless_dev *wdev)
+@@ -1611,7 +1611,7 @@ static int del_virtual_intf(struct wiphy
  	    wdev->iftype == NL80211_IFTYPE_P2P_GO)
  		wilc_wfi_deinit_mon_interface(wl, true);
  	vif = netdev_priv(wdev->netdev);
@@ -38,11 +36,9 @@ index b545d93c6e37..7e14f2e49d16 100644
  	cfg80211_unregister_netdevice(vif->ndev);
  	vif->monitor_flag = 0;
  
-diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index df834abb8ceb..39769fa2a2ee 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -9280,14 +9280,17 @@ int cfg80211_get_hw_idx_by_freq(struct wiphy *wiphy, int freq);
+@@ -9276,14 +9276,17 @@ int cfg80211_get_hw_idx_by_freq(struct w
   * @wiphy: the wiphy
   * @wdev: wireless device
   * @gfp: context flags
@@ -61,20 +57,18 @@ index df834abb8ceb..39769fa2a2ee 100644
  
  /**
   * cfg80211_shutdown_all_interfaces - shut down all interfaces for a wiphy
-diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
-index 126948d37207..e25df8093cb8 100644
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1879,7 +1879,7 @@ static int ieee80211_stop_ap(struct wiphy *wiphy, struct net_device *dev,
+@@ -1866,7 +1866,7 @@ static int ieee80211_stop_ap(struct wiph
  
- 	__sta_info_flush(sdata, true, -1);
+ 	__sta_info_flush(sdata, true, link_id);
  
 -	ieee80211_stop_mbssid(sdata);
 +	ieee80211_stop_mbssid(sdata, link_id);
  	link_conf->enable_beacon = false;
  	link_conf->mbssid_tx_vif = NULL;
  	link_conf->mbssid_tx_vif_linkid = -1;
-@@ -4228,7 +4228,7 @@ static void ieee80211_csa_finalize(struct ieee80211_link_data *link)
+@@ -4215,7 +4215,7 @@ static void ieee80211_csa_finalize(struc
  		sdata_info(sdata, "failed to finalize CSA on link_id %d, disconnecting\n",
  			   link->link_id);
  		cfg80211_stop_iface(sdata->local->hw.wiphy, &sdata->wdev,
@@ -83,11 +77,9 @@ index 126948d37207..e25df8093cb8 100644
  	}
  }
  
-diff --git a/net/mac80211/chan.c b/net/mac80211/chan.c
-index 628f09b65eea..d2c488055a70 100644
 --- a/net/mac80211/chan.c
 +++ b/net/mac80211/chan.c
-@@ -1805,7 +1805,7 @@ static int ieee80211_vif_use_reserved_switch(struct ieee80211_local *local)
+@@ -1806,7 +1806,7 @@ static int ieee80211_vif_use_reserved_sw
  				ieee80211_link_unreserve_chanctx(link);
  				cfg80211_stop_iface(local->hw.wiphy,
  						    &link->sdata->wdev,
@@ -96,22 +88,18 @@ index 628f09b65eea..d2c488055a70 100644
  			}
  		}
  	}
-diff --git a/net/mac80211/ieee80211_i.h b/net/mac80211/ieee80211_i.h
-index 83cd94e1d13d..08851d193a1b 100644
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -2721,5 +2721,5 @@ ieee80211_eht_cap_ie_to_sta_eht_cap(struct ieee80211_sub_if_data *sdata,
+@@ -2716,5 +2716,5 @@ ieee80211_eht_cap_ie_to_sta_eht_cap(stru
+ 				    const struct ieee80211_240mhz_vendor_oper *eht_240mhz_cap,
+ 				    u8 eht_240mhz_len,
  				    struct link_sta_info *link_sta);
- void ieee80211_eht_op_ie_to_bss_conf(struct ieee80211_bss_conf *link_conf,
- 				     const struct ieee80211_eht_operation *op_ie);
 -void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata);
 +void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata, int _link_id);
  #endif /* IEEE80211_I_H */
-diff --git a/net/mac80211/iface.c b/net/mac80211/iface.c
-index c2f7cc3ec2c5..0a4e75d91e44 100644
 --- a/net/mac80211/iface.c
 +++ b/net/mac80211/iface.c
-@@ -755,7 +755,7 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata, bool going_do
+@@ -762,7 +762,7 @@ static void ieee80211_do_stop(struct iee
  		ieee80211_add_virtual_monitor(local);
  }
  
@@ -120,7 +108,7 @@ index c2f7cc3ec2c5..0a4e75d91e44 100644
  {
  	struct ieee80211_sub_if_data *tx_sdata, *non_tx_sdata, *tmp_sdata;
  	struct ieee80211_vif *tx_vif;
-@@ -765,8 +765,13 @@ void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata)
+@@ -772,8 +772,13 @@ void ieee80211_stop_mbssid(struct ieee80
  
  	lockdep_assert_wiphy(sdata->local->hw.wiphy);
  	sdata_assert_lock(sdata);
@@ -136,7 +124,7 @@ index c2f7cc3ec2c5..0a4e75d91e44 100644
  	/* Check if any of the links of current sdata is an MBSSID. */
  	for_each_set_bit(iter_link_id, &iter_valid_links,
  			 IEEE80211_MLD_MAX_NUM_LINKS) {
-@@ -817,7 +822,8 @@ void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata)
+@@ -824,7 +829,8 @@ void ieee80211_stop_mbssid(struct ieee80
  					 * can be supported.
  					 */
  					cfg80211_stop_iface(non_tx_sdata->wdev.wiphy,
@@ -146,7 +134,7 @@ index c2f7cc3ec2c5..0a4e75d91e44 100644
  				}
  				sdata_unlock(non_tx_sdata);
  			}
-@@ -827,7 +833,8 @@ void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata)
+@@ -834,7 +840,8 @@ void ieee80211_stop_mbssid(struct ieee80
  		if (sdata != tx_sdata && ieee80211_sdata_running(tx_sdata)) {
  			sdata_lock(tx_sdata);
  			cfg80211_stop_iface(tx_sdata->wdev.wiphy,
@@ -156,7 +144,7 @@ index c2f7cc3ec2c5..0a4e75d91e44 100644
  			sdata_unlock(tx_sdata);
  		}
  	}
-@@ -891,7 +898,7 @@ static int ieee80211_stop(struct net_device *dev)
+@@ -898,7 +905,7 @@ static int ieee80211_stop(struct net_dev
  	 */
  	if (sdata->vif.type == NL80211_IFTYPE_AP) {
  		sdata_lock(sdata);
@@ -165,11 +153,9 @@ index c2f7cc3ec2c5..0a4e75d91e44 100644
  		sdata_unlock(sdata);
  	}
  	ieee80211_do_stop(sdata, true);
-diff --git a/net/wireless/core.c b/net/wireless/core.c
-index 9fca1fc2343d..de647e2ea63d 100644
 --- a/net/wireless/core.c
 +++ b/net/wireless/core.c
-@@ -1497,7 +1497,7 @@ void cfg80211_update_iface_num(struct cfg80211_registered_device *rdev,
+@@ -1497,7 +1497,7 @@ void cfg80211_update_iface_num(struct cf
  }
  
  void __cfg80211_leave(struct cfg80211_registered_device *rdev,
@@ -178,7 +164,7 @@ index 9fca1fc2343d..de647e2ea63d 100644
  {
  	struct net_device *dev = wdev->netdev;
  	struct cfg80211_sched_scan_request *pos, *tmp;
-@@ -1539,7 +1539,7 @@ void __cfg80211_leave(struct cfg80211_registered_device *rdev,
+@@ -1539,7 +1539,7 @@ void __cfg80211_leave(struct cfg80211_re
  		break;
  	case NL80211_IFTYPE_AP:
  	case NL80211_IFTYPE_P2P_GO:
@@ -187,7 +173,7 @@ index 9fca1fc2343d..de647e2ea63d 100644
  		break;
  	case NL80211_IFTYPE_OCB:
  		__cfg80211_leave_ocb(rdev, dev);
-@@ -1564,12 +1564,12 @@ void cfg80211_leave(struct cfg80211_registered_device *rdev,
+@@ -1564,12 +1564,12 @@ void cfg80211_leave(struct cfg80211_regi
  		    struct wireless_dev *wdev)
  {
  	wdev_lock(wdev);
@@ -202,7 +188,7 @@ index 9fca1fc2343d..de647e2ea63d 100644
  {
  	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
  	struct cfg80211_event *ev;
-@@ -1582,6 +1582,7 @@ void cfg80211_stop_iface(struct wiphy *wiphy, struct wireless_dev *wdev,
+@@ -1582,6 +1582,7 @@ void cfg80211_stop_iface(struct wiphy *w
  		return;
  
  	ev->type = EVENT_STOPPED;
@@ -210,8 +196,6 @@ index 9fca1fc2343d..de647e2ea63d 100644
  
  	spin_lock_irqsave(&wdev->event_lock, flags);
  	list_add_tail(&ev->list, &wdev->event_list);
-diff --git a/net/wireless/core.h b/net/wireless/core.h
-index a6279049f4e0..970e668fb1eb 100644
 --- a/net/wireless/core.h
 +++ b/net/wireless/core.h
 @@ -282,6 +282,7 @@ struct cfg80211_event {
@@ -222,7 +206,7 @@ index a6279049f4e0..970e668fb1eb 100644
  	};
  };
  
-@@ -534,7 +535,7 @@ void cfg80211_update_iface_num(struct cfg80211_registered_device *rdev,
+@@ -534,7 +535,7 @@ void cfg80211_update_iface_num(struct cf
  			       enum nl80211_iftype iftype, int num);
  
  void __cfg80211_leave(struct cfg80211_registered_device *rdev,
@@ -231,11 +215,9 @@ index a6279049f4e0..970e668fb1eb 100644
  void cfg80211_leave(struct cfg80211_registered_device *rdev,
  		    struct wireless_dev *wdev);
  
-diff --git a/net/wireless/util.c b/net/wireless/util.c
-index e9e210da0746..9dcf0d10c966 100644
 --- a/net/wireless/util.c
 +++ b/net/wireless/util.c
-@@ -1091,7 +1091,8 @@ void cfg80211_process_wdev_events(struct wireless_dev *wdev)
+@@ -1090,7 +1090,8 @@ void cfg80211_process_wdev_events(struct
  					       ev->ij.channel);
  			break;
  		case EVENT_STOPPED:
@@ -245,6 +227,3 @@ index e9e210da0746..9dcf0d10c966 100644
  			break;
  		case EVENT_PORT_AUTHORIZED:
  			__cfg80211_port_authorized(wdev, ev->pa.bssid,
--- 
-2.34.1
-

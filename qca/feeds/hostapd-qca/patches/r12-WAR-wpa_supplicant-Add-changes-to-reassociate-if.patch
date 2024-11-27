@@ -1,7 +1,7 @@
 From 5b17a5b79c7432c048035b3b48e36c1019660a97 Mon Sep 17 00:00:00 2001
 From: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 Date: Mon, 22 Jan 2024 12:14:33 +0530
-Subject: [PATCH] [WAR] wpa_supplicant: Add changes to reassociate if
+Subject: [PATCH] QSDK: [WAR] wpa_supplicant: Add changes to reassociate if
  associated links is lesser than requested link
 
 With the latest hostapd, when the partner link is going for a CAC/ACS
@@ -22,7 +22,15 @@ actual user requested configuration and try to re-associate after
 deauthenticating the existing link(s) if scan entry is found with the
 new link needed for completing the user configured association.
 
+Patch-depdendency: none
+
+Patch-work: none
+
+MLO
+
 Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
+Signed-off-by: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
+Signed-off-by: Karthik M <<quic_karm@quicinc.com>
 ---
  wpa_supplicant/bss.c              |  22 ++--
  wpa_supplicant/bss.h              |   7 +-
@@ -34,7 +42,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/wpa_supplicant/bss.c
 +++ b/wpa_supplicant/bss.c
-@@ -590,8 +590,8 @@ static int are_ies_equal(const struct wp
+@@ -593,8 +593,8 @@ static int are_ies_equal(const struct wp
  }
  
  
@@ -45,7 +53,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  {
  	u32 changes = 0;
  	int caps_diff = old->caps ^ new_res->caps;
-@@ -664,9 +664,10 @@ void notify_bss_changes(struct wpa_suppl
+@@ -667,9 +667,10 @@ void notify_bss_changes(struct wpa_suppl
  }
  
  
@@ -58,7 +66,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  {
  	u32 changes;
  
-@@ -695,13 +696,20 @@ wpa_bss_update(struct wpa_supplicant *wp
+@@ -698,13 +699,20 @@ wpa_bss_update(struct wpa_supplicant *wp
  			   (unsigned int) update_time.usec,
  			   res->freq,
  			   (res->flags & WPA_SCAN_ASSOCIATED) ? " assoc" : "");
@@ -81,7 +89,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		wpa_printf(MSG_DEBUG,
  			   "Accept this BSS entry since it looks more current than the previous update");
  	}
-@@ -875,7 +883,7 @@ void wpa_bss_update_scan_res(struct wpa_
+@@ -893,7 +901,7 @@ void wpa_bss_update_scan_res(struct wpa_
  	if (bss == NULL)
  		bss = wpa_bss_add(wpa_s, ssid + 2, ssid[1], res, fetch_time);
  	else {
@@ -90,23 +98,73 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		if (wpa_s->last_scan_res) {
  			unsigned int i;
  			for (i = 0; i < wpa_s->last_scan_res_used; i++) {
+@@ -1227,6 +1235,40 @@ const u8 * wpa_bss_get_ie(const struct w
+ }
+ 
+ 
++/**
++ * wpa_bss_get_ie_pos - Fetch a specified information element at given index
++ * from a BSS entry. This can be used to iterate over an element which is present
++ * multiple times in ie space
++ * @bss: BSS table entry
++ * @ie: Information element identitifier (WLAN_EID_*)
++ * @idx: index of entry of element to be found.
++ *
++ * This function returns the @idx'th matching information element in the BSS
++ * entry or NULL.
++ */
++const u8 * wpa_bss_get_ie_pos(const struct wpa_bss *bss, u8 ie, u8 idx)
++{
++        return get_ie_pos(wpa_bss_ie_ptr(bss), bss->ie_len, ie, idx);
++}
++
++/**
++ * wpa_bss_get_mbssid_idx - Fetch a mbssid idx of a BSS entry
++ * @bss: BSS table entry
++ *
++ * This function returns the mbssid idx of a BSS if MULTIPLE_BSSID_INDEX
++ * element is present in the BSS ie, 0 otherwise.
++ */
++u8 wpa_bss_get_mbssid_idx(const struct wpa_bss *bss)
++{
++        const u8 *mbssid_idx_ie = get_ie(wpa_bss_ie_ptr(bss), bss->ie_len,
++                                         WLAN_EID_MULTIPLE_BSSID_INDEX);
++        if (!mbssid_idx_ie)
++                return 0;
++        else
++                return mbssid_idx_ie[2];
++}
++
++
+ /**
+  * wpa_bss_get_ie_ext - Fetch a specified extended IE from a BSS entry
+  * @bss: BSS table entry
 --- a/wpa_supplicant/bss.h
 +++ b/wpa_supplicant/bss.h
-@@ -208,5 +208,10 @@ void calculate_update_time(const struct
- 			   struct os_reltime *update_time);
- 
- struct wpabuf * wpa_bss_defrag_mle(const struct wpa_bss *bss, u8 type);
--
+@@ -175,6 +175,8 @@ struct wpa_bss * wpa_bss_get_id(struct w
+ struct wpa_bss * wpa_bss_get_id_range(struct wpa_supplicant *wpa_s,
+ 				      unsigned int idf, unsigned int idl);
+ const u8 * wpa_bss_get_ie(const struct wpa_bss *bss, u8 ie);
++const u8 * wpa_bss_get_ie_pos(const struct wpa_bss *bss, u8 ie, u8 idx);
++u8 wpa_bss_get_mbssid_idx(const struct wpa_bss *bss);
+ const u8 * wpa_bss_get_ie_ext(const struct wpa_bss *bss, u8 ext);
+ const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type);
+ const u8 * wpa_bss_get_vendor_ie_beacon(const struct wpa_bss *bss,
+@@ -224,5 +226,11 @@ int wpa_bss_parse_basic_ml_element(struc
+ 				   u8 *ap_mld_id);
+ u16 wpa_bss_parse_reconf_ml_element(struct wpa_supplicant *wpa_s,
+ 				    struct wpa_bss *bss);
 +u32 wpa_bss_compare_res(const struct wpa_bss *old,
-+			const struct wpa_scan_res *new_res);
++		const struct wpa_scan_res *new_res);
 +struct wpa_bss *
 +wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
-+	       struct wpa_scan_res *res, struct os_reltime *fetch_time,
-+	       bool override);
++		struct wpa_scan_res *res, struct os_reltime *fetch_time,
++		bool override);
+ 
  #endif /* BSS_H */
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -3579,6 +3579,49 @@ out:
+@@ -4085,6 +4085,49 @@ out:
  }
  
  
@@ -136,7 +194,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +		freq = freq_list[++i];
 +	}
 +
-+	for (i = 0; i < MAX_NUM_MLO_LINKS; i++) {
++	for (i = 0; i < MAX_NUM_MLD_LINKS; i++) {
 +		if (valid_links & BIT(i))
 +			link_count++;
 +	}
@@ -156,7 +214,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
  				       union wpa_event_data *data)
  {
-@@ -3906,6 +3949,17 @@ static void wpa_supplicant_event_assoc(s
+@@ -4414,6 +4457,17 @@ static void wpa_supplicant_event_assoc(s
  
  	if (wpa_s->current_ssid && wpa_s->current_ssid->enable_4addr_mode)
  		wpa_supplicant_set_4addr_mode(wpa_s);
@@ -176,7 +234,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
 --- a/wpa_supplicant/scan.c
 +++ b/wpa_supplicant/scan.c
-@@ -3521,3 +3521,157 @@ void wpas_scan_restart_sched_scan(struct
+@@ -3866,3 +3866,173 @@ void wpas_scan_restart_sched_scan(struct
  	wpa_s->prev_sched_ssid = NULL;
  	wpa_supplicant_cancel_sched_scan(wpa_s);
  }
@@ -219,6 +277,10 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +		bss = wpa_bss_update(wpa_s, bss, res, fetch_time, true);
 +		mbssid_idx = wpa_bss_get_mbssid_idx(bss);
 +		i = 0;
++		/* NOTE: Any changes in rnr ie len calculation or fetching the ap info
++		 * from rnr ie must be reflected in wpa_bss_update_scan_rnr_res API as
++		 * it uses similar logic for WAR
++		 */
 +		while ((rnr_ie = wpa_bss_get_ie_pos(bss, WLAN_EID_REDUCED_NEIGHBOR_REPORT, i++))) {
 +			rnr_ie_len = rnr_ie[1];
 +			pos = rnr_ie + 2;
@@ -308,7 +370,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +		 */
 +		goto exit;
 +
-+	scan_res = wpa_drv_get_scan_results2(wpa_s);
++	scan_res = wpa_drv_get_scan_results(wpa_s, NULL);
 +	if (scan_res == NULL) {
 +		wpa_dbg(wpa_s, MSG_DEBUG, "No scan results available");
 +		goto exit;
@@ -316,7 +378,18 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +	filter_scan_res(wpa_s, scan_res);
 +
 +	for (i = 0; i < scan_res->num; i++) {
-+		if (os_memcmp(wpa_s->current_bss->bssid, scan_res->res[i]->bssid, ETH_ALEN) != 0) {
++		const u8 *ml_ie, *mld_addr;
++
++		ml_ie = wpa_scan_get_ml_ie(scan_res->res[i],
++					   MULTI_LINK_CONTROL_TYPE_BASIC);
++		if (!ml_ie)
++			continue;
++
++		mld_addr = get_basic_mle_mld_addr(&ml_ie[3], ml_ie[1] - 1);
++		if (!mld_addr)
++			continue;
++
++		if (os_memcmp(wpa_s->current_bss->bssid, mld_addr, ETH_ALEN) != 0) {
 +			/* Need to check any scan entry for current assoc bssid */
 +			continue;
 +		}
@@ -327,6 +400,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +		if (!ret)
 +			break;
 +	}
++	wpa_scan_results_free(scan_res);
 +
 +exit:
 +	if (ret)
@@ -336,9 +410,9 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +}
 --- a/wpa_supplicant/scan.h
 +++ b/wpa_supplicant/scan.h
-@@ -33,6 +33,14 @@
- #define IS_2P4GHZ(n) (n >= 2412 && n <= 2484)
- #define IS_5GHZ(n) (n > 4000 && n < 5895)
+@@ -38,6 +38,14 @@
+  */
+ #define TX_POWER_NO_CONSTRAINT 64
  
 +enum configured_freq_band {
 +	SCAN_FREQ_BAND_2GHZ = BIT(0),
@@ -353,24 +427,53 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  int wpa_supplicant_delayed_sched_scan(struct wpa_supplicant *wpa_s,
 --- a/wpa_supplicant/wpa_supplicant_i.h
 +++ b/wpa_supplicant/wpa_supplicant_i.h
-@@ -1930,5 +1930,5 @@ int wpas_pasn_deauthenticate(struct wpa_
- void wpas_pasn_auth_trigger(struct wpa_supplicant *wpa_s,
- 			    struct pasn_auth *pasn_auth);
- void wpas_pasn_auth_work_done(struct wpa_supplicant *wpa_s, int status);
--
+@@ -2013,4 +2013,6 @@ bool wpas_is_6ghz_supported(struct wpa_s
+ bool wpa_is_non_eht_scs_traffic_desc_supported(struct wpa_bss *bss);
+ bool wpas_ap_link_address(struct wpa_supplicant *wpa_s, const u8 *addr);
+ 
 +void wpas_scan_for_rnr_entries(void *eloop_ctx, void *timeout_ctx);
- #endif /* WPA_SUPPLICANT_I_H */
---- a/wpa_supplicant/sme.c
-+++ b/wpa_supplicant/sme.c
-@@ -465,6 +465,11 @@ static bool wpas_ml_element(struct wpa_s
- 	i = 0;
- 	mbssid_idx = wpa_bss_get_mbssid_idx(bss);
- 	wpa_printf(MSG_DEBUG, "MLD: mbssid idx = %u for bss " MACSTR, mbssid_idx, MAC2STR(bss->bssid));
 +
-+	/* NOTE: Any changes in rnr ie len calculation or fetching the ap info
-+	 * from rnr ie must be reflected in wpa_bss_update_scan_rnr_res API as
-+	 * it uses similar logic for WAR
-+	 */
- 	while ((rnr_ie = wpa_bss_get_ie_pos(bss, WLAN_EID_REDUCED_NEIGHBOR_REPORT, i++))) {
- 		rnr_ie_len = rnr_ie[1];
- 		pos = rnr_ie + 2;
+ #endif /* WPA_SUPPLICANT_I_H */
+--- a/src/common/ieee802_11_common.c
++++ b/src/common/ieee802_11_common.c
+@@ -2542,6 +2542,30 @@ const u8 * get_ie(const u8 *ies, size_t
+ 	return NULL;
+ }
+ 
++/**
++* get_ie_pos - Fetch a specified information element at given index from IEs buffer
++* @ies: Information elements buffer
++* @len: Information elements buffer length
++* @eid: Information element identifier (WLAN_EID_*)
++* @idx: index of entry of element to be found.
++*
++* Returns: Pointer to the information element (id field) at given @idx
++* or %NULL if not found.
++*/
++const u8 * get_ie_pos(const u8 *ies, size_t len, u8 eid, u8 idx)
++{
++	const struct element *elem;
++
++	if (!ies)
++		return NULL;
++
++	for_each_element(elem, ies, len) {
++		if (elem->id == eid && !idx--)
++			return &elem->id;
++	}
++	return NULL;
++}
++
+ 
+ /**
+  * get_ie_ext - Fetch a specified extended information element from IEs buffer
+--- a/src/common/ieee802_11_common.h
++++ b/src/common/ieee802_11_common.h
+@@ -270,6 +270,7 @@ extern const struct oper_class_map globa
+ extern size_t global_op_class_size;
+ 
+ const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
++const u8 * get_ie_pos(const u8 *ies, size_t len, u8 eid, u8 idx);
+ const u8 * get_ie_ext(const u8 *ies, size_t len, u8 ext);
+ const u8 * get_vendor_ie(const u8 *ies, size_t len, u32 vendor_type);
+ 

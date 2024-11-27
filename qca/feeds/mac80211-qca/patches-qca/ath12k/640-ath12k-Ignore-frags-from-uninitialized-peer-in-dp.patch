@@ -46,19 +46,9 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  drivers/net/wireless/ath/ath12k/peer.h  |  5 +++++
  3 files changed, 17 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp.c b/drivers/net/wireless/ath/ath12k/dp.c
-index e0ab80f..6e8cb96 100644
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -38,6 +38,7 @@ void ath12k_dp_peer_cleanup(struct ath12k *ar, int vdev_id, const u8 *addr)
- 
- 	ath12k_dp_rx_peer_tid_cleanup(ar, peer);
- 	crypto_free_shash(peer->tfm_mmic);
-+	peer->dp_setup_done = false;
- 	spin_unlock_bh(&ab->base_lock);
- }
- 
-@@ -73,6 +74,7 @@ int ath12k_dp_peer_setup(struct ath12k *ar, int vdev_id, const u8 *addr)
+@@ -74,6 +74,7 @@ int ath12k_dp_peer_setup(struct ath12k *
  	ret = ath12k_dp_rx_peer_frag_setup(ar, addr, vdev_id);
  	if (ret) {
  		ath12k_warn(ab, "failed to setup rx defrag context\n");
@@ -66,11 +56,9 @@ index e0ab80f..6e8cb96 100644
  		goto peer_clean;
  	}
  
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index f9f7c62..7eea37a 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -892,7 +892,6 @@ void ath12k_dp_rx_peer_tid_cleanup(struct ath12k *ar, struct ath12k_peer *peer)
+@@ -892,7 +892,6 @@ void ath12k_dp_rx_peer_tid_cleanup(struc
  
  		ath12k_dp_rx_peer_tid_delete(ar, peer, i);
  		ath12k_dp_rx_frags_cleanup(rx_tid, true);
@@ -78,54 +66,3 @@ index f9f7c62..7eea37a 100644
  		spin_unlock_bh(&ar->ab->base_lock);
  		del_timer_sync(&rx_tid->frag_timer);
  		spin_lock_bh(&ar->ab->base_lock);
-@@ -2802,6 +2801,7 @@ int ath12k_dp_rx_peer_frag_setup(struct ath12k *ar, const u8 *peer_mac, int vdev
- 	}
- 
- 	peer->tfm_mmic = tfm;
-+	peer->dp_setup_done = true;
- 	spin_unlock_bh(&ab->base_lock);
- 
- 	return 0;
-@@ -3268,6 +3268,14 @@ static int ath12k_dp_rx_frag_h_mpdu(struct ath12k *ar,
- 		ret = -ENOENT;
- 		goto out_unlock;
- 	}
-+
-+	if (!peer->dp_setup_done) {
-+		ath12k_warn(ab, "The peer %pM [%d] has not initialized its datapath\n",
-+				peer->addr, peer_id);
-+		ret = -ENOENT;
-+		goto out_unlock;
-+	}
-+
- 	rx_tid = &peer->rx_tid[tid];
- 
- 	if ((!skb_queue_empty(&rx_tid->rx_frags) && seqno != rx_tid->cur_sn) ||
-@@ -3283,7 +3291,7 @@ static int ath12k_dp_rx_frag_h_mpdu(struct ath12k *ar,
- 		goto out_unlock;
- 	}
- 
--	if (frag_no > __fls(rx_tid->rx_frag_bitmap))
-+	if (!rx_tid->rx_frag_bitmap || (frag_no > __fls(rx_tid->rx_frag_bitmap)))
- 		__skb_queue_tail(&rx_tid->rx_frags, msdu);
- 	else
- 		ath12k_dp_rx_h_sort_frags(ab, &rx_tid->rx_frags, msdu);
-diff --git a/drivers/net/wireless/ath/ath12k/peer.h b/drivers/net/wireless/ath/ath12k/peer.h
-index b296dc0..ab61abd 100644
---- a/drivers/net/wireless/ath/ath12k/peer.h
-+++ b/drivers/net/wireless/ath/ath12k/peer.h
-@@ -44,6 +44,11 @@ struct ath12k_peer {
- 	struct ppdu_user_delayba ppdu_stats_delayba;
- 	bool delayba_flag;
- 	bool is_authorized;
-+
-+	/* The below flag indicates whether
-+	 * a peer has setup its datapath or not
-+	 */
-+	bool dp_setup_done;
- };
- 
- void ath12k_peer_unmap_event(struct ath12k_base *ab, u16 peer_id);
--- 
-2.17.1
-

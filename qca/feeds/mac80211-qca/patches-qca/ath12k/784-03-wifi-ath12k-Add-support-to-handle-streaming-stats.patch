@@ -18,7 +18,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp.h
 +++ b/drivers/net/wireless/ath/ath12k/dp.h
-@@ -536,6 +536,7 @@ enum htt_h2t_msg_type {
+@@ -537,6 +537,7 @@ enum htt_h2t_msg_type {
  	HTT_H2T_MSG_TYPE_SAWF_DEF_Q_MAP_REQ	= 0x1c,
  	HTT_H2T_MSG_TYPE_SAWF_DEF_Q_UNMAP_REQ	= 0x1d,
  	HTT_H2T_MSG_TYPE_SAWF_DEF_Q_MAP_REPORT_REQ = 0x1e,
@@ -26,7 +26,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  };
  
  #define HTT_VER_REQ_INFO_MSG_ID		GENMASK(7, 0)
-@@ -1405,6 +1406,7 @@ enum htt_t2h_msg_type {
+@@ -1406,6 +1407,7 @@ enum htt_t2h_msg_type {
  	HTT_T2H_MSG_TYPE_VDEV_TXRX_STATS_PERIODIC_IND = 0x2c,
  	HTT_T2H_MSG_TYPE_SAWF_DEF_QUEUES_MAP_REPORT_CONF = 0x2d,
  	HTT_T2H_MSG_TYPE_SAWF_MSDUQ_INFO_IND = 0x2e,
@@ -44,7 +44,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  #include <linux/module.h>
  #include <qca-nss-ecm/ecm_classifier_emesh_public.h>
  
-@@ -1086,6 +1087,199 @@ unlock_base_lock:
+@@ -1139,6 +1140,206 @@ unlock_base_lock:
  	return ret;
  }
  
@@ -171,6 +171,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +        struct htt_stats_strm_gen_mpdus_details_tlv *mpdus_detail_tlv;
 +	const struct htt_tlv *tlv;
 +	u32 *data = NULL;
++	u8 *tlv_data;
 +	u32 len, tlv_tag, tlv_len;
 +	u16 info;
 +	u8 tid, q_type;
@@ -185,12 +186,18 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +		return;
 +
 +	while(len > 0) {
++		tlv_data = (u8 *)data;
 +		tlv = (struct htt_tlv *)data;
 +		tlv_tag = u32_get_bits(*data, HTT_TLV_TAG);
 +		tlv_len = u32_get_bits(*data, HTT_TLV_LEN);
 +
 +		if (!tlv_len)
 +			break;
++
++		if (len < tlv_len) {
++			ath12k_err(ab, "SAWF: len %d tlv_len %d\n", len, tlv_len);
++			break;
++		}
 +
 +		data++;
 +		if (tlv_tag == HTT_STATS_STRM_GEN_MPDUS_TAG) {
@@ -235,7 +242,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +				   __le16_to_cpu(mpdus_detail_tlv->burst_size_burst_size_spec),
 +				   __le16_to_cpu(mpdus_detail_tlv->burst_size_margin_bytes));
 +		}
-+		data += (tlv_len - 4);
++		data = (u32 *)(tlv_data + tlv_len);
 +		len -= tlv_len;
 +	}
 +	return;
@@ -244,7 +251,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  void ath12k_sawf_tx_enqueue_peer_stats(struct ath12k_base *ab,
  				       struct ath12k_peer *peer,
  				       u32 msduq_id, u32 len)
-@@ -1147,7 +1341,7 @@ void ath12k_sawf_stats_update(struct ath
+@@ -1200,7 +1401,7 @@ void ath12k_sawf_stats_update(struct ath
  	if (!(ath12k_debugfs_is_sawf_stats_enabled(ar) & ATH12K_SAWF_STATS_BASIC))
  		goto latency_stats_update;
  
@@ -255,7 +262,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/sawf.h
 +++ b/drivers/net/wireless/ath/ath12k/sawf.h
-@@ -545,6 +545,160 @@ struct ath12k_sawf_stats {
+@@ -559,6 +559,160 @@ struct ath12k_sawf_stats {
  	struct sawf_tx_stats tx_stats[ATH12K_SAWF_MAX_TID_SUPPORT][MAX_Q_PER_TID];
  };
  
@@ -416,7 +423,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  extern bool ath12k_sawf_enable;
  struct ath12k_sawf_ctx *ath12k_get_sawf_context(void);
  void ath12k_sawf_init(struct ath12k_base *ab);
-@@ -585,6 +739,15 @@ void ath12k_sawf_stats_update(struct ath
+@@ -600,6 +754,15 @@ void ath12k_sawf_stats_update(struct ath
  void ath12k_sawf_tx_enqueue_peer_stats(struct ath12k_base *ab,
  				       struct ath12k_peer *peer,
  				       u32 msduq_id, u32 len);
@@ -432,7 +439,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  #else /* CPTCFG_ATH12K_SAWF */
  
  static inline void ath12k_sawf_init(struct ath12k_base *ab) {
-@@ -597,7 +760,7 @@ static inline void ath12k_sawf_deinit(st
+@@ -612,7 +775,7 @@ static inline void ath12k_sawf_deinit(st
  
  static inline void ath12k_sawf_stats_update(struct ath12k *ar, struct sk_buff *skb,
  					    struct hal_tx_status *ts,
@@ -596,7 +603,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  int ath12k_vendor_register(struct ath12k_hw *ah);
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -2182,6 +2182,9 @@ void ath12k_dp_htt_htc_t2h_msg_handler(s
+@@ -2188,6 +2188,9 @@ void ath12k_dp_htt_htc_t2h_msg_handler(s
  	case HTT_T2H_MSG_TYPE_SAWF_DEF_QUEUES_MAP_REPORT_CONF:
  		ath12k_htt_sawf_def_q_map_report_handler(ab, skb);
  		break;

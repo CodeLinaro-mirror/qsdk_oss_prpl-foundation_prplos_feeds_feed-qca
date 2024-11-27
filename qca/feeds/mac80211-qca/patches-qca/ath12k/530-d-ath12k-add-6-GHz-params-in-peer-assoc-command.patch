@@ -14,11 +14,9 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  drivers/net/wireless/ath/ath12k/mac.c | 50 ++++++++++++++++++++++++++-
  1 file changed, 49 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 4382188..9c62bf2 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -1981,6 +1981,53 @@ static void ath12k_peer_assoc_h_he(struct ath12k *ar,
+@@ -2008,6 +2008,53 @@ static void ath12k_peer_assoc_h_he(struc
  		   arg->peer_bw_rxnss_override);
  }
  
@@ -72,15 +70,15 @@ index 4382188..9c62bf2 100644
  static void ath12k_peer_assoc_h_smps(struct ieee80211_sta *sta,
  				     struct ath12k_wmi_peer_assoc_arg *arg)
  {
-@@ -2270,6 +2317,7 @@ static void ath12k_peer_assoc_prepare(struct ath12k *ar,
+@@ -2485,6 +2532,7 @@ static void ath12k_peer_assoc_prepare(st
  	ath12k_peer_assoc_h_ht(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_vht(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_he(ar, vif, sta, arg);
 +	ath12k_peer_assoc_h_he_6ghz(ar, vif, sta, arg);
+ 	ath12k_peer_assoc_h_eht(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_qos(ar, vif, sta, arg);
  	ath12k_peer_assoc_h_smps(sta, arg);
- 
-@@ -7601,7 +7649,7 @@ static int __ath12k_mac_register(struct ath12k *ar)
+@@ -7986,7 +8034,7 @@ static int __ath12k_mac_register(struct
  	if (cap->nss_ratio_enabled)
  		ieee80211_hw_set(ar->hw, SUPPORTS_VHT_EXT_NSS_BW);
  
@@ -89,6 +87,3 @@ index 4382188..9c62bf2 100644
  		ieee80211_hw_set(ar->hw, AMPDU_AGGREGATION);
  		ieee80211_hw_set(ar->hw, TX_AMPDU_SETUP_IN_HW);
  		ieee80211_hw_set(ar->hw, SUPPORTS_REORDERING_BUFFER);
--- 
-2.17.1
-

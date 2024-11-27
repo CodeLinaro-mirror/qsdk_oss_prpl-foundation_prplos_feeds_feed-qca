@@ -42,7 +42,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	struct work_struct tid_config_wk;
  	struct ath11k_tid_qos_config tid_cfg[ATH11K_TID_MAX];
  #ifdef CPTCFG_ATH11K_CFR
-@@ -927,6 +929,7 @@ struct ath11k {
+@@ -923,6 +925,7 @@ struct ath11k {
  	u32 txpower_scale;
  	u32 power_scale;
  	u32 chan_tx_pwr;
@@ -52,90 +52,88 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	/* To synchronize concurrent synchronous mac80211 callback operations,
 --- a/drivers/net/wireless/ath/ath11k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath11k/dp_rx.c
-@@ -1602,91 +1602,92 @@ ath11k_update_per_peer_tx_stats(struct a
+@@ -1599,91 +1599,84 @@ ath11k_update_per_peer_tx_stats(struct a
  	ru_start = user_rate->ru_start;
  	ru_tone = user_rate->ru_end;
  
 -	/* Note: If host configured fixed rates and in some other special
 -	 * cases, the broadcast/management frames are sent in different rates.
 -	 * Firmware rate's control to be skipped for this?
-+	/* PPDU stats reported for mgmt packet doesn't have valid tx bytes.
-+	 * So skip peer stats update for mgmt packets.
- 	 */
- 
+-	 */
+-
 -	if (flags == WMI_RATE_PREAMBLE_HE && mcs > ATH11K_HE_MCS_MAX) {
 -		ath11k_warn(ab, "Invalid HE mcs %d peer stats",  mcs);
 -		return;
 -	}
-+	if (tid < HTT_PPDU_STATS_NON_QOS_TID) {
-+		/* Note: If host configured fixed rates and in some other special
-+		 * cases, the broadcast/management frames are sent in different rates.
-+		 * Firmware rate's control to be skipped for this?
-+		 */
- 
+-
 -	if (flags == WMI_RATE_PREAMBLE_VHT && mcs > ATH11K_VHT_MCS_MAX) {
 -		ath11k_warn(ab, "Invalid VHT mcs %d peer stats",  mcs);
 -		return;
 -	}
-+		if (flags == WMI_RATE_PREAMBLE_HE && mcs > ATH11K_HE_MCS_MAX) {
-+			ath11k_warn(ab, "Invalid HE mcs %d peer stats",  mcs);
-+			return;
-+		}
++	 /* PPDU stats reported for mgmt packet doesn't have valid tx bytes.
++	  * So skip peer stats update for mgmt packets.
++	  */
  
 -	if (flags == WMI_RATE_PREAMBLE_HT && (mcs > ATH11K_HT_MCS_MAX || nss < 1)) {
 -		ath11k_warn(ab, "Invalid HT mcs %d nss %d peer stats",
 -			    mcs, nss);
 -		return;
 -	}
-+		if (flags == WMI_RATE_PREAMBLE_VHT && mcs > ATH11K_VHT_MCS_MAX) {
-+			ath11k_warn(ab, "Invalid VHT mcs %d peer stats",  mcs);
-+			return;
-+		}
- 
+-
 -	if (flags == WMI_RATE_PREAMBLE_CCK || flags == WMI_RATE_PREAMBLE_OFDM) {
 -		ret = ath11k_mac_hw_ratecode_to_legacy_rate(mcs,
 -							    flags,
 -							    &rate_idx,
 -							    &rate);
 -		if (ret < 0)
-+		if (flags == WMI_RATE_PREAMBLE_HT && (mcs > ATH11K_HT_MCS_MAX || nss < 1)) {
-+			ath11k_warn(ab, "Invalid HT mcs %d nss %d peer stats",
-+				    mcs, nss);
++	if (tid < HTT_PPDU_STATS_NON_QOS_TID) {
++		/* Note: If host configured fixed rates and in some other special
++		 * cases, the broadcast/management frames are sent in different rates.
++		 * Firmware rate's control to be skipped for this?
++		 */
++		if (flags == WMI_RATE_PREAMBLE_HE && mcs > ATH11K_HE_MCS_MAX) {
++			ath11k_warn(ab, "Invalid HE mcs %d peer stats",  mcs);
  			return;
 -	}
-+		}
- 
+-
 -	rcu_read_lock();
 -	spin_lock_bh(&ab->base_lock);
 -	peer = ath11k_peer_find_by_id(ab, usr_stats->peer_id);
-+		if (flags == WMI_RATE_PREAMBLE_CCK || flags == WMI_RATE_PREAMBLE_OFDM) {
-+			ret = ath11k_mac_hw_ratecode_to_legacy_rate(mcs,
-+								    flags,
-+								    &rate_idx,
-+								    &rate);
-+			if (ret < 0)
-+				return;
-+		}
- 
+-
 -	if (!peer || !peer->sta) {
 -		spin_unlock_bh(&ab->base_lock);
 -		rcu_read_unlock();
 -		return;
 -	}
++		}
++		if (flags == WMI_RATE_PREAMBLE_VHT && mcs > ATH11K_VHT_MCS_MAX) {
++			ath11k_warn(ab, "Invalid VHT mcs %d peer stats",  mcs);
++			return;
++		}
+ 
+-	sta = peer->sta;
+-	arsta = ath11k_sta_to_arsta(sta);
++		if (flags == WMI_RATE_PREAMBLE_HT && (mcs > ATH11K_HT_MCS_MAX || nss < 1)) {
++			ath11k_warn(ab, "Invalid HT mcs %d nss %d peer stats",
++					mcs, nss);
++			return;
++		}
++		if (flags == WMI_RATE_PREAMBLE_CCK || flags == WMI_RATE_PREAMBLE_OFDM) {
++			ret = ath11k_mac_hw_ratecode_to_legacy_rate(mcs,
++														flags,&rate_idx,&rate);
++			if (ret < 0)
++				return;
++		}
 +		rcu_read_lock();
 +		spin_lock_bh(&ab->base_lock);
 +		peer = ath11k_peer_find_by_id(ab, usr_stats->peer_id);
-+
 +		if (!peer || !peer->sta) {
 +			spin_unlock_bh(&ab->base_lock);
 +			rcu_read_unlock();
 +			return;
 +		}
- 
--	sta = peer->sta;
--	arsta = (struct ath11k_sta *)sta->drv_priv;
 +		sta = peer->sta;
-+		arsta = (struct ath11k_sta *)sta->drv_priv;
++		arsta = ath11k_sta_to_arsta(sta);
  
 -	memset(&arsta->txrate, 0, sizeof(arsta->txrate));
 +		memset(&arsta->txrate, 0, sizeof(arsta->txrate));
@@ -195,7 +193,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
 +			arsta->txrate.he_gi = ath11k_mac_he_gi_to_nl80211_he_gi(sgi);
 +			arsta->txrate.he_ru_alloc = ath11k_mac_phy_he_ru_to_nl80211_he_ru_alloc
 +							((user_rate->ru_end -
-+							 user_rate->ru_start) + 1);
++						 	user_rate->ru_start) + 1);
 +			break;
 +		}
  
@@ -216,7 +214,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  		memset(peer_stats, 0, sizeof(*peer_stats));
  		peer_stats->succ_pkts = succ_pkts;
  		peer_stats->succ_bytes = succ_bytes;
-@@ -1714,12 +1715,12 @@ ath11k_update_per_peer_tx_stats(struct a
+@@ -1711,12 +1704,12 @@ ath11k_update_per_peer_tx_stats(struct a
  
  		if (unlikely(ath11k_debugfs_is_extd_tx_stats_enabled(ar)))
  			ath11k_debugfs_sta_add_tx_stats(arsta, peer_stats, rate_idx);
@@ -232,7 +230,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  }
  
  static void ath11k_htt_update_ppdu_stats(struct ath11k *ar,
-@@ -3508,13 +3509,16 @@ static void ath11k_dp_rx_update_peer_su_
+@@ -3509,13 +3502,16 @@ static void ath11k_dp_rx_update_peer_su_
  {
  	struct ath11k_rx_peer_stats *rx_stats = arsta->rx_stats;
  	u32 num_msdu;
@@ -252,7 +250,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  		return;
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
-@@ -11710,6 +11710,7 @@ static void ath11k_mac_op_sta_statistics
+@@ -11615,6 +11615,7 @@ static void ath11k_mac_op_sta_statistics
  	struct ath11k *ar = arsta->arvif->ar;
  	struct ath11k_vif *arvif = ath11k_vif_to_arvif(vif);
  	s8 signal;
@@ -260,7 +258,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	bool db2dbm = test_bit(WMI_TLV_SERVICE_HW_DB2DBM_CONVERSION_SUPPORT,
  			       ar->ab->wmi_ab.svc_map);
  
-@@ -11719,6 +11720,11 @@ static void ath11k_mac_op_sta_statistics
+@@ -11624,6 +11625,11 @@ static void ath11k_mac_op_sta_statistics
  	sinfo->tx_duration = arsta->tx_duration;
  	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_TX_DURATION);
  
@@ -272,7 +270,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	if (arsta->txrate.legacy || arsta->txrate.nss) {
  		if (arsta->txrate.legacy) {
  			sinfo->txrate.legacy = arsta->txrate.legacy;
-@@ -11744,25 +11750,36 @@ static void ath11k_mac_op_sta_statistics
+@@ -11649,25 +11655,36 @@ static void ath11k_mac_op_sta_statistics
  		ath11k_mac_put_chain_rssi(sinfo, arsta, "fw stats", true);
  	}
  
@@ -323,7 +321,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	if (arvif->ar->ab->nss.enabled)
 --- a/drivers/net/wireless/ath/ath11k/wmi.c
 +++ b/drivers/net/wireless/ath/ath11k/wmi.c
-@@ -7889,10 +7889,12 @@ static int ath11k_pull_wds_addr_ev(struc
+@@ -7344,10 +7344,12 @@ static int ath11k_pull_wds_addr_ev(struc
  	return 0;
  }
  
@@ -337,7 +335,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	dst->tx_frame_count = src->tx_frame_count;
  	dst->rx_frame_count = src->rx_frame_count;
  	dst->rx_clear_count = src->rx_clear_count;
-@@ -8116,7 +8118,7 @@ static int ath11k_wmi_tlv_fw_stats_data_
+@@ -7571,7 +7573,7 @@ static int ath11k_wmi_tlv_fw_stats_data_
  		if (!dst)
  			continue;
  
@@ -348,7 +346,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  		list_add_tail(&dst->list, &stats->pdevs);
 --- a/drivers/net/wireless/ath/ath11k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath11k/dp_tx.c
-@@ -823,6 +823,7 @@ static void ath11k_dp_tx_complete_msdu(s
+@@ -821,6 +821,7 @@ static void ath11k_dp_tx_complete_msdu(s
  	struct hal_tx_status ts = { 0 };
  	enum hal_wbm_htt_tx_comp_status wbm_status;
  	enum hal_wbm_tqm_rel_reason rel_status;
@@ -356,7 +354,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	u8 flags = 0;
  
  	if (unlikely(WARN_ON_ONCE(buf_rel_source != HAL_WBM_REL_SRC_MODULE_TQM))) {
-@@ -878,15 +879,6 @@ static void ath11k_dp_tx_complete_msdu(s
+@@ -876,15 +877,6 @@ static void ath11k_dp_tx_complete_msdu(s
  	/* skip tx rate update from ieee80211_status*/
  	info->status.rates[0].idx = -1;
  
@@ -372,7 +370,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	if (ts.status == HAL_WBM_TQM_REL_REASON_CMD_REMOVE_TX &&
  	    (info->flags & IEEE80211_TX_CTL_NO_ACK) &&
  	    (flags & ATH11K_SKB_F_NOACK_TID))
-@@ -938,6 +930,17 @@ static void ath11k_dp_tx_complete_msdu(s
+@@ -936,6 +928,17 @@ static void ath11k_dp_tx_complete_msdu(s
  	status.rates = &status_rate;
  	status.n_rates = 1;
  

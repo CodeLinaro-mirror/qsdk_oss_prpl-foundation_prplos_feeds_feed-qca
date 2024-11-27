@@ -14,7 +14,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -808,21 +808,22 @@ static int ath12k_mac_monitor_vdev_start
+@@ -829,22 +829,24 @@ static int ath12k_mac_monitor_vdev_start
  
  	channel = chandef->chan;
  	arg.vdev_id = vdev_id;
@@ -39,18 +39,20 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +	arg.channel.max_power = channel->max_power;
 +	arg.channel.max_reg_power = channel->max_reg_power;
 +	arg.channel.max_antenna_gain = channel->max_antenna_gain;
++
  
  	arg.pref_tx_streams = ar->num_tx_chains;
  	arg.pref_rx_streams = ar->num_rx_chains;
+ 	arg.punct_bitmap = 0xFFFFFFFF;
  
 -	arg.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
 +	arg.channel.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
  
  	reinit_completion(&ar->vdev_setup_done);
  	reinit_completion(&ar->vdev_delete_done);
-@@ -5472,15 +5473,16 @@ ath12k_mac_vdev_start_restart(struct ath
- 	arg.dtim_period = arvif->dtim_period;
+@@ -5809,15 +5811,16 @@ ath12k_mac_vdev_start_restart(struct ath
  	arg.bcn_intval = arvif->beacon_interval;
+ 	arg.punct_bitmap = ~arvif->punct_bitmap;
  
 -	arg.freq = chandef->chan->center_freq;
 -	arg.band_center_freq1 = chandef->center_freq1;
@@ -74,7 +76,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  	arg.pref_tx_streams = ar->num_tx_chains;
  	arg.pref_rx_streams = ar->num_rx_chains;
-@@ -5491,9 +5493,10 @@ ath12k_mac_vdev_start_restart(struct ath
+@@ -5828,9 +5831,10 @@ ath12k_mac_vdev_start_restart(struct ath
  		arg.hidden_ssid = arvif->u.ap.hidden_ssid;
  
  		/* For now allow DFS for AP mode */
@@ -87,7 +89,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  		spin_lock_bh(&ab->base_lock);
  		arg.regdomain = ar->ab->dfs_region;
-@@ -5510,7 +5513,7 @@ ath12k_mac_vdev_start_restart(struct ath
+@@ -5847,7 +5851,7 @@ ath12k_mac_vdev_start_restart(struct ath
  		}
  	}
  
@@ -95,10 +97,10 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +	arg.channel.passive |= !!(chandef->chan->flags & IEEE80211_CHAN_NO_IR);
  
  	ath12k_dbg(ab, ATH12K_DBG_MAC,
- 		   "mac vdev %d start center_freq %d phymode %s\n",
+ 		   "mac vdev %d start center_freq %d phymode %s punct_bitmap 0x%x\n",
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -929,39 +929,39 @@ static void ath12k_wmi_put_wmi_channel(s
+@@ -955,39 +955,39 @@ static void ath12k_wmi_put_wmi_channel(s
  {
  	memset(chan, 0, sizeof(*chan));
  
@@ -155,7 +157,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  }
  
  int ath12k_wmi_vdev_start(struct ath12k *ar, struct wmi_vdev_start_req_arg *arg,
-@@ -1031,7 +1031,7 @@ int ath12k_wmi_vdev_start(struct ath12k
+@@ -1058,7 +1058,7 @@ int ath12k_wmi_vdev_start(struct ath12k
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_WMI, "vdev %s id 0x%x freq 0x%x mode 0x%x\n",
  		   restart ? "restart" : "start", arg->vdev_id,
@@ -166,8 +168,8 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		ret = ath12k_wmi_cmd_send(wmi, skb,
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2763,8 +2763,7 @@ enum wmi_phy_mode {
- 	MODE_MAX = 24
+@@ -2847,8 +2847,7 @@ enum wmi_phy_mode {
+ 	MODE_MAX = 33,
  };
  
 -struct wmi_vdev_start_req_arg {
@@ -176,7 +178,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	u32 freq;
  	u32 band_center_freq1;
  	u32 band_center_freq2;
-@@ -2781,6 +2780,11 @@ struct wmi_vdev_start_req_arg {
+@@ -2865,6 +2864,11 @@ struct wmi_vdev_start_req_arg {
  	u32 max_reg_power;
  	u32 max_antenna_gain;
  	enum wmi_phy_mode mode;

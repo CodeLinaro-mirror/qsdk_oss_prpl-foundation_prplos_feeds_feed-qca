@@ -14,21 +14,14 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  src/ap/ieee802_11_eht.c | 4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index a62eb88df1dc..df429bfaef74 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -604,6 +604,10 @@ u8 * hostapd_eid_eht_basic_ml(struct hostapd_data *hapd, u8 *eid,
- 	u8 link_id;
- 	u8 common_info_len;
- 	u8 max_simul_links, tid_to_link_map, active_links;
-+
+@@ -606,6 +606,8 @@ static u8 * hostapd_eid_eht_basic_ml_com
+ 	u16 mld_cap;
+ 	u8 max_simul_links, active_links;
+ 
 +	if (!hapd->conf->mld_ap)
 +		return pos;
-+
  	/*
  	 * As the Multi-Link element can exceed the size of 255 bytes need to
  	 * first build it and then handle fragmentation.
--- 
-2.38.0
-

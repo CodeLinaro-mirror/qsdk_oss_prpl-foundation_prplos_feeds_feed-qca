@@ -34,7 +34,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  struct ath12k_link_vif {
  	struct ath12k_base *ab;
  	struct ath12k_dp *dp;
-@@ -448,6 +456,7 @@ struct ath12k_link_vif {
+@@ -450,6 +458,7 @@ struct ath12k_link_vif {
  	struct work_struct peer_ch_width_switch_work;
  	struct ath12k_peer_ch_width_switch_data *peer_ch_width_switch_data;
  	struct ieee80211_key_conf *keys[WMI_MAX_KEY_INDEX + 1];
@@ -44,7 +44,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  struct ath12k_vif {
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -2814,6 +2814,8 @@ static void ath12k_wmi_fill_cu_arg(struc
+@@ -2726,6 +2726,8 @@ static void ath12k_wmi_fill_cu_arg(struc
  	struct wmi_bcn_tmpl_ml_info *ml_info;
  	int i;
  	u64 non_tx_ml_vdev_bmap = 0;
@@ -53,7 +53,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	list_for_each_entry(arvif_iter, &arvif->ar->arvifs, list) {
  		if (arvif_iter != arvif && arvif_iter->tx_vdev_id == arvif->vdev_id &&
-@@ -2844,6 +2846,17 @@ static void ath12k_wmi_fill_cu_arg(struc
+@@ -2756,6 +2758,17 @@ static void ath12k_wmi_fill_cu_arg(struc
  		for (i = 0; i < cu_arg->num_ml_info; i++) {
  			ml_info = &cu_arg->ml_info[i];
  			ath12k_wmi_bcn_fill_ml_info(arvif, ml_info, non_tx_ml_vdev_bmap);
@@ -71,7 +71,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		}
  	}
  }
-@@ -5428,6 +5441,41 @@ int ath12k_wmi_fils_discovery_tmpl(struc
+@@ -5351,6 +5364,41 @@ int ath12k_wmi_fils_discovery_tmpl(struc
  	return ret;
  }
  
@@ -113,7 +113,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  int ath12k_wmi_probe_resp_tmpl(struct ath12k *ar, u32 vdev_id,
  			       struct sk_buff *tmpl)
  {
-@@ -5436,18 +5484,23 @@ int ath12k_wmi_probe_resp_tmpl(struct at
+@@ -5359,18 +5407,23 @@ int ath12k_wmi_probe_resp_tmpl(struct at
  	struct wmi_tlv *tlv;
  	struct sk_buff *skb;
  	void *ptr;
@@ -141,7 +141,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	cmd = (struct wmi_probe_tmpl_cmd *)skb->data;
  	cmd->tlv_header = ath12k_wmi_tlv_cmd_hdr(WMI_TAG_PRB_TMPL_CMD,
  						 sizeof(*cmd));
-@@ -5468,6 +5521,10 @@ int ath12k_wmi_probe_resp_tmpl(struct at
+@@ -5391,6 +5444,10 @@ int ath12k_wmi_probe_resp_tmpl(struct at
  	tlv = ptr;
  	tlv->header = ath12k_wmi_tlv_hdr(WMI_TAG_ARRAY_BYTE, aligned_len);
  	memcpy(tlv->value, tmpl->data, tmpl->len);
@@ -154,15 +154,15 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	if (ret) {
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2210,6 +2210,7 @@ enum wmi_tlv_tag {
+@@ -2208,6 +2208,7 @@ enum wmi_tlv_tag {
+ 	WMI_TAG_BCN_TMPL_ML_INFO_CMD = 0x436,
  	WMI_TAG_CTRL_PATH_CMD_FIXED_PARAM = 0x442,
  	WMI_TAG_CTRL_PATH_EVENT_FIXED_PARAM,
- 	WMI_TAG_PDEV_DFS_RADAR_FLAGS = 0x4b4,
 +	WMI_TAG_PRB_RESP_TMPL_ML_INFO_CMD = 0x460,
+ 	WMI_TAG_PDEV_DFS_RADAR_FLAGS = 0x4b4,
  	WMI_TAG_MAX
  };
- 
-@@ -8116,6 +8117,15 @@ struct wmi_critical_update_arg {
+@@ -8155,6 +8156,15 @@ struct wmi_critical_update_arg {
  	struct wmi_bcn_tmpl_ml_info *ml_info;
  };
  

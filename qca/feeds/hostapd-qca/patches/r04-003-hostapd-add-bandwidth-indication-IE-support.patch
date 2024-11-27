@@ -22,16 +22,16 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -1118,7 +1118,7 @@ static u8 * hostapd_gen_probe_resp(struc
+@@ -853,7 +853,7 @@ static u8 * hostapd_probe_resp_fill_elem
  	if ((hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) ||
  	    (hapd->iconf->ieee80211ax && !hapd->conf->disable_11ax) ||
  	    (hapd->iconf->ieee80211be && !hapd->conf->disable_11be))
 -		pos = hostapd_eid_wb_chsw_wrapper(hapd, pos);
 +		pos = hostapd_eid_chsw_wrapper(hapd, pos);
  
- 	pos = hostapd_eid_rnr(hapd, pos, WLAN_FC_STYPE_PROBE_RESP, true);
- 	pos = hostapd_eid_fils_indic(hapd, pos, 0);
-@@ -2338,7 +2338,7 @@ int ieee802_11_build_ap_params(struct ho
+ 	if (!params->is_ml_sta_info)
+ 		pos = hostapd_eid_rnr(hapd, pos, WLAN_FC_STYPE_PROBE_RESP,
+@@ -2456,7 +2456,7 @@ int ieee802_11_build_ap_params(struct ho
  	if ((hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) ||
  	    (hapd->iconf->ieee80211ax && !hapd->conf->disable_11ax) ||
  	    (hapd->iconf->ieee80211be && !hapd->conf->disable_11be))
@@ -40,187 +40,9 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	tailpos = hostapd_eid_rnr(hapd, tailpos, WLAN_FC_STYPE_BEACON, true);
  	tailpos = hostapd_eid_fils_indic(hapd, tailpos, 0);
---- a/src/ap/ieee802_11.c
-+++ b/src/ap/ieee802_11.c
-@@ -7176,16 +7176,12 @@ u8 * hostapd_eid_txpower_envelope(struct
- }
- 
- 
--u8 * hostapd_eid_wb_chsw_wrapper(struct hostapd_data *hapd, u8 *eid)
-+u8 *hostapd_eid_wide_bw_chan_switch(struct hostapd_data *hapd,
-+					u8 *eid, u8 ccfs0, u8 ccfs1)
- {
--	u8 bw, chan1, chan2 = 0;
--	int freq1;
- 
--	if (!hapd->cs_freq_params.channel ||
--	    (!hapd->cs_freq_params.vht_enabled &&
--	     !hapd->cs_freq_params.he_enabled &&
--	     !hapd->cs_freq_params.eht_enabled))
--		return eid;
-+	struct ieee80211_wb_chsw_element *wb_chsw_elem;
-+	u8 bw;
- 
- 	/* bandwidth: 0: 40, 1: 80, 2: 160, 3: 80+80, 4: 320 */
- 	switch (hapd->cs_freq_params.bandwidth) {
-@@ -7210,27 +7206,143 @@ u8 * hostapd_eid_wb_chsw_wrapper(struct
- 		return eid;
- 	}
- 
--	freq1 = hapd->cs_freq_params.center_freq1 ?
-+	*eid++ = WLAN_EID_WIDE_BW_CHSWITCH;
-+	/* Length of Wide Bandwidth Channel Switch element */
-+	*eid++ = sizeof(struct ieee80211_wb_chsw_element);
-+	wb_chsw_elem = (struct ieee80211_wb_chsw_element *) eid;
-+	eid += sizeof(struct ieee80211_wb_chsw_element);
-+
-+	/* New Channel Width */
-+	wb_chsw_elem->new_channel_width = bw;
-+	/* New Channel Center Frequency Segment 0 */
-+	wb_chsw_elem->new_ccfs0 = ccfs0;
-+	/* New Channel Center Frequency Segment 1 */
-+	wb_chsw_elem->new_ccfs1 = ccfs1;
-+
-+	return eid;
-+}
-+
-+u8 *hostapd_eid_bw_indication(struct hostapd_data *hapd, u8 *eid, u8 ccfs0, u8 ccfs1)
-+{
-+	u8 *pos = eid, *length_pos;
-+	struct ieee80211_bw_ind_element *bw_ind_elem;
-+	int bw_ind_status = false;
-+	size_t fixed_eid_len;
-+
-+	if (hapd->cs_freq_params.bandwidth > 160 ||
-+	    hapd->cs_freq_params.ru_punct_bitmap)
-+		bw_ind_status = true;
-+
-+	if (!bw_ind_status)
-+		return eid;
-+
-+	if (!hapd->cs_freq_params.channel || !hapd->cs_freq_params.eht_enabled)
-+		return eid;
-+
-+	*pos++ = WLAN_EID_EXTENSION;
-+	length_pos = pos++;
-+	*pos++ = WLAN_EID_EXT_BW_IND;
-+
-+	fixed_eid_len = (sizeof(struct ieee80211_bw_ind_element) -
-+			DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE);
-+
-+	bw_ind_elem = (struct ieee80211_bw_ind_element *) pos;
-+	os_memset(bw_ind_elem, 0, sizeof(struct ieee80211_bw_ind_element));
-+
-+	if (hapd->cs_freq_params.ru_punct_bitmap) {
-+		bw_ind_elem->bw_ind_params |=
-+			BW_IND_PARAMETER_DISABLED_SUBCHAN_BITMAP_PRESENT;
-+		bw_ind_elem->bw_ind_info.disabled_chan_bitmap =
-+			host_to_le16(hapd->cs_freq_params.ru_punct_bitmap);
-+		pos += DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
-+	} else {
-+		bw_ind_elem->bw_ind_params &=
-+			~BW_IND_PARAMETER_DISABLED_SUBCHAN_BITMAP_PRESENT;
-+	}
-+
-+	switch (hapd->cs_freq_params.bandwidth) {
-+	case 320:
-+		bw_ind_elem->bw_ind_info.control |=
-+			BW_IND_CHANNEL_WIDTH_320MHZ;
-+		ccfs1 = ccfs0;
-+		if (hapd->cs_freq_params.channel < ccfs0)
-+			ccfs0 -= 16;
-+		else
-+			ccfs0 += 16;
-+		break;
-+	case 160:
-+		bw_ind_elem->bw_ind_info.control |=
-+			BW_IND_CHANNEL_WIDTH_160MHZ;
-+		ccfs1 = ccfs0;
-+		if (hapd->cs_freq_params.channel < ccfs0)
-+			ccfs0 -= 8;
-+		else
-+			ccfs0 += 8;
-+		break;
-+	case 80:
-+		bw_ind_elem->bw_ind_info.control |=
-+			BW_IND_CHANNEL_WIDTH_80MHZ;
-+		break;
-+	case 40:
-+		if (hapd->cs_freq_params.sec_channel_offset == 1)
-+			bw_ind_elem->bw_ind_info.control |=
-+				BW_IND_CHANNEL_WIDTH_40MHZ;
-+		else
-+			bw_ind_elem->bw_ind_info.control |=
-+				BW_IND_CHANNEL_WIDTH_20MHZ;
-+		break;
-+	default:
-+		bw_ind_elem->bw_ind_info.control |=
-+			BW_IND_CHANNEL_WIDTH_20MHZ;
-+		break;
-+	}
-+
-+	bw_ind_elem->bw_ind_info.ccfs0 = ccfs0;
-+	bw_ind_elem->bw_ind_info.ccfs1 = ccfs1;
-+
-+	pos += fixed_eid_len;
-+	*length_pos = pos - (eid + 2);
-+
-+	return pos;
-+}
-+
-+u8 *hostapd_eid_chsw_wrapper(struct hostapd_data *hapd, u8 *eid)
-+{
-+	u8 *pos = eid, *length_pos;
-+	u8 ccfs0, ccfs1;
-+	int freq;
-+
-+	if (!hapd->cs_freq_params.channel ||
-+	   (!hapd->cs_freq_params.vht_enabled &&
-+	    !hapd->cs_freq_params.he_enabled &&
-+	    !hapd->cs_freq_params.eht_enabled))
-+		return eid;
-+
-+	freq = hapd->cs_freq_params.center_freq1 ?
- 		hapd->cs_freq_params.center_freq1 :
- 		hapd->cs_freq_params.freq;
--	if (ieee80211_freq_to_chan(freq1, &chan1) !=
-+	if (ieee80211_freq_to_chan(freq, &ccfs0) !=
- 	    HOSTAPD_MODE_IEEE80211A)
- 		return eid;
- 
- 	if (hapd->cs_freq_params.center_freq2 &&
- 	    ieee80211_freq_to_chan(hapd->cs_freq_params.center_freq2,
--				   &chan2) != HOSTAPD_MODE_IEEE80211A)
-+				   &ccfs1) != HOSTAPD_MODE_IEEE80211A)
- 		return eid;
- 
--	*eid++ = WLAN_EID_CHANNEL_SWITCH_WRAPPER;
--	*eid++ = 5; /* Length of Channel Switch Wrapper */
--	*eid++ = WLAN_EID_WIDE_BW_CHSWITCH;
--	*eid++ = 3; /* Length of Wide Bandwidth Channel Switch element */
--	*eid++ = bw; /* New Channel Width */
--	*eid++ = chan1; /* New Channel Center Frequency Segment 0 */
--	*eid++ = chan2; /* New Channel Center Frequency Segment 1 */
-+	*pos++ = WLAN_EID_CHANNEL_SWITCH_WRAPPER;
-+	/* Length of Channel Switch Wrapper */
-+	length_pos = pos++;
-+
-+	pos = hostapd_eid_wide_bw_chan_switch(hapd, pos, ccfs0, ccfs1);
-+
-+#ifdef CONFIG_IEEE80211BE
-+	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be)
-+		pos = hostapd_eid_bw_indication(hapd, pos, ccfs0, ccfs1);
-+#endif /*CONFIG_IEEE80211BE */
- 
--	return eid;
-+	*length_pos = pos - (eid + 2);
-+	return pos;
- }
- 
- int hostapd_config_read_maclist(const char *fname,
 --- a/src/ap/ieee802_11.h
 +++ b/src/ap/ieee802_11.h
-@@ -70,7 +70,11 @@ u8 * hostapd_eid_ht_operation(struct hos
+@@ -67,7 +67,11 @@ u8 * hostapd_eid_ht_operation(struct hos
  u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid, u32 nsts);
  u8 * hostapd_eid_vht_operation(struct hostapd_data *hapd, u8 *eid);
  u8 * hostapd_eid_vendor_vht(struct hostapd_data *hapd, u8 *eid);
@@ -235,17 +57,17 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  			  enum ieee80211_op_mode opmode);
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -503,6 +503,7 @@
- #define WLAN_EID_EXT_TID_TO_LINK_MAPPING 109
+@@ -525,6 +525,7 @@
  #define WLAN_EID_EXT_MULTI_LINK_TRAFFIC_INDICATION 110
+ #define WLAN_EID_EXT_QOS_CHARACTERISTICS 113
  #define WLAN_EID_EXT_AKM_SUITE_SELECTOR 114
 +#define WLAN_EID_EXT_BW_IND 135
  
  /* Extended Capabilities field */
  #define WLAN_EXT_CAPAB_20_40_COEX 0
-@@ -2923,6 +2924,42 @@ enum dscp_policy_request_type {
- #define WFA_CAPA_QM_DSCP_POLICY BIT(0)
+@@ -3099,6 +3100,42 @@ enum dscp_policy_request_type {
  #define WFA_CAPA_QM_UNSOLIC_DSCP BIT(1)
+ #define WFA_CAPA_QM_NON_EHT_SCS_TRAFFIC_DESC BIT(2)
  
 +/* IEEE P802.11be/D3.0,9.4.2.160 - Wide Bandwidth Channel Switch element */
 +struct ieee80211_wb_chsw_element {
@@ -286,3 +108,185 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  struct ieee80211_neighbor_ap_info {
  	u8 tbtt_info_hdr;
  	u8 tbtt_info_len;
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -7373,6 +7373,179 @@ u8 * hostapd_eid_txpower_envelope(struct
+ 				    tx_pwr);
+ }
+ 
++u8 *hostapd_eid_wide_bw_chan_switch(struct hostapd_data *hapd,
++                                        u8 *eid, u8 ccfs0, u8 ccfs1)
++{
++
++        struct ieee80211_wb_chsw_element *wb_chsw_elem;
++        u8 bw;
++
++        /* bandwidth: 0: 40, 1: 80, 160, 80+80, 4: 320 as per Draft P802.11Revme_D4.0 */
++        switch (hapd->cs_freq_params.bandwidth) {
++        case 40:
++                bw = 0;
++                break;
++        case 80:
++                bw = 1;
++                break;
++        case 160:
++                bw = 1;
++                /* ccfs1 - the channel center frequency index of the 160 MHz channel */
++                ccfs1 = ccfs0;
++                /* ccfs0 - the channel center frequency index of the 80 MHz
++                 * channel segment that contains the primary channel
++                 */
++                if (hapd->cs_freq_params.channel < ccfs0)
++                        ccfs0 -= 8;
++                else
++                        ccfs0 += 8;
++                break;
++        case 320:
++                bw = 4;
++                break;
++        default:
++                /* not valid VHT bandwidth or not in CSA */
++                return eid;
++        }
++
++        *eid++ = WLAN_EID_WIDE_BW_CHSWITCH;
++        /* Length of Wide Bandwidth Channel Switch element */
++        *eid++ = sizeof(struct ieee80211_wb_chsw_element);
++        wb_chsw_elem = (struct ieee80211_wb_chsw_element *) eid;
++        eid += sizeof(struct ieee80211_wb_chsw_element);
++
++        /* New Channel Width */
++        wb_chsw_elem->new_channel_width = bw;
++        /* New Channel Center Frequency Segment 0 */
++        wb_chsw_elem->new_ccfs0 = ccfs0;
++        /* New Channel Center Frequency Segment 1 */
++        wb_chsw_elem->new_ccfs1 = ccfs1;
++
++        return eid;
++}
++
++u8 *hostapd_eid_bw_indication(struct hostapd_data *hapd, u8 *eid, u8 ccfs0, u8 ccfs1)
++{
++        u8 *pos = eid, *length_pos;
++        struct ieee80211_bw_ind_element *bw_ind_elem;
++        int bw_ind_status = false;
++        size_t fixed_eid_len;
++
++        if (hapd->cs_freq_params.bandwidth > 160 ||
++            hostapd_get_punct_bitmap(hapd))
++                bw_ind_status = true;
++
++        if (!bw_ind_status)
++                return eid;
++
++        if (!hapd->cs_freq_params.channel || !hapd->cs_freq_params.eht_enabled)
++                return eid;
++
++        *pos++ = WLAN_EID_EXTENSION;
++        length_pos = pos++;
++        *pos++ = WLAN_EID_EXT_BW_IND;
++
++        fixed_eid_len = (sizeof(struct ieee80211_bw_ind_element) -
++                        DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE);
++
++        bw_ind_elem = (struct ieee80211_bw_ind_element *) pos;
++        os_memset(bw_ind_elem, 0, sizeof(struct ieee80211_bw_ind_element));
++
++        if (hostapd_get_punct_bitmap(hapd)) {
++                bw_ind_elem->bw_ind_params |=
++                        BW_IND_PARAMETER_DISABLED_SUBCHAN_BITMAP_PRESENT;
++                bw_ind_elem->bw_ind_info.disabled_chan_bitmap =
++                        host_to_le16(hostapd_get_punct_bitmap(hapd));
++                pos += DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
++        } else {
++                bw_ind_elem->bw_ind_params &=
++                        ~BW_IND_PARAMETER_DISABLED_SUBCHAN_BITMAP_PRESENT;
++        }
++
++        switch (hapd->cs_freq_params.bandwidth) {
++        case 320:
++                bw_ind_elem->bw_ind_info.control |=
++                        BW_IND_CHANNEL_WIDTH_320MHZ;
++                ccfs1 = ccfs0;
++                if (hapd->cs_freq_params.channel < ccfs0)
++                        ccfs0 -= 16;
++                else
++                        ccfs0 += 16;
++                break;
++        case 160:
++                bw_ind_elem->bw_ind_info.control |=
++                        BW_IND_CHANNEL_WIDTH_160MHZ;
++                ccfs1 = ccfs0;
++                if (hapd->cs_freq_params.channel < ccfs0)
++                        ccfs0 -= 8;
++                else
++                        ccfs0 += 8;
++                break;
++        case 80:
++                bw_ind_elem->bw_ind_info.control |=
++                        BW_IND_CHANNEL_WIDTH_80MHZ;
++                break;
++        case 40:
++                if (hapd->cs_freq_params.sec_channel_offset == 1)
++                        bw_ind_elem->bw_ind_info.control |=
++                                BW_IND_CHANNEL_WIDTH_40MHZ;
++                else
++                        bw_ind_elem->bw_ind_info.control |=
++                                BW_IND_CHANNEL_WIDTH_20MHZ;
++                break;
++        default:
++                bw_ind_elem->bw_ind_info.control |=
++                        BW_IND_CHANNEL_WIDTH_20MHZ;
++                break;
++        }
++
++        bw_ind_elem->bw_ind_info.ccfs0 = ccfs0;
++        bw_ind_elem->bw_ind_info.ccfs1 = ccfs1;
++
++        pos += fixed_eid_len;
++        *length_pos = pos - (eid + 2);
++
++        return pos;
++}
++
++u8 *hostapd_eid_chsw_wrapper(struct hostapd_data *hapd, u8 *eid)
++{
++        u8 *pos = eid, *length_pos;
++        u8 ccfs0 = 0, ccfs1 = 0;
++        int freq;
++
++        if (!hapd->cs_freq_params.channel ||
++           (!hapd->cs_freq_params.vht_enabled &&
++            !hapd->cs_freq_params.he_enabled &&
++            !hapd->cs_freq_params.eht_enabled))
++                return eid;
++
++        freq = hapd->cs_freq_params.center_freq1 ?
++                hapd->cs_freq_params.center_freq1 :
++                hapd->cs_freq_params.freq;
++        if (ieee80211_freq_to_chan(freq, &ccfs0) !=
++            HOSTAPD_MODE_IEEE80211A)
++                return eid;
++
++        if (hapd->cs_freq_params.center_freq2 &&
++            ieee80211_freq_to_chan(hapd->cs_freq_params.center_freq2,
++                                   &ccfs1) != HOSTAPD_MODE_IEEE80211A)
++                return eid;
++
++        *pos++ = WLAN_EID_CHANNEL_SWITCH_WRAPPER;
++        /* Length of Channel Switch Wrapper */
++        length_pos = pos++;
++
++        pos = hostapd_eid_wide_bw_chan_switch(hapd, pos, ccfs0, ccfs1);
++
++#ifdef CONFIG_IEEE80211BE
++        if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be)
++                pos = hostapd_eid_bw_indication(hapd, pos, ccfs0, ccfs1);
++#endif /*CONFIG_IEEE80211BE */
++
++        *length_pos = pos - (eid + 2);
++        return pos;
++}
+ 
+ u8 * hostapd_eid_wb_chsw_wrapper(struct hostapd_data *hapd, u8 *eid)
+ {

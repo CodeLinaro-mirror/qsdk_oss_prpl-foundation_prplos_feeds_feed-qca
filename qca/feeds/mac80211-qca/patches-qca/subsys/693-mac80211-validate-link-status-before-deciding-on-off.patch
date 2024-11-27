@@ -72,19 +72,20 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  			need_offchan = true;
  
  		rcu_read_lock();
-@@ -890,8 +927,17 @@ int ieee80211_mgmt_tx(struct wiphy *wiph
+@@ -890,8 +927,18 @@ int ieee80211_mgmt_tx(struct wiphy *wiph
  				break;
  			}
  
 -			if (ether_addr_equal(conf->addr, mgmt->sa))
-+			if (ether_addr_equal(conf->addr, mgmt->sa)) {
++			if (ether_addr_equal(conf->addr, mgmt->sa) &&
++			    cfg80211_channel_identical(params->chan,
++						       chanctx_conf->def.chan)) {
 +				/* If userspace requested Tx on a specific link
 +				 * use the same link id if the link bss is matching
 +				 * the requested chan.
 +				 */
 +				if (sdata->vif.valid_links &&
-+				    params->link_id >= 0 && params->link_id == i &&
-+				    params->chan == chanctx_conf->def.chan)
++				    params->link_id >= 0 && params->link_id == i)
 +					link_id = i;
  				break;
 +			}

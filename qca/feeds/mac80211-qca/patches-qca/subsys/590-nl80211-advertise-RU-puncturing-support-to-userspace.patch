@@ -20,7 +20,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -5494,6 +5494,10 @@ struct wiphy_iftype_akm_suites {
+@@ -5552,6 +5552,10 @@ struct wiphy_iftype_akm_suites {
   *	A value of %CFG80211_HW_TIMESTAMP_ALL_PEERS indicates the driver
   *	supports enabling HW timestamping for all peers (i.e. no need to
   *	specify a mac address).
@@ -31,7 +31,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
   */
  struct wiphy {
  	struct mutex mtx;
-@@ -5644,6 +5648,8 @@ struct wiphy {
+@@ -5702,6 +5706,8 @@ struct wiphy {
  
  	u16 hw_timestamp_max_peers;
  
@@ -40,53 +40,6 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	char priv[] __aligned(NETDEV_ALIGN);
  };
  
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -2837,6 +2837,11 @@ enum nl80211_commands {
-  * @NL80211_ATTR_BEACON_TX_MODE: used to configure the beacon tx mode as
-  *	staggered mode = 1 or burst mode = 2 in %NL80211_CMD_START_AP or
-  *	%NL80211_CMD_JOIN_MESH from user-space.
-+ *
-+ * @NL80211_ATTR_RU_PUNCT_SUPP_BW: (u8) Minimum bandwidth for which
-+ *	the driver supports preamble puncturing, value should be of type
-+ *	&enum nl80211_ru_punct_supp_bw
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3387,6 +3392,8 @@ enum nl80211_attrs {
- 
- 	NL80211_ATTR_6G_REG_POWER_MODE,
- 
-+	NL80211_ATTR_RU_PUNCT_SUPP_BW,
-+
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
-@@ -7955,6 +7962,23 @@ enum nl80211_ap_settings_flags {
- };
- 
- /**
-+ * enum nl80211_ru_punct_supp_bw - Bandwidths supporting preamble puncturing
-+ *
-+ * @NL80211_RU_PUNCT_NOT_SUPP: preamble puncturing is not supported
-+ * @NL80211_RU_PUNCT_SUPP_BW_80: puncturing supported within channels of at
-+ *	least 80 MHz bandwidth
-+ * @NL80211_RU_PUNCT_SUPP_BW_160: puncturing supported within channels of at
-+ *	least 160 MHz bandwidth
-+ * @NL80211_RU_PUNCT_SUPP_BW_320: puncturing supported within 320 MHz.
-+ */
-+enum nl80211_ru_punct_supp_bw {
-+	NL80211_RU_PUNCT_NOT_SUPP,
-+	NL80211_RU_PUNCT_SUPP_BW_80,
-+	NL80211_RU_PUNCT_SUPP_BW_160,
-+	NL80211_RU_PUNCT_SUPP_BW_320,
-+};
-+
-+/**
-  * enum nl80211_beacon_tx_mode - Beacon Tx Mode enum.
-  * 	Used to configure beacon staggered mode or beacon burst mode.
-  */
 --- a/net/wireless/core.c
 +++ b/net/wireless/core.c
 @@ -908,6 +908,10 @@ int wiphy_register(struct wiphy *wiphy)
@@ -102,16 +55,16 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		 * Validate we have a policy (can be explicitly set to
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -840,6 +840,8 @@ static const struct nla_policy nl80211_p
-					NLA_POLICY_MAX(NLA_U8, NL80211_MGMT_RTS_CTS_DISABLE),
-	[NL80211_ATTR_AWGN_INTERFERENCE_BITMAP] = { .type = NLA_U32 },
-	[NL80211_ATTR_6G_REG_POWER_MODE] = NLA_POLICY_RANGE(NLA_U8, 0, 2),
+@@ -839,6 +839,8 @@ static const struct nla_policy nl80211_p
+ 					NLA_POLICY_MAX(NLA_U8, NL80211_MGMT_RTS_CTS_DISABLE),
+ 	[NL80211_ATTR_AWGN_INTERFERENCE_BITMAP] = { .type = NLA_U32 },
+ 	[NL80211_ATTR_6G_REG_POWER_MODE] = NLA_POLICY_RANGE(NLA_U8, 0, 2),
 +	[NL80211_ATTR_RU_PUNCT_SUPP_BW] =
 +			NLA_POLICY_MAX(NLA_U8, NL80211_RU_PUNCT_SUPP_BW_320),
  };
  
  /* policy for the key attributes */
-@@ -2408,6 +2410,20 @@ fail:
+@@ -2407,6 +2409,20 @@ fail:
  	return -ENOBUFS;
  }
  
@@ -132,7 +85,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  struct nl80211_dump_wiphy_state {
  	s64 filter_wiphy;
  	long start;
-@@ -3017,6 +3033,9 @@ static int nl80211_send_wiphy(struct cfg
+@@ -3016,6 +3032,9 @@ static int nl80211_send_wiphy(struct cfg
  				rdev->wiphy.hw_timestamp_max_peers))
  			goto nla_put_failure;
  

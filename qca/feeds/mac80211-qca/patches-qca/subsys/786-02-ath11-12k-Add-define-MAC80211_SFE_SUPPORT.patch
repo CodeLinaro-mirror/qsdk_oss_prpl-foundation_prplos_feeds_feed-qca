@@ -18,7 +18,7 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
 
 --- a/net/mac80211/tx.c
 +++ b/net/mac80211/tx.c
-@@ -4605,7 +4605,7 @@ netdev_tx_t ieee80211_subif_start_xmit(s
+@@ -4613,7 +4613,7 @@ netdev_tx_t ieee80211_subif_start_xmit(s
  #ifdef CPTCFG_MAC80211_NSS_SUPPORT
  	ieee80211_xmit_nss_fixup(skb, dev);
  #endif
@@ -27,7 +27,7 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
  	skb->fast_xmit = 0;
  #endif
  
-@@ -4887,6 +4887,7 @@ void ieee80211_8023_xmit_ap(struct ieee8
+@@ -4897,6 +4897,7 @@ void ieee80211_8023_xmit_ap(struct ieee8
  netdev_tx_t ieee80211_subif_start_xmit_8023(struct sk_buff *skb,
  					    struct net_device *dev)
  {
@@ -35,7 +35,7 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
  	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
  	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
  	struct ieee80211_tx_control control = {};
-@@ -4921,9 +4922,10 @@ out:
+@@ -4931,9 +4932,10 @@ out:
  		}
  
  		return NETDEV_TX_OK;
@@ -50,28 +50,26 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
  netdev_tx_t __ieee80211_subif_start_xmit_8023(struct sk_buff *skb,
 --- a/net/mac80211/Kconfig
 +++ b/net/mac80211/Kconfig
-@@ -131,12 +131,12 @@ config MAC80211_BONDED_SUPPORT
+@@ -113,6 +113,13 @@ config MAC80211_NSS_SUPPORT
  
- 	  If unsure, say N.
+ 	  If unsure, say Y to enable NSS offload support.
  
--config MAC80211_BONDED_SUPPORT
--	bool "QTI mac80211 bonded support"
 +config MAC80211_SFE_SUPPORT
 +	bool "QTI mac80211 sfe support"
- 	depends on ATH12K
- 	default n
- 	---help---
--	  Enables Bonded support for ATH12K driver
++	depends on ATH12K
++	default n
++	---help---
 +	  Enables sfe support for ATH12K driver
- 
- 	  If unsure, say N.
- 
++
+ config MAC80211_PPE_SUPPORT
+        bool "QTI mac80211 ppe support"
+        depends on ATH12K
 --- a/local-symbols
 +++ b/local-symbols
-@@ -68,6 +68,7 @@ MAC80211_STA_HASH_MAX_SIZE=
+@@ -67,6 +67,7 @@ MAC80211_DEBUG_COUNTERS=
+ MAC80211_STA_HASH_MAX_SIZE=
  MAC80211_NSS_SUPPORT=
  MAC80211_PPE_SUPPORT=
- MAC80211_BONDED_SUPPORT=
 +MAC80211_SFE_SUPPORT=
  QCOM_AOSS_QMP=
  QCOM_COMMAND_DB=

@@ -20,11 +20,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/ap/dfs.c | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/src/ap/dfs.c b/src/ap/dfs.c
-index 74fc6ec936db..64fd08dd68ac 100644
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1527,7 +1527,10 @@ dfs_downgrade_bandwidth(struct hostapd_iface *iface, int *secondary_channel,
+@@ -1494,7 +1494,10 @@ dfs_downgrade_bandwidth(struct hostapd_i
  				continue;
  			}
  			*channel_type = DFS_AVAILABLE;
@@ -36,6 +34,3 @@ index 74fc6ec936db..64fd08dd68ac 100644
  		}
  	}
  
--- 
-2.34.1
-

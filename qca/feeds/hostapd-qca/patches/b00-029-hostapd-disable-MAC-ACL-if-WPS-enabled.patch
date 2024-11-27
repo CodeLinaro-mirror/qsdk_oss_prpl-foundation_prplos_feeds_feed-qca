@@ -1,8 +1,6 @@
-diff --git a/src/ap/ieee802_11_auth.c b/src/ap/ieee802_11_auth.c
-index 4277d82..3297da1 100644
 --- a/src/ap/ieee802_11_auth.c
 +++ b/src/ap/ieee802_11_auth.c
-@@ -208,6 +208,15 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
+@@ -208,6 +208,15 @@ static int hostapd_radius_acl_query(stru
  int hostapd_check_acl(struct hostapd_data *hapd, const u8 *addr,
  		      struct vlan_description *vlan_id)
  {

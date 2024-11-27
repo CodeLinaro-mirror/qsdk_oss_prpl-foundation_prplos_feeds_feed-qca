@@ -11,7 +11,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4323,6 +4323,8 @@ static int hostapd_config_fill(struct ho
+@@ -4575,6 +4575,8 @@ static int hostapd_config_fill(struct ho
  		bss->wowlan_triggers = os_strdup(pos);
  	} else if (os_strcmp(buf, "enable_320mhz_bw") == 0) {
  		conf->enable_320mhz_bw = atoi(pos);
@@ -22,9 +22,9 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	} else if (os_strcmp(buf, "disable_40mhz_scan") == 0) {
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1220,6 +1220,7 @@ struct hostapd_config {
- 		ENHANCED_MBSSID_ENABLED = 2,
- 	} mbssid;
+@@ -1262,6 +1262,7 @@ struct hostapd_config {
+ 	bool ht_vht_twt_responder;
+ 
  	int use_ru_puncture_dfs;
 +	int ccfs;
  };
@@ -32,8 +32,8 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1379,6 +1379,12 @@ struct wpa_driver_associate_params {
- 	u16 ru_punct_bitmap;
+@@ -1405,6 +1405,12 @@ struct wpa_driver_associate_params {
+ 	u16 punct_bitmap;
  
  	/**
 +	 * Center Frequency - 320MHz has overlapping bands and by default, center frequency
@@ -47,27 +47,17 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	int disable_eht;
 --- a/wpa_supplicant/config.c
 +++ b/wpa_supplicant/config.c
-@@ -2887,6 +2887,7 @@ static const struct parse_data ssid_fiel
+@@ -2859,6 +2859,7 @@ static const struct parse_data ssid_fiel
  	{ INT_RANGE(enable_320mhz_bw, 0, 1)},
- 	{ INT(ru_punct_bitmap) },
+ 	{ INT(punct_bitmap) },
  	{ INT_RANGE(use_ru_puncture_dfs, 0, 1) },
 +	{ INT(ccfs) },
  	{ INT_RANGE(disable_eht, 0, 1)},
  	{ INT_RANGE(enable_4addr_mode, 0, 1)},
- };
---- a/wpa_supplicant/config_file.c
-+++ b/wpa_supplicant/config_file.c
-@@ -904,6 +904,7 @@ static void wpa_config_write_network(FIL
- 	INT(beacon_tx_mode);
- 	INT(enable_160mhz_bw);
- 	INT(ru_punct_bitmap);
-+	INT(ccfs);
- 	INT(enable_4addr_mode);
- 
- #undef STR
+ 	{ INT_RANGE(max_idle, 0, 65535)},
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
-@@ -1305,6 +1305,12 @@ struct wpa_ssid {
+@@ -1296,6 +1296,12 @@ struct wpa_ssid {
  	int use_ru_puncture_dfs;
  
  	/**
@@ -80,3 +70,13 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	 * disable_eht - Disable EHT (IEEE 802.11be) for this network
  	 *
  	 * By default, use it if it is available, but this can be configured
+--- a/wpa_supplicant/config_file.c
++++ b/wpa_supplicant/config_file.c
+@@ -908,6 +908,7 @@ static void wpa_config_write_network(FIL
+ 	INT(beacon_tx_mode);
+ 	INT(enable_160mhz_bw);
+ 	INT(punct_bitmap);
++	INT(ccfs);
+ 	INT(enable_4addr_mode);
+ 	INT(max_idle);
+ 

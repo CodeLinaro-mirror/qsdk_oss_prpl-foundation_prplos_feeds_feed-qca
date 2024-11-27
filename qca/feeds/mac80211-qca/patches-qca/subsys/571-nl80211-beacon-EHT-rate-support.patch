@@ -16,7 +16,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -794,6 +794,7 @@ struct cfg80211_bitrate_mask {
+@@ -849,6 +849,7 @@ struct cfg80211_bitrate_mask {
  		enum nl80211_he_gi he_gi;
  		enum nl80211_he_ltf he_ltf;
  		u16 he_ul_mcs[NL80211_HE_NSS_MAX];
@@ -24,73 +24,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	} control[NUM_NL80211_BANDS];
  };
  
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -1926,8 +1926,9 @@ enum nl80211_commands {
-  *	The driver must also specify support for this with the extended
-  *	features NL80211_EXT_FEATURE_BEACON_RATE_LEGACY,
-  *	NL80211_EXT_FEATURE_BEACON_RATE_HT,
-- *	NL80211_EXT_FEATURE_BEACON_RATE_VHT and
-- *	NL80211_EXT_FEATURE_BEACON_RATE_HE.
-+ *	NL80211_EXT_FEATURE_BEACON_RATE_VHT,
-+ *	NL80211_EXT_FEATURE_BEACON_RATE_HE and
-+ *	NL80211_EXT_FEATURE_BEACON_RATE_EHT.
-  *
-  * @NL80211_ATTR_FRAME_MATCH: A binary attribute which typically must contain
-  *	at least one byte, currently used with @NL80211_CMD_REGISTER_FRAME.
-@@ -5318,6 +5319,8 @@ enum nl80211_key_attributes {
-  * @NL80211_TXRATE_HE_GI: configure HE GI, 0.8us, 1.6us and 3.2us.
-  * @NL80211_TXRATE_HE_LTF: configure HE LTF, 1XLTF, 2XLTF and 4XLTF.
-  * @NL80211_TXRATE_HE_UL: HE MCS rates of connected HE STA for uplink traffic.
-+ * @NL80211_TXRATE_EHT: EHT rates allowed for TX rate selection,
-+ * see &struct nl80211_txrate_eht
-  * @__NL80211_TXRATE_AFTER_LAST: internal
-  * @NL80211_TXRATE_MAX: highest TX rate attribute
-  */
-@@ -5331,6 +5334,7 @@ enum nl80211_tx_rate_attributes {
- 	NL80211_TXRATE_HE_GI,
- 	NL80211_TXRATE_HE_LTF,
- 	NL80211_TXRATE_HE_UL,
-+	NL80211_TXRATE_EHT,
- 
- 	/* keep last */
- 	__NL80211_TXRATE_AFTER_LAST,
-@@ -5365,6 +5369,14 @@ enum nl80211_txrate_gi {
- };
- 
- /**
-+ * struct nl80211_txrate_eht - EHT MCS/NSS txrate bitmap
-+ * @mcs: MCS bitmap table for each NSS (array index 0 for 1 stream, etc.)
-+ */
-+struct nl80211_txrate_eht {
-+	__u16 mcs[NL80211_EHT_NSS_MAX];
-+};
-+
-+/**
-  * enum nl80211_band - Frequency band
-  * @NL80211_BAND_2GHZ: 2.4 GHz ISM band
-  * @NL80211_BAND_5GHZ: around 5 GHz band (4.9 - 5.7 GHz)
-@@ -6478,6 +6490,9 @@ enum nl80211_feature_flags {
-  * @NL80211_EXT_FEATURE_WIDE_BAND_SCAN: Driver/device supports wide band scan
-  *	 on a frequency along with its corresponding phymode (40Mhz, 80Mhz)
-  *
-+ * @NL80211_EXT_FEATURE_BEACON_RATE_EHT: Driver supports beacon rate
-+ *	configuration (AP/mesh) with EHT rates.
-+ *
-  * @NUM_NL80211_EXT_FEATURES: number of extended features.
-  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
-  */
-@@ -6551,6 +6566,7 @@ enum nl80211_ext_feature_index {
- 	NL80211_EXT_FEATURE_SECURE_NAN,
- 	NL80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA,
- 	NL80211_EXT_FEATURE_STA_MGMT_RTS_CTS,
-+	NL80211_EXT_FEATURE_BEACON_RATE_EHT,
- 
- 	/* add new features before the definition below */
- 	NUM_NL80211_EXT_FEATURES,
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -399,6 +399,8 @@ static const struct nla_policy nl80211_t
+@@ -400,6 +400,8 @@ static const struct nla_policy nl80211_t
  		.type = NLA_EXACT_LEN_WARN,
  		.len = sizeof(struct nl80211_txrate_he),
  	},
@@ -99,7 +35,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  };
  
  static const struct nla_policy
-@@ -5198,6 +5200,153 @@ static bool he_set_mcs_mask(struct genl_
+@@ -5180,6 +5182,153 @@ static bool he_set_mcs_mask(struct genl_
  	return true;
  }
  
@@ -253,7 +189,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  static int nl80211_parse_tx_bitrate_mask(struct genl_info *info,
  					 struct nlattr *attrs[],
  					 enum nl80211_attrs attr,
-@@ -5218,6 +5367,7 @@ static int nl80211_parse_tx_bitrate_mask
+@@ -5200,6 +5349,7 @@ static int nl80211_parse_tx_bitrate_mask
  	/* Default to all rates enabled */
  	for (i = 0; i < NUM_NL80211_BANDS; i++) {
  		const struct ieee80211_sta_he_cap *he_cap;
@@ -261,7 +197,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  		if (!default_all_enabled)
  			break;
-@@ -5244,6 +5394,13 @@ static int nl80211_parse_tx_bitrate_mask
+@@ -5226,6 +5376,13 @@ static int nl80211_parse_tx_bitrate_mask
  		he_tx_mcs_map = he_get_txmcsmap(info, link_id, he_cap);
  		he_build_mcs_mask(he_tx_mcs_map, mask->control[i].he_mcs);
  
@@ -275,7 +211,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		mask->control[i].he_gi = 0xFF;
  		mask->control[i].he_ltf = 0xFF;
  	}
-@@ -5326,13 +5483,20 @@ static int nl80211_parse_tx_bitrate_mask
+@@ -5308,13 +5465,20 @@ static int nl80211_parse_tx_bitrate_mask
  				return -EINVAL;
  		}
  
@@ -297,7 +233,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  				return -EINVAL;
  
  			for (i = 0; i < IEEE80211_HT_MCS_MASK_LEN; i++)
-@@ -5347,6 +5511,10 @@ static int nl80211_parse_tx_bitrate_mask
+@@ -5329,6 +5493,10 @@ static int nl80211_parse_tx_bitrate_mask
  				if (mask->control[band].he_mcs[i])
  					goto out;
  
@@ -308,7 +244,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  			/* legacy and mcs rates may not be both empty */
  			return -EINVAL;
  		}
-@@ -5360,7 +5528,7 @@ static int validate_beacon_tx_rate(struc
+@@ -5342,7 +5510,7 @@ static int validate_beacon_tx_rate(struc
  				   enum nl80211_band band,
  				   struct cfg80211_bitrate_mask *beacon_rate)
  {
@@ -317,7 +253,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	u32 rate = beacon_rate->control[band].legacy;
  
  	/* Allow only one rate */
-@@ -5406,8 +5574,21 @@ static int validate_beacon_tx_rate(struc
+@@ -5388,8 +5556,21 @@ static int validate_beacon_tx_rate(struc
  			return -EINVAL;
  	}
  
@@ -341,7 +277,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		return -EINVAL;
  
  	if (rate &&
-@@ -5426,6 +5607,10 @@ static int validate_beacon_tx_rate(struc
+@@ -5408,6 +5589,10 @@ static int validate_beacon_tx_rate(struc
  	    !wiphy_ext_feature_isset(&rdev->wiphy,
  				     NL80211_EXT_FEATURE_BEACON_RATE_HE))
  		return -EINVAL;

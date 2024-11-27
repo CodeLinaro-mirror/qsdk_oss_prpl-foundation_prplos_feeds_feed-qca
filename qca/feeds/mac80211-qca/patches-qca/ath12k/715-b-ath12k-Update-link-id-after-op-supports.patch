@@ -18,7 +18,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7019,7 +7019,7 @@ static void ath12k_mac_op_sta_set_4addr(
+@@ -7169,7 +7169,7 @@ static void ath12k_mac_op_sta_set_4addr(
  static void ath12k_mac_op_sta_rc_update(struct ieee80211_hw *hw,
  					struct ieee80211_vif *vif,
  					struct ieee80211_sta *sta,
@@ -27,16 +27,16 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  {
  	struct ath12k *ar;
  	struct ath12k_sta *ahsta = (struct ath12k_sta *)sta->drv_priv;
-@@ -7028,12 +7028,15 @@ static void ath12k_mac_op_sta_rc_update(
+@@ -7178,10 +7178,15 @@ static void ath12k_mac_op_sta_rc_update(
  	struct ath12k_link_sta *arsta;
  	struct ath12k_peer *peer;
  	u32 bw, smps;
 -	/* TODO update link id after op supports */
 -	u8 link_id = 0;
- 
++
  	arvif = ahvif->link[link_id];
  	arsta = ahsta->link[link_id];
- 
++
 +	if (!arsta) {
 +		ath12k_err(NULL, "unable to determine arsta\n");
 +		return;

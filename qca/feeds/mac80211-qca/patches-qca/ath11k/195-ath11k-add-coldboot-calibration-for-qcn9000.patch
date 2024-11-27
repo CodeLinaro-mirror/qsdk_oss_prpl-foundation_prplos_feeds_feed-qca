@@ -17,48 +17,7 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
 
 --- a/drivers/net/wireless/ath/ath11k/ahb.c
 +++ b/drivers/net/wireless/ath/ath11k/ahb.c
-@@ -14,6 +14,7 @@
- #include "ahb.h"
- #include "debug.h"
- #include "hif.h"
-+#include "qmi.h"
- #include <linux/remoteproc.h>
- #include "pcic.h"
- #include <linux/soc/qcom/smem.h>
-@@ -421,32 +422,6 @@ static void ath11k_ahb_power_down(struct
- 	rproc_shutdown(ab_ahb->tgt_rproc);
- }
- 
--static int ath11k_ahb_fwreset_from_cold_boot(struct ath11k_base *ab)
--{
--	int timeout;
--
--	if (ath11k_cold_boot_cal == 0 || ab->qmi.cal_done ||
--	    ab->hw_params.cold_boot_calib == 0 ||
--	    ab->hw_params.cbcal_restart_fw == 0)
--		return 0;
--
--	ath11k_dbg(ab, ATH11K_DBG_AHB, "wait for cold boot done\n");
--	timeout = wait_event_timeout(ab->qmi.cold_boot_waitq,
--				     (ab->qmi.cal_done  == 1),
--				     ATH11K_COLD_BOOT_FW_RESET_DELAY);
--	if (timeout <= 0) {
--		ath11k_cold_boot_cal = 0;
--		ath11k_warn(ab, "Coldboot Calibration failed timed out\n");
--	}
--
--	/* reset the firmware */
--	ath11k_ahb_power_down(ab);
--	ath11k_ahb_power_up(ab);
--
--	ath11k_dbg(ab, ATH11K_DBG_AHB, "exited from cold boot mode\n");
--	return 0;
--}
--
- static void ath11k_ahb_init_qmi_ce_config(struct ath11k_base *ab)
- {
- 	struct ath11k_qmi_ce_cfg *cfg = &ab->qmi.ce_cfg;
-@@ -1147,11 +1122,13 @@ static int ath11k_ahb_fw_resource_deinit
+@@ -1115,11 +1115,13 @@ static int ath11k_ahb_fw_resource_deinit
  static int ath11k_ahb_probe(struct platform_device *pdev)
  {
  	struct ath11k_base *ab;
@@ -72,7 +31,7 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
  
  	of_id = of_match_device(ath11k_ahb_of_match, &pdev->dev);
  	if (!of_id) {
-@@ -1194,6 +1171,7 @@ static int ath11k_ahb_probe(struct platf
+@@ -1162,6 +1164,7 @@ static int ath11k_ahb_probe(struct platf
  	ab->pdev = pdev;
  	ab->hw_rev = hw_rev;
  	ab->fw_mode = ATH11K_FIRMWARE_MODE_NORMAL;
@@ -80,24 +39,23 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
  	platform_set_drvdata(pdev, ab);
  
  	ret = ath11k_pcic_register_pci_ops(ab, pci_ops);
-@@ -1264,7 +1242,13 @@ static int ath11k_ahb_probe(struct platf
+@@ -1232,8 +1235,12 @@ static int ath11k_ahb_probe(struct platf
  		goto err_ce_free;
  	}
  
--	ath11k_ahb_fwreset_from_cold_boot(ab);
 +	/* TODO
 +	 * below 4 lines can be removed once fw changes available
 +	 */
 +	of_property_read_u32(dev->of_node, "wlan-hw-mode",
-+			     &hw_mode_id);
-+
-+	ath11k_qmi_fwreset_from_cold_boot(ab);
- 
++			&hw_mode_id);
+ 	ath11k_qmi_fwreset_from_cold_boot(ab);
+-
  	return 0;
  
+ err_ce_free:
 --- a/drivers/net/wireless/ath/ath11k/core.h
 +++ b/drivers/net/wireless/ath/ath11k/core.h
-@@ -987,6 +987,7 @@ struct ath11k_base {
+@@ -986,6 +986,7 @@ struct ath11k_base {
  	struct ath11k_targ_cap target_caps;
  	u32 ext_service_bitmap[WMI_SERVICE_EXT_BM_SIZE];
  	bool pdevs_macaddr_valid;
@@ -107,15 +65,7 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
  	struct ath11k_hw_params hw_params;
 --- a/drivers/net/wireless/ath/ath11k/pci.c
 +++ b/drivers/net/wireless/ath/ath11k/pci.c
-@@ -15,6 +15,7 @@
- #include "mhi.h"
- #include "debug.h"
- #include "pcic.h"
-+#include "qmi.h"
- 
- #define ATH11K_PCI_BAR_NUM		0
- #define ATH11K_PCI_DMA_MASK		32
-@@ -812,6 +813,7 @@ static int ath11k_pci_probe(struct pci_d
+@@ -819,6 +819,7 @@ static int ath11k_pci_probe(struct pci_d
  	case QCN9074_DEVICE_ID:
  		pci_ops = &ath11k_pci_ops_qcn9074;
  		ab->hw_rev = ATH11K_HW_QCN9074_HW10;
@@ -123,27 +73,11 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
  		break;
  	case WCN6855_DEVICE_ID:
  		ab->id.bdf_search = ATH11K_BDF_SEARCH_BUS_AND_BOARD;
-@@ -917,6 +919,7 @@ unsupported_wcn6855_soc:
- 		ath11k_err(ab, "failed to init core: %d\n", ret);
- 		goto err_irq_affinity_cleanup;
- 	}
-+	ath11k_qmi_fwreset_from_cold_boot(ab);
- 	return 0;
- 
- err_irq_affinity_cleanup:
 --- a/drivers/net/wireless/ath/ath11k/qmi.c
 +++ b/drivers/net/wireless/ath/ath11k/qmi.c
-@@ -9,6 +9,7 @@
- #include "qmi.h"
- #include "core.h"
- #include "debug.h"
-+#include "hif.h"
- #include <linux/of.h>
- #include <linux/of_address.h>
- #include <linux/ioport.h>
-@@ -3361,6 +3362,33 @@ int ath11k_qmi_firmware_start(struct ath
- 	return 0;
+@@ -3386,6 +3386,33 @@ int ath11k_qmi_fwreset_from_cold_boot(st
  }
+ EXPORT_SYMBOL(ath11k_qmi_fwreset_from_cold_boot);
  
 +int ath11k_qmi_fwreset_from_cold_boot(struct ath11k_base *ab)
 +{
@@ -175,7 +109,7 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
  static int ath11k_qmi_process_coldboot_calibration(struct ath11k_base *ab)
  {
  	int timeout;
-@@ -3626,7 +3654,7 @@ static void ath11k_qmi_msg_mem_request_c
+@@ -3651,7 +3678,7 @@ static void ath11k_qmi_msg_mem_request_c
  				    ret);
  			return;
  		}
@@ -184,20 +118,3 @@ Signed-off-by: Jaya Surya Mathavan <jmathava@codeaurora.org>
  		ret = ath11k_qmi_alloc_target_mem_chunk(ab);
  		if (ret) {
  			ath11k_warn(ab, "failed to allocate qmi target memory: %d\n",
---- a/drivers/net/wireless/ath/ath11k/qmi.h
-+++ b/drivers/net/wireless/ath/ath11k/qmi.h
-@@ -46,7 +46,7 @@
- 
- #define QMI_WLANFW_MAX_DATA_SIZE_V01		6144
- #define ATH11K_FIRMWARE_MODE_OFF		4
--#define ATH11K_COLD_BOOT_FW_RESET_DELAY		(40 * HZ)
-+#define ATH11K_COLD_BOOT_FW_RESET_DELAY		(60 * HZ)
- 
- #define ATH11K_QMI_DEVICE_BAR_SIZE		0x200000
- 
-@@ -622,4 +622,5 @@ int wlfw_send_qdss_trace_config_download
- 					     const u8 *buffer, unsigned int len);
- int ath11k_send_qdss_trace_mode_req(struct ath11k_base *ab,
- 				    enum wlfw_qdss_trace_mode_enum_v01 mode);
-+int ath11k_qmi_fwreset_from_cold_boot(struct ath11k_base *ab);
- #endif

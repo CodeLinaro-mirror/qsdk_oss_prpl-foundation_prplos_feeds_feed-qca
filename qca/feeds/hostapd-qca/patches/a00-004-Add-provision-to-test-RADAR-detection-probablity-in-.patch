@@ -1,8 +1,6 @@
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 45b4d45..242179c 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -2444,6 +2444,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -2594,6 +2594,8 @@ static int hostapd_config_fill(struct ho
  		conf->ieee80211d = atoi(pos);
  	} else if (os_strcmp(buf, "ieee80211h") == 0) {
  		conf->ieee80211h = atoi(pos);
@@ -11,11 +9,9 @@ index 45b4d45..242179c 100644
  	} else if (os_strcmp(buf, "ieee8021x") == 0) {
  		bss->ieee802_1x = atoi(pos);
  	} else if (os_strcmp(buf, "eapol_version") == 0) {
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index 02fd494..a0a21ab 100644
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1055,6 +1055,7 @@ struct hostapd_config {
+@@ -1087,6 +1087,7 @@ struct hostapd_config {
  	int ieee80211d;
  
  	int ieee80211h; /* DFS */
@@ -23,11 +19,9 @@ index 02fd494..a0a21ab 100644
  
  	/*
  	 * Local power constraint is an octet encoded as an unsigned integer in
-diff --git a/src/ap/dfs.c b/src/ap/dfs.c
-index a19afb0..1cbca53 100644
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -18,7 +18,8 @@
+@@ -19,7 +19,8 @@
  #include "drivers/driver.h"
  #include "dfs.h"
  #include "crypto/crypto.h"
@@ -37,7 +31,7 @@ index a19afb0..1cbca53 100644
  
  enum dfs_channel_type {
  	DFS_ANY_CHANNEL,
-@@ -1117,6 +1118,78 @@ hostapd_dfs_is_background_event(struct hostapd_iface *iface, int freq)
+@@ -1132,6 +1133,79 @@ hostapd_dfs_is_background_event(struct h
  		iface->radar_background.freq == freq;
  }
  
@@ -84,7 +78,8 @@ index a19afb0..1cbca53 100644
 +				      vht_oper_centr_freq_seg1_idx,
 +				      iface->current_mode->vht_capab,
 +				      &iface->current_mode->he_capab[IEEE80211_MODE_AP],
-+				      &iface->current_mode->eht_capab[IEEE80211_MODE_AP]);
++				      &iface->current_mode->eht_capab[IEEE80211_MODE_AP],
++				      hostapd_get_punct_bitmap(iface->bss[0]));
 +
 +	if (err) {
 +		wpa_printf(MSG_ERROR, "DFS failed to calculate CSA freq params");
@@ -116,7 +111,7 @@ index a19afb0..1cbca53 100644
  
  static int
  hostapd_dfs_start_channel_switch_background(struct hostapd_iface *iface)
-@@ -1385,6 +1458,9 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
+@@ -1410,6 +1484,9 @@ static int hostapd_dfs_start_channel_swi
  	if (iface->dfs_domain == HOSTAPD_DFS_REGION_ETSI)
  		channel_type = DFS_ANY_CHANNEL;
  
@@ -126,7 +121,7 @@ index a19afb0..1cbca53 100644
  	/* Perform channel switch/CSA */
  	channel = dfs_get_valid_channel(iface, &secondary_channel,
  					&oper_centr_freq_seg0_idx,
-@@ -1456,6 +1532,12 @@ int hostapd_dfs_radar_detected(struct hostapd_iface *iface, int freq,
+@@ -1483,6 +1560,12 @@ int hostapd_dfs_radar_detected(struct ho
  			   cf1, cf2, HOSTAPD_CHAN_DFS_UNAVAILABLE))
  		return 0;
  
@@ -139,8 +134,6 @@ index a19afb0..1cbca53 100644
  	if (!hostapd_dfs_is_background_event(iface, freq)) {
  		/* Skip if reported radar event not overlapped our channels */
  		if (!dfs_are_channels_overlapped(iface, freq, chan_width,
-diff --git a/src/ap/dfs.h b/src/ap/dfs.h
-index 606c1b3..3a7c3e4 100644
 --- a/src/ap/dfs.h
 +++ b/src/ap/dfs.h
 @@ -9,6 +9,11 @@
@@ -155,11 +148,9 @@ index 606c1b3..3a7c3e4 100644
  int hostapd_handle_dfs(struct hostapd_iface *iface);
  
  int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 0b7d2c1..ef3b730 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3216,6 +3216,7 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
+@@ -3578,6 +3578,7 @@ int hostapd_disable_iface(struct hostapd
  		hostapd_cleanup_cs_params(hapd_iface->bss[j]);
  #endif /* NEED_AP_MLME */
  

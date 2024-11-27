@@ -19,24 +19,18 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  net/mac80211/sta_info.c | 15 +++++++++++++--
  1 file changed, 13 insertions(+), 2 deletions(-)
 
-Index: backports-20220822-5.4.213-ef7197996efe/net/mac80211/sta_info.c
-===================================================================
---- backports-20220822-5.4.213-ef7197996efe.orig/net/mac80211/sta_info.c
-+++ backports-20220822-5.4.213-ef7197996efe/net/mac80211/sta_info.c
-@@ -2547,8 +2547,12 @@ void sta_set_sinfo(struct sta_info *sta,
- 	struct ieee80211_local *local = sdata->local;
- 	u32 thr = 0;
+--- a/net/mac80211/sta_info.c
++++ b/net/mac80211/sta_info.c
+@@ -2718,6 +2718,8 @@ void sta_set_sinfo(struct sta_info *sta,
  	int i, ac, link_id = 0;
-+	u16 beacon_interval;
-+	u8 dtim_period;
  	struct ieee80211_sta_rx_stats *last_rxstats;
  	struct link_sta_info *link_sta = NULL;
 +	struct ieee80211_link_data *link;
 +	struct ieee80211_bss_conf *link_conf;
  
- 	last_rxstats = sta_get_last_rx_stats(sta);
+ 	last_rxstats = sta_get_last_rx_stats(sta, false);
  
-@@ -2600,11 +2604,22 @@ void sta_set_sinfo(struct sta_info *sta,
+@@ -2769,11 +2771,22 @@ void sta_set_sinfo(struct sta_info *sta,
  			link_sta_filled |= link_sta_set_info(link_sta, sinfo,
  							     init);
  			init = false;
@@ -59,22 +53,9 @@ Index: backports-20220822-5.4.213-ef7197996efe/net/mac80211/sta_info.c
  		sinfo->filled |= link_sta_set_info(&sta->deflink, sinfo, true);
  	}
  
-@@ -2718,8 +2733,8 @@ void sta_set_sinfo(struct sta_info *sta,
- 		sinfo->bss_param.flags |= BSS_PARAM_FLAGS_SHORT_PREAMBLE;
- 	if (sdata->vif.bss_conf.use_short_slot)
- 		sinfo->bss_param.flags |= BSS_PARAM_FLAGS_SHORT_SLOT_TIME;
--	sinfo->bss_param.dtim_period = sdata->vif.bss_conf.dtim_period;
--	sinfo->bss_param.beacon_interval = sdata->vif.bss_conf.beacon_int;
-+	sinfo->bss_param.dtim_period = dtim_period;
-+	sinfo->bss_param.beacon_interval = beacon_interval;
- 
- 	sinfo->sta_flags.set = 0;
- 	sinfo->sta_flags.mask = BIT(NL80211_STA_FLAG_AUTHORIZED) |
-Index: backports-20220822-5.4.213-ef7197996efe/include/net/cfg80211.h
-===================================================================
---- backports-20220822-5.4.213-ef7197996efe.orig/include/net/cfg80211.h
-+++ backports-20220822-5.4.213-ef7197996efe/include/net/cfg80211.h
-@@ -1994,6 +1994,8 @@ struct cfg80211_tid_stats {
+--- a/include/net/cfg80211.h
++++ b/include/net/cfg80211.h
+@@ -2093,6 +2093,8 @@ struct cfg80211_tid_stats {
  
  struct link_station_info {
  	u8 addr[ETH_ALEN] __aligned(2);
@@ -83,11 +64,9 @@ Index: backports-20220822-5.4.213-ef7197996efe/include/net/cfg80211.h
  	/* TODO: packet stats */
  };
  
-Index: backports-20220822-5.4.213-ef7197996efe/net/wireless/nl80211.c
-===================================================================
---- backports-20220822-5.4.213-ef7197996efe.orig/net/wireless/nl80211.c
-+++ backports-20220822-5.4.213-ef7197996efe/net/wireless/nl80211.c
-@@ -7170,16 +7170,34 @@ static int nl80211_send_station(struct s
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -7288,16 +7288,36 @@ static int nl80211_send_station(struct s
  		if (!bss_param)
  			goto nla_put_failure;
  
@@ -95,6 +74,8 @@ Index: backports-20220822-5.4.213-ef7197996efe/net/wireless/nl80211.c
 +		if (sinfo->valid_links) {
 +			for_each_valid_link(sinfo, link_id) {
 +				link = nla_nest_start(msg, link_id + 1);
++				if (!link)
++					goto nla_put_failure;
 +				if (nla_put_u8(msg, NL80211_STA_BSS_PARAM_DTIM_PERIOD,
 +					       sinfo->links[link_id].dtim_period))
 +					goto nla_put_failure;

@@ -21,23 +21,27 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/drivers/driver_nl80211_scan.c | 24 ++++++++++++++++++++++++
  1 file changed, 24 insertions(+)
 
-diff --git a/src/drivers/driver_nl80211_scan.c b/src/drivers/driver_nl80211_scan.c
-index 5173accf2338..a5fe955555b1 100644
 --- a/src/drivers/driver_nl80211_scan.c
 +++ b/src/drivers/driver_nl80211_scan.c
-@@ -398,6 +398,30 @@ int wpa_driver_nl80211_scan(struct i802_bss *bss,
+@@ -413,6 +413,40 @@ int wpa_driver_nl80211_scan(struct i802_
  		if (drv->hostapd && is_ap_interface(drv->nlmode)) {
  			enum nl80211_iftype old_mode = drv->nlmode;
  
-+			/* For Multi Link BSS, retry scan if any other links are busy scanning */
-+			if (ret == -EBUSY && nl80211_link_valid(bss, params->mlo_link_id)) {
++#ifdef CONFIG_IEEE80211BE
++			/* For Multi Link BSS, retry scan if any other links
++			 * are busy scanning
++			 */
++			if (ret == -EBUSY &&
++			    nl80211_link_valid(bss->valid_links, params->mlo_link_id)) {
 +				struct i802_bss *link_bss;
++				u8 link_id;
 +
 +				wpa_printf(MSG_DEBUG,
-+					   "nl80211: Scan trigger on Multi Link BSS failed (requested link=%d interface %s)",
++					   "nl80211: Scan trigger on Multi Link BSS failed (requested link=%d on interface %s)",
 +					   params->mlo_link_id, bss->ifname);
 +
-+				for (link_bss = drv->first_bss; link_bss; link_bss = link_bss->next)
++				for (link_bss = drv->first_bss; link_bss;
++				     link_bss = link_bss->next)
 +					if (link_bss->scan_link)
 +						break;
 +
@@ -47,15 +51,16 @@ index 5173accf2338..a5fe955555b1 100644
 +					goto fail;
 +				}
 +
++				link_id =
++				       nl80211_get_link_id_from_link(link_bss,
++								     link_bss->scan_link);
 +				wpa_printf(MSG_DEBUG,
 +					   "nl80211: Scan already running on interface %s link %d",
-+					   link_bss->ifname, link_bss->scan_link->link_id);
++					   link_bss->ifname, link_id);
 +				goto fail;
 +			}
++#endif /* CONFIG_IEEE80211BE */
 +
  			/*
  			 * mac80211 does not allow scan requests in AP mode, so
  			 * try to do this in station mode.
--- 
-2.17.1
-

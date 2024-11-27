@@ -77,13 +77,13 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 +#endif
 --- a/net/mac80211/driver-ops.c
 +++ b/net/mac80211/driver-ops.c
-@@ -541,7 +541,9 @@ int drv_change_vif_links(struct ieee8021
- 	for_each_set_bit(link_id, &links_to_add, IEEE80211_MLD_MAX_NUM_LINKS) {
- 		link = rcu_access_pointer(sdata->link[link_id]);
+@@ -543,7 +543,9 @@ int drv_change_vif_links(struct ieee8021
+ 				 IEEE80211_MLD_MAX_NUM_LINKS) {
+ 			link = rcu_access_pointer(sdata->link[link_id]);
  
 +#ifdef CPTCFG_MAC80211_DEBUGFS
- 		ieee80211_link_debugfs_drv_add(link);
+ 			ieee80211_link_debugfs_drv_add(link);
 +#endif
+ 		}
  	}
  
- 	return 0;

@@ -131,16 +131,6 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
  static struct qmi_elem_info qmi_wlanfw_qdss_trace_config_download_req_msg_v01_ei[] = {
  	{
  		.data_type	= QMI_OPT_FLAG,
-@@ -2922,7 +2926,8 @@ static int ath11k_qmi_assign_target_mem_
- 				return -EINVAL;
- 			}
- 
--			if (ath11k_cold_boot_cal && ab->hw_params.cold_boot_calib) {
-+			if (ath11k_cold_boot_cal && ab->hw_params.cold_boot_calib &&
-+			    ab->enable_cold_boot_cal) {
- 				if (hremote_node) {
- 					ab->qmi.target_mem[idx].paddr =
- 							res.start + host_ddr_sz;
 @@ -4806,6 +4811,17 @@ int ath11k_qmi_init_service(struct ath11
  	ab->qmi.ab = ab;
  

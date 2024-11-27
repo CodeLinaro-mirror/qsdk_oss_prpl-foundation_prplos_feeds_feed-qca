@@ -667,15 +667,6 @@
  		.ring_mask = &ath11k_hw_ring_mask_ipq8074,
  		.internal_sleep_clock = false,
  		.regs = &ipq8074_regs,
-@@ -343,7 +345,7 @@ static const struct ath11k_hw_params ath
- 		.supports_shadow_regs = false,
- 		.idle_ps = false,
- 		.supports_sta_ps = false,
--		.cold_boot_calib = false,
-+		.cold_boot_calib = true,
- 		.cbcal_restart_fw = false,
- 		.fw_mem_mode = 2,
- 		.num_vdevs = 8,
 --- a/drivers/net/wireless/ath/ath11k/hw.h
 +++ b/drivers/net/wireless/ath/ath11k/hw.h
 @@ -201,6 +201,7 @@ struct ath11k_hw_params {

@@ -50,7 +50,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	desc_addr_ptr = ath12k_dp_cc_get_desc_addr_ptr(ab, ppt_idx, spt_idx);
  
  	return *desc_addr_ptr;
-@@ -1422,6 +1428,36 @@ struct ath12k_tx_desc_info *ath12k_dp_ge
+@@ -1422,6 +1432,36 @@ struct ath12k_tx_desc_info *ath12k_dp_ge
  	return *desc_addr_ptr;
  }
  
@@ -87,7 +87,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  static int ath12k_dp_cc_desc_init(struct ath12k_base *ab)
  {
  	struct ath12k_dp *dp = &ab->dp;
-@@ -1443,6 +1479,7 @@ static int ath12k_dp_cc_desc_init(struct
+@@ -1443,6 +1483,7 @@ static int ath12k_dp_cc_desc_init(struct
  		}
  
  		dp->spt_info->rxbaddr[i] = &rx_descs[0];
@@ -95,7 +95,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  		for (j = 0; j < ATH12K_MAX_SPT_ENTRIES; j++) {
  			rx_descs[j].cookie = ath12k_dp_cc_cookie_gen(i, j);
-@@ -1518,6 +1555,7 @@ static int ath12k_dp_cc_init(struct ath1
+@@ -1518,6 +1559,7 @@ static int ath12k_dp_cc_init(struct ath1
  		return -ENOMEM;
  	}
  
@@ -103,7 +103,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	cmem_base = ab->qmi.dev_mem[ATH12K_QMI_DEVMEM_CMEM_INDEX].start;
  
  	for (i = 0; i < dp->num_spt_pages; i++) {
-@@ -1536,12 +1574,12 @@ static int ath12k_dp_cc_init(struct ath1
+@@ -1536,12 +1578,12 @@ static int ath12k_dp_cc_init(struct ath1
  			ret = -EINVAL;
  			goto free;
  		}
@@ -132,7 +132,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	/* protects the free and used desc list */
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3196,7 +3196,7 @@ try_again:
+@@ -3180,7 +3180,7 @@ try_again:
  		if (!desc_info) {
  			desc_info = ath12k_dp_get_rx_desc(ab, cookie);
  			if (!desc_info) {
@@ -141,7 +141,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  				continue;
  			}
  		}
-@@ -3914,7 +3914,7 @@ ath12k_dp_process_rx_err_buf(struct ath1
+@@ -3902,7 +3902,7 @@ ath12k_dp_process_rx_err_buf(struct ath1
  	if (!desc_info) {
  		desc_info = ath12k_dp_get_rx_desc(ab, cookie);
  		if (!desc_info) {
@@ -150,7 +150,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  			return -EINVAL;
  		}
  	}
-@@ -4430,7 +4430,7 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -4420,7 +4420,7 @@ int ath12k_dp_rx_process_wbm_err(struct
  		if (!desc_info) {
  			desc_info = ath12k_dp_get_rx_desc(ab, err_info.cookie);
  			if (!desc_info) {
@@ -161,7 +161,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  		}
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -4623,7 +4623,7 @@ int ath12k_wmi_pdev_dma_ring_cfg(struct
+@@ -4550,7 +4550,7 @@ int ath12k_wmi_pdev_dma_ring_cfg(struct
  	cmd->tlv_header = ath12k_wmi_tlv_cmd_hdr(WMI_TAG_DMA_RING_CFG_REQ,
  						 sizeof(*cmd));
  

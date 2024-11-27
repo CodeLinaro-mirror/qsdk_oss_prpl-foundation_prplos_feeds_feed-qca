@@ -1,13 +1,13 @@
 From 72cda5ad1b6af19f6fa8144bb0853dea024595b0 Mon Sep 17 00:00:00 2001
 From: Nagarajan Maran <quic_nmaran@quicinc.com>
 Date: Tue, 30 Jan 2024 23:06:14 +0530
-Subject: [PATCH] wifi: ath12k: Fetch TQM and TSF2 register for QCN6432
+Subject: [PATCH] wifi: ath12k: Fetch TQM and TSF2 register for QCn6432.
 
 TQM and TSF2 register values are not fetched due to which the
 calcuated hw_delay values are exceeding a max accepted value and so
 sdwf delay stats are not getting updated.
 
-Fix this by fetching the register values for QCN6432 chips.
+Fix this by fetching the register values for QCN6432 radios.
 
 Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 ---

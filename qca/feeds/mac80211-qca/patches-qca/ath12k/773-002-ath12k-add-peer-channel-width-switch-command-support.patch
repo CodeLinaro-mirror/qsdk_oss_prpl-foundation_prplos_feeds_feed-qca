@@ -24,7 +24,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -347,6 +347,11 @@ struct ath12k_link_vif_pvt {
+@@ -304,6 +304,11 @@ struct ath12k_link_vif_pvt {
  };
  #endif
  
@@ -36,7 +36,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  struct ath12k_link_vif {
  	struct ath12k_base *ab;
  	struct ath12k_dp *dp;
-@@ -410,6 +415,10 @@ struct ath12k_link_vif {
+@@ -368,6 +373,10 @@ struct ath12k_link_vif {
  	bool mvr_processing;
  	bool pending_csa_up;
  	int num_stations;
@@ -47,18 +47,18 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  };
  
  struct ath12k_vif {
-@@ -1387,6 +1396,8 @@ struct ath12k_base {
+@@ -1370,6 +1379,8 @@ struct ath12k_base {
  
  	int userpd_id;
  
 +	u32 chwidth_num_peer_caps;
 +
  	/* must be last */
- 	u8 drv_priv[0] __aligned(sizeof(void *));
+ 	u8 drv_priv[] __aligned(sizeof(void *));
  };
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -4877,6 +4877,9 @@ ath12k_mac_assign_link_vif( struct ath12
+@@ -4957,6 +4957,9 @@ ath12k_mac_assign_link_vif( struct ath12
  			INIT_WORK(&arvif->update_bcn_template_work,
  				  ath12k_update_bcn_template_work);
  			arvif->num_stations = 0;
@@ -68,7 +68,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		}
  	}
  
-@@ -6287,6 +6290,98 @@ static int ath12k_station_unauthorize(st
+@@ -6376,6 +6379,98 @@ static int ath12k_station_unauthorize(st
  	return ret;
  }
  
@@ -167,7 +167,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  static void ath12k_sta_rc_update_wk(struct work_struct *wk)
  {
  	struct ath12k *ar;
-@@ -6350,6 +6445,11 @@ static void ath12k_sta_rc_update_wk(stru
+@@ -6438,6 +6533,11 @@ static void ath12k_sta_rc_update_wk(stru
  		ath12k_peer_assoc_h_phymode(ar, arvif, arsta, &peer_arg);
  		peer_phymode = peer_arg.peer_phymode;
  
@@ -177,9 +177,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +			goto err_rc_bw_changed;
 +
  		if (bw > bw_prev) {
- 			/* BW is upgraded. In this case we send WMI_PEER_PHYMODE
- 			 * followed by WMI_PEER_CHWIDTH
-@@ -10128,6 +10228,9 @@ static int ath12k_mac_op_add_interface(s
+ 			/* Phymode shows maximum supported channel width, if we
+ 			 * upgrade bandwidth then due to sanity check of firmware,
+@@ -10223,6 +10323,9 @@ static int ath12k_mac_op_add_interface(s
  	INIT_WORK(&ahvif->deflink.update_bcn_template_work,
  		  ath12k_update_bcn_template_work);
  	ahvif->deflink.num_stations = 0;
@@ -189,7 +189,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	ahvif->key_cipher = INVALID_CIPHER;
  
-@@ -10182,6 +10285,7 @@ static void ath12k_mac_remove_link_inter
+@@ -10277,6 +10380,7 @@ static void ath12k_mac_remove_link_inter
  
  	cancel_work_sync(&arvif->update_obss_color_notify_work);
  	cancel_work_sync(&arvif->update_bcn_template_work);
@@ -199,15 +199,15 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -6201,6 +6201,7 @@ static int ath12k_wmi_tlv_svc_rdy_ext2_p
+@@ -6551,6 +6551,7 @@ static int ath12k_wmi_svc_rdy_ext2_parse
  		}
- 		ab->max_msduq_per_tid = parse->param.max_msduq_per_tid;
- 		ab->default_msduq_per_tid = parse->param.default_msduq_per_tid;
-+		ab->chwidth_num_peer_caps = parse->param.chwidth_num_peer_caps;
+ 		ab->max_msduq_per_tid = parse->arg.max_msduq_per_tid;
+ 		ab->default_msduq_per_tid = parse->arg.default_msduq_per_tid;
++		ab->chwidth_num_peer_caps = parse->arg.chwidth_num_peer_caps;
  		break;
  
  	case WMI_TAG_ARRAY_STRUCT:
-@@ -14374,3 +14375,219 @@ int ath12k_wmi_svc_send_disable(struct a
+@@ -14453,3 +14454,219 @@ int ath12k_wmi_svc_send_disable(struct a
  
  	return ret;
  }
@@ -429,7 +429,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +}
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -8242,6 +8242,38 @@ struct wmi_vdev_adfs_ocac_complete_event
+@@ -8025,6 +8025,38 @@ struct wmi_vdev_adfs_ocac_complete_event
  	u32 center_freq2;
  } __packed;
  
@@ -468,7 +468,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  #define ATH12K_FW_STATS_BUF_SIZE (1024 * 1024)
  
  void ath12k_wmi_init_qcn9274(struct ath12k_base *ab,
-@@ -8450,4 +8482,5 @@ int ath12k_wmi_config_peer_ppeds_routing
+@@ -8230,4 +8262,5 @@ int ath12k_wmi_config_peer_ppeds_routing
  					 u32 service_code, u32 priority_valid,
  					 u32 src_info, bool ppe_routing_enable);
  #endif

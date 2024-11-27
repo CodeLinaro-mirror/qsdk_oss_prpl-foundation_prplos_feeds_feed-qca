@@ -24,7 +24,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
 
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
-@@ -4403,7 +4403,7 @@ struct ieee80211_ops {
+@@ -4498,7 +4498,7 @@ struct ieee80211_ops {
  	void (*sta_rc_update)(struct ieee80211_hw *hw,
  			      struct ieee80211_vif *vif,
  			      struct ieee80211_sta *sta,
@@ -35,7 +35,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  				    struct ieee80211_sta *sta);
 --- a/net/mac80211/driver-ops.c
 +++ b/net/mac80211/driver-ops.c
-@@ -187,20 +187,24 @@ int drv_sta_set_mgmt_rts_cts(struct ieee
+@@ -188,20 +188,24 @@ int drv_sta_set_mgmt_rts_cts(struct ieee
  
  void drv_sta_rc_update(struct ieee80211_local *local,
  		       struct ieee80211_sub_if_data *sdata,
@@ -65,7 +65,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  }
 --- a/net/mac80211/driver-ops.h
 +++ b/net/mac80211/driver-ops.h
-@@ -551,7 +551,8 @@ int drv_sta_set_mgmt_rts_cts(struct ieee
+@@ -574,7 +574,8 @@ int drv_sta_set_mgmt_rts_cts(struct ieee
  
  void drv_sta_rc_update(struct ieee80211_local *local,
  		       struct ieee80211_sub_if_data *sdata,
@@ -77,7 +77,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  					   struct ieee80211_sub_if_data *sdata,
 --- a/net/mac80211/ibss.c
 +++ b/net/mac80211/ibss.c
-@@ -981,6 +981,12 @@ static void ieee80211_update_sta_info(st
+@@ -989,6 +989,12 @@ static void ieee80211_update_sta_info(st
  	struct ieee80211_supported_band *sband;
  	bool rates_updated = false;
  	u32 supp_rates = 0;
@@ -90,7 +90,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  
  	if (sdata->vif.type != NL80211_IFTYPE_ADHOC)
  		return;
-@@ -1088,7 +1094,7 @@ static void ieee80211_update_sta_info(st
+@@ -1096,7 +1102,7 @@ static void ieee80211_update_sta_info(st
  		if (sta->sta.deflink.rx_nss != rx_nss)
  			changed |= IEEE80211_RC_NSS_CHANGED;
  
@@ -99,7 +99,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  	}
  
  	rcu_read_unlock();
-@@ -1110,7 +1116,6 @@ static void ieee80211_rx_bss_info(struct
+@@ -1118,7 +1124,6 @@ static void ieee80211_rx_bss_info(struct
  	channel = ieee80211_get_channel(local->hw.wiphy, rx_status->freq);
  	if (!channel)
  		return;
@@ -118,18 +118,18 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  	if (ref && ref->ops->rate_update) {
  		rcu_read_lock();
  
-@@ -119,7 +117,7 @@ void rate_control_rate_update(struct iee
- 		rcu_read_unlock();
+@@ -120,7 +118,7 @@ void rate_control_rate_update(struct iee
  	}
  
--	drv_sta_rc_update(local, sta->sdata, &sta->sta, changed);
-+	drv_sta_rc_update(local, sta->sdata, &sta->sta, changed, link_id);
+ 	if (sta->uploaded)
+-		drv_sta_rc_update(local, sta->sdata, &sta->sta, changed);
++		drv_sta_rc_update(local, sta->sdata, &sta->sta, changed, link_id);
  }
  
  int ieee80211_rate_control_register(const struct rate_control_ops *ops)
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
-@@ -3547,6 +3547,7 @@ ieee80211_rx_h_action(struct ieee80211_r
+@@ -3539,6 +3539,7 @@ ieee80211_rx_h_action(struct ieee80211_r
  	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *) rx->skb->data;
  	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(rx->skb);
  	int len = rx->skb->len;
@@ -137,7 +137,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  
  	if (!ieee80211_is_action(mgmt->frame_control))
  		return RX_CONTINUE;
-@@ -3612,7 +3613,8 @@ ieee80211_rx_h_action(struct ieee80211_r
+@@ -3600,7 +3601,8 @@ ieee80211_rx_h_action(struct ieee80211_r
  
  			sband = rx->local->hw.wiphy->bands[status->band];
  
@@ -147,7 +147,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  						 IEEE80211_RC_SMPS_CHANGED);
  			cfg80211_sta_opmode_change_notify(sdata->dev,
  							  rx->sta->addr,
-@@ -3650,7 +3652,8 @@ ieee80211_rx_h_action(struct ieee80211_r
+@@ -3638,7 +3640,8 @@ ieee80211_rx_h_action(struct ieee80211_r
  				ieee80211_sta_rx_bw_to_chan_width(rx->link_sta);
  			sta_opmode.changed = STA_OPMODE_MAX_BW_CHANGED;
  
@@ -159,7 +159,7 @@ Signed-off-by: Rajat Soni <quic_rajson@quicinc.com>
  							  rx->sta->addr,
 --- a/net/mac80211/trace.h
 +++ b/net/mac80211/trace.h
-@@ -969,9 +969,9 @@ TRACE_EVENT(drv_sta_rc_update,
+@@ -971,9 +971,9 @@ TRACE_EVENT(drv_sta_rc_update,
  	TP_PROTO(struct ieee80211_local *local,
  		 struct ieee80211_sub_if_data *sdata,
  		 struct ieee80211_sta *sta,

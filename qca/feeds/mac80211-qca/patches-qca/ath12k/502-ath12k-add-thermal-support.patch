@@ -82,7 +82,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  #include "dbring.h"
  
  #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)
-@@ -588,6 +589,7 @@ struct ath12k {
+@@ -589,6 +590,7 @@ struct ath12k {
  	u32 cached_ppdu_id;
  
  	bool dfs_block_radar_events;
@@ -92,7 +92,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	bool monitor_started;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7098,6 +7098,7 @@ int ath12k_mac_allocate(struct ath12k_ba
+@@ -7461,6 +7461,7 @@ int ath12k_mac_allocate(struct ath12k_ba
  		init_completion(&ar->bss_survey_done);
  		init_completion(&ar->scan.started);
  		init_completion(&ar->scan.completed);
@@ -397,12 +397,11 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +#endif /* _ATH12K_THERMAL_ */
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7020,6 +7020,8 @@ ath12k_wmi_pdev_temperature_event(struct
- 		ath12k_warn(ab, "invalid pdev id in pdev temperature ev %d", ev.pdev_id);
- 		return;
+@@ -7290,6 +7290,7 @@ ath12k_wmi_pdev_temperature_event(struct
+ 		goto exit;
  	}
-+
-+	ath12k_thermal_event_temperature(ar, ev.temp);
- }
  
- static void ath12k_fils_discovery_event(struct ath12k_base *ab,
++	ath12k_thermal_event_temperature(ar, ev.temp);
+ exit:
+ 	rcu_read_unlock();
+ }

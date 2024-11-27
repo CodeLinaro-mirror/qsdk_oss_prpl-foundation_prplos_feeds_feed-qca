@@ -11,11 +11,9 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  wpa_supplicant/ctrl_iface.c | 17 ++++++++++++++++-
  1 file changed, 16 insertions(+), 1 deletion(-)
 
-diff --git a/wpa_supplicant/ctrl_iface.c b/wpa_supplicant/ctrl_iface.c
-index 61aeea7..b96a996 100644
 --- a/wpa_supplicant/ctrl_iface.c
 +++ b/wpa_supplicant/ctrl_iface.c
-@@ -2205,7 +2205,7 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
+@@ -2243,7 +2243,7 @@ static int wpa_supplicant_ctrl_iface_sta
  					    const char *params,
  					    char *buf, size_t buflen)
  {
@@ -24,7 +22,7 @@ index 61aeea7..b96a996 100644
  	int res, verbose, wps, ret;
  #ifdef CONFIG_HS20
  	const u8 *hs20;
-@@ -2346,12 +2346,27 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
+@@ -2384,12 +2384,27 @@ static int wpa_supplicant_ctrl_iface_sta
  	}
  #endif /* CONFIG_SAE */
  #endif /* CONFIG_SME */
@@ -52,6 +50,3 @@ index 61aeea7..b96a996 100644
  	if (wpa_s->l2 &&
  	    l2_packet_get_ip_addr(wpa_s->l2, tmp, sizeof(tmp)) >= 0) {
  		ret = os_snprintf(pos, end - pos, "ip_address=%s\n", tmp);
--- 
-2.7.4
-

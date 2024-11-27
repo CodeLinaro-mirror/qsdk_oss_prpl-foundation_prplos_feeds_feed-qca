@@ -10,11 +10,9 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  src/ap/ctrl_iface_ap.c | 128 +++++++++++++++++++++++++++++++++++++++++
  1 file changed, 128 insertions(+)
 
-diff --git a/src/ap/ctrl_iface_ap.c b/src/ap/ctrl_iface_ap.c
-index 1579ce4..f713c77 100644
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -28,6 +28,19 @@
+@@ -47,6 +47,19 @@ static const char * hw_mode_str(enum hos
  
  #ifdef CONFIG_CTRL_IFACE_MIB
  
@@ -34,8 +32,8 @@ index 1579ce4..f713c77 100644
  static size_t hostapd_write_ht_mcs_bitmask(char *buf, size_t buflen,
  					   size_t curr_len, const u8 *mcs_set)
  {
-@@ -232,6 +245,45 @@ static const char * hw_mode_str(enum hostapd_hw_mode mode)
- 	return "unknown";
+@@ -231,6 +244,45 @@ static const char * timeout_next_str(int
+ 	}
  }
  
 +unsigned int operclass_to_uniimask(unsigned int operclass)
@@ -80,10 +78,12 @@ index 1579ce4..f713c77 100644
  
  static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
  				      struct sta_info *sta,
-@@ -360,6 +412,81 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
+@@ -369,8 +421,81 @@ static int hostapd_ctrl_iface_sta_mib(st
  					sta->supp_op_classes + 1,
  					sta->supp_op_classes[0]);
- 		len += os_snprintf(buf + len, buflen - len, "\n");
+ 		res = os_snprintf(buf + len, buflen - len, "\n");
+-		if (!os_snprintf_error(buflen - len, res))
+-			len += res;
 +
 +		u8 *op_classes = sta->supp_op_classes + 1;
 +
@@ -115,48 +115,48 @@ index 1579ce4..f713c77 100644
 +				len += ret;
 +				break;
 +			case BAND_UNII_2A:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_2A\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_2A\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			case BAND_UNII_2C:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_2C\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_2C\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			case BAND_UNII_3:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_3\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_3\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			case BAND_UNII_4:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_4\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_4\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			case BAND_UNII_ALL_5G:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_1 UNII_2A "
-+						  "UNII_2C UNII_3 UNII_4\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_1 UNII_2A "
++						"UNII_2C UNII_3 UNII_4\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			case BAND_UNII_ALL_6G:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_5 UNII_6 UNII_7 UNII_8\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_5 UNII_6 UNII_7 UNII_8\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			case BAND_UNII_5:
-+				 ret = os_snprintf(buf + len, buflen - len, "\tUNII_5\n");
-+				 if (os_snprintf_error(buflen - len, ret))
-+					 return len;
-+				 len += ret;
-+				 break;
++				ret = os_snprintf(buf + len, buflen - len, "\tUNII_5\n");
++				if (os_snprintf_error(buflen - len, ret))
++					return len;
++				len += ret;
++				break;
 +			}
 +		}
  	}

@@ -20,7 +20,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -2527,6 +2527,25 @@ void ath12k_debugfs_fw_stats_init(struct
+@@ -2597,6 +2597,25 @@ void ath12k_debugfs_fw_stats_init(struct
  
  }
  
@@ -28,7 +28,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 +                                    struct htt_tx_ring_tlv_filter
 +                                    *tlv_filter)
 +{
-+	int ret, i;
++	int ret = 0, i;
 +	u32 ring_id;
 +	for (i = 0; i < ar->ab->hw_params->num_rxmda_per_pdev; i++) {
 +	    ring_id = ar->dp.rxdma_mon_dst_ring[i].ring_id;
@@ -46,7 +46,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  static int ath12k_pktlog_enable_hybrid_mode(struct ath12k *ar, u32 filter,
  					    u32 mode)
  {
-@@ -2582,8 +2601,7 @@ static ssize_t ath12k_write_pktlog_filte
+@@ -2652,8 +2671,7 @@ static ssize_t ath12k_write_pktlog_filte
  	struct ath12k *ar = file->private_data;
  	struct ath12k_base *ab = ar->ab;
  	struct htt_rx_ring_tlv_filter tlv_filter = {0};
@@ -56,7 +56,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	u8 buf[128] = {0};
  	int ret, hybrid_enable, rx_buf_sz;
  	ssize_t rc;
-@@ -2612,7 +2630,7 @@ static ssize_t ath12k_write_pktlog_filte
+@@ -2682,7 +2700,7 @@ static ssize_t ath12k_write_pktlog_filte
  
  	if ((filter & ATH12K_PKTLOG_RX) && hybrid_enable) {
  		ret = -EINVAL;
@@ -65,7 +65,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  			    "Invalid configuration. Hybrid mode is only applicable when tx or lite pktlog is used");
  		goto out;
  	}
-@@ -2624,36 +2642,33 @@ static ssize_t ath12k_write_pktlog_filte
+@@ -2694,36 +2712,33 @@ static ssize_t ath12k_write_pktlog_filte
  		filter |= ATH12K_PKTLOG_HYBRID;
  	ret = ath12k_wmi_pdev_pktlog_enable(ar, filter);
  	if (ret) {
@@ -115,7 +115,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		goto out;
  	}
  
-@@ -2672,12 +2687,12 @@ static ssize_t ath12k_write_pktlog_filte
+@@ -2742,12 +2757,12 @@ static ssize_t ath12k_write_pktlog_filte
  			    HTT_RX_FILTER_TLV_FLAGS_MPDU_END |
  			    HTT_RX_FILTER_TLV_FLAGS_PACKET_HEADER |
  			    HTT_RX_FILTER_TLV_FLAGS_ATTENTION;
@@ -130,7 +130,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  			goto out;
  		}
  
-@@ -2691,7 +2706,7 @@ static ssize_t ath12k_write_pktlog_filte
+@@ -2761,7 +2776,7 @@ static ssize_t ath12k_write_pktlog_filte
  		ret = ath12k_dp_tx_htt_h2t_ppdu_stats_req(ar,
  							  HTT_PPDU_STATS_TAG_DEFAULT);
  		if (ret) {
@@ -139,8 +139,8 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  				   ret);
  			goto out;
  		}
-@@ -2706,12 +2721,10 @@ static ssize_t ath12k_write_pktlog_filte
- 					       HTT_RX_FP_DATA_FILTER_FLASG3;
+@@ -2785,12 +2800,10 @@ static ssize_t ath12k_write_pktlog_filte
+ 					HTT_RX_MO_DATA_FILTER_FLASG3;
  	}
  
 -	ret = ath12k_dp_tx_htt_rx_filter_setup(ab, ring_id, 0,
@@ -260,7 +260,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		mon_dst_desc = ath12k_hal_srng_dst_peek(ab, srng);
  		if (unlikely(!mon_dst_desc))
  			break;
-@@ -4092,6 +4084,12 @@ move_next:
+@@ -4091,6 +4083,12 @@ move_next:
  #endif /* CPTCFG_ATH12K_BONDED_DS_SUPPORT */
   		}
  
@@ -275,7 +275,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		rcu_read_unlock();
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -1424,7 +1424,7 @@ static int ath12k_get_ppdu_user_index(st
+@@ -1428,7 +1428,7 @@ static int ath12k_get_ppdu_user_index(st
  static void ath12k_htt_pktlog(struct ath12k_base *ab, struct sk_buff *skb)
  {
  	struct htt_pktlog_msg *data = (struct htt_pktlog_msg *)skb->data;
@@ -800,7 +800,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	spinlock_t lock;
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -12691,8 +12691,8 @@ ath12k_wmi_pktlog_decode_info(struct ath
+@@ -13023,8 +13023,8 @@ ath12k_wmi_pktlog_decode_info(struct ath
  	struct ath12k *ar;
          const void **tb;
  	int ret;
@@ -813,7 +813,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
                  ath12k_warn(ab, "firmware doesn't support pktlog decode info support\n");
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -792,7 +792,7 @@ struct ath12k_debug {
+@@ -808,7 +808,7 @@ struct ath12k_debug {
  	u8 pktlog_peer_addr[ETH_ALEN];
  #ifdef CPTCFG_ATH12K_PKTLOG
  	struct dentry *debugfs_pktlog;
@@ -822,7 +822,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	bool is_pkt_logging;
  #endif
  	u32 rx_filter;
-@@ -803,6 +803,10 @@ struct ath12k_debug {
+@@ -819,6 +819,10 @@ struct ath12k_debug {
  	u32 coex_priority_level[ATH12K_MAX_COEX_PRIORITY_LEVEL];
  };
  

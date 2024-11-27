@@ -23,8 +23,8 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -172,7 +172,9 @@ static int nl80211_send_frame_cmd(struct
- 				  int link_id);
+@@ -183,7 +183,9 @@ static int nl80211_send_frame_cmd(struct
+ 				  size_t csa_offs_len, int link_id);
  static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss,
  					       int report);
 -
@@ -34,7 +34,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #define IFIDX_ANY -1
  
  static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx,
-@@ -4930,9 +4932,9 @@ err:
+@@ -5002,9 +5004,9 @@ err:
  }
  #endif /* CONFIG_DRIVER_NL80211_QCA */
  
@@ -47,16 +47,16 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  {
  	enum hostapd_hw_mode hw_mode;
  	int is_24ghz;
-@@ -5340,7 +5342,7 @@ static int wpa_driver_nl80211_set_ap(voi
- 		nla_nest_end(msg, spr);
+@@ -5406,7 +5408,7 @@ static int wpa_driver_nl80211_set_ap(voi
+ 		nla_nest_end(msg, ftm);
  	}
  
 -	if (params->freq && nl80211_put_freq_params(msg, params->freq) < 0)
 +	if (params->freq && nl80211_put_freq_params(drv, msg, params->freq) < 0)
  		goto fail;
  
- 	if (params->mld_ap) {
-@@ -5517,7 +5519,7 @@ static int nl80211_set_channel(struct i8
+ #ifdef CONFIG_IEEE80211AX
+@@ -5588,7 +5590,7 @@ static int nl80211_set_channel(struct i8
  
  	msg = nl80211_bss_msg(bss, 0, set_chan ? NL80211_CMD_SET_CHANNEL :
  			      NL80211_CMD_SET_WIPHY);
@@ -65,7 +65,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		nlmsg_free(msg);
  		return -1;
  	}
-@@ -6676,7 +6678,7 @@ retry:
+@@ -6745,7 +6747,7 @@ retry:
  	os_memcpy(drv->ssid, params->ssid, params->ssid_len);
  	drv->ssid_len = params->ssid_len;
  
@@ -74,7 +74,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	    nl80211_put_beacon_int(msg, params->beacon_int))
  		goto fail;
  
-@@ -10559,7 +10561,7 @@ static int nl80211_start_radar_detection
+@@ -10726,7 +10728,7 @@ static int nl80211_start_radar_detection
  	}
  
  	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_RADAR_DETECT)) ||
@@ -83,7 +83,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		nlmsg_free(msg);
  		return -1;
  	}
-@@ -10712,7 +10714,7 @@ nl80211_tdls_enable_channel_switch(void
+@@ -10919,7 +10921,7 @@ nl80211_tdls_enable_channel_switch(void
  	if (!msg ||
  	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
  	    nla_put_u8(msg, NL80211_ATTR_OPER_CLASS, oper_class) ||
@@ -92,7 +92,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		nlmsg_free(msg);
  		wpa_printf(MSG_DEBUG, "nl80211: Could not build TDLS chan switch");
  		return ret;
-@@ -11317,7 +11319,7 @@ static int nl80211_switch_channel(void *
+@@ -11606,7 +11608,7 @@ static int nl80211_switch_channel(void *
  	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_CHANNEL_SWITCH)) ||
  	    nla_put_u32(msg, NL80211_ATTR_CH_SWITCH_COUNT,
  			settings->cs_count) ||
@@ -101,7 +101,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	    (settings->block_tx &&
  	     nla_put_flag(msg, NL80211_ATTR_CH_SWITCH_BLOCK_TX)) ||
  	    (settings->punct_bitmap &&
-@@ -12100,7 +12102,7 @@ static int nl80211_join_mesh(struct i802
+@@ -12379,7 +12381,7 @@ static int nl80211_join_mesh(struct i802
  	wpa_printf(MSG_DEBUG, "nl80211: mesh join (ifindex=%d)", drv->ifindex);
  	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_JOIN_MESH);
  	if (!msg ||
@@ -112,53 +112,32 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	    nl80211_put_beacon_int(msg, params->beacon_int) ||
 --- a/src/drivers/driver_nl80211.h
 +++ b/src/drivers/driver_nl80211.h
-@@ -204,6 +204,7 @@ struct wpa_driver_nl80211_data {
+@@ -202,6 +202,7 @@ struct wpa_driver_nl80211_data {
  	unsigned int secure_ranging_ctx_vendor_cmd_avail:1;
  	unsigned int puncturing:1;
  	unsigned int qca_ap_allowed_freqs:1;
 +	unsigned int device_bw:1;
  
- 	u64 vendor_scan_cookie;
- 	u64 remain_on_chan_cookie;
+ 	u32 ignore_next_local_disconnect;
+ 	u32 ignore_next_local_deauth;
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -701,6 +701,9 @@ static void wiphy_info_ext_feature_flags
- 		capa->flags2 |= WPA_DRIVER_FLAGS2_PROT_RANGE_NEG_STA;
- 		capa->flags2 |= WPA_DRIVER_FLAGS2_PROT_RANGE_NEG_AP;
+@@ -516,7 +516,6 @@ static void wiphy_info_tdls(struct wpa_d
  	}
+ }
+ 
+-
+ static int ext_feature_isset(const u8 *ext_features, int ext_features_len,
+ 			     enum nl80211_ext_feature_index ftidx)
+ {
+@@ -724,6 +723,10 @@ static void wiphy_info_ext_feature_flags
+ 	if (ext_feature_isset(ext_features, len,
+ 			      NL80211_EXT_FEATURE_SAE_OFFLOAD_AP))
+ 		capa->flags2 |= WPA_DRIVER_FLAGS2_SAE_OFFLOAD_AP;
 +
-+	if (ext_feature_isset(ext_features, len, NL80211_EXT_FEATURE_DEVICE_BW))
++	if (ext_feature_isset(ext_features, len,
++			      NL80211_EXT_FEATURE_DEVICE_BW))
 +		info->drv->device_bw = 1;
  }
  
- 
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -6642,6 +6642,9 @@ enum nl80211_feature_flags {
-  * @NL80211_EXT_FEATURE_BEACON_RATE_EHT: Driver supports beacon rate
-  *	configuration (AP/mesh) with EHT rates.
-  *
-+ * @NL80211_EXT_FEATURE_DEVICE_BW: Driver/device supports different parameters for device
-+ *	bandwidth compared to the operating bandwidth.
-+ *
-  * @NUM_NL80211_EXT_FEATURES: number of extended features.
-  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
-  */
-@@ -6716,6 +6719,7 @@ enum nl80211_ext_feature_index {
- 	NL80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA,
- 	NL80211_EXT_FEATURE_STA_MGMT_RTS_CTS,
- 	NL80211_EXT_FEATURE_BEACON_RATE_EHT,
-+	NL80211_EXT_FEATURE_DEVICE_BW,
- 
- 	/* add new features before the definition below */
- 	NUM_NL80211_EXT_FEATURES,
---- a/src/drivers/driver.h
-+++ b/src/drivers/driver.h
-@@ -2409,7 +2409,6 @@ struct wpa_driver_capa {
- /** Driver supports MLO in station/AP mode */
- #define WPA_DRIVER_FLAGS2_MLO			0x0000000000004000ULL
- 	u64 flags2;
--
- #define FULL_AP_CLIENT_STATE_SUPP(drv_flags) \
- 	(drv_flags & WPA_DRIVER_FLAGS_FULL_AP_CLIENT_STATE)
  

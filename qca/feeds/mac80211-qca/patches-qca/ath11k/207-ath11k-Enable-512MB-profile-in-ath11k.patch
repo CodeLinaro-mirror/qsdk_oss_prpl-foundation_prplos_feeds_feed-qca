@@ -106,7 +106,7 @@ Signed-off-by: Ramya Gnanasekar <rgnanase@codeaurora.org>
  ATH11K_TRACING=
 --- a/drivers/net/wireless/ath/ath11k/core.h
 +++ b/drivers/net/wireless/ath/ath11k/core.h
-@@ -1094,6 +1094,7 @@ struct ath11k_base {
+@@ -1092,6 +1092,7 @@ struct ath11k_base {
  #endif
  
  	bool fw_recovery_support;
@@ -158,7 +158,7 @@ Signed-off-by: Ramya Gnanasekar <rgnanase@codeaurora.org>
  }
  
  static void
-@@ -411,6 +413,7 @@ ath11k_dp_tx_htt_tx_complete_buf(struct
+@@ -413,6 +415,7 @@ ath11k_dp_tx_htt_tx_complete_buf(struct
  
  	if (atomic_dec_and_test(&ar->dp.num_tx_pending))
  		wake_up(&ar->dp.tx_empty_waitq);
@@ -166,7 +166,7 @@ Signed-off-by: Ramya Gnanasekar <rgnanase@codeaurora.org>
  
  	dma_unmap_single(ab->dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE);
  
-@@ -825,6 +828,7 @@ void ath11k_dp_tx_completion_handler(str
+@@ -843,6 +846,7 @@ void ath11k_dp_tx_completion_handler(str
  			wake_up(&ar->dp.tx_empty_waitq);
  
  		ath11k_dp_tx_complete_msdu(ar, msdu, &ts);
@@ -176,61 +176,61 @@ Signed-off-by: Ramya Gnanasekar <rgnanase@codeaurora.org>
  
 --- a/drivers/net/wireless/ath/ath11k/core.c
 +++ b/drivers/net/wireless/ath/ath11k/core.c
-@@ -189,7 +189,7 @@ static struct ath11k_hw_params ath11k_hw
- 		.supports_sta_ps = false,
- 		.cold_boot_calib = true,
+@@ -191,7 +191,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.coldboot_cal_mm = false,
+ 		.coldboot_cal_ftm = false,
  		.cbcal_restart_fw = true,
 -		.fw_mem_mode = 0,
 +		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE,
  		.num_vdevs = 16 + 1,
  		.num_peers = 512,
  		.supports_suspend = false,
-@@ -270,7 +270,7 @@ static struct ath11k_hw_params ath11k_hw
- 		.supports_sta_ps = true,
- 		.cold_boot_calib = false,
+@@ -273,7 +273,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.coldboot_cal_mm = false,
+ 		.coldboot_cal_ftm = false,
  		.cbcal_restart_fw = false,
 -		.fw_mem_mode = 0,
 +		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE,
  		.num_vdevs = 16 + 1,
  		.num_peers = 512,
  		.supports_suspend = true,
-@@ -354,7 +354,7 @@ static struct ath11k_hw_params ath11k_hw
- 		.supports_sta_ps = false,
- 		.cold_boot_calib = true,
- 		.cbcal_restart_fw = false,
+@@ -358,7 +358,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.coldboot_cal_mm = false,
+ 		.coldboot_cal_ftm = true,
+ 		.cbcal_restart_fw = true,
 -		.fw_mem_mode = 2,
 +		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE_256M,
  		.num_vdevs = 8,
  		.num_peers = 128,
  		.supports_suspend = false,
-@@ -435,7 +435,7 @@ static struct ath11k_hw_params ath11k_hw
- 		.supports_sta_ps = true,
- 		.cold_boot_calib = false,
+@@ -440,7 +440,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.coldboot_cal_mm = false,
+ 		.coldboot_cal_ftm = false,
  		.cbcal_restart_fw = false,
 -		.fw_mem_mode = 0,
 +		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE,
  		.num_vdevs = 16 + 1,
  		.num_peers = 512,
  		.supports_suspend = true,
-@@ -517,7 +517,7 @@ static struct ath11k_hw_params ath11k_hw
- 		.supports_sta_ps = true,
- 		.cold_boot_calib = false,
+@@ -523,7 +523,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.coldboot_cal_mm = false,
+ 		.coldboot_cal_ftm = false,
  		.cbcal_restart_fw = false,
 -		.fw_mem_mode = 0,
 +		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE,
  		.num_vdevs = 16 + 1,
  		.num_peers = 512,
  		.supports_suspend = true,
-@@ -600,7 +600,7 @@ static struct ath11k_hw_params ath11k_hw
- 		.supports_sta_ps = true,
- 		.cold_boot_calib = true,
+@@ -607,7 +607,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.coldboot_cal_mm = true,
+ 		.coldboot_cal_ftm = true,
  		.cbcal_restart_fw = false,
 -		.fw_mem_mode = 0,
 +		.fw_mem_mode = ATH11K_QMI_TARGET_MEM_MODE,
  		.num_vdevs = 16 + 1,
  		.num_peers = 512,
  		.supports_suspend = false,
-@@ -679,7 +679,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -686,7 +686,7 @@ static struct ath11k_hw_params ath11k_hw
  		.supports_monitor = false,
  		.supports_sta_ps = false,
  		.supports_shadow_regs = false,

@@ -15,7 +15,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -4932,6 +4932,60 @@ err:
+@@ -5004,6 +5004,60 @@ err:
  }
  #endif /* CONFIG_DRIVER_NL80211_QCA */
  
@@ -76,7 +76,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  static int nl80211_put_freq_params(struct wpa_driver_nl80211_data *drv,
  				   struct nl_msg *msg,
   				   const struct hostapd_freq_params *freq)
-@@ -5041,6 +5095,12 @@ static int nl80211_put_freq_params(struc
+@@ -5113,6 +5167,12 @@ static int nl80211_put_freq_params(struc
  				NL80211_CHAN_NO_HT))
  			return -ENOBUFS;
  	}
@@ -89,28 +89,3 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (freq->radar_background &&
  	    nla_put_flag(msg, NL80211_ATTR_RADAR_BACKGROUND))
  		return -ENOBUFS;
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -2885,6 +2885,13 @@ enum nl80211_commands {
-  * @NL80211_ATTR_SET_CRITICAL_UPDATE: set critical update for the bss
-  *	(see &enum nl80211_set_cu).
-  *
-+ * @NL80211_ATTR_CHANNEL_WIDTH_DEVICE: Device channel width (u32). Value
-+ *	must be zero or twice @NL80211_ATTR_CHANNEL_WIDTH which is the
-+ *	operating channel width. Minimum value is 40 MHz.
-+ *
-+ * @NL80211_ATTR_CENTER_FREQ_DEVICE: Device center frequency (u32). The value
-+ *	must coincide with one edge of the operating bandwidth.
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3447,6 +3454,8 @@ enum nl80211_attrs {
- 	NL80211_ATTR_DEL_MULTI_CHAN,
- 	NL80211_ATTR_RXMGMT_CRITICAL_UPDATE,
- 	NL80211_ATTR_SET_CRITICAL_UPDATE,
-+	NL80211_ATTR_CHANNEL_WIDTH_DEVICE,
-+	NL80211_ATTR_CENTER_FREQ_DEVICE,
- 
- /* add attributes here, update the policy in nl80211.c */
- 

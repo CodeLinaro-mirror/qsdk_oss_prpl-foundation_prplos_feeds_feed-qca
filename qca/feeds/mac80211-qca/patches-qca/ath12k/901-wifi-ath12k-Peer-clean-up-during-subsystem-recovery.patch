@@ -1,0 +1,121 @@
+From 54a8c165b256304c13f2c55d6c04f3d16d704435 Mon Sep 17 00:00:00 2001
+From: Sidhanta Sahu <quic_sidhanta@quicinc.com>
+Date: Fri, 29 Mar 2024 18:52:04 -0700
+Subject: [PATCH] wifi: ath12k: Subsystem recovery improvement
+
+Currently, hostapd is not aware of the recovery operation. There are
+some instances where hostapd can trigger an operation related to peers
+or radios for which recovery in progress. 
+
+The change reports a low ack to upper layer to disassoc existing sta to
+cleanup the peers from driver. 
+
+Change list:
+	- Add support to report low ack to free the sta info.
+        
+Patch-depdendency:none
+Patch-work:none
+
+Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
+---
+ drivers/net/wireless/ath/ath12k/core.c |  65 ++++++++++-
+ drivers/net/wireless/ath/ath12k/core.h |   5 +
+ drivers/net/wireless/ath/ath12k/mac.c  | 147 +++++++++++++++++++++----
+ drivers/net/wireless/ath/ath12k/mhi.c  |   1 +
+ 4 files changed, 191 insertions(+), 27 deletions(-)
+
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+@@ -2262,6 +2262,51 @@ static void ath12k_core_post_reconfigure
+ 	}
+ }
+ 
++static void ath12k_mac_peer_ab_disassoc(struct ath12k_base *ab)
++{
++	struct ath12k_peer *peer, *tmp;
++	struct ath12k_sta *ahsta;
++	struct ieee80211_sta *sta;
++
++	spin_lock_bh(&ab->base_lock);
++	list_for_each_entry_safe(peer, tmp, &ab->peers, list) {
++
++		if (!peer->vif)
++			continue;
++
++		/* In case of STA Vif type,
++		 * report disconnect will be sent during sta_restart work.
++		 */
++		if (peer->vif->type == NL80211_IFTYPE_STATION)
++			continue;
++
++		sta = peer->sta;
++		if (!sta)
++			continue;
++
++		ahsta = (struct ath12k_sta *)sta->drv_priv;
++		if (!ahsta->low_ack_sent) {
++			ath12k_dbg(ab, ATH12K_DBG_MAC,
++				   "sending low ack event during recovery to clean "
++				   "up peers (STA:%pM)\n", sta->addr);
++
++			/* Sending low ack event to hostapd to remove (free) the
++			 * existing STAs since FW is crashed and recovering at the momemt.
++			 * After recovery, FW comes up with no information about peers.
++			 * To stop any operation related to peers coming from upper
++			 * layers.
++			 * Here, 0xFFFF is used to differentiate between low ack event
++			 * sent during recovery versus normal low ack event. In normal,
++			 * low ack event, num_packets is not expected to be 0xFFFF.
++			 */
++			ieee80211_report_low_ack(sta,
++						 ATH12K_REPORT_LOW_ACK_NUM_PKT_SSR);
++			ahsta->low_ack_sent = true;
++		}
++	}
++	spin_unlock_bh(&ab->base_lock);
++}
++
+ void ath12k_core_halt(struct ath12k *ar)
+ {
+ 	struct ath12k_base *ab = ar->ab;
+@@ -2272,6 +2317,19 @@ void ath12k_core_halt(struct ath12k *ar)
+ 	ar->num_created_vdevs = 0;
+ 	ar->allocated_vdev_map = 0;
+ 
++	/* Send low ack disassoc to hostapd to free the peers from host
++	 * to associate fresh after recovery. It is expected that, this
++	 * low ack event to hostapd must free the stas from hostapd and
++	 * kernel before new association process starts.
++	 *
++	 * And also during ieee80211_reconfig, it should not add back the
++	 * existing stas as it is already freed from host due to low ack
++	 * event.
++	 */
++
++	if (ag->recovery_mode == ATH12K_MLO_RECOVERY_MODE0)
++		ath12k_mac_peer_ab_disassoc(ab);
++
+ 	ath12k_mac_peer_cleanup_all(ar);
+ 	cancel_work_sync(&ar->regd_update_work);
+ 	cancel_work_sync(&ar->agile_cac_abort_wq);
+--- a/drivers/net/wireless/ath/ath12k/core.h
++++ b/drivers/net/wireless/ath/ath12k/core.h
+@@ -733,6 +733,8 @@ struct ath12k_link_sta {
+ 	u16 ast_idx;
+ };
+ 
++#define ATH12K_REPORT_LOW_ACK_NUM_PKT_SSR 0xFFFF
++
+ struct ath12k_sta {
+ 	struct ath12k_vif *ahvif;
+  #ifdef CPTCFG_MAC80211_DEBUGFS
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -1350,6 +1350,7 @@ void ath12k_mac_peer_cleanup_all(struct
+ 		peer_id = peer->peer_id;
+ 		ath12k_dp_rx_peer_tid_cleanup(ar, peer);
+ 		ath12k_peer_rhash_delete(ab, peer);
++		peer->sta = NULL;
+ 		list_del(&peer->list);
+ #ifdef CPTCFG_ATH12K_SAWF
+ 	if (peer->sawf_ctx_peer.telemetry_peer_ctx)

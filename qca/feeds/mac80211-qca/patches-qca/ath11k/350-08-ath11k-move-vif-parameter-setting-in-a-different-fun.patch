@@ -14,7 +14,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
-@@ -1646,6 +1646,14 @@ static void ath11k_mac_set_vif_params(st
+@@ -1647,6 +1647,14 @@ static void ath11k_mac_set_vif_params(st
  		arvif->wpaie_present = true;
  	else
  		arvif->wpaie_present = false;
@@ -29,14 +29,14 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  }
  
  static int ath11k_mac_setup_bcn_tmpl_ema(struct ath11k_vif *arvif)
-@@ -1754,11 +1762,11 @@ static int ath11k_mac_setup_bcn_tmpl(str
+@@ -1755,11 +1763,11 @@ static int ath11k_mac_setup_bcn_tmpl(str
  	/* Target does not expect beacon templates for the already up
  	 * non-transmitting interfaces, and results in a crash if sent.
  	 */
 -	if (vif->mbssid_tx_vif &&
--	    arvif != (void *)vif->mbssid_tx_vif->drv_priv && arvif->is_up)
+-	    arvif != ath11k_vif_to_arvif(vif->mbssid_tx_vif) && arvif->is_up)
 +	if (vif->bss_conf.mbssid_tx_vif &&
-+	    arvif != (void *)vif->bss_conf.mbssid_tx_vif->drv_priv && arvif->is_up)
++		arvif != (void *)vif->bss_conf.mbssid_tx_vif->drv_priv && arvif->is_up)
  		return 0;
  
 -	if (vif->bss_conf.ema_ap && vif->mbssid_tx_vif)

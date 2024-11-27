@@ -15,11 +15,9 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  src/ap/ieee802_11_vht.c | 5 +++++
  1 file changed, 5 insertions(+)
 
-diff --git a/src/ap/ieee802_11_vht.c b/src/ap/ieee802_11_vht.c
-index b53f521..af5b4f6 100644
 --- a/src/ap/ieee802_11_vht.c
 +++ b/src/ap/ieee802_11_vht.c
-@@ -72,6 +72,11 @@ u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid, u32 nsts)
+@@ -73,6 +73,11 @@ u8 * hostapd_eid_vht_capabilities(struct
  		cap->vht_capabilities_info &= ~(host_to_le32(VHT_CAP_SUPP_CHAN_WIDTH_MASK));
  	} else {
  		cap->vht_capabilities_info &= ~VHT_CAP_EXTENDED_NSS_BW_SUPPORT_MASK;
@@ -31,6 +29,3 @@ index b53f521..af5b4f6 100644
  	}
  
  	/* Supported MCS set comes from hw */
--- 
-2.17.1
-

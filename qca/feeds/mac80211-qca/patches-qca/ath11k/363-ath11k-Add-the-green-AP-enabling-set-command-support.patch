@@ -28,23 +28,19 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
  drivers/net/wireless/ath/ath11k/mac.c  | 8 ++++++++
  3 files changed, 10 insertions(+)
 
-diff --git a/drivers/net/wireless/ath/ath11k/core.c b/drivers/net/wireless/ath/ath11k/core.c
-index 22225b2..d093004 100644
 --- a/drivers/net/wireless/ath/ath11k/core.c
 +++ b/drivers/net/wireless/ath/ath11k/core.c
-@@ -768,6 +768,7 @@ static const struct ath11k_hw_params ath11k_hw_params[] = {
- 		.wakeup_mhi = false,
+@@ -731,6 +731,7 @@ static struct ath11k_hw_params ath11k_hw
+ 		.dp_window = 1,
  		.reo_status_poll = false,
  		.num_vdevs_peers = ath11k_vdevs_peers,
 +		.supports_ap_ps = true,
  	},
- };
- 
-diff --git a/drivers/net/wireless/ath/ath11k/hw.h b/drivers/net/wireless/ath/ath11k/hw.h
-index 8bd2ac4..af1b70b 100644
+ 	{
+ 		.hw_rev = ATH11K_HW_IPQ5018_HW10,
 --- a/drivers/net/wireless/ath/ath11k/hw.h
 +++ b/drivers/net/wireless/ath/ath11k/hw.h
-@@ -218,6 +218,7 @@ struct ath11k_hw_params {
+@@ -229,6 +229,7 @@ struct ath11k_hw_params {
  	u32 hal_desc_sz;
  	bool supports_regdb;
  	bool fix_l1ss;
@@ -52,32 +48,27 @@ index 8bd2ac4..af1b70b 100644
  	bool credit_flow;
  	u8 max_tx_ring;
  	const struct ath11k_hw_hal_params *hal_params;
-diff --git a/drivers/net/wireless/ath/ath11k/mac.c b/drivers/net/wireless/ath/ath11k/mac.c
-index 38b82be..3f31373 100644
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
-@@ -4050,6 +4050,11 @@ static void ath11k_mac_op_bss_info_changed(struct ieee80211_hw *hw,
- 	if (changed & BSS_CHANGED_FILS_DISCOVERY ||
- 	    changed & BSS_CHANGED_UNSOL_BCAST_PROBE_RESP)
- 		ath11k_mac_fils_discovery(arvif, info);
-+	
+@@ -4160,6 +4160,11 @@ static void ath11k_mac_op_bss_info_chang
+ 
+ 	ath11k_mac_fils_discovery(arvif, info);
+ 
 +	if ((changed & BSS_CHANGED_PS) && vif->type == NL80211_IFTYPE_AP) {
 +		ar->ap_ps_enabled = info->ap_ps_enable;
 +		ath11k_mac_ap_ps_recalc(ar);
 +	}
- 
- 	mutex_unlock(&ar->conf_mutex);
- }
-@@ -12151,6 +12156,9 @@ static int __ath11k_mac_register(struct ath11k *ar)
- 
++
+ 	if (changed & BSS_CHANGED_ARP_FILTER) {
+ 		ipv4_cnt = min(vif->cfg.arp_addr_cnt, ATH11K_IPV4_MAX_COUNT);
+ 		memcpy(arvif->arp_ns_offload.ipv4_addr,
+@@ -12705,6 +12710,9 @@ static int __ath11k_mac_register(struct
  	if (ab->hw_params.single_pdev_only && ar->supports_6ghz)
  		ieee80211_hw_set(ar->hw, SINGLE_SCAN_ON_ALL_BANDS);
-+	
+ 
 +	if (ab->hw_params.supports_ap_ps)
 +		ieee80211_hw_set(ar->hw, SUPPORTS_AP_PS);
- 
- 	ieee80211_hw_set(ar->hw, SIGNAL_DBM);
- 	ieee80211_hw_set(ar->hw, SUPPORTS_PS);
--- 
-2.17.1
-
++
+ 	if (ab->hw_params.supports_multi_bssid) {
+ 		ieee80211_hw_set(ar->hw, SUPPORTS_MULTI_BSSID);
+ 		ieee80211_hw_set(ar->hw, SUPPORTS_ONLY_HE_MULTI_BSSID);

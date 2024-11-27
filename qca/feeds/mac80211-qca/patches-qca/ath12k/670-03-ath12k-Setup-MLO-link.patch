@@ -17,11 +17,9 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.c   |  30 +++-
  6 files changed, 290 insertions(+), 15 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/core.c b/drivers/net/wireless/ath/ath12k/core.c
-index 4e36369..02a9dbe 100644
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -904,6 +904,74 @@ err_wmi_detach:
+@@ -908,6 +908,74 @@ err_wmi_detach:
  	return ret;
  }
  
@@ -96,7 +94,7 @@ index 4e36369..02a9dbe 100644
  static int ath12k_core_hw_group_start(struct ath12k_hw_group *ag)
  {
  	struct ath12k_base *ab = ag->ab[0];
-@@ -940,11 +1008,17 @@ static int ath12k_core_hw_group_start(struct ath12k_hw_group *ag)
+@@ -944,11 +1012,17 @@ static int ath12k_core_hw_group_start(st
  		mutex_unlock(&ab->core_lock);
  	}
  
@@ -115,7 +113,7 @@ index 4e36369..02a9dbe 100644
  		}
  	}
  
-@@ -996,6 +1070,8 @@ pdev_cleanup:
+@@ -1000,6 +1074,8 @@ pdev_cleanup:
  	}
  
  	ath12k_mac_unregister(ag);
@@ -124,7 +122,7 @@ index 4e36369..02a9dbe 100644
  	i = ag->num_chip;
  err_pdev_destroy:
  	for (i = i - 1; i >= 0; i--) {
-@@ -1465,7 +1541,7 @@ static void ath12k_core_hw_group_stop(struct ath12k_hw_group *ag)
+@@ -1487,7 +1563,7 @@ static void ath12k_core_hw_group_stop(st
  
  	clear_bit(ATH12K_FLAG_REGISTERED, &ag->dev_flags);
  
@@ -133,7 +131,7 @@ index 4e36369..02a9dbe 100644
  		ab = ag->ab[i];
  
  		mutex_lock(&ab->core_lock);
-@@ -1477,7 +1553,9 @@ static void ath12k_core_hw_group_stop(struct ath12k_hw_group *ag)
+@@ -1499,7 +1575,9 @@ static void ath12k_core_hw_group_stop(st
  
  	ath12k_mac_unregister(ag);
  
@@ -144,21 +142,19 @@ index 4e36369..02a9dbe 100644
  		ab = ag->ab[i];
  
  		mutex_lock(&ab->core_lock);
-diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
-index 9f13aa7..1fe174e 100644
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -739,6 +739,9 @@ struct ath12k {
+@@ -768,6 +768,9 @@ struct ath12k {
  	struct wmi_tpc_stats_event *tpc_stats;
  	struct completion tpc_complete;
  	bool tpc_request;
 +
 +	struct completion mlo_setup_done;
-+	u32 mlo_setup_status;	
++	u32 mlo_setup_status;
  };
  
  struct ath12k_hw {
-@@ -870,7 +873,9 @@ struct vendor_info {
+@@ -925,7 +928,9 @@ struct vendor_info {
      u32 subsystem_device;
  };
  
@@ -169,27 +165,9 @@ index 9f13aa7..1fe174e 100644
  struct ath12k_hw_group {
  	/* Keep this always as first member */
  	struct list_head list;
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index 192c5ee..8eb13ce 100644
---- a/drivers/net/wireless/ath/ath12k/dp_rx.c
-+++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -1805,10 +1805,8 @@ static void ath12k_htt_mlo_offset_event_handler(struct ath12k_base *ab,
- 			       HTT_T2H_MLO_OFFSET_INFO_PDEV_ID);
- 	ar = ath12k_mac_get_ar_by_pdev_id(ab, pdev_id);
- 
--	if (!ar) {
--		ath12k_warn(ab, "invalid pdev id %d on htt mlo offset\n", pdev_id);
-+	if (!ar)
- 		return;
--	}
- 
- 	spin_lock_bh(&ar->data_lock);
- 	pdev = ar->pdev;
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index c387461..3b7e196 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7028,6 +7028,149 @@ static int ath12k_mac_config_mon_status_default(struct ath12k *ar, bool enable)
+@@ -7000,6 +7000,149 @@ static int ath12k_mac_config_mon_status_
  	return ret;
  }
  
@@ -339,7 +317,7 @@ index c387461..3b7e196 100644
  static int ath12k_mac_radio_start(struct ath12k *ar)
  {
  	struct ath12k_base *ab = ar->ab;
-@@ -7154,8 +7297,28 @@ err:
+@@ -7126,8 +7269,28 @@ err:
  	return ret;
  }
  
@@ -368,7 +346,7 @@ index c387461..3b7e196 100644
  	struct htt_ppdu_stats_info *ppdu_stats, *tmp;
  	int ret;
  
-@@ -7164,7 +7327,7 @@ static void ath12k_mac_radio_stop(struct ath12k *ar)
+@@ -7136,7 +7299,7 @@ static void ath12k_mac_radio_stop(struct
  	mutex_lock(&ar->conf_mutex);
  	ret = ath12k_mac_config_mon_status_default(ar, false);
  	if (ret && (ret != -ENOTSUPP))
@@ -377,7 +355,7 @@ index c387461..3b7e196 100644
  			   ret);
  
  	clear_bit(ATH12K_CAC_RUNNING, &ar->dev_flags);
-@@ -7181,7 +7344,7 @@ static void ath12k_mac_radio_stop(struct ath12k *ar)
+@@ -7153,7 +7316,7 @@ static void ath12k_mac_radio_stop(struct
  	}
  	spin_unlock_bh(&ar->data_lock);
  
@@ -386,7 +364,7 @@ index c387461..3b7e196 100644
  
  	synchronize_rcu();
  
-@@ -7225,6 +7388,7 @@ static int ath12k_mac_op_start(struct ieee80211_hw *hw)
+@@ -7197,6 +7360,7 @@ static int ath12k_mac_op_start(struct ie
  
  	mutex_unlock(&ah->conf_mutex);
  	return 0;
@@ -394,7 +372,7 @@ index c387461..3b7e196 100644
  err:
  	ar = ah->radio;
  	for (i = i - 1; i >= 0; i--) {
-@@ -7246,9 +7410,9 @@ static void ath12k_mac_op_stop(struct ieee80211_hw *hw)
+@@ -7218,9 +7382,9 @@ static void ath12k_mac_op_stop(struct ie
  
  	/* TODO Maintain state for ah? */
  
@@ -406,7 +384,7 @@ index c387461..3b7e196 100644
  	}
  
  	mutex_unlock(&ah->conf_mutex);
-@@ -9891,6 +10055,7 @@ ath12k_mac_set_fixed_rate_GI_LTF(struct ath12k_vif *arvif, u8 gi, u8 ltf)
+@@ -9869,6 +10033,7 @@ ath12k_mac_set_fixed_rate_GI_LTF(struct
  			    ltf, ret);
  		return ret;
  	}
@@ -414,7 +392,7 @@ index c387461..3b7e196 100644
  	return 0;
  }
  
-@@ -11085,7 +11250,7 @@ void ath12k_mac_unregister(struct ath12k_hw_group *ag)
+@@ -11129,7 +11294,7 @@ void ath12k_mac_unregister(struct ath12k
  	struct ath12k_hw *ah = ag->ah;
  	int i;
  
@@ -423,7 +401,7 @@ index c387461..3b7e196 100644
  		ah = ag->ah[i];
  		if (!ah)
  			continue;
-@@ -11451,6 +11616,7 @@ static int ath12k_mac_chip_setup(struct ath12k_hw *ah, u8 *link_id,
+@@ -11495,6 +11660,7 @@ static int ath12k_mac_chip_setup(struct
  	init_completion(&ar->scan.started);
  	init_completion(&ar->scan.completed);
  	init_completion(&ar->thermal.wmi_sync);
@@ -431,8 +409,6 @@ index c387461..3b7e196 100644
  
  	INIT_DELAYED_WORK(&ar->scan.timeout, ath12k_scan_timeout_work);
  	INIT_WORK(&ar->regd_update_work, ath12k_regd_update_work);
-diff --git a/drivers/net/wireless/ath/ath12k/mac.h b/drivers/net/wireless/ath/ath12k/mac.h
-index dbef1a7..20f2d2c 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.h
 +++ b/drivers/net/wireless/ath/ath12k/mac.h
 @@ -12,6 +12,7 @@
@@ -443,7 +419,7 @@ index dbef1a7..20f2d2c 100644
  struct ath12k_hw_group;
  
  struct ath12k_generic_iter {
-@@ -96,4 +97,7 @@ void ath12k_mac_get_any_chandef_iter(struct ieee80211_hw *hw,
+@@ -96,4 +97,7 @@ void ath12k_mac_get_any_chandef_iter(str
                                       void *data);
  void ath12k_mac_bcn_tx_event(struct ath12k_vif *arvif);
  struct ath12k *ath12k_get_ar_by_vif(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
@@ -451,11 +427,9 @@ index dbef1a7..20f2d2c 100644
 +int ath12k_mac_mlo_ready(struct ath12k_hw *ah);
 +int ath12k_mac_mlo_teardown(struct ath12k_hw *ah);
  #endif
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 00394e7..f7b2e98 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -718,7 +718,9 @@ static void ath12k_wmi_event_mlo_setup_complete(struct ath12k_base *ab,
+@@ -637,7 +637,9 @@ static void ath12k_wmi_event_mlo_setup_c
  {
  	const void **tb;
  	const struct wmi_mlo_setup_complete_event_fixed_param *ev;
@@ -466,7 +440,7 @@ index 00394e7..f7b2e98 100644
  
  	tb = ath12k_wmi_tlv_parse_alloc(ab, skb->data, skb->len, GFP_ATOMIC);
  	if (IS_ERR(tb)) {
-@@ -737,9 +739,31 @@ static void ath12k_wmi_event_mlo_setup_complete(struct ath12k_base *ab,
+@@ -656,9 +658,31 @@ static void ath12k_wmi_event_mlo_setup_c
  	}
  
  	if (ev->status)
@@ -491,15 +465,15 @@ index 00394e7..f7b2e98 100644
  			    ev->pdev_id, ev->status);
 +		goto out;
 +	}
- 
++
 +	ar->mlo_setup_status = ev->status;
 +	complete(&ar->mlo_setup_done);
-+
+ 
 +out:
  	kfree(tb);
  }
  
-@@ -767,7 +791,7 @@ static void ath12k_wmi_event_teardown_complete(struct ath12k_base *ab,
+@@ -686,7 +710,7 @@ static void ath12k_wmi_event_teardown_co
  	}
  
  	if (ev->status)
@@ -508,6 +482,17 @@ index 00394e7..f7b2e98 100644
  			    ev->pdev_id, ev->status);
  
  	kfree(tb);
--- 
-2.17.1
-
+--- a/drivers/net/wireless/ath/ath12k/dp_rx.c
++++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
+@@ -1894,10 +1894,8 @@ static void ath12k_htt_mlo_offset_event_
+ 
+ 	rcu_read_lock();
+ 	ar = ath12k_mac_get_ar_by_pdev_id(ab, pdev_id);
+-	if (!ar) {
+-		ath12k_warn(ab, "invalid pdev id %d on htt mlo offset\n", pdev_id);
++	if (!ar)
+ 		goto exit;
+-	}
+ 
+ 	spin_lock_bh(&ar->data_lock);
+ 	pdev = ar->pdev;

@@ -14,26 +14,16 @@ Signed-off-by: Muna Sinada <quic_msinada@quicinc.com>
  drivers/net/wireless/ath/ath12k/mac.c | 9 ++++++---
  1 file changed, 6 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 0478982..97a3483 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -5298,9 +5298,12 @@ static void ath12k_mac_copy_he_cap(struct ath12k *ar,
- 
- 	he_cap_elem->mac_cap_info[1] &=
+@@ -5292,7 +5292,9 @@ static void ath12k_mac_copy_he_cap(struc
  		IEEE80211_HE_MAC_CAP1_TF_MAC_PAD_DUR_MASK;
--
--	he_cap_elem->phy_cap_info[5] &=
--		~IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_UNDER_80MHZ_MASK;
-+	he_cap_elem->phy_cap_info[0] &=
+ 
+ 	he_cap_elem->phy_cap_info[0] &=
+-		~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G;
 +		IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G |
 +		IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G |
 +		IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G;
-+	he_cap_elem->phy_cap_info[0] &=
-+		~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G;
+ 	he_cap_elem->phy_cap_info[0] &=
+ 		~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G;
  	he_cap_elem->phy_cap_info[5] &=
- 		~IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_ABOVE_80MHZ_MASK;
- 	he_cap_elem->phy_cap_info[5] |= ar->num_tx_chains - 1;
--- 
-2.17.1
-

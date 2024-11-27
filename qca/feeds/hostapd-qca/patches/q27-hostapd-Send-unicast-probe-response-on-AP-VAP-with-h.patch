@@ -17,19 +17,14 @@ Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
  src/ap/beacon.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/src/ap/beacon.c b/src/ap/beacon.c
-index d737343517a4..342e01ec5f5a 100644
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -609,7 +609,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
+@@ -946,7 +946,7 @@ static void hostapd_gen_probe_resp(struc
  	 * the Probe Response frame template for the unsolicited (i.e., not as
  	 * a response to a specific request) case. */
- 	if (req && (!is_6ghz_op_class(hapd->iconf->op_class) ||
+ 	if (params->req && (!is_6ghz_op_class(hapd->iconf->op_class) ||
 -		    hapd->conf->ignore_broadcast_ssid))
 +		    hapd_probed->conf->ignore_broadcast_ssid))
- 		os_memcpy(resp->da, req->sa, ETH_ALEN);
+ 		os_memcpy(params->resp->da, params->req->sa, ETH_ALEN);
  	else
- 		os_memset(resp->da, 0xff, ETH_ALEN);
--- 
-2.25.1
-
+ 		os_memset(params->resp->da, 0xff, ETH_ALEN);

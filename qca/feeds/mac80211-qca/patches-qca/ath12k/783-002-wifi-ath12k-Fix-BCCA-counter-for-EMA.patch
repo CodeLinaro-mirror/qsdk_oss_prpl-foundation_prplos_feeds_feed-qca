@@ -1,4 +1,4 @@
-From 2717fe6fd7f54cb2d21074c5e88b12f962762ed2 Mon Sep 17 00:00:00 2001
+ath12k/783-002-wifi-ath12k-Fix-BCCA-counter-for-EMA.patchFrom 2717fe6fd7f54cb2d21074c5e88b12f962762ed2 Mon Sep 17 00:00:00 2001
 From: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 Date: Thu, 15 Jun 2023 12:30:15 +0530
 Subject: [PATCH] wifi: ath12k: Fix BCCA counter for EMA
@@ -30,7 +30,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  int ath12k_mac_mlo_setup(struct ath12k_hw *ah);
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -8710,7 +8710,6 @@ static void ath12k_bcn_tx_status_event(s
+@@ -8887,7 +8887,6 @@ static void ath12k_bcn_tx_status_event(s
  		rcu_read_unlock();
  		return;
  	}
@@ -38,7 +38,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	rcu_read_unlock();
  }
  
-@@ -11889,12 +11888,17 @@ ath12k_wmi_process_csa_switch_count_even
+@@ -12304,12 +12303,17 @@ ath12k_wmi_process_csa_switch_count_even
  			continue;
  
  		/* FIXME some changes are expected for ML vifs */

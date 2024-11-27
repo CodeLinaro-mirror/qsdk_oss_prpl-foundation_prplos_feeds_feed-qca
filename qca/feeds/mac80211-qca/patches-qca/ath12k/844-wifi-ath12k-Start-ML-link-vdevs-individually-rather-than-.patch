@@ -24,11 +24,9 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h  |   2 +
  5 files changed, 59 insertions(+), 206 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/core.c b/drivers/net/wireless/ath/ath12k/core.c
-index 8f33976..e6cc1db 100644
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -2381,8 +2381,8 @@ static int ath12k_mlo_recovery_link_vif_reconfig(struct ath12k *ar,
+@@ -2381,8 +2381,8 @@ static int ath12k_mlo_recovery_link_vif_
  			ath12k_info(NULL,
  				    "bss info parameter changes %llx cached to apply after vdev create on channel assign\n",
  				    changed);
@@ -38,7 +36,7 @@ index 8f33976..e6cc1db 100644
  			mutex_unlock(&ah->conf_mutex);
  			return 0;
  		}
-@@ -2534,14 +2534,6 @@ static int ath12k_mlo_core_recovery_reconfig_link_bss(struct ath12k *ar,
+@@ -2534,14 +2534,6 @@ static int ath12k_mlo_core_recovery_reco
  		goto exit;
  	}
  
@@ -53,11 +51,9 @@ index 8f33976..e6cc1db 100644
  	ret = ath12k_mac_vdev_start(arvif, &ctx->def, ctx->radar_enabled);
  	if (ret) {
  		ath12k_err(ab, "vdev start failed during recovery\n");
-diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
-index 479daf4..f9fd0a5 100644
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -481,7 +481,6 @@ struct ath12k_vif {
+@@ -445,7 +445,6 @@ struct ath12k_vif {
  	u32 aid;
  	struct ath12k_mgmt_frame_stats mgmt_stats;
  	u8 num_vdev_created;
@@ -65,11 +61,9 @@ index 479daf4..f9fd0a5 100644
  	u16 mcbc_gsn;
  	spinlock_t mcbc_gsn_lock; /* Protect mcbc_gsn */
  	struct ath12k_vif_cache cache[IEEE80211_MLD_MAX_NUM_LINKS];
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index cb684b6..a92ad38 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -4632,7 +4632,6 @@ void ath12k_mac_bss_info_changed(struct ath12k *ar,
+@@ -4616,7 +4616,6 @@ void ath12k_mac_bss_info_changed(struct
  				/* skip non tx vif's */
  				goto skip_pending_cs_up;
  			}
@@ -77,7 +71,7 @@ index cb684b6..a92ad38 100644
  			ret = ath12k_wmi_vdev_up(arvif->ar, &params);
  			if (ret)
  				ath12k_warn(ar->ab, "failed to bring vdev up %d: %d\n",
-@@ -5014,6 +5013,7 @@ static void ath12k_mac_op_bss_info_changed(struct ieee80211_hw *hw,
+@@ -4983,6 +4982,7 @@ static void ath12k_mac_op_bss_info_chang
  		mutex_unlock(&ah->conf_mutex);
  		return;
  	}
@@ -85,7 +79,7 @@ index cb684b6..a92ad38 100644
  	ar = arvif->ar;
  
  	if (!ar) {
-@@ -5979,51 +5979,6 @@ static int ath12k_mac_op_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
+@@ -5955,51 +5955,6 @@ static int ath12k_mac_op_set_key(struct
  		goto out;
  	}
  
@@ -137,14 +131,17 @@ index cb684b6..a92ad38 100644
  	if (sta) {
  		ahsta = ath12k_sta_to_ahsta(sta);
  		if (sta->mlo) {
-@@ -6050,6 +6005,45 @@ static int ath12k_mac_op_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
+@@ -6026,6 +5981,48 @@ static int ath12k_mac_op_set_key(struct
  			arsta->keys[key->keyidx] = key;
  		}
  	} else {
-+		if (key->link_id >= 0 && key->link_id < IEEE80211_MLD_MAX_NUM_LINKS)
++		if (key->link_id >= 0 && key->link_id < IEEE80211_MLD_MAX_NUM_LINKS) {
 +			arvif = ahvif->link[key->link_id];
-+		else
++			link_id = key->link_id;
++		} else {
 +			arvif = &ahvif->deflink;
++			link_id = 0;
++		}
 +
 +		if (!arvif || !arvif->is_created) {
 +			key_conf = kzalloc(sizeof(*key_conf), GFP_ATOMIC);
@@ -183,7 +180,7 @@ index cb684b6..a92ad38 100644
  		mutex_lock(&arvif->ar->conf_mutex);
  		ret = ath12k_mac_set_key(arvif->ar, cmd, arvif, arsta, key);
  		/* if sta is null, consider it has self peer */
-@@ -11580,6 +11574,13 @@ ath12k_mac_mlo_get_vdev_args(struct ath12k_link_vif *arvif,
+@@ -11568,6 +11565,13 @@ ath12k_mac_mlo_get_vdev_args(struct ath1
  	rcu_read_lock();
  
  	ml_arg->enabled = true;
@@ -197,7 +194,7 @@ index cb684b6..a92ad38 100644
  	/* TODO check assoc and mcast vdev for AP mode */
  
  	links_map = ahvif->links_map;
-@@ -11961,142 +11962,6 @@ beacon_tmpl_setup:
+@@ -11949,142 +11953,6 @@ beacon_tmpl_setup:
  	return ret;
  }
  
@@ -340,7 +337,7 @@ index cb684b6..a92ad38 100644
  struct ath12k_mac_change_chanctx_arg {
  	struct ieee80211_chanctx_conf *ctx;
  	struct ieee80211_vif_chanctx_switch *vifs;
-@@ -13456,13 +13321,6 @@ ath12k_mac_op_assign_vif_chanctx(struct ieee80211_hw *hw,
+@@ -13444,13 +13312,6 @@ ath12k_mac_op_assign_vif_chanctx(struct
  	}
  
  	memcpy(&arvif->chanctx, ctx, sizeof(*ctx));
@@ -354,7 +351,7 @@ index cb684b6..a92ad38 100644
  
  	ret = ath12k_mac_vdev_start(arvif, &ctx->def, ctx->radar_enabled);
  	if (ret) {
-@@ -13648,12 +13506,6 @@ stop_primary:
+@@ -13636,12 +13497,6 @@ stop_primary:
  
  	arvif->is_started = false;
  
@@ -367,11 +364,9 @@ index cb684b6..a92ad38 100644
  	peer = ath12k_peer_find_by_vdev_id(ab, arvif->vdev_id);
  	if (ahvif->vdev_type == WMI_VDEV_TYPE_STA && peer) {
  		struct ieee80211_sta *sta;
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index e923b7a..65d483a 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -1745,7 +1745,12 @@ int ath12k_wmi_vdev_start(struct ath12k *ar, struct wmi_vdev_start_req_arg *arg,
+@@ -1745,7 +1745,12 @@ int ath12k_wmi_vdev_start(struct ath12k
  			   FIELD_PREP(ATH12K_WMI_FLAG_MLO_ASSOC_LINK,
  				      arg->ml.assoc_link) |
  			   FIELD_PREP(ATH12K_WMI_FLAG_MLO_MCAST_VDEV,
@@ -385,7 +380,7 @@ index e923b7a..65d483a 100644
  
  	ptr += sizeof(*ml_params);
  
-@@ -1765,6 +1770,9 @@ int ath12k_wmi_vdev_start(struct ath12k *ar, struct wmi_vdev_start_req_arg *arg,
+@@ -1765,6 +1770,9 @@ int ath12k_wmi_vdev_start(struct ath12k
  		partner_info->hw_link_id = arg->ml.partner_info[i].hw_link_id;
  		ether_addr_copy(partner_info->vdev_addr.addr, arg->ml.partner_info[i].addr);
  
@@ -395,11 +390,9 @@ index e923b7a..65d483a 100644
  		partner_info++;
  	}
  
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index 9f4e2ea..0c9c664 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -3250,6 +3250,7 @@ struct wmi_vdev_create_mlo_params {
+@@ -3249,6 +3249,7 @@ struct wmi_vdev_create_mlo_params {
  #define ATH12K_WMI_FLAG_MLO_MCAST_VDEV			BIT(5)
  #define ATH12K_WMI_FLAG_MLO_EMLSR_SUPPORT		BIT(6)
  #define ATH12K_WMI_FLAG_MLO_FORCED_INACTIVE		BIT(7)
@@ -407,7 +400,7 @@ index 9f4e2ea..0c9c664 100644
  
  struct wmi_vdev_start_mlo_params {
  	u32 tlv_header;
-@@ -3534,6 +3535,7 @@ struct wmi_ml_arg {
+@@ -3452,6 +3453,7 @@ struct wmi_ml_arg {
  	bool enabled;
  	bool assoc_link;
  	bool mcast_link;
@@ -415,6 +408,3 @@ index 9f4e2ea..0c9c664 100644
  	u8 num_partner_links;
  	struct wmi_ml_partner_info partner_info[ATH12K_WMI_MLO_MAX_LINKS];
  };
--- 
-2.17.1
-

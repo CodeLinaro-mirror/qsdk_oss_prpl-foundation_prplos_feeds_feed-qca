@@ -172,22 +172,5 @@ index 8d3f9fa..e7e8490 100644
  
  	ab_pci->register_window = 0;
  	clear_bit(ATH11K_FLAG_DEVICE_INIT_DONE, &ab->dev_flags);
-diff --git a/drivers/net/wireless/ath/ath11k/qmi.c b/drivers/net/wireless/ath/ath11k/qmi.c
-index 1765008..43ad458 100644
---- a/drivers/net/wireless/ath/ath11k/qmi.c
-+++ b/drivers/net/wireless/ath/ath11k/qmi.c
-@@ -2935,11 +2935,6 @@ static int ath11k_qmi_assign_target_mem_chunk(struct ath11k_base *ab)
- 			idx++;
- 			break;
- 		case CALDB_MEM_REGION_TYPE:
--			if (ab->qmi.target_mem[i].size > ATH11K_QMI_CALDB_SIZE) {
--				ath11k_warn(ab, "qmi mem size is low to load caldata\n");
--				return -EINVAL;
--			}
--
- 			if (ath11k_cold_boot_cal && ab->hw_params.cold_boot_calib &&
- 			    ab->enable_cold_boot_cal) {
- 				if (hremote_node) {
--- 
 2.17.1
 

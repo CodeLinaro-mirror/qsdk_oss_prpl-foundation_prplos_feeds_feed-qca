@@ -17,20 +17,18 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/drivers/driver_nl80211_scan.c | 16 +++++++------
  2 files changed, 29 insertions(+), 27 deletions(-)
 
-diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
-index f53c6f547c65..cb161efa5214 100644
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -1824,7 +1824,7 @@ static int nl80211_channel_info(void *priv, struct wpa_channel_info *ci)
+@@ -1860,7 +1860,7 @@ static int nl80211_channel_info(void *pr
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	struct nl_msg *msg;
  
 -	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_GET_INTERFACE);
 +	msg = nl80211_bss_msg(bss, 0, NL80211_CMD_GET_INTERFACE);
- 	return send_and_recv_msgs(drv, msg, get_channel_info, ci, NULL, NULL);
+ 	return send_and_recv_resp(drv, msg, get_channel_info, ci);
  }
  
-@@ -4452,7 +4452,7 @@ static int wpa_driver_nl80211_set_acl(void *priv,
+@@ -4525,7 +4525,7 @@ static int wpa_driver_nl80211_set_acl(vo
  		nla_total_size(acl_nla_sz);
  	nlmsg_sz = nlmsg_total_size(nla_sz);
  	if (!(msg = nl80211_ifindex_msg_build(drv, nlmsg_alloc_size(nlmsg_sz),
@@ -39,7 +37,7 @@ index f53c6f547c65..cb161efa5214 100644
  					      NL80211_CMD_SET_MAC_ACL)) ||
  	    nla_put_u32(msg, NL80211_ATTR_ACL_POLICY, params->acl_policy ?
  			NL80211_ACL_POLICY_DENY_UNLESS_LISTED :
-@@ -7390,16 +7390,16 @@ fail:
+@@ -7501,16 +7501,16 @@ fail:
  }
  
  
@@ -60,7 +58,7 @@ index f53c6f547c65..cb161efa5214 100644
  	if (!msg || nla_put_u32(msg, NL80211_ATTR_IFTYPE, mode))
  		goto fail;
  
-@@ -7430,7 +7430,7 @@ static int wpa_driver_nl80211_set_mode_impl(
+@@ -7541,7 +7541,7 @@ static int wpa_driver_nl80211_set_mode_i
  	if (TEST_FAIL())
  		return -1;
  
@@ -69,7 +67,7 @@ index f53c6f547c65..cb161efa5214 100644
  	if (mode_switch_res && nlmode == nl80211_get_ifmode(bss))
  		mode_switch_res = 0;
  
-@@ -7494,7 +7494,7 @@ static int wpa_driver_nl80211_set_mode_impl(
+@@ -7605,7 +7605,7 @@ static int wpa_driver_nl80211_set_mode_i
  		}
  
  		/* Try to set the mode again while the interface is down */
@@ -78,7 +76,7 @@ index f53c6f547c65..cb161efa5214 100644
  		if (mode_switch_res == -EBUSY) {
  			wpa_printf(MSG_DEBUG,
  				   "nl80211: Delaying mode set while interface going down");
-@@ -7758,7 +7758,7 @@ static int i802_set_rts(void *priv, int rts)
+@@ -7869,7 +7869,7 @@ static int i802_set_rts(void *priv, int
  	else
  		val = rts;
  
@@ -87,7 +85,7 @@ index f53c6f547c65..cb161efa5214 100644
  	    nla_put_u32(msg, NL80211_ATTR_WIPHY_RTS_THRESHOLD, val)) {
  		nlmsg_free(msg);
  		return -ENOBUFS;
-@@ -7786,7 +7786,7 @@ static int i802_set_frag(void *priv, int frag)
+@@ -7897,7 +7897,7 @@ static int i802_set_frag(void *priv, int
  	else
  		val = frag;
  
@@ -96,7 +94,7 @@ index f53c6f547c65..cb161efa5214 100644
  	    nla_put_u32(msg, NL80211_ATTR_WIPHY_FRAG_THRESHOLD, val)) {
  		nlmsg_free(msg);
  		return -ENOBUFS;
-@@ -10345,7 +10345,7 @@ static int wpa_driver_nl80211_get_survey(void *priv, unsigned int freq,
+@@ -10520,7 +10520,7 @@ static int wpa_driver_nl80211_get_survey
  	arg.acs_exclude_6ghz_non_psc = acs_exclude_6ghz_non_psc;
  
  	dl_list_init(&arg.survey_results->survey_list);
@@ -105,7 +103,7 @@ index f53c6f547c65..cb161efa5214 100644
  	if (!msg)
  		return -ENOBUFS;
  
-@@ -10543,7 +10543,7 @@ static int nl80211_start_radar_detection(void *priv,
+@@ -10719,7 +10719,7 @@ static int nl80211_start_radar_detection
  		return -1;
  	}
  
@@ -114,16 +112,16 @@ index f53c6f547c65..cb161efa5214 100644
  	    nl80211_put_freq_params(msg, freq) < 0) {
  		nlmsg_free(msg);
  		return -1;
-@@ -11667,7 +11667,7 @@ static int nl80211_set_qos_map(void *priv, const u8 *qos_map_set,
+@@ -11965,7 +11965,7 @@ static int nl80211_set_qos_map(void *pri
  	wpa_hexdump(MSG_DEBUG, "nl80211: Setting QoS Map",
  		    qos_map_set, qos_map_set_len);
  
--	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_SET_QOS_MAP)) ||
+-	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_SET_QOS_MAP)) ||
 +	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_QOS_MAP)) ||
  	    nla_put(msg, NL80211_ATTR_QOS_MAP, qos_map_set_len, qos_map_set)) {
  		nlmsg_free(msg);
  		return -ENOBUFS;
-@@ -11899,7 +11899,7 @@ static int nl80211_add_sta_node(void *priv, const u8 *addr, u16 auth_alg)
+@@ -12196,7 +12196,7 @@ static int nl80211_add_sta_node(void *pr
  
  	wpa_printf(MSG_DEBUG, "nl80211: Add STA node");
  
@@ -132,7 +130,7 @@ index f53c6f547c65..cb161efa5214 100644
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
  			QCA_NL80211_VENDOR_SUBCMD_ADD_STA_NODE) ||
-@@ -12632,7 +12632,7 @@ static int nl80211_set_band(void *priv, u32 band_mask)
+@@ -12933,7 +12933,7 @@ static int nl80211_set_band(void *priv,
  		   "nl80211: QCA_BAND_MASK = 0x%x, QCA_BAND_VALUE = %d",
  		   qca_band_mask, qca_band_value);
  
@@ -141,7 +139,7 @@ index f53c6f547c65..cb161efa5214 100644
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
  			QCA_NL80211_VENDOR_SUBCMD_SETBAND) ||
-@@ -13388,11 +13388,11 @@ static int nl80211_set_secure_ranging_ctx(void *priv,
+@@ -13688,11 +13688,11 @@ static int nl80211_set_secure_ranging_ct
  	if (!params->peer_addr || !params->own_addr)
  		return -1;
  
@@ -155,7 +153,7 @@ index f53c6f547c65..cb161efa5214 100644
  	if (!msg ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-@@ -13785,10 +13785,10 @@ static int nl80211_send_external_auth_status(void *priv,
+@@ -14085,10 +14085,10 @@ static int nl80211_send_external_auth_st
  	    (drv->capa.flags & WPA_DRIVER_FLAGS_SME))
  		return -1;
  
@@ -168,7 +166,7 @@ index f53c6f547c65..cb161efa5214 100644
  	if (!msg ||
  	    nla_put_u16(msg, NL80211_ATTR_STATUS_CODE, params->status) ||
  	    (params->ssid && params->ssid_len &&
-@@ -14184,7 +14184,7 @@ static int nl80211_set_scs(void *priv, struct scs_latency_params *scs_drv)
+@@ -14492,7 +14492,7 @@ static int nl80211_set_scs(void *priv, s
  	struct nlattr *params;
  	int ret;
  
@@ -177,11 +175,9 @@ index f53c6f547c65..cb161efa5214 100644
  	if (!msg)
  		return -EINVAL;
  
-diff --git a/src/drivers/driver_nl80211_scan.c b/src/drivers/driver_nl80211_scan.c
-index 6ce93249b10b..1db9dccb2849 100644
 --- a/src/drivers/driver_nl80211_scan.c
 +++ b/src/drivers/driver_nl80211_scan.c
-@@ -75,13 +75,14 @@ static int get_noise_for_scan_results(struct nl_msg *msg, void *arg)
+@@ -75,13 +75,14 @@ static int get_noise_for_scan_results(st
  }
  
  
@@ -196,21 +192,21 @@ index 6ce93249b10b..1db9dccb2849 100644
  	os_memset(info, 0, sizeof(*info));
 -	msg = nl80211_drv_msg(drv, NLM_F_DUMP, NL80211_CMD_GET_SURVEY);
 +	msg = nl80211_bss_msg(bss, NLM_F_DUMP, NL80211_CMD_GET_SURVEY);
- 	return send_and_recv_msgs(drv, msg, get_noise_for_scan_results, info,
- 				  NULL, NULL);
+ 	return send_and_recv_resp(drv, msg, get_noise_for_scan_results, info);
  }
-@@ -997,8 +998,9 @@ static void nl80211_update_scan_res_noise(struct wpa_scan_res *res,
+ 
+@@ -1028,8 +1029,9 @@ static void nl80211_update_scan_res_nois
  
  
  static struct wpa_scan_results *
--nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
-+nl80211_get_scan_results(struct i802_bss *bss)
+-nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv, const u8 *bssid)
++nl80211_get_scan_results(struct i802_bss *bss, const u8 *bssid)
  {
 +	struct wpa_driver_nl80211_data *drv = bss->drv;
  	struct nl_msg *msg;
  	struct wpa_scan_results *res;
  	int ret;
-@@ -1009,7 +1011,7 @@ try_again:
+@@ -1040,7 +1042,7 @@ try_again:
  	res = os_zalloc(sizeof(*res));
  	if (res == NULL)
  		return NULL;
@@ -219,7 +215,7 @@ index 6ce93249b10b..1db9dccb2849 100644
  				    NL80211_CMD_GET_SCAN))) {
  		wpa_scan_results_free(res);
  		return NULL;
-@@ -1035,7 +1037,7 @@ try_again:
+@@ -1067,7 +1069,7 @@ try_again:
  
  		wpa_printf(MSG_DEBUG, "nl80211: Received scan results (%lu "
  			   "BSSes)", (unsigned long) res->num);
@@ -228,15 +224,12 @@ index 6ce93249b10b..1db9dccb2849 100644
  			size_t i;
  
  			for (i = 0; i < res->num; ++i)
-@@ -1062,7 +1064,7 @@ struct wpa_scan_results * wpa_driver_nl80211_get_scan_results(void *priv)
+@@ -1096,7 +1098,7 @@ struct wpa_scan_results * wpa_driver_nl8
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	struct wpa_scan_results *res;
  
--	res = nl80211_get_scan_results(drv);
-+	res = nl80211_get_scan_results(bss);
+-	res = nl80211_get_scan_results(drv, bssid);
++	res = nl80211_get_scan_results(bss, bssid);
  	if (res)
  		wpa_driver_nl80211_check_bss_status(drv, res);
  	return res;
--- 
-2.17.1
-

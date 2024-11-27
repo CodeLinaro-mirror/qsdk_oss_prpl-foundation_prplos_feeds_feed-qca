@@ -14,20 +14,18 @@ secondary_channel in 5 GHz and 2 GHz bands.
 Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 ---
-diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index 9a07f75..e1ab09c 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -225,6 +225,8 @@ u8 * hostapd_eid_eht_operation(struct hostapd_data *hapd, u8 *eid)
- 		chwidth = conf->eht_oper_chwidth;
+@@ -246,6 +246,8 @@ u8 * hostapd_eid_eht_operation(struct ho
  
+ 	oper->oper_params |= EHT_OPER_INFO_PRESENT;
  	seg0 = hostapd_get_oper_centr_freq_seg0_idx(conf);
 +	if (!seg0)
 +		seg0 = hapd->iconf->channel;
  
  	switch (chwidth) {
  	case CONF_OPER_CHWIDTH_320MHZ:
-@@ -247,14 +249,20 @@ u8 * hostapd_eid_eht_operation(struct hostapd_data *hapd, u8 *eid)
+@@ -268,14 +270,20 @@ u8 * hostapd_eid_eht_operation(struct ho
  		oper->oper_info.control |= EHT_OPER_CHANNEL_WIDTH_80MHZ;
  		break;
  	case CONF_OPER_CHWIDTH_USE_HT:
@@ -50,4 +48,4 @@ index 9a07f75..e1ab09c 100644
 +	oper->oper_info.ccfs0 = seg0;
  	oper->oper_info.ccfs1 = seg1;
  
- 	if (hapd->iconf->punct_bitmap) {
+ 	if (punct_bitmap) {

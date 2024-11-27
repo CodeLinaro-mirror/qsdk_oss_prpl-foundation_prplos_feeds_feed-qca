@@ -1,7 +1,7 @@
 From 234aa775f8046dc823a0ce72267f62045d81ee08 Mon Sep 17 00:00:00 2001
 From: Harshitha Prem <quic_hprem@quicinc.com>
 Date: Wed, 6 Jul 2022 17:03:52 +0530
-Subject: [PATCH] hostapd: Add config to truncate ext capabilities
+Subject: [PATCH][QSDK] hostapd: Add config to truncate ext capabilities
 
 Certain legacy clients are not able to scan 11ax vaps due to
 extended capabilities which are more than 8bytes in length.
@@ -17,11 +17,9 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  src/ap/ieee802_11_shared.c | 3 +++
  3 files changed, 6 insertions(+)
 
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index ea44ce0..a6334b1 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -2371,6 +2371,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -2519,6 +2519,8 @@ static int hostapd_config_fill(struct ho
  		conf->country[2] = strtol(pos, NULL, 16);
  	} else if (os_strcmp(buf, "ieee80211d") == 0) {
  		conf->ieee80211d = atoi(pos);
@@ -29,12 +27,10 @@ index ea44ce0..a6334b1 100644
 +		 conf->ext_cap_len = atoi(pos);
  	} else if (os_strcmp(buf, "ieee80211h") == 0) {
  		conf->ieee80211h = atoi(pos);
-         } else if (os_strcmp(buf, "dfs_test_mode") == 0) {
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index 1f083c4..4e7108a 100644
+ 	 } else if (os_strcmp(buf, "dfs_test_mode") == 0) {
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1104,6 +1104,7 @@ struct hostapd_config {
+@@ -1136,6 +1136,7 @@ struct hostapd_config {
  	/* Use driver-generated interface addresses when adding multiple BSSs */
  	u8 use_driver_iface_addr;
  	u8 skip_unii1_dfs_switch;
@@ -42,11 +38,9 @@ index 1f083c4..4e7108a 100644
  
  #ifdef CONFIG_FST
  	struct fst_iface_cfg fst_cfg;
-diff --git a/src/ap/ieee802_11_shared.c b/src/ap/ieee802_11_shared.c
-index 8d6b89d..ff68256 100644
 --- a/src/ap/ieee802_11_shared.c
 +++ b/src/ap/ieee802_11_shared.c
-@@ -465,6 +465,9 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid,
+@@ -489,6 +489,9 @@ u8 * hostapd_eid_ext_capab(struct hostap
  	if (len < hapd->iface->extended_capa_len)
  		len = hapd->iface->extended_capa_len;
  

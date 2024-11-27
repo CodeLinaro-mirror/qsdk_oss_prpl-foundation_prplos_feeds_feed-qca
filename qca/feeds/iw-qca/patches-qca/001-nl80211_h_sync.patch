@@ -1,0 +1,51 @@
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -2856,6 +2856,9 @@ enum nl80211_commands {
+  *	%NL80211_CMD_ASSOCIATE indicating the SPP A-MSDUs
+  *	are used on this connection
+  *
++ * @NL80211_ATTR_WIPHY_ANTENNA_GAIN: Configured antenna gain. Used to reduce
++ *	transmit power to stay within regulatory limits. u32, dBi.
++ *
+  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
+  * @NL80211_ATTR_MAX: highest attribute number currently defined
+  * @__NL80211_ATTR_AFTER_LAST: internal use
+@@ -3401,6 +3404,8 @@ enum nl80211_attrs {
+ 
+ 	NL80211_ATTR_ASSOC_SPP_AMSDU,
+ 
++	NL80211_ATTR_WIPHY_ANTENNA_GAIN,
++
+ 	/* add attributes here, update the policy in nl80211.c */
+ 
+ 	__NL80211_ATTR_AFTER_LAST,
+--- a/scan.c
++++ b/scan.c
+@@ -1821,7 +1821,6 @@ static void print_ie(const struct ie_pri
+ static const struct ie_print ieprinters[] = {
+ 	[0] = { "SSID", print_ssid, 0, 32,
+ 		 BIT(PRINT_SCAN) | BIT(PRINT_LINK) | BIT(PRINT_LINK_MLO_MLD), },
+-	[11] = { "BSS Load", print_bss_load, 5, 5, BIT(PRINT_SCAN), },
+ 	[45] = { "HT capabilities", print_ht_capa, 26, 26, BIT(PRINT_SCAN), },
+ 	[48] = { "RSN", print_rsn, 2, 255, BIT(PRINT_SCAN), },
+ 	[61] = { "HT operation", print_ht_op, 22, 22, BIT(PRINT_SCAN), },
+@@ -1835,6 +1834,7 @@ static const struct ie_print ieprinters[
+ 	[5] = { "TIM", print_tim, 4, 255, BIT(PRINT_SCAN), },
+ 	[6] = { "IBSS ATIM window", print_ibssatim, 2, 2, BIT(PRINT_SCAN), },
+ 	[7] = { "Country", print_country, 3, 255, BIT(PRINT_SCAN), },
++	[11] = { "BSS Load", print_bss_load, 5, 5, BIT(PRINT_SCAN), },
+ 	[32] = { "Power constraint", print_powerconstraint, 1, 1, BIT(PRINT_SCAN), },
+ 	[35] = { "TPC report", print_tpcreport, 2, 2, BIT(PRINT_SCAN), },
+ 	[42] = { "ERP", print_erp, 1, 255, BIT(PRINT_SCAN), },
+@@ -1851,10 +1851,10 @@ static const struct ie_print ieprinters[
+ 	[108] = { "802.11u Advertisement", print_11u_advert, 0, 255, BIT(PRINT_SCAN), },
+ 	[111] = { "802.11u Roaming Consortium", print_11u_rcon, 2, 255, BIT(PRINT_SCAN), },
+ 	[195] = { "Transmit Power Envelope", print_tx_power_envelope, 2, 5, BIT(PRINT_SCAN), },
++#endif
+ 	[214] = { "Short beacon interval", print_short_beacon_int, 2, 2, BIT(PRINT_SCAN), },
+ 	[217] = { "S1G capabilities", print_s1g_capa, 15, 15, BIT(PRINT_SCAN), },
+ 	[232] = { "S1G operation", print_s1g_oper, 6, 6, BIT(PRINT_SCAN), },
+-#endif
+ };
+ 
+ static void print_wifi_wpa(const uint8_t type, uint8_t len, const uint8_t *data,

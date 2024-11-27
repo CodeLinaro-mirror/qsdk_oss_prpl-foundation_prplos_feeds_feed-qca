@@ -19,11 +19,9 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  net/mac80211/cfg.c | 35 +++++++++++++++++++++++++++--------
  1 file changed, 27 insertions(+), 8 deletions(-)
 
-diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
-index c22dacb..280d2b1 100644
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -4184,17 +4184,13 @@ static int ieee80211_probe_client(struct wiphy *wiphy, struct net_device *dev,
+@@ -4296,6 +4296,8 @@ static int ieee80211_probe_client(struct
  	struct ieee80211_chanctx_conf *chanctx_conf;
  	enum nl80211_band band;
  	int ret;
@@ -32,21 +30,11 @@ index c22dacb..280d2b1 100644
  
  	/* the lock is needed to assign the cookie later */
  	mutex_lock(&local->mtx);
+@@ -4309,11 +4311,25 @@ static int ieee80211_probe_client(struct
  
- 	rcu_read_lock();
+ 	qos = sta->sta.wme;
+ 
 -	chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
--	if (WARN_ON(!chanctx_conf)) {
--		ret = -EINVAL;
--		goto unlock;
--	}
--	band = chanctx_conf->def.chan->band;
- 	sta = sta_info_get_bss(sdata, peer);
- 	if (sta) {
- 		qos = sta->sta.wme;
-@@ -4203,6 +4199,27 @@ static int ieee80211_probe_client(struct wiphy *wiphy, struct net_device *dev,
- 		goto unlock;
- 	}
- 
 +	/* In case of ML vif, we shall use the default sta link to
 +	 * send the probe frame. For non ML vif the link id 0 is
 +	 * the deflink
@@ -61,17 +49,15 @@ index c22dacb..280d2b1 100644
 +	}
 +
 +	chanctx_conf = rcu_dereference(conf->chanctx_conf);
-+	if (WARN_ON(!chanctx_conf)) {
-+		ret = -EINVAL;
-+		goto unlock;
-+	}
+ 	if (WARN_ON(!chanctx_conf)) {
+ 		ret = -EINVAL;
+ 		goto unlock;
+ 	}
 +
-+	band = chanctx_conf->def.chan->band;
-+
+ 	band = chanctx_conf->def.chan->band;
+ 
  	if (qos) {
- 		fc = cpu_to_le16(IEEE80211_FTYPE_DATA |
- 				 IEEE80211_STYPE_QOS_NULLFUNC |
-@@ -4228,8 +4245,8 @@ static int ieee80211_probe_client(struct wiphy *wiphy, struct net_device *dev,
+@@ -4341,8 +4357,8 @@ static int ieee80211_probe_client(struct
  	nullfunc->frame_control = fc;
  	nullfunc->duration_id = 0;
  	memcpy(nullfunc->addr1, sta->sta.addr, ETH_ALEN);
@@ -82,7 +68,7 @@ index c22dacb..280d2b1 100644
  	nullfunc->seq_ctrl = 0;
  
  	info = IEEE80211_SKB_CB(skb);
-@@ -4238,6 +4255,8 @@ static int ieee80211_probe_client(struct wiphy *wiphy, struct net_device *dev,
+@@ -4351,6 +4367,8 @@ static int ieee80211_probe_client(struct
  		       IEEE80211_TX_INTFL_NL80211_FRAME_TX;
  	info->band = band;
  
@@ -91,6 +77,3 @@ index c22dacb..280d2b1 100644
  	skb_set_queue_mapping(skb, IEEE80211_AC_VO);
  	skb->priority = 7;
  	if (qos)
--- 
-2.17.1
-

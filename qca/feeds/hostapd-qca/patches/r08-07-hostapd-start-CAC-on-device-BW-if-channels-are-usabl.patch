@@ -19,7 +19,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -21,6 +21,7 @@
+@@ -22,6 +22,7 @@
  #include "beacon.h"
  #include "eloop.h"
  #include "ieee802_11.h"
@@ -27,7 +27,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  #define IEEE80211_DFS_MIN_CAC_TIME_MS  60000
  
-@@ -1883,31 +1884,133 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1895,31 +1896,132 @@ int hostapd_dfs_radar_detected(struct ho
  			oper_centr_freq_seg0_idx, oper_centr_freq_seg1_idx);
  	}
  
@@ -39,7 +39,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 -
  	/* Switch channel with random channel selection for invalid puncturing pattern */
  	iface->radar_bit_pattern = 0;
- 	iface->conf->ru_punct_bitmap = 0;
+ 	iface->conf->punct_bitmap = 0;
  
 -	if (hostapd_dfs_background_start_channel_switch(iface, freq) && radar_bitmap_oper) {
 -		if (!iface->conf->disable_csa_dfs) {
@@ -50,24 +50,21 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  			return hostapd_dfs_start_channel_switch(iface);
 -		} else if (!eloop_is_timeout_registered(hostapd_dfs_radar_handling_timeout,
 -			   iface, NULL)) {
--			eloop_register_timeout(0, HAPD_DFS_RADAR_CH_SWITCH_WAIT_DUR,
--					       hostapd_dfs_radar_handling_timeout,
--					       iface, NULL);
- 		}
--	}
- 
++		}
++
 +		if (radar_bitmap_oper) {
 +			if (!iface->conf->disable_csa_dfs) {
 +				/* Radar detected while operating, switch the channel. */
 +				return hostapd_dfs_start_channel_switch(iface);
 +			} else if (!eloop_is_timeout_registered(hostapd_dfs_radar_handling_timeout,
 +				   iface, NULL)) {
-+				eloop_register_timeout(0, HAPD_DFS_RADAR_CH_SWITCH_WAIT_DUR,
-+						       hostapd_dfs_radar_handling_timeout, iface,
-+						       NULL);
+ 			eloop_register_timeout(0, HAPD_DFS_RADAR_CH_SWITCH_WAIT_DUR,
+ 					       hostapd_dfs_radar_handling_timeout,
+ 					       iface, NULL);
 +			}
-+		}
-+	}
+ 		}
+ 	}
+-
  	return 0;
  }
  
@@ -80,7 +77,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +	u8 seg0;
 +
 +	if (!iface->conf->ieee80211be ||
-+	    !(iface->drv_flags2 & WPA_DRIVER_RADAR_BACKGROUND) ||
++	    !(iface->drv_flags2 & WPA_DRIVER_FLAGS2_RADAR_BACKGROUND) ||
 +	    iface->radar_background.cac_started)
 +		return;
 +
@@ -136,10 +133,10 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +
 +	for (i = 0; i < n_chans; i++) {
 +		chan = &mode->channels[start_chan_idx + i];
-+
++ 
 +		if (!(chan->flag & HOSTAPD_CHAN_RADAR))
 +			continue;
-+
++ 
 +		if ((chan->flag & HOSTAPD_CHAN_DFS_MASK) == HOSTAPD_CHAN_DFS_AVAILABLE)
 +			continue;
 +		else if ((chan->flag & HOSTAPD_CHAN_DFS_MASK) == HOSTAPD_CHAN_DFS_USABLE)
@@ -159,8 +156,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +			      hostapd_get_oper_chwidth(iface->conf),
 +			      hostapd_get_oper_centr_freq_seg0_idx(iface->conf),
 +			      hostapd_get_oper_centr_freq_seg1_idx(iface->conf),
-+			      true, iface->conf->ru_punct_bitmap,
-+			      iface->conf->ru_punct_ofdma,
++			      true,
 +			      iface->conf->bandwidth_device,
 +			      iface->conf->center_freq_device);
 +
@@ -176,10 +172,14 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
  			     int ht_enabled, int chan_offset, int chan_width,
-@@ -1943,6 +2046,8 @@ int hostapd_dfs_nop_finished(struct host
- 		   iface->radar_background.channel == -1) {
+@@ -1952,9 +2054,11 @@ int hostapd_dfs_nop_finished(struct host
+ 		/* Handle cases where all channels were initially unavailable */
+ 		hostapd_handle_dfs(iface);
+ 	} else if (dfs_use_radar_background(iface) &&
+-		   iface->radar_background.channel == -1) {
++			iface->radar_background.channel == -1) {
  		/* Reset radar background chain if disabled */
- 		hostpad_dfs_update_background_chain(iface);
+ 		hostapd_dfs_update_background_chain(iface);
 +	} else {
 +		hostapd_start_device_cac_background(iface);
  	}
@@ -195,7 +195,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #endif /* DFS_H */
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -1102,6 +1102,7 @@ void hostapd_event_ch_switch(struct host
+@@ -1334,6 +1334,7 @@ void hostapd_event_ch_switch(struct host
  	    freq == hapd->cs_freq_params.freq) {
  		hostapd_cleanup_cs_params(hapd);
  		ieee802_11_set_beacon(hapd);

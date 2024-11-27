@@ -19,7 +19,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -4397,6 +4397,7 @@ int ath12k_dp_rx_process_err(struct ath1
+@@ -4373,6 +4373,7 @@ int ath12k_dp_rx_process_err(struct ath1
  {
  	u32 msdu_cookies[HAL_NUM_RX_MSDUS_PER_LINK_DESC];
  	struct dp_link_desc_bank *link_desc_banks;
@@ -27,7 +27,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	enum hal_rx_buf_return_buf_manager rbm;
  	struct hal_rx_msdu_link *link_desc_va;
  	int tot_n_bufs_reaped, quota, ret, i;
-@@ -4408,7 +4409,7 @@ int ath12k_dp_rx_process_err(struct ath1
+@@ -4384,7 +4385,7 @@ int ath12k_dp_rx_process_err(struct ath1
  	struct ath12k_dp *dp;
  	struct ath12k *ar = NULL;
  	dma_addr_t paddr;
@@ -36,7 +36,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	char buf[64] = {0};
  	u8 hw_link_id;
  
-@@ -4417,7 +4418,6 @@ int ath12k_dp_rx_process_err(struct ath1
+@@ -4393,7 +4394,6 @@ int ath12k_dp_rx_process_err(struct ath1
  
  	dp = &ab->dp;
  	reo_except = &dp->reo_except_ring;
@@ -44,7 +44,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  	srng = &ab->hal.srng_list[reo_except->ring_id];
  
-@@ -4445,38 +4445,41 @@ int ath12k_dp_rx_process_err(struct ath1
+@@ -4421,38 +4421,41 @@ int ath12k_dp_rx_process_err(struct ath1
                          ar = rcu_dereference(ab->ag->hw_links[hw_link_id]);
  		else
  			ar = NULL;
@@ -93,7 +93,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  						      HAL_WBM_REL_BM_ACT_REL_MSDU);
  			continue;
  		}
-@@ -4486,18 +4489,22 @@ int ath12k_dp_rx_process_err(struct ath1
+@@ -4462,17 +4465,22 @@ int ath12k_dp_rx_process_err(struct ath1
  
  		/* Process only rx fragments with one msdu per link desc below, and drop
  		 * msdu's indicated due to error reasons.
@@ -114,14 +114,13 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 +			ar->wmm_stats.total_wmm_rx_drop[ar->wmm_stats.rx_type] += num_msdus;
  		}
  
-  		for (i = 0; i < num_msdus; i++) {
+ 		for (i = 0; i < num_msdus; i++) {
 -			if (drop)
 -				ar->wmm_stats.total_wmm_rx_drop[ar->wmm_stats.rx_type]++;
--
+ 
  			if (!ath12k_dp_process_rx_err_buf(ar, reo_desc, drop,
  							  msdu_cookies[i]))
- 				tot_n_bufs_reaped++;
-@@ -4516,6 +4523,7 @@ exit:
+@@ -4492,6 +4500,7 @@ exit:
  
  	spin_unlock_bh(&srng->lock);
  

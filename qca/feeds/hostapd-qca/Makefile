@@ -5,29 +5,26 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hostapd-qca
-PKG_RELEASE:=7
+PKG_RELEASE:=2
 
-PKG_SOURCE_URL:=http://w1.fi/hostap.git
+PKG_SOURCE_URL:=https://w1.fi/hostap.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2023-06-22
-PKG_SOURCE_VERSION:=599d00be9de2846c6ea18c1487d8329522ade22b
-PKG_MIRROR_HASH:=c05a31e0b7481544f99ea494676a43497403a918aeeb4121b9c7fc488f7df2b6
-
+PKG_SOURCE_DATE:=2024-06-05
+PKG_SOURCE_VERSION:=1b96745f1de8806e2c500ad781aa09b88fdae7b9
+PKG_MIRROR_HASH:=d5ff4046dc8000a1c38e6920bf60a610b621ebb094525d3a076a8bd6c0792d54
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-3-Clause
 PKG_CPE_ID:=cpe:/a:w1.fi:hostapd
+PKG_SOURCE_SUBMODULES:=skip
 
 PKG_BUILD_PARALLEL:=1
 PKG_ASLR_PIE_REGULAR:=1
 
 PKG_CONFIG_DEPENDS:= \
-	CONFIG_PACKAGE_kmod-ath9k-qca \
-	CONFIG_PACKAGE_kmod-cfg80211-qca \
 	CONFIG_PACKAGE_hostapd-qca \
 	CONFIG_PACKAGE_hostapd-qca-basic \
 	CONFIG_PACKAGE_hostapd-qca-mini \
 	CONFIG_WPA_RFKILL_SUPPORT \
-	CONFIG_DRIVER_WEXT_SUPPORT \
 	CONFIG_DRIVER_11AC_SUPPORT \
 	CONFIG_DRIVER_11AX_SUPPORT \
 	CONFIG_WPA_ENABLE_WEP
@@ -82,13 +79,15 @@ ifneq ($(CONFIG_DRIVER_11AX_SUPPORT),)
   HOSTAPD_IEEE80211AX:=y
 endif
 
+CORE_DEPENDS = +ucode +libubus +libucode +ucode-mod-fs +ucode-mod-nl80211 +ucode-mod-rtnl +ucode-mod-ubus +ucode-mod-uloop +libblobmsg-json +libudebug
+OPENSSL_DEPENDS = +PACKAGE_$(1):libopenssl +PACKAGE_$(1):libopenssl-legacy
+
 DRIVER_MAKEOPTS= \
-	CONFIG_ACS=$(CONFIG_PACKAGE_kmod-cfg80211-qca) \
-	CONFIG_DRIVER_NL80211=$(CONFIG_PACKAGE_kmod-cfg80211-qca) \
+	CONFIG_ACS=y CONFIG_DRIVER_NL80211=y \
 	CONFIG_IEEE80211AC=$(HOSTAPD_IEEE80211AC) \
 	CONFIG_IEEE80211AX=$(HOSTAPD_IEEE80211AX) \
-	CONFIG_DRIVER_WEXT=$(CONFIG_DRIVER_WEXT_SUPPORT) \
-	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT)
+	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT) \
+	CONFIG_UCODE=y
 
 ifeq ($(SSL_VARIANT),openssl)
   DRIVER_MAKEOPTS += CONFIG_TLS=openssl CONFIG_SAE=y
@@ -141,7 +140,7 @@ ifneq ($(LOCAL_TYPE),hostapd-qca)
   endif
 endif
 
-DRV_DEPENDS:=+PACKAGE_kmod-cfg80211-qca:libnl
+DRV_DEPENDS:=+libnl-tiny
 
 
 define Package/hostapd-qca/Default
@@ -150,8 +149,8 @@ define Package/hostapd-qca/Default
   SUBMENU:=WirelessAPD
   TITLE:=IEEE 802.1x Authenticator
   URL:=http://hostap.epitest.fi/
-  DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common +libubus
-  EXTRA_DEPENDS:=hostapd-qca-common (=$(PKG_VERSION)-$(PKG_RELEASE))
+  DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common $(CORE_DEPENDS)
+  EXTRA_DEPENDS:=hostapd-qca-common
   USERID:=network=101:network=101
   PROVIDES:=hostapd-qca
   CONFLICTS:=$(HOSTAPD_PROVIDERS)
@@ -173,7 +172,7 @@ define Package/hostapd-qca-openssl
 $(call Package/hostapd-qca/Default,$(1))
   TITLE+= (OpenSSL full)
   VARIANT:=full-openssl
-  DEPENDS+=+PACKAGE_hostapd-qca-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
 endef
 
 Package/hostapd-qca-openssl/description = $(Package/hostapd-qca/description)
@@ -181,9 +180,6 @@ Package/hostapd-qca-openssl/description = $(Package/hostapd-qca/description)
 define Package/hostapd-qca-macsec
 $(call Package/hostapd-qca/Default,$(1))
   TITLE+= (macsec)
-  DEPENDS+= @TARGET_ipq||TARGET_ipq50xx||TARGET_ipq60xx||TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq807x +kmod-qca-nss-macsec +libopenssl
-  PROVIDES:=hostapd-qca-macsec
-  CONFLICTS:=
   VARIANT:=macsec
 endef
 
@@ -268,8 +264,8 @@ define Package/wpad-qca/Default
   CATEGORY:=Network
   SUBMENU:=WirelessAPD
   TITLE:=IEEE 802.1x Auth/Supplicant
-  DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common +libubus
-  EXTRA_DEPENDS:=hostapd-qca-common (=$(PKG_VERSION)-$(PKG_RELEASE))
+  DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common $(CORE_DEPENDS)
+  EXTRA_DEPENDS:=hostapd-qca-common
   USERID:=network=101:network=101
   URL:=http://hostap.epitest.fi/
   PROVIDES:=hostapd-qca wpa-supplicant-qca
@@ -293,7 +289,7 @@ define Package/wpad-qca-openssl
 $(call Package/wpad-qca/Default,$(1))
   TITLE+= (OpenSSL full)
   VARIANT:=wpad-qca-full-openssl
-  DEPENDS+=+PACKAGE_wpad-qca-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
 endef
 
 Package/wpad-qca-openssl/description = $(Package/wpad-qca/description)
@@ -330,7 +326,7 @@ define Package/wpad-qca-basic-openssl
 $(call Package/wpad-qca/Default,$(1))
   TITLE+= (OpenSSL, 11r, 11w)
   VARIANT:=wpad-basic-openssl
-  DEPENDS+=+PACKAGE_wpad-qca-basic-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
 endef
 
 define Package/wpad-qca-basic-openssl/description
@@ -371,7 +367,7 @@ endef
 
 define Package/wpad-qca-mesh
 $(call Package/wpad-qca/Default,$(1))
-  DEPENDS+=@PACKAGE_kmod-cfg80211-qca @(!TARGET_uml||BROKEN)
+  DEPENDS+=@(!TARGET_uml||BROKEN)
   PROVIDES+=wpa-supplicant-qca-mesh wpad-qca-mesh
 endef
 
@@ -382,7 +378,7 @@ endef
 define Package/wpad-qca-mesh-openssl
 $(call Package/wpad-qca-mesh,$(1))
   TITLE+= (OpenSSL, 11s, SAE)
-  DEPENDS+=+PACKAGE_wpad-qca-mesh-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
   VARIANT:=wpad-qca-mesh-openssl
 endef
 
@@ -413,8 +409,8 @@ define Package/wpa-supplicant-qca/Default
   SUBMENU:=WirelessAPD
   TITLE:=WPA Supplicant
   URL:=http://hostap.epitest.fi/wpa_supplicant/
-  DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common +libubus
-  EXTRA_DEPENDS:=hostapd-qca-common (=$(PKG_VERSION)-$(PKG_RELEASE))
+  DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common $(CORE_DEPENDS)
+  EXTRA_DEPENDS:=hostapd-qca-common (=$(PKG_VERSION)-r$(PKG_RELEASE))
   USERID:=network=101:network=101
   PROVIDES:=wpa-supplicant-qca
   CONFLICTS:=$(SUPPLICANT_PROVIDERS)
@@ -431,7 +427,7 @@ define Package/wpa-supplicant-qca-openssl
 $(call Package/wpa-supplicant-qca/Default,$(1))
   TITLE+= (OpenSSL full)
   VARIANT:=supplicant-qca-full-openssl
-  DEPENDS+=+PACKAGE_wpa-supplicant-qca-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
 endef
 
 define Package/wpa-supplicant-qca-wolfssl
@@ -455,9 +451,6 @@ endef
 define Package/wpa-supplicant-qca-macsec
 $(call Package/wpa-supplicant-qca/Default,$(1))
   TITLE:=WPA Supplicant (MACSEC)
-  DEPENDS+= @TARGET_ipq||TARGET_ipq50xx||TARGET_ipq60xx||TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq807x +kmod-qca-nss-macsec +libopenssl
-  PROVIDES:=wpa-supplicant-qca-macsec
-  CONFLICTS:=
   VARIANT:=supplicant-qca-macsec
 endef
 
@@ -468,13 +461,12 @@ endef
 define Package/wpa-supplicant-qca-p2p
 $(call Package/wpa-supplicant-qca/Default,$(1))
   TITLE+= (Wi-Fi P2P support)
-  DEPENDS+=@PACKAGE_kmod-cfg80211-qca
   VARIANT:=supplicant-qca-p2p-internal
 endef
 
 define Package/wpa-supplicant-qca-mesh/Default
 $(call Package/wpa-supplicant-qca/Default,$(1))
-  DEPENDS+=@PACKAGE_kmod-cfg80211-qca @(!TARGET_uml||BROKEN)
+  DEPENDS+=@(!TARGET_uml||BROKEN)
   PROVIDES+=wpa-supplicant-qca-mesh
 endef
 
@@ -482,7 +474,7 @@ define Package/wpa-supplicant-qca-mesh-openssl
 $(call Package/wpa-supplicant-qca-mesh/Default,$(1))
   TITLE+= (OpenSSL, 11s, SAE)
   VARIANT:=supplicant-qca-mesh-openssl
-  DEPENDS+=+PACKAGE_wpa-supplicant-qca-mesh-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
 endef
 
 define Package/wpa-supplicant-qca-mesh-wolfssl
@@ -548,7 +540,7 @@ define Package/eapol-test-qca/Default
   SECTION:=net
   SUBMENU:=WirelessAPD
   CATEGORY:=Network
-  DEPENDS:=$(DRV_DEPENDS) +libubus
+  DEPENDS:=$(DRV_DEPENDS) $(CORE_DEPENDS)
 endef
 
 define Package/eapol-test-qca
@@ -562,7 +554,7 @@ define Package/eapol-test-qca-openssl
   TITLE+= (OpenSSL full)
   VARIANT:=supplicant-qca-full-openssl
   CONFLICTS:=$(filter-out eapol-test-qca-openssl ,$(EAPOL_TEST_PROVIDERS))
-  DEPENDS+=+PACKAGE_eapol-test-qca-openssl:libopenssl
+  DEPENDS+=$(OPENSSL_DEPENDS)
   PROVIDES:=eapol-test-qca
 endef
 
@@ -584,7 +576,6 @@ define Package/eapol-test-qca-mbedtls
   PROVIDES:=eapol-test-qca
 endef
 
-
 ifneq ($(wildcard $(PKG_BUILD_DIR)/.config_*),$(subst .configured_,.config_,$(STAMP_CONFIGURED)))
   define Build/Configure/rebuild
 	$(FIND) $(PKG_BUILD_DIR) -name \*.o -or -name \*.a | $(XARGS) rm -f
@@ -595,30 +586,36 @@ ifneq ($(wildcard $(PKG_BUILD_DIR)/.config_*),$(subst .configured_,.config_,$(ST
   endef
 endif
 
-EXTERNAL_PATCH_DIR:=.
-
 define Build/Configure
 	$(Build/Configure/rebuild)
-	$(if $(wildcard $(EXTERNAL_PATCH_DIR)/files/hostapd-$(CONFIG_VARIANT).config), \
-		$(CP) $(EXTERNAL_PATCH_DIR)/files/hostapd-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/hostapd/.config \
+	$(if $(wildcard ./files/hostapd-$(CONFIG_VARIANT).config), \
+		$(CP) ./files/hostapd-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/hostapd/.config \
 	)
-	$(if $(wildcard $(EXTERNAL_PATCH_DIR)/files/wpa_supplicant-$(CONFIG_VARIANT).config), \
-		$(CP) $(EXTERNAL_PATCH_DIR)/files/wpa_supplicant-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/wpa_supplicant/.config
+	$(if $(wildcard ./files/wpa_supplicant-$(CONFIG_VARIANT).config), \
+		$(CP) ./files/wpa_supplicant-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/wpa_supplicant/.config
 	)
 endef
 
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/common/qca-vendor.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/drivers/nl80211_copy.h $(1)/usr/include/
+endef
+
 TARGET_CPPFLAGS := \
-	-I$(STAGING_DIR)/usr/include/libnl3 \
+	-I$(STAGING_DIR)/usr/include/libnl-tiny \
 	-I$(PKG_BUILD_DIR)/src/crypto \
 	$(TARGET_CPPFLAGS) \
+	-DCONFIG_LIBNL20 \
 	-D_GNU_SOURCE \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
-TARGET_LDFLAGS += -lubox -lubus
+TARGET_LDFLAGS += -lubox -lubus -lblobmsg_json -lucode -lm -lnl-tiny -ludebug
 
-ifdef CONFIG_PACKAGE_kmod-cfg80211-qca
-  TARGET_LDFLAGS += -lm -lnl-3 -lnl-genl-3
+ifdef CONFIG_DEBUG
+	TARGET_CFLAGS += -g3
 endif
+
 
 ifdef CONFIG_WPA_ENABLE_WEP
     DRIVER_MAKEOPTS += CONFIG_WEP=y
@@ -709,18 +706,49 @@ define Build/Compile
 	$(Build/Compile/$(BUILD_VARIANT))
 endef
 
+define Install/hostapd/full
+	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config $(1)/etc/radius
+	ln -sf hostapd $(1)/usr/sbin/hostapd-radius
+	$(INSTALL_BIN) ./files/radius.init $(1)/etc/init.d/radius
+	$(INSTALL_DATA) ./files/radius.config $(1)/etc/config/radius
+	$(INSTALL_DATA) ./files/radius.clients $(1)/etc/radius/clients
+	$(INSTALL_DATA) ./files/radius.users $(1)/etc/radius/users
+endef
+
+define Package/hostapd-full/conffiles
+/etc/config/radius
+/etc/radius
+endef
+
+ifeq ($(CONFIG_VARIANT),full)
+Package/wpad-qca-mesh-openssl/conffiles = $(Package/hostapd-full/conffiles)
+Package/wpad-qca-mesh-wolfssl/conffiles = $(Package/hostapd-full/conffiles)
+Package/wpad-qca-mesh-mbedtls/conffiles = $(Package/hostapd-full/conffiles)
+Package/wpad-qca/conffiles = $(Package/hostapd-full/conffiles)
+Package/wpad-qca-openssl/conffiles = $(Package/hostapd-full/conffiles)
+Package/wpad-qca-wolfssl/conffiles = $(Package/hostapd-full/conffiles)
+Package/wpad-qca-mbedtls/conffiles = $(Package/hostapd-full/conffiles)
+Package/hostapd-qca/conffiles = $(Package/hostapd-full/conffiles)
+Package/hostapd-qca-openssl/conffiles = $(Package/hostapd-full/conffiles)
+Package/hostapd-qca-wolfssl/conffiles = $(Package/hostapd-full/conffiles)
+Package/hostapd-qca-mbedtls/conffiles = $(Package/hostapd-full/conffiles)
+Package/hostapd-qca-macsec/conffiles = $(Package/hostapd-full/conffiles)
+endif
+
 define Install/hostapd-qca
-	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/share/hostap
+	$(INSTALL_DATA) ./files/hostapd.uc $(1)/usr/share/hostap/
+	$(if $(findstring full,$(CONFIG_VARIANT)),$(Install/hostapd/full))
 endef
 
 define Install/supplicant-qca
-	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/share/hostap
+	$(INSTALL_DATA) ./files/wpa_supplicant.uc $(1)/usr/share/hostap/
 endef
 
 define Package/hostapd-qca-common/install
-	$(INSTALL_DIR) $(1)/etc/capabilities $(1)/etc/rc.button $(1)/etc/hotplug.d/ieee80211 $(1)/etc/init.d $(1)/lib/netifd  $(1)/usr/share/acl.d
+	$(INSTALL_DIR) $(1)/etc/capabilities $(1)/etc/rc.button $(1)/etc/hotplug.d/ieee80211 $(1)/etc/init.d $(1)/lib/netifd  $(1)/usr/share/acl.d $(1)/usr/share/hostap
 	$(INSTALL_BIN) ./files/dhcp-get-server.sh $(1)/lib/netifd/dhcp-get-server.sh
-	$(INSTALL_DATA) ./files/hostapd.sh $(1)/lib/netifd/hostapd.sh
 	$(INSTALL_BIN) ./files/wpad.init $(1)/etc/init.d/wpad
 	$(INSTALL_BIN) ./files/wps-hotplug.sh $(1)/etc/rc.button/wps
 	$(INSTALL_DATA) ./files/wpad_acl.json $(1)/usr/share/acl.d
@@ -869,5 +897,3 @@ $(eval $(call BuildPackage,eapol-test-qca))
 $(eval $(call BuildPackage,eapol-test-qca-openssl))
 $(eval $(call BuildPackage,eapol-test-qca-wolfssl))
 $(eval $(call BuildPackage,eapol-test-qca-mbedtls))
-$(eval $(call BuildPackage,hostapd-qca-macsec))
-$(eval $(call BuildPackage,wpa-supplicant-qca-macsec))

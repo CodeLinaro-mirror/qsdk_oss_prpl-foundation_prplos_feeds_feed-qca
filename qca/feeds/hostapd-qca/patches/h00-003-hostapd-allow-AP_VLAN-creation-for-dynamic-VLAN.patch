@@ -16,11 +16,9 @@ Date:   Wed Jan 13 16:51:07 2021 +0530
 
     Signed-off-by: Sathishkumar Muruganandam <murugana@codeaurora.org>
 
-diff --git a/src/ap/sta_info.c b/src/ap/sta_info.c
-index 64a77ba..a9e85c9 100644
 --- a/src/ap/sta_info.c
 +++ b/src/ap/sta_info.c
-@@ -1123,8 +1123,7 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta)
+@@ -1298,8 +1298,7 @@ int ap_sta_bind_vlan(struct hostapd_data
  	if (sta->vlan_id == old_vlanid)
  		goto skip_counting;
  
@@ -30,11 +28,9 @@ index 64a77ba..a9e85c9 100644
  		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
  			       HOSTAPD_LEVEL_DEBUG, "could not find VLAN for "
  			       "binding station to (vlan_id=%d)",
-diff --git a/src/ap/wpa_auth_glue.c b/src/ap/wpa_auth_glue.c
-index 17186bf..82f36d7 100644
 --- a/src/ap/wpa_auth_glue.c
 +++ b/src/ap/wpa_auth_glue.c
-@@ -454,12 +454,8 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
+@@ -463,12 +463,8 @@ static int hostapd_wpa_auth_set_key(void
  
  	if (vlan_id > 0) {
  		ifname = hostapd_get_vlan_id_ifname(hapd->conf->vlan, vlan_id);
@@ -49,7 +45,7 @@ index 17186bf..82f36d7 100644
  	}
  
  #ifdef CONFIG_TESTING_OPTIONS
-@@ -973,33 +969,27 @@ static int hostapd_wpa_auth_update_vlan(void *ctx, const u8 *addr, int vlan_id)
+@@ -991,32 +987,27 @@ static int hostapd_wpa_auth_update_vlan(
  #ifndef CONFIG_NO_VLAN
  	struct hostapd_data *hapd = ctx;
  	struct sta_info *sta;
@@ -71,16 +67,6 @@ index 17186bf..82f36d7 100644
 -				   vlan_id);
 -			return -1;
 -		}
--
--		if (ap_sta_set_vlan(hapd, sta, &vlan_desc) < 0) {
--			wpa_printf(MSG_INFO,
--				   "Failed to assign VLAN ID %d from wpa_psk_file to "
--				   MACSTR, vlan_id, MAC2STR(sta->addr));
--			return -1;
--		}
--	} else {
--		sta->vlan_id = vlan_id;
--	}
 +	os_memset(&vlan_desc, 0, sizeof(vlan_desc));
 +	vlan_desc.notempty = 1;
 +	vlan_desc.untagged = vlan_id;
@@ -90,12 +76,20 @@ index 17186bf..82f36d7 100644
 +			   vlan_id);
 +		return -1;
 +	}
-+
+ 
+-		if (ap_sta_set_vlan(hapd, sta, &vlan_desc) < 0) {
+-			wpa_printf(MSG_INFO,
+-				   "Failed to assign VLAN ID %d from wpa_psk_file to "
+-				   MACSTR, vlan_id, MAC2STR(sta->addr));
+-			return -1;
+-		}
+-	} else {
+-		sta->vlan_id = vlan_id;
 +	if (ap_sta_set_vlan(hapd, sta, &vlan_desc) < 0) {
 +		wpa_printf(MSG_INFO,
 +			   "Failed to assign VLAN ID %d from wpa_psk_file to "
 +			   MACSTR, vlan_id, MAC2STR(sta->addr));
 +		return -1;
+ 	}
  
  	wpa_printf(MSG_INFO,
- 		   "Assigned VLAN ID %d from wpa_psk_file to " MACSTR,

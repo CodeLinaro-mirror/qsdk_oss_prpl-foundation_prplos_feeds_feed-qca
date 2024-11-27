@@ -10,11 +10,9 @@ Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
  src/ap/ap_config.c | 6 ------
  1 file changed, 6 deletions(-)
 
-diff --git a/src/ap/ap_config.c b/src/ap/ap_config.c
-index dd73e68b3b57..eebcb4fa8dbd 100644
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -1460,12 +1460,6 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
+@@ -1501,12 +1501,6 @@ static int hostapd_config_check_bss(stru
  	}
  #endif /* CONFIG_IEEE80211BE */
  
@@ -27,6 +25,3 @@ index dd73e68b3b57..eebcb4fa8dbd 100644
  	return 0;
  }
  
--- 
-2.25.1
-

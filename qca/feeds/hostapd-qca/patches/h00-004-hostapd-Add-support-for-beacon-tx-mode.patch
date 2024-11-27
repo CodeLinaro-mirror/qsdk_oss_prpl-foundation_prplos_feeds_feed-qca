@@ -27,7 +27,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4680,6 +4680,15 @@ static int hostapd_config_fill(struct ho
+@@ -4975,6 +4975,15 @@ static int hostapd_config_fill(struct ho
  		bss->disable_11ax = !!atoi(pos);
  	} else if (os_strcmp(buf, "disable_11be") == 0) {
  		bss->disable_11be = !!atoi(pos);
@@ -57,7 +57,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  # item allows this list be filtered so that only the listed rates will be left
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -944,6 +944,7 @@ struct hostapd_bss_config {
+@@ -966,6 +966,7 @@ struct hostapd_bss_config {
  	u8 ext_capa[EXT_CAPA_MAX_LEN];
  
  	u8 rnr;
@@ -67,7 +67,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -2064,6 +2064,8 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2525,6 +2525,8 @@ int ieee802_11_build_ap_params(struct ho
  		}
  	}
  
@@ -78,7 +78,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	    !hapd->conf->disable_11be) {
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1318,11 +1318,18 @@ struct wpa_driver_associate_params {
+@@ -1358,11 +1358,18 @@ struct wpa_driver_associate_params {
  	enum sae_pwe sae_pwe;
  
  	/**
@@ -101,7 +101,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	 * disable_eht - Disable EHT for this connection
  	 */
  	int disable_eht;
-@@ -1748,6 +1755,13 @@ struct wpa_driver_ap_params {
+@@ -1790,6 +1797,13 @@ struct wpa_driver_ap_params {
  	bool ema;
  
  	/**
@@ -115,7 +115,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	 * punct_bitmap - Preamble puncturing bitmap
  	 * Each bit corresponds to a 20 MHz subchannel, the lowest bit for the
  	 * channel with the lowest frequency. A bit set to 1 indicates that the
-@@ -1835,6 +1849,7 @@ struct wpa_driver_mesh_join_params {
+@@ -1895,6 +1909,7 @@ struct wpa_driver_mesh_join_params {
  	unsigned int flags;
  	bool handle_dfs;
  	int mcast_rate;
@@ -125,7 +125,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  struct wpa_driver_set_key_params {
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5010,6 +5010,7 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5103,6 +5103,7 @@ static int wpa_driver_nl80211_set_ap(voi
  	wpa_printf(MSG_DEBUG, "nl80211: beacon_rate=%u", params->beacon_rate);
  	wpa_printf(MSG_DEBUG, "nl80211: rate_type=%d", params->rate_type);
  	wpa_printf(MSG_DEBUG, "nl80211: dtim_period=%d", params->dtim_period);
@@ -133,7 +133,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	wpa_printf(MSG_DEBUG, "nl80211: ssid=%s",
  		   wpa_ssid_txt(params->ssid, params->ssid_len));
  	if (!(msg = nl80211_bss_msg(bss, 0, cmd)) ||
-@@ -5021,7 +5022,9 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5114,7 +5115,9 @@ static int wpa_driver_nl80211_set_ap(voi
  	    nl80211_put_beacon_rate(msg, drv->capa.flags, drv->capa.flags2,
  				    params) ||
  	    nl80211_put_dtim_period(msg, params->dtim_period) ||
@@ -144,7 +144,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  		goto fail;
  
  	if (params->mld_ap) {
-@@ -11748,7 +11751,9 @@ static int nl80211_join_mesh(struct i802
+@@ -12122,7 +12125,9 @@ static int nl80211_join_mesh(struct i802
  	    nl80211_put_mesh_id(msg, params->meshid, params->meshid_len) ||
  	    nl80211_put_beacon_int(msg, params->beacon_int) ||
  	    nl80211_put_mcast_rate(msg, params->mcast_rate) ||
@@ -155,52 +155,17 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  		goto fail;
  
  	wpa_printf(MSG_DEBUG, "  * flags=%08X", params->flags);
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -2790,6 +2790,9 @@ enum nl80211_commands {
-  * @NL80211_ATTR_HE_MUEDCA_PARAMS: MU-EDCA AC parameters for the
-  *	NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS command.
-  *
-+ * @NL80211_ATTR_BEACON_TX_MODE: used to configure the beacon tx mode as
-+ *	staggered mode or burst mode in %NL80211_CMD_START_AP from
-+ *	user-space.
-  *
-  * @NL80211_ATTR_PUNCT_BITMAP: (u32) Preamble puncturing bitmap, lowest
-  *	bit corresponds to the lowest 20 MHz channel. Each bit set to 1
-@@ -3351,6 +3354,9 @@ enum nl80211_attrs {
- 	NL80211_ATTR_EMA_RNR_ELEMS,
- 
- 	NL80211_ATTR_HE_MUEDCA_PARAMS,
-+
-+	NL80211_ATTR_BEACON_TX_MODE,
-+
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
-@@ -7822,4 +7828,12 @@ enum nl80211_ap_settings_flags {
- 	NL80211_AP_SETTINGS_SA_QUERY_OFFLOAD_SUPPORT	= 1 << 1,
- };
- 
-+/**
-+ * enum nl80211_beacon_tx_mode - Beacon Tx Mode enum.
-+ *	Used to configure beacon staggered mode or beacon burst mode.
-+ */
-+enum nl80211_beacon_tx_mode {
-+	NL80211_BEACON_STAGGERED_MODE = 1,
-+	NL80211_BEACON_BURST_MODE = 2,
-+};
- #endif /* __LINUX_NL80211_H */
 --- a/wpa_supplicant/config.c
 +++ b/wpa_supplicant/config.c
-@@ -2879,6 +2879,7 @@ static const struct parse_data ssid_fiel
+@@ -2854,6 +2854,7 @@ static const struct parse_data ssid_fiel
  	{ INT_RANGE(transition_disable, 0, 255) },
  	{ INT_RANGE(sae_pk, 0, 2) },
  	{ INT_RANGE(disable_40mhz_scan, 0, 1)},
 +	{ INT_RANGE(beacon_tx_mode, 1, 2)},
  	{ INT_RANGE(disable_eht, 0, 1)},
  	{ INT_RANGE(enable_4addr_mode, 0, 1)},
- };
-@@ -3401,6 +3402,7 @@ void wpa_config_set_network_defaults(str
+ 	{ INT_RANGE(max_idle, 0, 65535)},
+@@ -3383,6 +3384,7 @@ void wpa_config_set_network_defaults(str
  #endif /* CONFIG_MACSEC */
  	ssid->mac_addr = WPAS_MAC_ADDR_STYLE_NOT_SET;
  	ssid->max_oper_chwidth = DEFAULT_MAX_OPER_CHWIDTH;
@@ -210,17 +175,17 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  
 --- a/wpa_supplicant/config_file.c
 +++ b/wpa_supplicant/config_file.c
-@@ -899,6 +899,7 @@ static void wpa_config_write_network(FIL
+@@ -905,6 +905,7 @@ static void wpa_config_write_network(FIL
  #endif /* CONFIG_HE_OVERRIDES */
  	INT(disable_eht);
  	INT(disable_40mhz_scan);
 +	INT(beacon_tx_mode);
  	INT(enable_4addr_mode);
+ 	INT(max_idle);
  
- #undef STR
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
-@@ -47,6 +47,7 @@
+@@ -45,6 +45,7 @@
  #define DEFAULT_AMPDU_DENSITY -1 /* no change */
  #define DEFAULT_USER_SELECTED_SIM 1
  #define DEFAULT_MAX_OPER_CHWIDTH -1
@@ -228,10 +193,10 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  
  /* Consider global sae_pwe for SAE mechanism for PWE derivation */
  #define DEFAULT_SAE_PWE SAE_PWE_NOT_SET
-@@ -1265,6 +1266,13 @@ struct wpa_ssid {
+@@ -1266,6 +1267,13 @@ struct wpa_ssid {
  	  */
- 	 int disable_40mhz_scan;
-  
+ 	int disable_40mhz_scan;
+ 
 +	/**
 +	 * beacon_tx_mode - Beacon Tx mode
 +	 * 1 = STAGGERED MODE
@@ -254,7 +219,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  		params->conf.rssi_threshold = ssid->mesh_rssi_threshold;
 --- a/wpa_supplicant/wpa_cli.c
 +++ b/wpa_supplicant/wpa_cli.c
-@@ -1503,8 +1503,9 @@ static const char *network_fields[] = {
+@@ -1510,8 +1510,9 @@ static const char *network_fields[] = {
  #ifdef CONFIG_HS20
  	"update_identifier",
  #endif /* CONFIG_HS20 */

@@ -10,36 +10,19 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  2 files changed, 185 insertions(+), 60 deletions(-)
 
 diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
-index f180376..767c78b 100644
+index 0403584..859e4e6 100644
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -3307,75 +3307,203 @@ fail:
+@@ -3307,6 +3307,221 @@ fail:
  }
  
  
--static int hostapd_2ghz_ht40_allow_map(struct hostapd_hw_modes *mode,
--				       char *buf, size_t buflen)
 +static int hostapd_2ghz_channel_bw(struct hostapd_hw_modes *mode, char *buf,
 +				    size_t buflen)
- {
--	int j, ret, len = 0;
++{
 +	int ch, ret, len = 0;
 +	char temp_buf[30] = {0};
- 
--	for (j = 0; j < mode->num_channels; j++) {
--		struct hostapd_channel_data *chan = &mode->channels[j];
--		if (!(chan->flag & HOSTAPD_CHAN_DISABLED)) {
--			ret = os_snprintf(buf + len, buflen - len,
--					  "Channel: %d : %d HT40%c%c\n",
--					  chan->chan, chan->freq,
--					  (chan->flag & HOSTAPD_CHAN_HT40MINUS) ?
--						'-' : ' ',
--					  (chan->flag & HOSTAPD_CHAN_HT40PLUS) ?
--						'+' : ' ');
--			if (os_snprintf_error(buflen - len, ret))
--				return len;
--			len += ret;
--		}
++
 +	for (ch = 0; ch < mode->num_channels; ch++) {
 +		struct hostapd_channel_data *chan = &mode->channels[ch];
 +		if (chan->flag & HOSTAPD_CHAN_DISABLED)
@@ -55,21 +38,15 @@ index f180376..767c78b 100644
 +		if (os_snprintf_error(buflen - len, ret))
 +			return len;
 +		len += ret;
-	}
-	return len;
- }
- 
--static int hostapd_5ghz_ht40_allow_map(struct hostapd_hw_modes *mode,
--				       char *buf, size_t buflen)
++	}
++	return len;
++}
++
 +static int hostapd_get_channel_idx(struct hostapd_hw_modes *mode,
 +				    int channel_num)
- {
--	int j, k, ok, ret, len = 0, allowed[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 140,
--						149, 157, 184, 192 };
++{
 +	int  j=0;
- 
--	for (j = 0; j < mode->num_channels; j++) {
--		struct hostapd_channel_data *chan = &mode->channels[j];
++
 +	for(j = 0; j < mode->num_channels; j++) {
 +	       struct hostapd_channel_data *chan = &mode->channels[j];
 +	       if(chan->chan == channel_num)
@@ -77,17 +54,7 @@ index f180376..767c78b 100644
 +	}
 +	return -1;
 +}
- 
--		if ((chan->flag & HOSTAPD_CHAN_HT40MINUS) ||
--				(chan->flag & HOSTAPD_CHAN_HT40PLUS)) {
--			ok = 0;
--			for (k = 0; k < ARRAY_SIZE(allowed); k++) {
--				if (chan->chan < allowed[k])
--					break;
--				if (chan->chan == allowed[k]) {
--					ok = 1;
--					break;
--				}
++
 +static int hostapd_5ghz_vht_80_channel_bw(struct hostapd_hw_modes *mode,
 +					  int channel_idx)
 +{
@@ -102,7 +69,7 @@ index f180376..767c78b 100644
 +			if (chan->chan == allowed[k][m]) {
 +				ok = 1;
 +				break;
-			}
++			}
 +		 }
 +		 if(ok == 1)
 +			 break;
@@ -117,15 +84,10 @@ index f180376..767c78b 100644
 +		   HOSTAPD_CHAN_DISABLED))
 +			return false;
 +	}
- 
--			if (!ok && chan->chan != (allowed[k - 1] + 4))
--				ok = -1;
++
 +	 return true;
 +}
- 
--			if (ok == 1 && (mode->channels[j + 1].flag &
--					HOSTAPD_CHAN_DISABLED))
--				ok = -1;
++
 +static bool hostapd_5ghz_vht_160_channel_bw(struct hostapd_hw_modes *mode,
 +					    int channel_idx)
 +{
@@ -141,23 +103,14 @@ index f180376..767c78b 100644
 +				break;
 +			}
 +		}
- 
--			if (ok != -1) {
--				ret = os_snprintf(buf + len, buflen - len,
--						  "Channel: %d : %d HT40%s\n",
--						  chan->chan, chan->freq,
--						  ok == 1 ? "+" : "-");
++
 +		if(ok == 1)
 +			break;
 +	}
- 
--				if (os_snprintf_error(buflen - len, ret))
--					return len;
++
 +	if (ok == 0)
 +		return false;
- 
--				len += ret;
--			}
++
 +	for(m = 0; m < ARRAY_SIZE(allowed[0]); m++) {
 +		channel_idx = hostapd_get_channel_idx(mode, allowed[k][m]);
 +		if (channel_idx == -1 || (mode->channels[channel_idx].flag &
@@ -240,7 +193,7 @@ index f180376..767c78b 100644
 +			if (os_snprintf_error(buflen - len, ret))
 +				return len;
 +			len += ret;
-		}
++		}
 +
 +		if((mode->vht_capab & (VHT_CAP_SUPP_CHAN_WIDTH_160MHZ |
 +		   VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ)) &&
@@ -255,37 +208,37 @@ index f180376..767c78b 100644
 +		if (os_snprintf_error(buflen - len, ret))
 +			return len;
 +		len += ret;
-	}
-	return len;
- }
- 
--static int hostapd_ctrl_iface_ht40_allow_map(struct hostapd_iface *iface,
--					     char *buf, size_t buflen)
++	}
++	return len;
++}
++
 +static int hostapd_ctrl_iface_channel_bw(struct hostapd_iface *iface,
 +					 char *buf, size_t buflen)
- {
-	struct hostapd_data *hapd = iface->bss[0];
-	struct hostapd_hw_modes *mode;
-@@ -3387,9 +3515,9 @@ static int hostapd_ctrl_iface_ht40_allow_map(struct hostapd_iface *iface,
-					   &dfs_domain);
- 
-	if (mode->mode != HOSTAPD_MODE_IEEE80211A)
--		len = hostapd_2ghz_ht40_allow_map(mode, buf, buflen);
++{
++	struct hostapd_data *hapd = iface->bss[0];
++	struct hostapd_hw_modes *mode;
++	int len = 0;
++	u16 num_modes, flags;
++	u8 dfs_domain;
++
++	mode = hostapd_get_hw_feature_data(hapd, &num_modes, &flags,
++					   &dfs_domain);
++
++	if (mode->mode != HOSTAPD_MODE_IEEE80211A)
 +		len = hostapd_2ghz_channel_bw(mode, buf, buflen);
-	else
--		len = hostapd_5ghz_ht40_allow_map(mode, buf, buflen);
++	else
 +		len = hostapd_5ghz_channel_bw(mode, buf, buflen);
- 
-	return len;
- }
-@@ -4067,10 +4195,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
++
++	return len;
++}
++
+ static int hostapd_ctrl_iface_remove_neighbor(struct hostapd_data *hapd,
+					      char *buf)
+ {
+@@ -3980,6 +4195,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
 		if (radius_server_dac_request(hapd->radius_srv, buf + 12) < 0)
 			reply_len = -1;
  #endif /* RADIUS_SERVER */
--	 } else if (os_strcmp(buf, "HT40_ALLOW_MAP") == 0) {
--		 reply_len = hostapd_ctrl_iface_ht40_allow_map(hapd->iface,
--							       reply,
--							       reply_size);
 +	} else if(os_strcmp(buf, "CHANNEL_BW") == 0) {
 +		reply_len = hostapd_ctrl_iface_channel_bw(hapd->iface, reply,
 +							  reply_size);
@@ -294,28 +247,25 @@ index f180376..767c78b 100644
 		reply_len = hostapd_ctrl_iface_get_capability(
 			hapd, buf + 15, reply, reply_size);
 diff --git a/hostapd/hostapd_cli.c b/hostapd/hostapd_cli.c
-index dd898b7..aef8195 100644
+index e5fad36..78364e7 100644
 --- a/hostapd/hostapd_cli.c
 +++ b/hostapd/hostapd_cli.c
-@@ -1402,10 +1402,10 @@ static int hostapd_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
+@@ -1402,6 +1402,11 @@ static int hostapd_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
 	return wpa_ctrl_command(ctrl, "DRIVER_FLAGS");
  }
  
--static int hostapd_cli_cmd_ht40_allow_map(struct wpa_ctrl *ctrl,
 +static int hostapd_cli_cmd_channel_bw(struct wpa_ctrl *ctrl,
-					   int argc, char *argv[])
- {
--	 return wpa_ctrl_command(ctrl, "HT40_ALLOW_MAP");
++					   int argc, char *argv[])
++{
 +	return wpa_ctrl_command(ctrl, "CHANNEL_BW");
- }
- 
++}
+
  #ifdef CONFIG_DPP
-@@ -1794,8 +1794,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
+
+@@ -1789,6 +1794,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	  "=Add/Delete/Show/Clear deny MAC ACL" },
 	{ "poll_sta", hostapd_cli_cmd_poll_sta, hostapd_complete_stations,
 	  "<addr> = poll a STA to check connectivity with a QoS null frame" },
--	 { "ht40_allow_map", hostapd_cli_cmd_ht40_allow_map, NULL,
--	   "= show ht40 allow map status" },
 +	{ "channel_bw", hostapd_cli_cmd_channel_bw, NULL,
 +	  "= show allowed bandwidth on each channel"},
 	{ "req_beacon", hostapd_cli_cmd_req_beacon, NULL,

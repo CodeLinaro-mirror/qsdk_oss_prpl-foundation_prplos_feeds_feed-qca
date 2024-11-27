@@ -21,7 +21,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
 
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1239,7 +1239,7 @@ hostapd_dfs_start_channel_switch_backgro
+@@ -1356,7 +1356,7 @@ hostapd_dfs_start_channel_switch_backgro
  
  int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
  			     int ht_enabled, int chan_offset, int chan_width,
@@ -29,8 +29,8 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
 +			     int cf1, int cf2, bool is_background)
  {
  	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_CAC_COMPLETED
- 		"success=%d freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
-@@ -1264,13 +1264,14 @@ int hostapd_dfs_complete_cac(struct host
+ 		"success=%d freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d radar_detected=%d",
+@@ -1390,13 +1390,14 @@ int hostapd_dfs_complete_cac(struct host
  			 * selected channel and configure the background chain
  			 * to a new DFS channel.
  			 */
@@ -47,20 +47,20 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  			}
  
  			/*
-@@ -1289,9 +1290,10 @@ int hostapd_dfs_complete_cac(struct host
+@@ -1415,9 +1416,10 @@ int hostapd_dfs_complete_cac(struct host
  				iface->cac_started = 0;
  			}
  		}
 -	} else if (hostapd_dfs_is_background_event(iface, freq)) {
 +	} else if (is_background || hostapd_dfs_is_background_event(iface, freq)) {
  		iface->radar_background.cac_started = 0;
--		hostpad_dfs_update_background_chain(iface);
+-		hostapd_dfs_update_background_chain(iface);
 +		if (iface->conf->enable_background_radar)
-+			hostpad_dfs_update_background_chain(iface);
++			hostapd_dfs_update_background_chain(iface);
  	}
  
- 	return 0;
-@@ -1733,9 +1735,9 @@ int hostapd_is_dfs_required(struct hosta
+ 	iface->radar_detected = false;
+@@ -1778,9 +1780,9 @@ int hostapd_is_dfs_required(struct hosta
  
  int hostapd_dfs_start_cac(struct hostapd_iface *iface, int freq,
  			  int ht_enabled, int chan_offset, int chan_width,
@@ -94,7 +94,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  			   int center_freq);
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -1762,7 +1762,7 @@ static void hostapd_event_dfs_cac_finish
+@@ -2242,7 +2242,7 @@ static void hostapd_event_dfs_cac_finish
  	wpa_printf(MSG_DEBUG, "DFS CAC finished on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(hapd->iface, 1, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -103,7 +103,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -1772,7 +1772,7 @@ static void hostapd_event_dfs_cac_aborte
+@@ -2252,7 +2252,7 @@ static void hostapd_event_dfs_cac_aborte
  	wpa_printf(MSG_DEBUG, "DFS CAC aborted on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(hapd->iface, 0, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -112,7 +112,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -1792,7 +1792,7 @@ static void hostapd_event_dfs_cac_starte
+@@ -2272,7 +2272,7 @@ static void hostapd_event_dfs_cac_starte
  	wpa_printf(MSG_DEBUG, "DFS offload CAC started on %d MHz", radar->freq);
  	hostapd_dfs_start_cac(hapd->iface, radar->freq, radar->ht_enabled,
  			      radar->chan_offset, radar->chan_width,
@@ -121,23 +121,13 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  #endif /* NEED_AP_MLME */
---- a/src/drivers/driver.h
-+++ b/src/drivers/driver.h
-@@ -6380,6 +6380,7 @@ union wpa_event_data {
- 		int cf1;
- 		int cf2;
- 		u16 radar_bitmap;
-+		bool is_background;
- 	} dfs_event;
- 
- 	/**
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1958,6 +1958,10 @@ static void nl80211_radar_event(struct w
+@@ -2505,6 +2505,10 @@ static void nl80211_radar_event(struct w
  		}
  	}
  
-+	if ((drv->capa.flags2 & WPA_DRIVER_RADAR_BACKGROUND) &&
++	if ((drv->capa.flags2 & WPA_DRIVER_FLAGS2_RADAR_BACKGROUND) &&
 +	    tb[NL80211_ATTR_RADAR_BACKGROUND]) {
 +		data.dfs_event.is_background = true;
 +	}
@@ -146,7 +136,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  		data.dfs_event.chan_width =
 --- a/wpa_supplicant/ap.c
 +++ b/wpa_supplicant/ap.c
-@@ -2107,7 +2107,8 @@ void wpas_ap_event_dfs_cac_started(struc
+@@ -2163,7 +2163,8 @@ void wpas_ap_event_dfs_cac_started(struc
  	wpa_printf(MSG_DEBUG, "DFS CAC started on %d MHz", radar->freq);
  	hostapd_dfs_start_cac(iface, radar->freq,
  			      radar->ht_enabled, radar->chan_offset,
@@ -156,7 +146,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -2123,7 +2124,8 @@ void wpas_ap_event_dfs_cac_finished(stru
+@@ -2179,7 +2180,8 @@ void wpas_ap_event_dfs_cac_finished(stru
  	wpa_printf(MSG_DEBUG, "DFS CAC finished on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(iface, 1, radar->freq,
  				 radar->ht_enabled, radar->chan_offset,
@@ -166,7 +156,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -2139,7 +2141,8 @@ void wpas_ap_event_dfs_cac_aborted(struc
+@@ -2195,7 +2197,8 @@ void wpas_ap_event_dfs_cac_aborted(struc
  	wpa_printf(MSG_DEBUG, "DFS CAC aborted on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(iface, 0, radar->freq,
  				 radar->ht_enabled, radar->chan_offset,
@@ -176,3 +166,13 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -6757,6 +6757,7 @@ union wpa_event_data {
+ 		int cf2;
+ 		int link_id;
+ 		u16 radar_bitmap;
++		bool is_background;
+ 	} dfs_event;
+ 
+ 	/**

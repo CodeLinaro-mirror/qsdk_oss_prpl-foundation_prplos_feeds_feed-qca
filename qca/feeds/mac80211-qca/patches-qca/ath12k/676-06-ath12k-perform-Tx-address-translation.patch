@@ -19,7 +19,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7786,6 +7786,75 @@ static int ath12k_mac_mgmt_tx(struct ath
+@@ -7776,6 +7776,75 @@ static int ath12k_mac_mgmt_tx(struct ath
  	return 0;
  }
  
@@ -95,7 +95,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  static void ath12k_mac_op_tx(struct ieee80211_hw *hw,
  			     struct ieee80211_tx_control *control,
  			     struct sk_buff *skb)
-@@ -7794,10 +7863,9 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -7784,10 +7853,9 @@ static void ath12k_mac_op_tx(struct ieee
  	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
  	struct ieee80211_vif *vif = info->control.vif;
  	struct ath12k_vif *ahvif = ath12k_vif_to_ahvif(vif);
@@ -109,14 +109,15 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
  	struct ieee80211_key_conf *key = info->control.hw_key;
  	struct ath12k_mgmt_frame_stats *mgmt_stats = &ahvif->mgmt_stats;
-@@ -7808,20 +7876,39 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -7798,20 +7866,39 @@ static void ath12k_mac_op_tx(struct ieee
  	bool is_prb_rsp;
  	u16 frm_type = 0;
  	int ret;
 +	u8 link = u32_get_bits(info->control.flags, IEEE80211_TX_CTRL_MLO_LINK);
  
  	if (ahvif->vdev_type == WMI_VDEV_TYPE_MONITOR) {
- 		ieee80211_free_txskb(ah->hw, skb);
+-		ieee80211_free_txskb(ah->hw, skb);
++		ieee80211_free_txskb(hw, skb);
  		return;
  	}
  

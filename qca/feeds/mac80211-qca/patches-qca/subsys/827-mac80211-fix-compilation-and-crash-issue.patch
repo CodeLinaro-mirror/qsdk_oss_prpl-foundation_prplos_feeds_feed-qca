@@ -13,7 +13,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
 
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
-@@ -1331,7 +1331,11 @@ struct ieee80211_tx_status {
+@@ -1326,7 +1326,11 @@ struct ieee80211_tx_status {
  	ktime_t ack_hwtstamp;
  	u8 n_rates;
  
@@ -25,7 +25,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  	u32 mpdu_succ;
  	u32 mpdu_fail;
  };
-@@ -5375,6 +5379,10 @@ void ieee80211_tx_status_ext(struct ieee
+@@ -5369,6 +5373,10 @@ void ieee80211_tx_status_ext(struct ieee
   *	(NULL for multicast packets)
   * @info: tx status information
   */
@@ -49,7 +49,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  	sdata->debugfs.subdir_stations = debugfs_create_dir("stations",
 --- a/net/mac80211/sta_info.c
 +++ b/net/mac80211/sta_info.c
-@@ -1419,27 +1419,6 @@ static void __sta_info_destroy_part2(str
+@@ -1448,19 +1448,6 @@ static void __sta_info_destroy_part2(str
  		WARN_ON_ONCE(ret);
  	}
  
@@ -65,21 +65,13 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
 -			ieee80211_flush_queues(local, sta->sdata, false);
 -	}
 -
--	/* Flush queues before removing keys, as that might remove them
--	 * from hardware, and then depending on the offload method, any
--	 * frames sitting on hardware queues might be sent out without
--	 * any encryption at all.
--	 */
--	if (local->ops->set_key)
--		ieee80211_flush_queues(local, sta->sdata, false);
--
 -	/* now keys can no longer be reached */
  	ieee80211_free_sta_keys(local, sta);
  
  	/* disable TIM bit - last chance to tell driver */
 --- a/net/mac80211/status.c
 +++ b/net/mac80211/status.c
-@@ -1280,6 +1280,30 @@ EXPORT_SYMBOL(ieee80211_ppeds_tx_update_
+@@ -1281,6 +1281,30 @@ EXPORT_SYMBOL(ieee80211_ppeds_tx_update_
  #endif /* CPTCFG_MAC80211_BONDED_SUPPORT */
  
  
@@ -112,7 +104,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  	struct sta_info *sta = container_of(pubsta, struct sta_info, sta);
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -9533,7 +9533,7 @@ void cfg80211_bss_flush(struct wiphy *wi
+@@ -9632,7 +9632,7 @@ void cfg80211_bss_flush(struct wiphy *wi
   * @color_bitmap: representations of the colors that the local BSS is aware of
   * @link_id: valid link_id in case of MLO or 0 for non-MLO.
   */
@@ -121,7 +113,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  			      enum nl80211_commands cmd, u8 count,
  			      u64 color_bitmap,
  			      unsigned int link_id);
-@@ -9545,10 +9545,10 @@ int cfg80211_bss_color_notify(struct net
+@@ -9644,10 +9644,10 @@ int cfg80211_bss_color_notify(struct net
   * @link_id: valid link_id in case of MLO or 0 for non-MLO.
   */
  static inline int cfg80211_obss_color_collision_notify(struct net_device *dev,
@@ -134,7 +126,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  					 0, color_bitmap, link_id);
  }
  
-@@ -9564,7 +9564,7 @@ static inline int cfg80211_color_change_
+@@ -9663,7 +9663,7 @@ static inline int cfg80211_color_change_
  						       u8 count,
  						       unsigned int link_id)
  {
@@ -143,7 +135,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  					 count, 0, link_id);
  }
  
-@@ -9578,7 +9578,7 @@ static inline int cfg80211_color_change_
+@@ -9677,7 +9677,7 @@ static inline int cfg80211_color_change_
  static inline int cfg80211_color_change_aborted_notify(struct net_device *dev,
  						      unsigned int link_id)
  {
@@ -152,7 +144,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  					 0, 0, link_id);
  }
  
-@@ -9592,7 +9592,7 @@ static inline int cfg80211_color_change_
+@@ -9691,7 +9691,7 @@ static inline int cfg80211_color_change_
  static inline int cfg80211_color_change_notify(struct net_device *dev,
  					      unsigned int link_id)
  {
@@ -163,7 +155,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  }
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -5431,7 +5431,7 @@ void ieee80211_color_collision_detection
+@@ -5360,7 +5360,7 @@ void ieee80211_color_collision_detection
  	struct ieee80211_sub_if_data *sdata = link->sdata;
  
  	sdata_lock(sdata);
@@ -172,8 +164,8 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  	sdata_unlock(sdata);
  }
  
-@@ -5484,7 +5484,7 @@ ieee80211_obss_color_collision_notify(st
- 
+@@ -5425,7 +5425,7 @@ ieee80211_obss_color_collision_notify(st
+ 				     msecs_to_jiffies(500));
  	rcu_read_unlock();
  
 -	cfg80211_obss_color_collision_notify(sdata->dev, color_bitmap,
@@ -183,7 +175,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  EXPORT_SYMBOL_GPL(ieee80211_obss_color_collision_notify);
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -20428,7 +20428,7 @@ void cfg80211_ch_switch_started_notify(s
+@@ -20484,7 +20484,7 @@ void cfg80211_ch_switch_started_notify(s
  }
  EXPORT_SYMBOL(cfg80211_ch_switch_started_notify);
  
@@ -192,7 +184,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  			      enum nl80211_commands cmd, u8 count,
  			      u64 color_bitmap,
  			      unsigned int link_id)
-@@ -20443,7 +20443,7 @@ int cfg80211_bss_color_notify(struct net
+@@ -20499,7 +20499,7 @@ int cfg80211_bss_color_notify(struct net
  
  	trace_cfg80211_bss_color_notify(dev, cmd, count, color_bitmap);
  
@@ -201,7 +193,7 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  	if (!msg)
  		return -ENOMEM;
  
-@@ -20470,7 +20470,7 @@ int cfg80211_bss_color_notify(struct net
+@@ -20526,7 +20526,7 @@ int cfg80211_bss_color_notify(struct net
  	genlmsg_end(msg, hdr);
  
  	return genlmsg_multicast_netns(&nl80211_fam, wiphy_net(&rdev->wiphy),

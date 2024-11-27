@@ -1,6 +1,6 @@
 --- a/drivers/net/wireless/ath/ath11k/core.c
 +++ b/drivers/net/wireless/ath/ath11k/core.c
-@@ -1798,6 +1798,9 @@ int ath11k_core_qmi_firmware_ready(struc
+@@ -1884,6 +1884,9 @@ int ath11k_core_qmi_firmware_ready(struc
  	}
  
  	ath11k_hif_irq_enable(ab);
@@ -12,7 +12,7 @@
  	return 0;
 --- a/drivers/net/wireless/ath/ath11k/core.h
 +++ b/drivers/net/wireless/ath/ath11k/core.h
-@@ -1208,6 +1208,7 @@ struct ath11k_base *ath11k_core_alloc(st
+@@ -1207,6 +1207,7 @@ struct ath11k_base *ath11k_core_alloc(st
  void ath11k_core_free(struct ath11k_base *ath11k);
  int ath11k_core_fetch_bdf(struct ath11k_base *ath11k,
  			  struct ath11k_board_data *bd);
@@ -217,8 +217,8 @@
  static const struct qmi_elem_info qmi_wlanfw_host_cap_req_msg_v01_ei[] = {
  	{
  		.data_type	= QMI_OPT_FLAG,
-@@ -1707,6 +1895,156 @@ static const struct qmi_elem_info qmi_wl
- 	{},
+@@ -1704,6 +1892,156 @@ static const struct qmi_elem_info qmi_wl
+ 	},
  };
  
 +int wlfw_send_qdss_trace_config_download_req(struct ath11k_base *ab,
@@ -374,7 +374,7 @@
  static int ath11k_qmi_host_cap_send(struct ath11k_base *ab)
  {
  	struct qmi_wlanfw_host_cap_req_msg_v01 req;
-@@ -1816,7 +2154,12 @@ static int ath11k_qmi_fw_ind_register_se
+@@ -1813,7 +2151,12 @@ static int ath11k_qmi_fw_ind_register_se
  	req->cal_done_enable = 1;
  	req->fw_init_done_enable_valid = 1;
  	req->fw_init_done_enable = 1;
@@ -388,7 +388,7 @@
  	req->pin_connect_result_enable_valid = 0;
  	req->pin_connect_result_enable = 0;
  
-@@ -2817,6 +3160,31 @@ void ath11k_qmi_firmware_stop(struct ath
+@@ -2814,6 +3157,31 @@ void ath11k_qmi_firmware_stop(struct ath
  	}
  }
  
@@ -514,13 +514,13 @@
  };
  
  struct qmi_wlanfw_ind_register_resp_msg_v01 {
-@@ -522,5 +576,8 @@ void ath11k_qmi_msg_recv_work(struct wor
- void ath11k_qmi_deinit_service(struct ath11k_base *ab);
+@@ -521,5 +575,8 @@ void ath11k_qmi_deinit_service(struct at
  int ath11k_qmi_init_service(struct ath11k_base *ab);
  void ath11k_qmi_free_resource(struct ath11k_base *ab);
+ int ath11k_qmi_fwreset_from_cold_boot(struct ath11k_base *ab);
 -
 +int wlfw_send_qdss_trace_config_download_req(struct ath11k_base *ab,
-+					     const u8 *buffer, unsigned int len);
++		const u8 *buffer, unsigned int len);
 +int ath11k_send_qdss_trace_mode_req(struct ath11k_base *ab,
-+				    enum wlfw_qdss_trace_mode_enum_v01 mode);
++		enum wlfw_qdss_trace_mode_enum_v01 mode);
  #endif

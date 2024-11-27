@@ -36,15 +36,15 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  struct ath12k_vif {
  	u32 vdev_id;
  	enum wmi_vdev_type vdev_type;
-@@ -247,6 +260,7 @@ struct ath12k_vif {
- 	u32 key_cipher;
+@@ -248,6 +261,7 @@ struct ath12k_vif {
  	u8 tx_encap_type;
  	u8 vdev_stats_id;
+ 	u32 punct_bitmap;
 +	struct ath12k_fw_vdev_ol_stats vdev_stats;
  };
  
  struct ath12k_vif_iter {
-@@ -750,6 +764,129 @@ struct ath12k_base {
+@@ -784,6 +798,129 @@ struct ath12k_base {
  	u8 drv_priv[] __aligned(sizeof(void *));
  };
  
@@ -176,8 +176,8 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  int ath12k_core_init(struct ath12k_base *ath12k);
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -1663,6 +1663,72 @@ static void ath12k_htt_mlo_offset_event_
- 	spin_unlock_bh(&ar->data_lock);
+@@ -1683,6 +1683,74 @@ exit:
+ 	rcu_read_unlock();
  }
  
 +static void ath12k_htt_vdev_txrx_stats_handler(struct ath12k_base *ab,
@@ -196,6 +196,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +	if (payload_bytes > skb->len)
 +		return;
 +
++	rcu_read_lock();
 +	while (payload_bytes > 0) {
 +		tlv_tag = u32_get_bits(*data, HAL_TLV_HDR_TAG);
 +		tlv_len = u32_get_bits(*data, HAL_TLV_HDR_LEN);
@@ -244,12 +245,13 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +		data += tlv_len >> 2;
 +		payload_bytes -= tlv_len;
 +	}
++	rcu_read_unlock();
 +}
 +
  void ath12k_dp_htt_htc_t2h_msg_handler(struct ath12k_base *ab,
  				       struct sk_buff *skb)
  {
-@@ -1742,6 +1808,9 @@ void ath12k_dp_htt_htc_t2h_msg_handler(s
+@@ -1762,6 +1830,9 @@ void ath12k_dp_htt_htc_t2h_msg_handler(s
  	case HTT_T2H_MSG_TYPE_MLO_TIMESTAMP_OFFSET_IND:
  		ath12k_htt_mlo_offset_event_handler(ab, skb);
  		break;
@@ -261,7 +263,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  			   type);
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -134,6 +134,8 @@ static const struct ath12k_wmi_tlv_polic
+@@ -152,6 +152,8 @@ static const struct ath12k_wmi_tlv_polic
  		.min_len = sizeof(struct wmi_service_available_event) },
  	[WMI_TAG_PEER_ASSOC_CONF_EVENT] = {
  		.min_len = sizeof(struct wmi_peer_assoc_conf_event) },
@@ -270,7 +272,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	[WMI_TAG_PDEV_CTL_FAILSAFE_CHECK_EVENT] = {
  		.min_len = sizeof(struct wmi_pdev_ctl_failsafe_chk_event) },
  	[WMI_TAG_HOST_SWFDA_EVENT] = {
-@@ -1620,6 +1622,39 @@ int ath12k_wmi_vdev_set_param_cmd(struct
+@@ -1647,6 +1649,39 @@ int ath12k_wmi_vdev_set_param_cmd(struct
  	return ret;
  }
  
@@ -310,7 +312,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  int ath12k_wmi_send_pdev_temperature_cmd(struct ath12k *ar)
  {
  	struct ath12k_wmi_pdev *wmi = ar->wmi;
-@@ -5205,6 +5240,215 @@ static int ath12k_pull_peer_assoc_conf_e
+@@ -5527,6 +5562,215 @@ static int ath12k_pull_peer_assoc_conf_e
  	return 0;
  }
  
@@ -526,7 +528,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  static int
  ath12k_pull_pdev_temp_ev(struct ath12k_base *ab, u8 *evt_buf,
  			 u32 len, const struct wmi_pdev_temperature_event *ev)
-@@ -5230,6 +5474,358 @@ ath12k_pull_pdev_temp_ev(struct ath12k_b
+@@ -5552,6 +5796,358 @@ ath12k_pull_pdev_temp_ev(struct ath12k_b
  	return 0;
  }
  
@@ -895,7 +897,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  
  /* There is no signed version of __le32, so for a temporary solution come
   * up with our own version. The idea is from fs/ntfs/endian.h.
-@@ -3390,6 +3391,32 @@ struct wmi_vdev_set_param_cmd {
+@@ -3477,6 +3478,32 @@ struct wmi_vdev_set_param_cmd {
  	__le32 param_value;
  } __packed;
  
@@ -928,7 +930,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  struct wmi_get_pdev_temperature_cmd {
  	__le32 tlv_header;
  	__le32 param;
-@@ -4011,6 +4038,177 @@ struct wmi_probe_resp_tx_status_event {
+@@ -4155,6 +4182,177 @@ struct wmi_probe_resp_tx_status_event {
  	__le32 tx_status;
  } __packed;
  
@@ -1106,7 +1108,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  struct wmi_pdev_ctl_failsafe_chk_event {
  	__le32 pdev_id;
  	__le32 ctl_failsafe_status;
-@@ -4811,6 +5009,14 @@ ath12k_wmi_rx_reord_queue_remove(struct
+@@ -4956,6 +5154,14 @@ ath12k_wmi_rx_reord_queue_remove(struct
  				 struct ath12k_wmi_rx_reorder_queue_remove_arg *arg);
  int ath12k_wmi_send_pdev_set_regdomain(struct ath12k *ar,
  				       struct ath12k_wmi_pdev_set_regdomain_arg *arg);

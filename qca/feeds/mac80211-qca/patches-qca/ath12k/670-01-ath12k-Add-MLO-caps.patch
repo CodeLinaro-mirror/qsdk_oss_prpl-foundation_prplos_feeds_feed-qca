@@ -127,7 +127,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  err_debugfs:
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -186,6 +186,8 @@ struct ath12k_he {
+@@ -184,6 +184,8 @@ struct ath12k_he {
  #define ATH12K_GROUP_MAX_RADIO (ATH12K_MAX_SOCS * MAX_RADIOS)
  #define ATH12K_INVALID_GRP_ID  0xFF
  #define ATH12K_INVALID_CHIP_ID 0xFF
@@ -152,7 +152,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  struct ath12k_band_cap {
  	u32 phy_id;
  	u32 max_bw_supported;
-@@ -919,6 +930,7 @@ struct ath12k_hw_group {
+@@ -925,6 +936,7 @@ struct ath12k_hw_group {
  	unsigned long dev_flags;
  	struct ath12k_hw *ah[ATH12K_GROUP_MAX_RADIO];
  	struct ath12k_base *ab[ATH12K_MAX_SOCS];
@@ -160,7 +160,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	struct mutex mutex_lock;
  };
  
-@@ -1038,7 +1050,7 @@ struct ath12k_base {
+@@ -1063,7 +1075,7 @@ struct ath12k_base {
  	bool stats_disable;
  	u32 rx_hash_ix2;
  	u32 rx_hash_ix3;
@@ -180,7 +180,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	},
  	{
  		.name = "wcn7850 hw2.0",
-@@ -1043,6 +1045,8 @@ static const struct ath12k_hw_params ath
+@@ -1044,6 +1046,8 @@ static const struct ath12k_hw_params ath
  		.supports_ap_ps = true,
  		.credit_flow = false,
  		.alloc_cacheable_memory = true,
@@ -210,15 +210,6 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  #include <linux/ioport.h>
  #include <linux/firmware.h>
  #include <linux/module.h>
-@@ -573,7 +574,7 @@ static struct qmi_elem_info qmi_wlanfw_h
- 					   mlo_capable_valid),
- 	},
- 	{
--		.data_type	= QMI_OPT_FLAG,
-+		.data_type	= QMI_UNSIGNED_1_BYTE,
- 		.elem_len	= 1,
- 		.elem_size	= sizeof(u8),
- 		.array_type	= NO_ARRAY,
 @@ -2726,28 +2727,103 @@ out:
  	return ret;
  }
@@ -579,7 +570,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2455,6 +2455,23 @@ enum {
+@@ -2459,6 +2459,23 @@ enum {
  	WMI_HOST_VDEV_FLAGS_SCAN_MODE_VAP       = 0x00000010,
  };
  
@@ -603,7 +594,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  /*
   * 0 – index indicated EHT-MCS map for 20Mhz only sta (4 bytes valid)
   * 1 – index for <= 80MHz bw  (only 3 bytes are valid and other is reserved)
-@@ -2777,6 +2794,9 @@ struct ath12k_wmi_soc_mac_phy_hw_mode_ca
+@@ -2763,6 +2780,9 @@ struct ath12k_wmi_soc_mac_phy_hw_mode_ca
  	__le32 num_chainmask_tables;
  } __packed;
  
@@ -613,7 +604,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  struct ath12k_wmi_hw_mode_cap_params {
  	__le32 tlv_header;
  	__le32 hw_mode_id;
-@@ -2794,7 +2814,8 @@ struct ath12k_wmi_hw_mode_cap_params {
+@@ -2780,7 +2800,8 @@ struct ath12k_wmi_hw_mode_cap_params {
  
  struct ath12k_wmi_mac_phy_caps_params {
  	__le32 hw_mode_id;

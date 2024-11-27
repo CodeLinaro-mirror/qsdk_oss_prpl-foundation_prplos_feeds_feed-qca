@@ -1,0 +1,201 @@
+From 9518716f3f3414c66c60589fb60adfa1d77c9c73 Mon Sep 17 00:00:00 2001
+From: Pavithra Ganesan <quic_pavigane@quicinc.com>
+Date: Wed, 11 Sep 2024 09:49:57 +0530
+Subject: [PATCH] wpa_supplicant: initate auth when all configured links of ml bss are found
+
+While establishing ML connection, if BSS entry of partner BSS
+is not found in scan result, supplicant proceeds to authenticate with links
+which are available is current scan result.
+
+Instead attempt to retry scan and find all configured links in mld so that
+supplicant will be able associate on all configured links.
+Currently the retry limit is set to 5 scans.
+
+Also added a check to verify if partner link BSS'es freq is part for configured
+freq list before considering the link for association.
+
+Signed-off-by: Pavithra Ganesan <quic_pavigane@quicinc.com>
+---
+ tests/test-bss.c        |  2 +-
+ wpa_supplicant/bss.c    | 35 +++++++++++++++++++++++++++++++++--
+ wpa_supplicant/bss.h    |  3 ++-
+ wpa_supplicant/events.c |  4 ++--
+ wpa_supplicant/sme.c    | 39 ++++++++++++++++++++++++---------------
+ 5 files changed, 62 insertions(+), 21 deletions(-)
+
+--- a/tests/test-bss.c
++++ b/tests/test-bss.c
+@@ -60,7 +60,7 @@ void test_parse_basic_ml(struct wpa_supplicant *wpa_s, u8 mld_id)
+	}
+
+	ret = wpa_bss_parse_basic_ml_element(wpa_s, &bss.bss, ap_mld_addr,
+-					     &missing_links, NULL, &ap_mld_id);
++					     &missing_links, NULL, &ap_mld_id, NULL);
+
+	ASSERT_CMP_INT(ret, ==, 0);
+	ASSERT_CMP_INT(bss.bss.valid_links, ==, 1);
+--- a/wpa_supplicant/bss.c
++++ b/wpa_supplicant/bss.c
+@@ -1569,6 +1569,25 @@ wpa_bss_parse_ml_rnr_ap_info(struct wpa_supplicant *wpa_s,
+ 		if (link_id >= MAX_NUM_MLD_LINKS)
+ 			return;
+ 
++		int partner_freq = ieee80211_chan_to_freq(NULL, ap_info->op_class, ap_info->channel);
++		int curr_freq = 0;
++		if (partner_freq && wpa_s->conf->freq_list && wpa_s->conf->freq_list[0]) {
++			int i = 0;
++			curr_freq = wpa_s->conf->freq_list[i];
++			while (curr_freq) {
++				i++;
++				if (curr_freq == partner_freq) {
++					wpa_printf(MSG_DEBUG, "ML Partner freq %d is part of our scan list", partner_freq);
++					break;
++				}
++				curr_freq = wpa_s->conf->freq_list[i];
++			}
++		}
++		if (wpa_s->conf->freq_list && wpa_s->conf->freq_list[0] && !curr_freq) {
++			wpa_printf(MSG_DEBUG, "ML Partner freq %d is not part of our scan list ignore this link", partner_freq);
++			goto cont;
++		}
++
+ 		if (*mld_params != mbssid_idx) {
+ 			wpa_printf(MSG_DEBUG,
+ 				   "MLD: Reported link not part of MLD");
+@@ -1599,7 +1618,7 @@ wpa_bss_parse_ml_rnr_ap_info(struct wpa_supplicant *wpa_s,
+ 					RNR_TBTT_INFO_MLD_PARAM2_LINK_DISABLED;
+ 			}
+ 		}
+-
++cont:
+ 		pos += ap_info->tbtt_info_len;
+ 	}
+ }
+@@ -1627,7 +1646,8 @@ int wpa_bss_parse_basic_ml_element(struct wpa_supplicant *wpa_s,
+				   u8 *ap_mld_addr,
+				   u16 *missing_links,
+				   struct wpa_ssid *ssid,
+-				   u8 *ap_mld_id)
++				   u8 *ap_mld_id,
++				   struct wpa_driver_auth_params *params)
+ {
+	struct ieee802_11_elems elems;
+	struct wpabuf *mlbuf;
+@@ -1654,6 +1674,9 @@ int wpa_bss_parse_basic_ml_element(struct wpa_supplicant *wpa_s,
+	int ret = -1;
+	struct mld_link *l;
+
++	if (params)
++		params->mld = false;
++
+	if (ieee802_11_parse_elems(ies_pos, ies_len, &elems, 1) ==
+	    ParseFailed) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "MLD: Failed to parse elements");
+@@ -1731,6 +1754,8 @@ int wpa_bss_parse_basic_ml_element(struct wpa_supplicant *wpa_s,
+	os_memcpy(l->bssid, bss->bssid, ETH_ALEN);
+	l->freq = bss->freq;
+
++	if (params)
++		params->mld = true;
+
+	/*
+	 * The AP MLD ID in the RNR corresponds to the MBSSID index, see
+@@ -1788,6 +1813,12 @@ int wpa_bss_parse_basic_ml_element(struct wpa_supplicant *wpa_s,
+ 			   i, MAC2STR(bss->mld_links[i].bssid));
+ 	}
+ 
++	if(missing && wpa_s->ml_neigh_retries <= 5) {
++		wpa_printf(MSG_DEBUG,
++		   "MLD: Neighbor not found in scan, current neigh scan retry count %u", wpa_s->ml_neigh_retries);
++		goto out;
++	}
++
+	if (missing_links)
+		*missing_links = missing;
+
+--- a/wpa_supplicant/bss.h
++++ b/wpa_supplicant/bss.h
+@@ -223,7 +223,8 @@ int wpa_bss_parse_basic_ml_element(struct wpa_supplicant *wpa_s,
+				   u8 *ap_mld_addr,
+				   u16 *missing_links,
+				   struct wpa_ssid *ssid,
+-				   u8 *ap_mld_id);
++				   u8 *ap_mld_id,
++				   struct wpa_driver_auth_params *params);
+ u16 wpa_bss_parse_reconf_ml_element(struct wpa_supplicant *wpa_s,
+				    struct wpa_bss *bss);
+ u32 wpa_bss_compare_res(const struct wpa_bss *old,
+--- a/wpa_supplicant/events.c
++++ b/wpa_supplicant/events.c
+@@ -1162,7 +1162,7 @@ static bool wpas_valid_ml_bss(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+ {
+	u16 removed_links;
+
+-	if (wpa_bss_parse_basic_ml_element(wpa_s, bss, NULL, NULL, NULL, NULL))
++	if (wpa_bss_parse_basic_ml_element(wpa_s, bss, NULL, NULL, NULL, NULL, NULL))
+		return true;
+
+	if (!bss->valid_links)
+@@ -1896,7 +1896,7 @@ static int wpa_supplicant_connect_ml_missing(struct wpa_supplicant *wpa_s,
+
+	if (wpa_bss_parse_basic_ml_element(wpa_s, selected, NULL,
+					   &missing_links, ssid,
+-					   &ap_mld_id) ||
++					   &ap_mld_id, NULL) ||
+	    !missing_links)
+		return 0;
+
+--- a/wpa_supplicant/sme.c
++++ b/wpa_supplicant/sme.c
+@@ -568,25 +568,34 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
+
+	os_memset(&params, 0, sizeof(params));
+
+-	if ((wpa_s->drv_flags2 & WPA_DRIVER_FLAGS2_MLO) &&
+-	    !wpa_bss_parse_basic_ml_element(wpa_s, bss, wpa_s->ap_mld_addr,
+-					    NULL, ssid, NULL) &&
+-	    bss->valid_links) {
+-		wpa_printf(MSG_DEBUG, "MLD: In authentication");
+-		wpas_sme_set_mlo_links(wpa_s, bss);
++	ret = wpa_bss_parse_basic_ml_element(wpa_s, bss, wpa_s->ap_mld_addr,NULL, ssid, NULL, &params);
++
++	if (params.mld) {
++		if ((wpa_s->drv_flags2 & WPA_DRIVER_FLAGS2_MLO) &&
++		    !ret && bss->valid_links) {
++			wpa_printf(MSG_DEBUG, "MLD: In authentication");
++			wpas_sme_set_mlo_links(wpa_s, bss);
+
+ #ifdef CONFIG_TESTING_OPTIONS
+-		bss = wpas_ml_connect_pref(wpa_s, bss);
++			bss = wpas_ml_connect_pref(wpa_s, bss);
+
+-		if (wpa_s->conf->mld_force_single_link) {
+-			wpa_printf(MSG_DEBUG, "MLD: Force single link");
+-			wpa_s->valid_links = BIT(wpa_s->mlo_assoc_link_id);
+-		}
++			if (wpa_s->conf->mld_force_single_link) {
++				wpa_printf(MSG_DEBUG, "MLD: Force single link");
++				wpa_s->valid_links = BIT(wpa_s->mlo_assoc_link_id);
++			}
+ #endif /* CONFIG_TESTING_OPTIONS */
+-		params.mld = true;
+-		params.mld_link_id = wpa_s->mlo_assoc_link_id;
+-		params.ap_mld_addr = wpa_s->ap_mld_addr;
+-		wpas_ml_handle_removed_links(wpa_s, bss);
++			params.mld_link_id = wpa_s->mlo_assoc_link_id;
++			params.ap_mld_addr = wpa_s->ap_mld_addr;
++			wpas_ml_handle_removed_links(wpa_s, bss);
++		} else {
++			wpas_connect_work_done(wpa_s);
++			/* Tear down auth process and start scan again */
++			wpa_supplicant_cancel_scan(wpa_s);
++			wpa_supplicant_cancel_sched_scan(wpa_s);
++			wpa_s->ml_neigh_retries++;
++			wpa_supplicant_req_scan(wpa_s, 0, 0);
++			return;
++		}
+ 	}
+ 
+	skip_auth = wpa_s->conf->reassoc_same_bss_optim &&
+--
+2.34.1

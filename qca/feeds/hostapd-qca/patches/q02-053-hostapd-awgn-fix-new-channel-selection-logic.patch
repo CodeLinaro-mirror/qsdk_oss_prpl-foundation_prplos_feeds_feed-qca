@@ -181,7 +181,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	for (i = 0; i < mode->num_channels; i++) {
  		chan = &mode->channels[i];
  
-@@ -220,44 +257,47 @@ static int intf_awgn_find_channel(struct
+@@ -220,44 +257,48 @@ static int intf_awgn_find_channel(struct
  			continue;
  		}
  
@@ -209,7 +209,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
 +				   " chan_width : %d", chan->chan, chan_width);
 +			return 0;
  		}
--
+ 
 -		if (ret_chan && idx == channel_idx) {
 -			wpa_printf(MSG_DEBUG, "AWGN: Selected channel %d (%d)",
 -				   chan->freq, chan->chan);
@@ -217,7 +217,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
 -			return idx;
 +		new_start_freq = new_centre_freq - channel_width_to_int(chan_width) / 2;
 +		new_end_freq = new_centre_freq + channel_width_to_int(chan_width) / 2;
-+ 
++
 +		/* check whether new operating range is outside the current
 +		 * operating range since current operating range contains awgn
 +		 * interference
@@ -257,7 +257,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	SEG_SEC80_LOW		  = 0x10,
  	SEG_SEC80_LOW_UP	  = 0x20,
  	SEG_SEC80_UP_LOW	  = 0x40,
-@@ -274,6 +314,31 @@ enum chan_seg {
+@@ -274,6 +315,31 @@ enum chan_seg {
  	SEG_SEC160		  = 0xFF00,
  };
  
@@ -289,7 +289,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  /*
   * hostapd_intf_awgn_detected - awgn interference is detected in the operating channel.
   * The interference channel information is available as a
-@@ -287,14 +352,16 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -287,14 +353,16 @@ int hostapd_intf_awgn_detected(struct ho
  	struct csa_settings settings;
  	struct hostapd_channel_data *chan_data = NULL;
  	struct hostapd_channel_data *chan_temp = NULL;
@@ -307,7 +307,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	struct hostapd_hw_modes *mode = iface->current_mode;
  
  	wpa_printf(MSG_DEBUG,
-@@ -306,7 +373,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -306,7 +374,7 @@ int hostapd_intf_awgn_detected(struct ho
  
  	if (iface->conf->discard_6g_awgn_event) {
  		wpa_printf(MSG_DEBUG, "discard_6g_awgn_event set ignoring"
@@ -316,7 +316,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		return 0;
  	}
  
-@@ -314,47 +381,47 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -314,47 +382,47 @@ int hostapd_intf_awgn_detected(struct ho
  	if (!chan_bw_interference_bitmap || (chan_bw_interference_bitmap & SEG_PRI20))
  		channel_switch = 1;
  
@@ -387,7 +387,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	} else {
  		/* interference is not present in the primary 20Mhz, so reduce bandwidth*/
  		for (i = 0; i < mode->num_channels; i++) {
-@@ -364,7 +431,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -364,7 +432,7 @@ int hostapd_intf_awgn_detected(struct ho
  		}
  		if (!chan_data) {
  			wpa_printf(MSG_ERROR, "AWGN : no channel found");
@@ -396,7 +396,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		}
  
  		if ((chan_width > CHAN_WIDTH_160) &&
-@@ -390,7 +457,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -390,7 +458,7 @@ int hostapd_intf_awgn_detected(struct ho
  			wpa_printf(MSG_ERROR,
  				   "AWGN : couldn't find centre freq for chan : %d"
  				   " chan_width : %d", chan_data->chan, new_chan_width);
@@ -405,7 +405,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		}
  	} else {
  		new_centre_freq = chan_data->freq;
-@@ -446,5 +513,7 @@ int hostapd_intf_awgn_detected(struct ho
+@@ -446,5 +514,7 @@ int hostapd_intf_awgn_detected(struct ho
  		}
  	}
  

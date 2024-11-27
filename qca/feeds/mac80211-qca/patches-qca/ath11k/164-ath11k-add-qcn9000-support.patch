@@ -151,12 +151,3 @@ Signed-off-by: Anilkumar Kolli <akolli@codeaurora.org>
  		ret = ath11k_qmi_alloc_target_mem_chunk(ab);
  		if (ret) {
  			ath11k_warn(ab, "failed to allocate qmi target memory: %d\n",
-@@ -3584,7 +3584,7 @@ static void ath11k_qmi_driver_event_work
- 				break;
- 			}
- 
--			if (ath11k_cold_boot_cal && ab->qmi.cal_done == 0 &&
-+			if (ab->enable_cold_boot_cal && ab->qmi.cal_done == 0 &&
- 			    ab->hw_params.cold_boot_calib) {
- 				ath11k_qmi_process_coldboot_calibration(ab);
- 			} else {

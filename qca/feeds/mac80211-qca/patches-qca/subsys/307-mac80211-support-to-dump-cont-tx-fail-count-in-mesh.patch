@@ -16,7 +16,7 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -8366,6 +8366,11 @@ void cfg80211_cqm_pktloss_notify(struct
+@@ -8466,6 +8466,11 @@ void cfg80211_cqm_pktloss_notify(struct
  void cfg80211_cqm_txe_notify(struct net_device *dev, const u8 *peer,
  			     u32 num_packets, u32 rate, u32 intvl, gfp_t gfp);
  
@@ -28,28 +28,6 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  /**
   * cfg80211_cqm_beacon_loss_notify - beacon loss event
   * @dev: network device
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -5350,6 +5350,11 @@ enum nl80211_ps_state {
- 	NL80211_PS_ENABLED,
- };
- 
-+enum nl80211_mpath_change_notify {
-+	NL80211_MPATH_METRIC_CHANGE,
-+	NL80211_MPATH_BROKEN_NOTIFY,
-+};
-+
- /**
-  * enum nl80211_attr_cqm - connection quality monitor attributes
-  * @__NL80211_ATTR_CQM_INVALID: invalid
-@@ -5394,6 +5399,7 @@ enum nl80211_attr_cqm {
- 	NL80211_ATTR_CQM_TXE_INTVL,
- 	NL80211_ATTR_CQM_BEACON_LOSS_EVENT,
- 	NL80211_ATTR_CQM_RSSI_LEVEL,
-+	NL80211_ATTR_CQM_MPATH_CHANGE_EVENT,
- 
- 	/* keep last */
- 	__NL80211_ATTR_CQM_AFTER_LAST,
 --- a/net/mac80211/mesh_hwmp.c
 +++ b/net/mac80211/mesh_hwmp.c
 @@ -71,6 +71,9 @@ static inline u16 u16_field_get(const u8
@@ -195,7 +173,7 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  	return process ? new_metric : 0;
 --- a/net/mac80211/mesh_pathtbl.c
 +++ b/net/mac80211/mesh_pathtbl.c
-@@ -871,6 +871,7 @@ void mesh_plink_broken(struct sta_info *
+@@ -884,6 +884,7 @@ void mesh_plink_broken(struct sta_info *
  	struct mesh_table *tbl = &sdata->u.mesh.mesh_paths;
  	static const u8 bcast[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
  	struct mesh_path *mpath;
@@ -203,7 +181,7 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  
  	rcu_read_lock();
  	hlist_for_each_entry_rcu(mpath, &tbl->walk_head, walk_list) {
-@@ -885,9 +886,19 @@ void mesh_plink_broken(struct sta_info *
+@@ -898,9 +899,19 @@ void mesh_plink_broken(struct sta_info *
  				sdata->u.mesh.mshcfg.element_ttl,
  				mpath->dst, mpath->sn,
  				WLAN_REASON_MESH_PATH_DEST_UNREACHABLE, bcast);
@@ -241,7 +219,7 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  DECLARE_EWMA(avg_signal, 10, 8)
  enum ieee80211_agg_stop_reason {
  	AGG_STOP_DECLINED,
-@@ -426,6 +435,11 @@ struct mesh_sta {
+@@ -427,6 +436,11 @@ struct mesh_sta {
  	struct ewma_mesh_fail_avg fail_avg;
  	/* moving average of tx bitrate */
  	struct ewma_mesh_tx_rate_avg tx_rate_avg;
@@ -253,7 +231,7 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  };
  
  DECLARE_EWMA(signal, 10, 8)
-@@ -939,6 +953,8 @@ void ieee80211_sta_remove_link(struct st
+@@ -940,6 +954,8 @@ void ieee80211_sta_remove_link(struct st
  void ieee80211_sta_ps_deliver_wakeup(struct sta_info *sta);
  void ieee80211_sta_ps_deliver_poll_response(struct sta_info *sta);
  void ieee80211_sta_ps_deliver_uapsd(struct sta_info *sta);
@@ -264,7 +242,7 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -19192,6 +19192,28 @@ void cfg80211_cqm_txe_notify(struct net_
+@@ -19254,6 +19254,28 @@ void cfg80211_cqm_txe_notify(struct net_
  }
  EXPORT_SYMBOL(cfg80211_cqm_txe_notify);
  

@@ -1,0 +1,182 @@
+From 434c69b7555c17ed5ae80bc8126357fe5d42c81e Mon Sep 17 00:00:00 2001
+From: Aaradhana Sahu <quic_aarasahu@quicinc.com>
+Date: Tue, 13 Aug 2024 15:19:09 +0530
+Subject: [PATCH] hostapd: handle ACS scan start request failure with error
+ code -EBUSY
+
+Currently, if ACS scan request fails, states are cleared and returned.
+However, in case of multi link opertion, there is a possibilty of getting
+return value of -EBUSY. In this case, ACS can retry the scan request
+after some time like HT-40 scan.
+
+Hence, add changes to retry the scan after 5 seconds if -EBUSY is
+returned. Max 15 re-attempts would be made post which no further attempts
+would be made.
+
+Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
+Co-developed-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
+Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
+---
+ src/ap/acs.c | 81 ++++++++++++++++++++++++++++++++++++++--------------
+ src/ap/acs.h |  3 ++
+ 2 files changed, 62 insertions(+), 22 deletions(-)
+
+diff --git a/src/ap/acs.c b/src/ap/acs.c
+index 2ed6a9b..b1a822f 100644
+--- a/src/ap/acs.c
++++ b/src/ap/acs.c
+@@ -12,6 +12,7 @@
+ 
+ #include "utils/common.h"
+ #include "utils/list.h"
++#include "utils/eloop.h"
+ #include "common/ieee802_11_defs.h"
+ #include "common/hw_features_common.h"
+ #include "common/wpa_ctrl.h"
+@@ -307,7 +308,7 @@ static const struct bw_item *bw_desc[] = {
+ 
+ static int acs_request_scan(struct hostapd_iface *iface);
+ static int acs_survey_is_sufficient(struct freq_survey *survey);
+-
++static void acs_scan_retry(void *eloop_data, void *user_data);
+ 
+ static void acs_clean_chan_surveys(struct hostapd_channel_data *chan)
+ {
+@@ -352,6 +353,8 @@ void acs_cleanup(struct hostapd_iface *iface)
+ 
+ 	iface->chans_surveyed = 0;
+ 	iface->acs_num_completed_scans = 0;
++	iface->acs_num_retries = 0;
++	eloop_cancel_timeout(acs_scan_retry, iface, NULL);
+ }
+ 
+ 
+@@ -1505,6 +1508,7 @@ static void acs_scan_complete(struct hostapd_iface *iface)
+ 	int err;
+ 
+ 	iface->scan_cb = NULL;
++	iface->acs_num_retries = 0;
+ 
+ 	wpa_printf(MSG_DEBUG, "ACS: Using survey based algorithm (acs_num_scans=%d)",
+ 		   iface->conf->acs_num_scans);
+@@ -1518,7 +1522,7 @@ static void acs_scan_complete(struct hostapd_iface *iface)
+ 
+ 	if (++iface->acs_num_completed_scans < iface->conf->acs_num_scans) {
+ 		err = acs_request_scan(iface);
+-		if (err) {
++		if (err && err != -EBUSY) {
+ 			wpa_printf(MSG_ERROR, "ACS: Failed to request scan");
+ 			goto fail;
+ 		}
+@@ -1572,11 +1576,10 @@ static int * acs_request_scan_add_freqs(struct hostapd_iface *iface,
+ 	return freq;
+ }
+ 
+-
+ static int acs_request_scan(struct hostapd_iface *iface)
+ {
+ 	struct wpa_driver_scan_params params;
+-	int i, *freq;
++	int i, *freq, ret;
+ 	int num_channels;
+ 	struct hostapd_hw_modes *mode;
+ 
+@@ -1609,29 +1612,63 @@ static int acs_request_scan(struct hostapd_iface *iface)
+ 		return -1;
+ 	}
+ 
+-	iface->scan_cb = acs_scan_complete;
++	if (!iface->acs_num_retries)
++                wpa_printf(MSG_DEBUG, "ACS: Scanning %d / %d",
++                           iface->acs_num_completed_scans + 1,
++                           iface->conf->acs_num_scans);
++        else
++                wpa_printf(MSG_DEBUG, "ACS: Re-try Scanning attempt %d (%d / %d)",
++                           iface->acs_num_retries,
++                           iface->acs_num_completed_scans + 1,
++                           iface->conf->acs_num_scans);
++
++        if (iface->num_multi_hws) {
++                params.bssid = iface->bss[0]->conf->bssid;
++                wpa_printf(MSG_DEBUG, "scan triggered with bssid" MACSTR "\n",
++                           MAC2STR(params.bssid));
++        }
++
++        ret = hostapd_driver_scan(iface->bss[0], &params);
++        os_free(params.freqs);
++
++        if (ret == -EBUSY) {
++                iface->acs_num_retries++;
++                wpa_printf(MSG_ERROR, "Failed to request acs scan ret=%d (%s) - try to scan after %d seconds",
++                           ret, strerror(-ret), ACS_SCAN_RETRY_INTERVAL);
++                eloop_cancel_timeout(acs_scan_retry, iface, NULL);
++                eloop_register_timeout(ACS_SCAN_RETRY_INTERVAL, 0,
++                                       acs_scan_retry, iface, NULL);
++                return 0;
++        } else if (ret < 0) {
++                wpa_printf(MSG_ERROR, "ACS: Failed to request initial scan");
++                acs_cleanup(iface);
++                return -1;
++        }
++
++        iface->scan_cb = acs_scan_complete;
+ 
+-	wpa_printf(MSG_DEBUG, "ACS: Scanning %d / %d",
+-		   iface->acs_num_completed_scans + 1,
+-		   iface->conf->acs_num_scans);
++	return 0;
++}
+ 
+-	if (iface->num_multi_hws) {
+-		params.bssid = iface->bss[0]->conf->bssid;
+-		wpa_printf(MSG_DEBUG, "scan triggered with bssid" MACSTR "\n",
+-			   MAC2STR(params.bssid));
+-	}
++static void acs_scan_retry(void *eloop_data, void *user_data)
++{
++        struct hostapd_iface *iface = eloop_data;
++        int ret;
+ 
+-	if (hostapd_driver_scan(iface->bss[0], &params) < 0) {
+-		wpa_printf(MSG_ERROR, "ACS: Failed to request initial scan");
+-		acs_cleanup(iface);
+-		os_free(params.freqs);
+-		return -1;
+-	}
++        if (iface->acs_num_retries >= ACS_SCAN_RETRY_MAX_COUNT) {
++                wpa_printf(MSG_ERROR, "ACS: Failed to request initial scan (all re-attempts failed)");
++                goto acs_fail;
++        }
+ 
+-	os_free(params.freqs);
+-	return 0;
+-}
++        ret = acs_request_scan(iface);
++        if (!ret)
++                return;
+ 
++        wpa_printf(MSG_ERROR, "ACS: Failed to request re-try of initial scan");
++
++acs_fail:
++        acs_fail(iface);
++}
+ 
+ enum hostapd_chan_status acs_init(struct hostapd_iface *iface)
+ {
+diff --git a/src/ap/acs.h b/src/ap/acs.h
+index 105d22e..5de209a 100644
+--- a/src/ap/acs.h
++++ b/src/ap/acs.h
+@@ -15,6 +15,9 @@
+ enum hostapd_chan_status acs_init(struct hostapd_iface *iface);
+ void acs_cleanup(struct hostapd_iface *iface);
+ 
++#define ACS_SCAN_RETRY_MAX_COUNT 15
++#define ACS_SCAN_RETRY_INTERVAL 5
++
+ #else /* CONFIG_ACS */
+ 
+ static inline enum hostapd_chan_status acs_init(struct hostapd_iface *iface)
+-- 
+2.34.1
+

@@ -62,7 +62,7 @@ Signed-off-by: Venkateswara Naralasetty <quic_vnaralas@quicinc.com>
 -static int ath11k_dp_tx_pending_cleanup(int buf_id, void *skb, void *ctx)
 +static int ath11k_dp_tx_pending_cleanup(struct ath11k_base *ab, void *skb)
  {
--	struct ath11k_base *ab = (struct ath11k_base *)ctx;
+-	struct ath11k_base *ab = ctx;
  	struct sk_buff *msdu = skb;
  
  	dma_unmap_single(ab->dev, ATH11K_SKB_CB(msdu)->paddr, msdu->len,
@@ -254,7 +254,7 @@ Signed-off-by: Venkateswara Naralasetty <quic_vnaralas@quicinc.com>
  
  	if (unlikely(!msdu)) {
  		ath11k_warn(ab, "htt tx completion for unknown msdu_id %d\n",
-@@ -915,6 +926,7 @@ void ath11k_dp_tx_completion_handler(str
+@@ -913,6 +924,7 @@ void ath11k_dp_tx_completion_handler(str
  	}
  
  	while (count--) {
@@ -262,7 +262,7 @@ Signed-off-by: Venkateswara Naralasetty <quic_vnaralas@quicinc.com>
  		tx_status = &tx_ring->tx_status[i++];
  
  		desc_id = FIELD_GET(BUFFER_ADDR_INFO1_SW_COOKIE,
-@@ -933,17 +945,19 @@ void ath11k_dp_tx_completion_handler(str
+@@ -931,17 +943,19 @@ void ath11k_dp_tx_completion_handler(str
  			continue;
  		}
  

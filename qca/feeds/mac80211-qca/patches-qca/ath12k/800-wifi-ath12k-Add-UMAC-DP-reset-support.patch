@@ -490,15 +490,6 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  static void ath12k_dp_cc_cleanup(struct ath12k_base *ab)
  {
  	struct ath12k_rx_desc_info *desc_info, *tmp;
-@@ -1586,7 +1727,7 @@ static void ath12k_dp_cc_cleanup(struct
- 			continue;
- 
- 		kfree(dp->spt_info->rxbaddr[i]);
--        }
-+	}
- 
- 	spin_unlock_bh(&dp->rx_desc_lock);
- 
 @@ -2292,3 +2433,81 @@ fail_link_desc_cleanup:
  
  	return ret;

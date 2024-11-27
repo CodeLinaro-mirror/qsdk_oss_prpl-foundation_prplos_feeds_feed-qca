@@ -22,11 +22,9 @@ Signed-off-by: Dinesh Karthikeyan <quic_dinek@quicinc.com>
  net/wireless/nl80211.c       | 3 +++
  3 files changed, 8 insertions(+)
 
-diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index 234dae9..b1e1872 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -314,11 +314,13 @@ struct ieee80211_he_obss_pd {
+@@ -317,11 +317,13 @@ struct ieee80211_he_obss_pd {
   * @color: the current color.
   * @enabled: HE BSS color is used
   * @partial: define the AID equation.
@@ -40,32 +38,9 @@ index 234dae9..b1e1872 100644
  };
  
  /**
-diff --git a/include/uapi/linux/nl80211.h b/include/uapi/linux/nl80211.h
-index 7aae716..354a959 100644
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -7482,6 +7482,8 @@ enum nl80211_obss_pd_attributes {
-  * @NL80211_HE_BSS_COLOR_ATTR_COLOR: the current BSS Color.
-  * @NL80211_HE_BSS_COLOR_ATTR_DISABLED: is BSS coloring disabled.
-  * @NL80211_HE_BSS_COLOR_ATTR_PARTIAL: the AID equation to be used..
-+ * @NL80211_HE_BSS_COLOR_ATTR_COLLISION_DETECTION_DISABLED: is BSS
-+ * color collision detection disabled.
-  *
-  * @__NL80211_HE_BSS_COLOR_ATTR_LAST: Internal
-  * @NL80211_HE_BSS_COLOR_ATTR_MAX: highest BSS Color attribute.
-@@ -7492,6 +7494,7 @@ enum nl80211_bss_color_attributes {
- 	NL80211_HE_BSS_COLOR_ATTR_COLOR,
- 	NL80211_HE_BSS_COLOR_ATTR_DISABLED,
- 	NL80211_HE_BSS_COLOR_ATTR_PARTIAL,
-+	NL80211_HE_BSS_COLOR_ATTR_COLLISION_DETECTION_DISABLED,
- 
- 	/* keep last */
- 	__NL80211_HE_BSS_COLOR_ATTR_LAST,
-diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-index 0c0f8d3..bb9e652 100644
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -370,6 +370,7 @@ he_bss_color_policy[NL80211_HE_BSS_COLOR_ATTR_MAX + 1] = {
+@@ -380,6 +380,7 @@ he_bss_color_policy[NL80211_HE_BSS_COLOR
  	[NL80211_HE_BSS_COLOR_ATTR_COLOR] = NLA_POLICY_RANGE(NLA_U8, 1, 63),
  	[NL80211_HE_BSS_COLOR_ATTR_DISABLED] = { .type = NLA_FLAG },
  	[NL80211_HE_BSS_COLOR_ATTR_PARTIAL] = { .type = NLA_FLAG },
@@ -73,7 +48,7 @@ index 0c0f8d3..bb9e652 100644
  };
  
  static const struct nla_policy nl80211_txattr_policy[NL80211_TXRATE_MAX + 1] = {
-@@ -5684,6 +5685,8 @@ static int nl80211_parse_he_bss_color(struct nlattr *attrs,
+@@ -5838,6 +5839,8 @@ static int nl80211_parse_he_bss_color(st
  		!nla_get_flag(tb[NL80211_HE_BSS_COLOR_ATTR_DISABLED]);
  	he_bss_color->partial =
  		nla_get_flag(tb[NL80211_HE_BSS_COLOR_ATTR_PARTIAL]);
@@ -82,6 +57,3 @@ index 0c0f8d3..bb9e652 100644
  
  	return 0;
  }
--- 
-2.17.1
-

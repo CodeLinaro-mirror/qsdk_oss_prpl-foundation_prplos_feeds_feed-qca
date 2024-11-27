@@ -97,16 +97,6 @@ Signed-off-by: Anilkumar Kolli <akolli@codeaurora.org>
  void ath11k_debugfs_fw_stats_init(struct ath11k *ar)
  {
  	struct dentry *fwstats_dir = debugfs_create_dir("fw_stats",
-@@ -1923,6 +1941,9 @@ int ath11k_debugfs_register(struct ath11
- 	char pdev_name[5];
- 	char buf[100] = {0};
- 
-+	if (!(IS_ERR_OR_NULL(ar->debug.debugfs_pdev)))
-+		return 0;
-+
- 	snprintf(pdev_name, sizeof(pdev_name), "%s%d", "mac", ar->pdev_idx);
- 
- 	ar->debug.debugfs_pdev = debugfs_create_dir(pdev_name, ab->debugfs_soc);
 @@ -2012,6 +2033,8 @@ void ath11k_debugfs_unregister(struct at
  	}
  

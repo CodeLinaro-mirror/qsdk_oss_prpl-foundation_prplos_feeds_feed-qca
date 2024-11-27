@@ -16,11 +16,9 @@ Signed-off-by: Govindaraj Saminathan <quic_gsaminat@quicinc.com>
  src/ap/hostapd.c | 64 +++++++++++++++++++++++++++++-------------------
  1 file changed, 39 insertions(+), 25 deletions(-)
 
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 8d0be71392e3..b636e5c0ba3b 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1895,59 +1895,71 @@ static void hostapd_no_ir_cleanup(struct hostapd_data *bss)
+@@ -1941,59 +1941,71 @@ static void hostapd_no_ir_cleanup(struct
  static int hostapd_no_ir_channel_list_updated(struct hostapd_iface *iface,
  					      void *ctx)
  {
@@ -28,12 +26,13 @@ index 8d0be71392e3..b636e5c0ba3b 100644
  	bool all_no_ir, is_6ghz;
  	int i, j;
 -	struct hostapd_hw_modes *mode = NULL;
+-
+-	if (hostapd_get_hw_features(iface))
+-		return 0;
 +	struct hostapd_hw_modes *hw_mode = NULL, *hw_features;
 +	u16 num_hw_features, flags;
 +	u8 dfs_domain;
- 
--	if (hostapd_get_hw_features(iface))
--		return 0;
++
 +	if (hostapd_drv_none(hapd))
 +		return -1;
 +
@@ -111,7 +110,7 @@ index 8d0be71392e3..b636e5c0ba3b 100644
  			wpa_printf(MSG_DEBUG,
  				   "NO_IR: The current channel has NO_IR flag now, stop AP.");
  		} else {
-@@ -1964,20 +1976,20 @@ static int hostapd_no_ir_channel_list_updated(struct hostapd_iface *iface,
+@@ -2010,20 +2022,20 @@ static int hostapd_no_ir_channel_list_up
  		if (all_no_ir) {
  			wpa_printf(MSG_DEBUG,
  				   "NO_IR: AP in NO_IR and all chan in the new chanlist are NO_IR. Ignore");
@@ -137,7 +136,7 @@ index 8d0be71392e3..b636e5c0ba3b 100644
  			}
  
  			/* If the last operating channel is NO_IR, trigger ACS.
-@@ -1988,13 +2000,15 @@ static int hostapd_no_ir_channel_list_updated(struct hostapd_iface *iface,
+@@ -2034,13 +2046,15 @@ static int hostapd_no_ir_channel_list_up
  				if (acs_init(iface) != HOSTAPD_CHAN_ACS)
  					wpa_printf(MSG_ERROR,
  						   "NO_IR: Could not start ACS");
@@ -154,6 +153,3 @@ index 8d0be71392e3..b636e5c0ba3b 100644
  	return 0;
  }
  
--- 
-2.17.1
-

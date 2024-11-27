@@ -14,6 +14,7 @@ Add changes for the same.
 
 Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
+Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 ---
  src/ap/ap_drv_ops.c                |  10 +++
  src/ap/dfs.c                       |  31 +++++++
@@ -23,7 +24,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/ap/ap_drv_ops.c
 +++ b/src/ap/ap_drv_ops.c
-@@ -939,6 +939,16 @@ int hostapd_start_dfs_cac(struct hostapd
+@@ -1025,6 +1025,16 @@ int hostapd_start_dfs_cac(struct hostapd
  	}
  	data.radar_background = radar_background;
  
@@ -42,7 +43,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		if (radar_background)
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1362,6 +1362,13 @@ hostapd_dfs_start_channel_switch_backgro
+@@ -1368,6 +1368,13 @@ hostapd_dfs_start_channel_switch_backgro
  		hostapd_get_oper_centr_freq_seg1_idx(iface->conf));
  }
  
@@ -56,9 +57,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
  			     int ht_enabled, int chan_offset, int chan_width,
-@@ -1371,6 +1378,12 @@ int hostapd_dfs_complete_cac(struct host
- 		"success=%d freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
- 		success, freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
+@@ -1378,6 +1385,12 @@ int hostapd_dfs_complete_cac(struct host
+ 		success, freq, ht_enabled, chan_offset, chan_width, cf1, cf2,
+ 		iface->radar_detected);
  
 +	if (!hostapd_is_freq_in_current_hw_info(iface, freq)) {
 +		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_CAC_COMPLETED
@@ -69,7 +70,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (success) {
  		/* Complete iface/ap configuration */
  		if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) {
-@@ -1434,6 +1447,12 @@ int hostapd_dfs_pre_cac_expired(struct h
+@@ -1449,6 +1462,12 @@ int hostapd_dfs_pre_cac_expired(struct h
  		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
  		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
  
@@ -82,7 +83,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	hostapd_ubus_notify_radar_detected(iface, freq, chan_width, cf1, cf2);
  
  	/* Proceed only if DFS is not offloaded to the driver */
-@@ -1804,6 +1823,12 @@ int hostapd_dfs_nop_finished(struct host
+@@ -1824,6 +1843,12 @@ int hostapd_dfs_nop_finished(struct host
  		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
  		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
  
@@ -95,7 +96,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	/* Proceed only if DFS is not offloaded to the driver */
  	if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
  		return 0;
-@@ -1864,6 +1889,12 @@ int hostapd_dfs_start_cac(struct hostapd
+@@ -1884,6 +1909,12 @@ int hostapd_dfs_start_cac(struct hostapd
  	u8 channel_no, cf1_ch_no;
  	bool is_background_event = hostapd_dfs_is_background_event(iface, freq);
  
@@ -108,95 +109,44 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (is_background || is_background_event) {
  		iface->radar_background.cac_started = 1;
  	} else {
---- a/src/drivers/driver_nl80211.c
-+++ b/src/drivers/driver_nl80211.c
-@@ -10447,9 +10447,22 @@ static int nl80211_start_radar_detection
- 		return -1;
- 	}
- 
-+	if (nl80211_link_valid(bss, freq->link_id)) {
-+		wpa_printf(MSG_DEBUG, "nl80211: radar detection (CAC) on link_id=%d",
-+			   freq->link_id);
-+
-+		if (nla_put_u8(msg, NL80211_ATTR_MLO_LINK_ID, freq->link_id)) {
-+			nlmsg_free(msg);
-+			return -1;
-+		}
-+	}
-+
- 	ret = send_and_recv_msgs(drv, msg, NULL, NULL, NULL, NULL);
--	if (ret == 0)
-+	if (ret == 0) {
-+		nl80211_link_set_freq(bss, freq->link_id, freq->freq);
- 		return 0;
-+	}
-+
- 	wpa_printf(MSG_DEBUG, "nl80211: Failed to start radar detection: "
- 		   "%d (%s)", ret, strerror(-ret));
- 	return -1;
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1642,6 +1642,27 @@ nl80211_get_mld_link_by_freq(struct i802
- 	return NULL;
- }
- 
-+static int wpa_is_freq_in_bss(struct i802_bss *bss, int freq,
-+			      struct i802_link **mld_link)
-+{
-+	*mld_link = nl80211_get_mld_link_by_freq(bss, freq);
-+	if (*mld_link)
-+		return 1;
-+
-+	/* For non-ML case also, %NULL would be returned. Hence check if
-+	 * its for non-ML case, then proceed with first link.
-+	 * Non-ML link should have link ID as -1 and freq should be set.
-+	 */
-+	if (bss->n_links == 1 && bss->links[0].link_id == -1 &&
-+	    bss->links[0].freq == freq) {
-+		*mld_link = bss->flink;
-+		return 2;
-+	}
-+
-+	*mld_link = NULL;
-+	return 0;
-+
-+}
- 
- static void mlme_event(struct i802_bss *bss,
- 		       enum nl80211_commands cmd, struct nlattr *frame,
-@@ -2390,12 +2411,54 @@ static void nl80211_connect_failed_event
+@@ -2461,30 +2461,61 @@ static void nl80211_connect_failed_event
  	wpa_supplicant_event(drv->ctx, EVENT_CONNECT_FAILED_REASON, &data);
  }
  
-+static void nl80211_process_radar_event(void *ctx ,union wpa_event_data *data,
-+					enum nl80211_radar_event event_type,
-+					struct i802_link *mld_link)
++static void nl80211_process_radar_event(struct i802_bss *bss,
++					union wpa_event_data *data,
++					enum nl80211_radar_event event_type)
 +{
-+	if (mld_link->link_id != NL80211_DRV_LINK_ID_NA) {
-+		wpa_printf(MSG_DEBUG, "nl80211: DFS event for link_id %d",
-+			   mld_link->link_id);
-+		ctx = mld_link->ctx;
-+	}
-+
++	wpa_printf(MSG_DEBUG,
++		   "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz, link_id=%d",
++		   data->dfs_event.freq, data->dfs_event.ht_enabled,
++		   data->dfs_event.chan_offset, data->dfs_event.chan_width,
++		   data->dfs_event.cf1, data->dfs_event.cf2,
++		   data->dfs_event.link_id);
+ 
+-static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
+-				struct nlattr **tb)
 +	switch (event_type) {
 +	case NL80211_RADAR_DETECTED:
-+		wpa_supplicant_event(ctx, EVENT_DFS_RADAR_DETECTED, data);
++		wpa_supplicant_event(bss->ctx, EVENT_DFS_RADAR_DETECTED, data);
 +		break;
 +	case NL80211_RADAR_CAC_FINISHED:
-+		wpa_supplicant_event(ctx, EVENT_DFS_CAC_FINISHED, data);
++		wpa_supplicant_event(bss->ctx, EVENT_DFS_CAC_FINISHED, data);
 +		break;
 +	case NL80211_RADAR_CAC_ABORTED:
-+		wpa_supplicant_event(ctx, EVENT_DFS_CAC_ABORTED, data);
++		wpa_supplicant_event(bss->ctx, EVENT_DFS_CAC_ABORTED, data);
 +		break;
 +	case NL80211_RADAR_NOP_FINISHED:
-+		wpa_supplicant_event(ctx, EVENT_DFS_NOP_FINISHED, data);
++		wpa_supplicant_event(bss->ctx, EVENT_DFS_NOP_FINISHED, data);
 +		break;
 +	case NL80211_RADAR_PRE_CAC_EXPIRED:
-+		wpa_supplicant_event(ctx, EVENT_DFS_PRE_CAC_EXPIRED,
++		wpa_supplicant_event(bss->ctx, EVENT_DFS_PRE_CAC_EXPIRED,
 +				     data);
 +		break;
 +	case NL80211_RADAR_CAC_STARTED:
-+		wpa_supplicant_event(ctx, EVENT_DFS_CAC_STARTED, data);
++		wpa_supplicant_event(bss->ctx, EVENT_DFS_CAC_STARTED, data);
 +		break;
 +	default:
 +		wpa_printf(MSG_DEBUG, "nl80211: Unknown radar event %d "
@@ -204,26 +154,76 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +		break;
 +	}
 +}
- 
--static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
--				struct nlattr **tb)
++
++
 +static void nl80211_radar_event(struct i802_bss *bss, struct nlattr **tb)
  {
 +	struct wpa_driver_nl80211_data *drv = bss->drv;
-+	struct i802_link *mld_link;
  	union wpa_event_data data;
  	enum nl80211_radar_event event_type;
-+	void *ctx = bss->ctx;
 +	struct i802_bss *bss_iter;
-+	int ret;
 +	unsigned int i;
 +	bool hit = false;
  
  	if (!tb[NL80211_ATTR_WIPHY_FREQ] || !tb[NL80211_ATTR_RADAR_EVENT])
  		return;
-@@ -2445,31 +2508,52 @@ static void nl80211_radar_event(struct w
- 		   data.dfs_event.chan_offset, data.dfs_event.chan_width,
- 		   data.dfs_event.cf1, data.dfs_event.cf2, data.dfs_event.radar_bitmap);
+ 
+ 	os_memset(&data, 0, sizeof(data));
+-	data.dfs_event.link_id = NL80211_DRV_LINK_ID_NA;
+ 	data.dfs_event.freq = nla_get_u32(tb[NL80211_ATTR_WIPHY_FREQ]);
+ 	event_type = nla_get_u32(tb[NL80211_ATTR_RADAR_EVENT]);
+ 
+-	if (tb[NL80211_ATTR_MLO_LINK_ID]) {
+-		data.dfs_event.link_id =
+-			nla_get_u8(tb[NL80211_ATTR_MLO_LINK_ID]);
+-	} else if (data.dfs_event.freq) {
+-		data.dfs_event.link_id =
+-			nl80211_get_link_id_by_freq(drv->first_bss,
+-						    data.dfs_event.freq);
+-	}
+-
+ 	/* Check HT params */
+ 	if (tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]) {
+ 		data.dfs_event.ht_enabled = 1;
+@@ -2521,38 +2552,68 @@ static void nl80211_radar_event(struct w
+ 	if (tb[NL80211_ATTR_RADAR_BITMAP])
+ 		data.dfs_event.radar_bitmap = nla_get_u16(tb[NL80211_ATTR_RADAR_BITMAP]);
+ 
+-	wpa_printf(MSG_DEBUG,
+-		   "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz, link_id=%d"
+-		   "radar_bitmap: %0x ",data.dfs_event.freq, data.dfs_event.ht_enabled,
+-		   data.dfs_event.chan_offset, data.dfs_event.chan_width,
+-		   data.dfs_event.cf1, data.dfs_event.cf2,
+-		   data.dfs_event.link_id, data.dfs_event.radar_bitmap);
++	/* Finding a link match based on the frequency.
++	 * If %NL80211_DRV_LINK_ID_NA is returned, then either match was
++	 * not found or the bss could be operating as non-MLO.
++	 */
++	data.dfs_event.link_id = nl80211_get_link_id_by_freq(bss, data.dfs_event.freq);
++
++	if (data.dfs_event.link_id == NL80211_DRV_LINK_ID_NA) {
++		/* For non-MLO operation, freq should still match */
++		if (!bss->valid_links &&
++		    (unsigned int)bss->links[0].freq == data.dfs_event.freq)
++			return nl80211_process_radar_event(bss, &data, event_type);
++ 	}
++
++	wpa_printf(MSG_DEBUG, "nl80211: Checking suitable BSS for the DFS event");
++
++	/* It is possible to have the event without ifidx and wdev_id. For
++	 * example - NL80211_RADAR_NOP_FINISHED, NL80211_RADAR_PRE_CAC_EXPIRED.
++	 * Hence need to check on all BSSes.
++	 */
++	for (bss_iter = drv->first_bss; bss_iter; bss_iter = bss_iter->next) {
++		data.dfs_event.link_id = nl80211_get_link_id_by_freq(bss_iter,
++								     data.dfs_event.freq);
++		if (data.dfs_event.link_id == NL80211_DRV_LINK_ID_NA) {
++			/* For non-MLO operation, freq should still match */
++			if (!bss_iter->valid_links &&
++			    (unsigned int)bss_iter->links[0].freq == data.dfs_event.freq)
++				return nl80211_process_radar_event(bss_iter,
++								   &data, event_type);
++		}
  
 -	switch (event_type) {
 -	case NL80211_RADAR_DETECTED:
@@ -249,41 +249,27 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 -		wpa_printf(MSG_DEBUG, "nl80211: Unknown radar event %d "
 -			   "received", event_type);
 -		break;
-+	ret = wpa_is_freq_in_bss(bss, data.dfs_event.freq, &mld_link);
-+	if (ret) {
-+		if (ret == 2)
-+			ctx = bss->ctx;
-+		return nl80211_process_radar_event(ctx, &data, event_type, mld_link);
-+	}
-+
-+	wpa_printf(MSG_DEBUG, "nl80211: Checking suitable BSS for the DFS event");
-+
-+	/* It is possible to have the event without ifidx and wdev_id. For example -
-+	 * NL80211_RADAR_NOP_FINISHED, NL80211_RADAR_PRE_CAC_EXPIRED.
-+	 * Hence need to check on all BSSes.
-+	 */
-+	for (bss_iter = drv->first_bss; bss_iter; bss_iter = bss_iter->next) {
-+		ret = wpa_is_freq_in_bss(bss_iter, data.dfs_event.freq,
-+					 &mld_link);
-+		if (ret) {
-+			if (ret == 2)
-+				ctx = bss_iter->ctx;
-+			return nl80211_process_radar_event(ctx, &data, event_type,
-+							   mld_link);
-+		}
-+
-+		/* For event like NL80211_RADAR_NOP_FINISHED, freq info will
-+		 * not match exactly with the link freq. Hence, check if link
-+		 * freq is 5 GHz, pass the event to its ctx.
++		/* For event like NL80211_RADAR_NOP_FINISHED, freq info
++		 * will not match exactly with the link freq. Hence, check
++		 * if link freq is 5 GHz, pass the event to it.
 +		 */
-+		for (i = 0; i < bss_iter->n_links; i++) {
++		for_each_link_default(bss_iter->valid_links, i, 0) {
 +			if (bss_iter->links[i].freq < 5180 ||
-+			    bss_iter->links[i].freq > 5885)
++			    bss_iter->links[i].freq > 5900)
 +				continue;
 +
-+			mld_link = &bss_iter->links[i];
-+			ctx = bss_iter->ctx;
-+			nl80211_process_radar_event(ctx, &data, event_type, mld_link);
++			data.dfs_event.link_id = bss_iter->valid_links ?
++						 i : NL80211_DRV_LINK_ID_NA;
++
++			/* Can not just return after 1 match since if split
++			 * hardware is participating in MLO, then possibly
++			 * event is for 5 GHz upper band and this iteration
++			 * it has picked 5 GHz low band link. But 5 GHz freq
++			 * check will be true for both. Hence, iterate on
++			 * all possible links. The handler later should take
++			 * care whether actually event is for it or not
++			 */
++			nl80211_process_radar_event(bss_iter, &data, event_type);
 +
 +			if (!hit)
 +				hit = true;
@@ -298,7 +284,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  }
  
  static void nl80211_awgn_event(struct wpa_driver_nl80211_data *drv,
-@@ -4003,7 +4087,7 @@ static void do_process_drv_event(struct
+@@ -4131,7 +4192,7 @@ static void do_process_drv_event(struct
  		mlme_event_ft_event(drv, tb);
  		break;
  	case NL80211_CMD_RADAR_DETECT:
@@ -307,3 +293,29 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		break;
  	case NL80211_CMD_STOP_AP:
  		nl80211_stop_ap(drv, tb);
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -10630,9 +10630,22 @@ static int nl80211_start_radar_detection
+ 		return -1;
+ 	}
+ 
++	if (nl80211_link_valid(bss->valid_links, freq->link_id)) {
++		wpa_printf(MSG_DEBUG, "nl80211: radar detection (CAC) on link_id=%d",
++				freq->link_id);
++
++		if (nla_put_u8(msg, NL80211_ATTR_MLO_LINK_ID, freq->link_id)) {
++			nlmsg_free(msg);
++			return -1;
++		}
++	}
++
+ 	ret = send_and_recv_cmd(drv, msg);
+-	if (ret == 0)
++	if (ret == 0) {
++		nl80211_link_set_freq(bss, freq->link_id, freq->freq);
+ 		return 0;
++	}
++
+ 	wpa_printf(MSG_DEBUG, "nl80211: Failed to start radar detection: "
+ 		   "%d (%s)", ret, strerror(-ret));
+ 	return -1;

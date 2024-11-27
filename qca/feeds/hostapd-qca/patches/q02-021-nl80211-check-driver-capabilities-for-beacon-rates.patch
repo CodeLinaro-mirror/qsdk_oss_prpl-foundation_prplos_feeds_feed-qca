@@ -12,23 +12,19 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  src/drivers/driver_nl80211_capa.c | 4 ++++
  2 files changed, 6 insertions(+)
 
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 2a38917..9549683 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2319,6 +2319,7 @@ struct wpa_driver_capa {
+@@ -2361,6 +2361,7 @@ struct wpa_driver_capa {
   * frames in STA mode
   */
  #define WPA_DRIVER_FLAGS2_PROT_RANGE_NEG_STA	0x0000000000002000ULL
 +#define WPA_DRIVER_FLAGS2_BEACON_RATE_EHT	0x0000000000004000ULL
  /** Driver supports MLO in station/AP mode */
  #define WPA_DRIVER_FLAGS2_MLO			0x0000000000004000ULL
- 	u64 flags2;
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index 861e9e5..8693d7f 100644
+ /** Driver supports minimal scan request probe content  */
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -570,6 +570,10 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
+@@ -569,6 +569,10 @@ static void wiphy_info_ext_feature_flags
  		capa->flags2 |= WPA_DRIVER_FLAGS2_BEACON_RATE_HE;
  
  	if (ext_feature_isset(ext_features, len,

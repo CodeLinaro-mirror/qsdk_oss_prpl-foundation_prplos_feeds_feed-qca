@@ -20,12 +20,14 @@ scan vdev in driver
 
 Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
 ---
- drivers/net/wireless/ath/ath12k/mac.c | 16 ++++++++++++++--
- 1 file changed, 14 insertions(+), 2 deletions(-)
+ drivers/net/wireless/ath/ath12k/mac.c | 18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
 
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index ebfa186..c083b9c 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -5143,6 +5143,8 @@ void ath12k_mac_unassign_link_vif(struct
+@@ -5134,6 +5134,8 @@ void ath12k_mac_unassign_link_vif(struct ath12k_link_vif *arvif)
  
  	if (arvif != &ahvif->deflink)
  		kfree(arvif);
@@ -34,20 +36,20 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  struct ath12k_link_vif *
-@@ -5506,6 +5508,12 @@ static int ath12k_mac_op_hw_scan(struct
- 		return -ENOMEM;
- 	}
- 
-+	if (arvif->link_id == ATH12K_DEFAULT_SCAN_LINK &&
-+	    (!is_broadcast_ether_addr(req->bssid) &&
-+	     !is_zero_ether_addr(req->bssid))) {
-+		memcpy(arvif->addr, req->bssid, ETH_ALEN);
-+	}
-+
- 	if (arvif->is_created) {
- 		if (ar != arvif->ar && arvif->is_started) {
+@@ -5525,6 +5527,12 @@ static int ath12k_mac_op_hw_scan(struct ieee80211_hw *hw,
  			mutex_unlock(&ah->conf_mutex);
-@@ -10730,8 +10738,14 @@ static void ath12k_update_obss_color_not
+ 			return -ENOMEM;
+ 		}
++
++		if (arvif->link_id == ATH12K_DEFAULT_SCAN_LINK &&
++		    (!is_broadcast_ether_addr(req->bssid) &&
++		     !is_zero_ether_addr(req->bssid)))
++			memcpy(arvif->addr, req->bssid, ETH_ALEN);
++
+ 		mutex_lock(&ar->conf_mutex);
+ 		ret = ath12k_mac_vdev_create(ar, arvif);
+ 		if (ret) {
+@@ -10754,8 +10762,14 @@ static void ath12k_update_obss_color_notify_work(struct work_struct *work)
  		return -EINVAL;
  	}
  
@@ -64,3 +66,6 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  	txpower = link_conf->txpower;
  	rcu_read_unlock();
  
+-- 
+2.34.1
+

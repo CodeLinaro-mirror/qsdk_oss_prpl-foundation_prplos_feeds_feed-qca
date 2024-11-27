@@ -15,11 +15,9 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  src/common/dpp_crypto.c | 4 +---
  1 file changed, 1 insertion(+), 3 deletions(-)
 
-diff --git a/src/common/dpp_crypto.c b/src/common/dpp_crypto.c
-index 39d39f4..08143e4 100644
 --- a/src/common/dpp_crypto.c
 +++ b/src/common/dpp_crypto.c
-@@ -1588,9 +1588,7 @@ dpp_pkex_derive_Qr(const struct dpp_curve_params *curve, const u8 *mac_resp,
+@@ -1588,9 +1588,7 @@ dpp_pkex_derive_Qr(const struct dpp_curv
  	Pr = crypto_ec_key_get_public_key(Pr_key);
  	Qr = crypto_ec_point_init(ec);
  	hash_bn = crypto_bignum_init_set(hash, curve->hash_len);
@@ -30,6 +28,3 @@ index 39d39f4..08143e4 100644
  		goto fail;
  
  	if (crypto_ec_point_is_at_infinity(ec, Qr)) {
--- 
-2.17.1
-

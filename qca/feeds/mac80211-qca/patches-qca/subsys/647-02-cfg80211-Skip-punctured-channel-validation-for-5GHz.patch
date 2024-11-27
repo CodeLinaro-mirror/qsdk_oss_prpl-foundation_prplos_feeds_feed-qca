@@ -18,7 +18,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -4888,7 +4888,7 @@ struct ieee80211_iface_combination {
+@@ -5087,7 +5087,7 @@ struct ieee80211_iface_combination {
  	 * @radar_detect_widths:
  	 * bitmap of channel widths supported for radar detection
  	 */
@@ -29,7 +29,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	 * @radar_detect_regions:
 --- a/net/mac80211/vht.c
 +++ b/net/mac80211/vht.c
-@@ -339,8 +339,12 @@ ieee80211_sta_cap_rx_bw(struct link_sta_
+@@ -353,8 +353,12 @@ ieee80211_sta_cap_rx_bw(struct link_sta_
  		rcu_read_lock();
  		link_conf = rcu_dereference(sdata->vif.link_conf[link_id]);
  
@@ -58,7 +58,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  static bool cfg80211_valid_60g_freq(u32 freq)
  {
  	return freq >= 58320 && freq <= 70200;
-@@ -627,7 +633,8 @@ static u32 cfg80211_get_end_freq(u32 cen
+@@ -629,7 +635,8 @@ static u32 cfg80211_get_end_freq(u32 cen
  
  static int cfg80211_get_chans_dfs_required(struct wiphy *wiphy,
  					    u32 center_freq,
@@ -68,7 +68,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  {
  	struct ieee80211_channel *c;
  	u32 freq, start_freq, end_freq;
-@@ -636,6 +643,8 @@ static int cfg80211_get_chans_dfs_requir
+@@ -638,6 +645,8 @@ static int cfg80211_get_chans_dfs_requir
  	end_freq = cfg80211_get_end_freq(center_freq, bandwidth);
  
  	for (freq = start_freq; freq <= end_freq; freq += MHZ_TO_KHZ(20)) {
@@ -77,7 +77,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		c = ieee80211_get_channel_khz(wiphy, freq);
  		if (!c)
  			return -EINVAL;
-@@ -668,7 +677,7 @@ int cfg80211_chandef_dfs_required(struct
+@@ -670,7 +679,7 @@ int cfg80211_chandef_dfs_required(struct
  
  		ret = cfg80211_get_chans_dfs_required(wiphy,
  					ieee80211_chandef_to_khz(chandef),
@@ -86,7 +86,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		if (ret < 0)
  			return ret;
  		else if (ret > 0)
-@@ -679,7 +688,7 @@ int cfg80211_chandef_dfs_required(struct
+@@ -681,7 +690,7 @@ int cfg80211_chandef_dfs_required(struct
  
  		ret = cfg80211_get_chans_dfs_required(wiphy,
  					MHZ_TO_KHZ(chandef->center_freq2),
@@ -95,7 +95,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		if (ret < 0)
  			return ret;
  		else if (ret > 0)
-@@ -704,9 +713,20 @@ int cfg80211_chandef_dfs_required(struct
+@@ -706,9 +715,20 @@ int cfg80211_chandef_dfs_required(struct
  }
  EXPORT_SYMBOL(cfg80211_chandef_dfs_required);
  
@@ -117,7 +117,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  {
  	struct ieee80211_channel *c;
  	u32 freq, start_freq, end_freq;
-@@ -722,6 +742,8 @@ static int cfg80211_get_chans_dfs_usable
+@@ -724,6 +744,8 @@ static int cfg80211_get_chans_dfs_usable
  	 * (require CAC). Allow DFS and non-DFS channel mix.
  	 */
  	for (freq = start_freq; freq <= end_freq; freq += MHZ_TO_KHZ(20)) {
@@ -126,7 +126,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		c = ieee80211_get_channel_khz(wiphy, freq);
  		if (!c)
  			return -EINVAL;
-@@ -756,7 +778,7 @@ bool cfg80211_chandef_dfs_usable(struct
+@@ -758,7 +780,7 @@ bool cfg80211_chandef_dfs_usable(struct
  
  	r1 = cfg80211_get_chans_dfs_usable(wiphy,
  					   MHZ_TO_KHZ(chandef->center_freq1),
@@ -135,7 +135,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  
  	if (r1 < 0)
  		return false;
-@@ -766,7 +788,7 @@ bool cfg80211_chandef_dfs_usable(struct
+@@ -768,7 +790,7 @@ bool cfg80211_chandef_dfs_usable(struct
  		WARN_ON(!chandef->center_freq2);
  		r2 = cfg80211_get_chans_dfs_usable(wiphy,
  					MHZ_TO_KHZ(chandef->center_freq2),
@@ -144,7 +144,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		if (r2 < 0)
  			return false;
  		break;
-@@ -950,7 +972,8 @@ bool cfg80211_any_wiphy_oper_chan(struct
+@@ -953,7 +975,8 @@ bool cfg80211_any_wiphy_oper_chan(struct
  
  static bool cfg80211_get_chans_dfs_available(struct wiphy *wiphy,
  					     u32 center_freq,
@@ -154,7 +154,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  {
  	struct ieee80211_channel *c;
  	u32 freq, start_freq, end_freq;
-@@ -968,6 +991,8 @@ static bool cfg80211_get_chans_dfs_avail
+@@ -971,6 +994,8 @@ static bool cfg80211_get_chans_dfs_avail
  	 * had gone through CAC return false
  	 */
  	for (freq = start_freq; freq <= end_freq; freq += MHZ_TO_KHZ(20)) {
@@ -163,7 +163,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		c = ieee80211_get_channel_khz(wiphy, freq);
  		if (!c)
  			return false;
-@@ -999,7 +1024,7 @@ static bool cfg80211_chandef_dfs_availab
+@@ -1045,7 +1070,7 @@ static bool cfg80211_chandef_dfs_availab
  
  	r = cfg80211_get_chans_dfs_available(wiphy,
  					     MHZ_TO_KHZ(chandef->center_freq1),
@@ -172,7 +172,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  
  	/* If any of channels unavailable for cf1 just return */
  	if (!r)
-@@ -1010,7 +1035,7 @@ static bool cfg80211_chandef_dfs_availab
+@@ -1056,7 +1081,7 @@ static bool cfg80211_chandef_dfs_availab
  		WARN_ON(!chandef->center_freq2);
  		r = cfg80211_get_chans_dfs_available(wiphy,
  					MHZ_TO_KHZ(chandef->center_freq2),
@@ -181,7 +181,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		break;
  	default:
  		WARN_ON(chandef->center_freq2);
-@@ -1022,7 +1047,8 @@ static bool cfg80211_chandef_dfs_availab
+@@ -1068,7 +1093,8 @@ static bool cfg80211_chandef_dfs_availab
  
  static unsigned int cfg80211_get_chans_dfs_cac_time(struct wiphy *wiphy,
  						    u32 center_freq,
@@ -191,7 +191,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  {
  	struct ieee80211_channel *c;
  	u32 start_freq, end_freq, freq;
-@@ -1032,6 +1058,8 @@ static unsigned int cfg80211_get_chans_d
+@@ -1078,6 +1104,8 @@ static unsigned int cfg80211_get_chans_d
  	end_freq = cfg80211_get_end_freq(center_freq, bandwidth);
  
  	for (freq = start_freq; freq <= end_freq; freq += MHZ_TO_KHZ(20)) {
@@ -200,7 +200,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		c = ieee80211_get_channel_khz(wiphy, freq);
  		if (!c)
  			return 0;
-@@ -1065,21 +1093,22 @@ cfg80211_chandef_dfs_cac_time(struct wip
+@@ -1111,14 +1139,14 @@ cfg80211_chandef_dfs_cac_time(struct wip
  
  	t1 = cfg80211_get_chans_dfs_cac_time(wiphy,
  					     MHZ_TO_KHZ(chandef->center_freq1),
@@ -217,6 +217,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  
  	return max(t1, t2);
  }
+@@ -1126,7 +1154,8 @@ EXPORT_SYMBOL(cfg80211_chandef_dfs_cac_t
  
  static bool cfg80211_secondary_chans_ok(struct wiphy *wiphy,
  					u32 center_freq, u32 bandwidth,
@@ -226,7 +227,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  {
  	struct ieee80211_channel *c;
  	u32 freq, start_freq, end_freq;
-@@ -1088,6 +1117,8 @@ static bool cfg80211_secondary_chans_ok(
+@@ -1135,6 +1164,8 @@ static bool cfg80211_secondary_chans_ok(
  	end_freq = cfg80211_get_end_freq(center_freq, bandwidth);
  
  	for (freq = start_freq; freq <= end_freq; freq += MHZ_TO_KHZ(20)) {
@@ -235,7 +236,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		c = ieee80211_get_channel_khz(wiphy, freq);
  		if (!c || c->flags & prohibited_flags)
  			return false;
-@@ -1266,10 +1297,14 @@ bool cfg80211_chandef_usable(struct wiph
+@@ -1313,10 +1344,14 @@ bool cfg80211_chandef_usable(struct wiph
  		prohibited_flags |= IEEE80211_CHAN_NO_320MHZ;
  		width = 320;
  
@@ -252,7 +253,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		if (!sband)
  			return false;
  
-@@ -1314,14 +1349,16 @@ bool cfg80211_chandef_usable(struct wiph
+@@ -1360,14 +1395,16 @@ bool cfg80211_chandef_usable(struct wiph
  
  	if (!cfg80211_secondary_chans_ok(wiphy,
  					 ieee80211_chandef_to_khz(chandef),
@@ -273,7 +274,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  
 --- a/net/wireless/reg.c
 +++ b/net/wireless/reg.c
-@@ -1790,7 +1790,8 @@ static uint32_t reg_rule_to_chan_bw_flag
+@@ -1760,7 +1760,8 @@ static uint32_t reg_rule_to_chan_bw_flag
  			bw_flags |= IEEE80211_CHAN_NO_80MHZ;
  		if (max_bandwidth_khz < MHZ_TO_KHZ(160))
  			bw_flags |= IEEE80211_CHAN_NO_160MHZ;

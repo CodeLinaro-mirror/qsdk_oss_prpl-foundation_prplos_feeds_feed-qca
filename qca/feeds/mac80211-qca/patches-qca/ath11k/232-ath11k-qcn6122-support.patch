@@ -123,7 +123,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  static inline u32 ath11k_ahb_read32(struct ath11k_base *ab, u32 offset)
  {
  	return ioread32(ab->mem + offset);
-@@ -431,6 +432,7 @@ static void ath11k_ahb_init_qmi_ce_confi
+@@ -430,6 +431,7 @@ static void ath11k_ahb_init_qmi_ce_confi
  	cfg->svc_to_ce_map_len = ab->hw_params.svc_to_ce_map_len;
  	cfg->svc_to_ce_map = ab->hw_params.svc_to_ce_map;
  	ab->qmi.service_ins_id = ab->hw_params.qmi_service_ins_id;
@@ -131,7 +131,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  }
  
  static void ath11k_ahb_free_ext_irq(struct ath11k_base *ab)
-@@ -452,6 +454,9 @@ static void ath11k_ahb_free_irq(struct a
+@@ -451,6 +453,9 @@ static void ath11k_ahb_free_irq(struct a
  	int irq_idx;
  	int i;
  
@@ -141,7 +141,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	if (ab->hw_params.hybrid_bus_type)
  		return ath11k_pcic_free_irq(ab);
  
-@@ -615,6 +620,9 @@ static int ath11k_ahb_config_irq(struct
+@@ -614,6 +619,9 @@ static int ath11k_ahb_config_irq(struct
  	int irq, irq_idx, i;
  	int ret;
  
@@ -151,7 +151,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	if (ab->hw_params.hybrid_bus_type)
  		return ath11k_pcic_config_irq(ab);
  
-@@ -826,6 +834,27 @@ static const struct ath11k_hif_ops ath11
+@@ -825,6 +833,27 @@ static const struct ath11k_hif_ops ath11
  	.ce_irq_disable = ath11k_pci_disable_ce_irqs_except_wake_irq,
  };
  
@@ -179,7 +179,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  static int ath11k_core_get_rproc(struct ath11k_base *ab)
  {
  	struct ath11k_ahb *ab_ahb = ath11k_ahb_priv(ab);
-@@ -932,6 +961,11 @@ static int ath11k_ahb_setup_resources(st
+@@ -931,6 +960,11 @@ static int ath11k_ahb_setup_resources(st
  	struct resource *mem_res;
  	void __iomem *mem;
  
@@ -191,7 +191,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	if (ab->hw_params.hybrid_bus_type)
  		return ath11k_ahb_setup_msi_resources(ab);
  
-@@ -1126,6 +1160,28 @@ static int ath11k_ahb_fw_resource_deinit
+@@ -1119,6 +1153,28 @@ static int ath11k_ahb_fw_resource_deinit
  	return 0;
  }
  
@@ -220,7 +220,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  static int ath11k_ahb_probe(struct platform_device *pdev)
  {
  	struct ath11k_base *ab;
-@@ -1134,7 +1190,7 @@ static int ath11k_ahb_probe(struct platf
+@@ -1127,7 +1183,7 @@ static int ath11k_ahb_probe(struct platf
  	const struct ath11k_hif_ops *hif_ops;
  	const struct ath11k_pci_ops *pci_ops;
  	enum ath11k_hw_rev hw_rev;
@@ -229,7 +229,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	u32 hw_mode_id;
  
  	of_id = of_match_device(ath11k_ahb_of_match, &pdev->dev);
-@@ -1156,11 +1212,16 @@ static int ath11k_ahb_probe(struct platf
+@@ -1149,11 +1205,16 @@ static int ath11k_ahb_probe(struct platf
  		hif_ops = &ath11k_ahb_hif_ops_wcn6750;
  		pci_ops = &ath11k_ahb_pci_ops_wcn6750;
  		break;
@@ -246,7 +246,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
  	if (ret) {
  		dev_err(&pdev->dev, "failed to set 32-bit consistent dma\n");
-@@ -1177,6 +1238,7 @@ static int ath11k_ahb_probe(struct platf
+@@ -1170,6 +1231,7 @@ static int ath11k_ahb_probe(struct platf
  	ab->hif.ops = hif_ops;
  	ab->pdev = pdev;
  	ab->hw_rev = hw_rev;
@@ -290,7 +290,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  #define CE_ATTR_BYTE_SWAP_DATA 2
 --- a/drivers/net/wireless/ath/ath11k/core.c
 +++ b/drivers/net/wireless/ath/ath11k/core.c
-@@ -652,6 +652,8 @@ static struct ath11k_hw_params ath11k_hw
+@@ -659,6 +659,8 @@ static struct ath11k_hw_params ath11k_hw
  		.tx_ring_size = DP_TCL_DATA_RING_SIZE_WCN6750,
  		.smp2p_wow_exit = true,
  		.support_fw_mac_sequence = true,
@@ -299,7 +299,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	},
  	{
  		.hw_rev = ATH11K_HW_IPQ5018_HW10,
-@@ -666,7 +668,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -673,7 +675,7 @@ static struct ath11k_hw_params ath11k_hw
  		/* hal_desc_sz and hw ops are similar to qcn9074 */
  		.hal_desc_sz = sizeof(struct hal_rx_desc_qcn9074),
  		.qmi_service_ins_id = ATH11K_QMI_WLFW_SERVICE_INS_ID_V01_IPQ8074,
@@ -308,7 +308,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  		.credit_flow = false,
  		.max_tx_ring = 1,
  		.spectral = {
-@@ -734,6 +736,76 @@ static struct ath11k_hw_params ath11k_hw
+@@ -742,6 +744,76 @@ static struct ath11k_hw_params ath11k_hw
  		.smp2p_wow_exit = false,
  		.support_fw_mac_sequence = false,
  	},
@@ -405,7 +405,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  };
  
  enum ath11k_firmware_mode {
-@@ -954,6 +958,14 @@ struct ath11k_num_vdevs_peers {
+@@ -952,6 +956,14 @@ struct ath11k_num_vdevs_peers {
  	u32 num_peers;
  };
  
@@ -420,13 +420,13 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  /* Master structure to hold the hw data which may be used in core module */
  struct ath11k_base {
  	enum ath11k_hw_rev hw_rev;
-@@ -1018,6 +1030,8 @@ struct ath11k_base {
+@@ -1014,6 +1026,8 @@ struct ath11k_base {
+ 
+ 	struct list_head peers;
  	wait_queue_head_t peer_mapping_wq;
- 	u8 mac_addr[ETH_ALEN];
- 	bool wmi_ready;
 +	int userpd_id;
 +	struct ath11k_internal_pci ipci;
- 	u32 wlan_init_status;
+ 	u8 mac_addr[ETH_ALEN];
  	int irq_num[ATH11K_IRQ_NUM_MAX];
  	struct ath11k_ext_irq_grp ext_irq_grp[ATH11K_EXT_IRQ_GRP_NUM_MAX];
 --- a/drivers/net/wireless/ath/ath11k/dp.c
@@ -669,7 +669,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  
  struct hal_rx_desc;
  struct hal_tcl_data_cmd;
-@@ -245,6 +249,9 @@ struct ath11k_hw_params {
+@@ -246,6 +250,9 @@ struct ath11k_hw_params {
  	bool support_fw_mac_sequence;
  	bool ce_fwlog_enable;
  	bool fwmem_mode_change;
@@ -679,7 +679,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  };
  
  struct ath11k_hw_ops {
-@@ -298,11 +305,13 @@ extern const struct ath11k_hw_ops qcn907
+@@ -299,11 +306,13 @@ extern const struct ath11k_hw_ops qcn907
  extern const struct ath11k_hw_ops wcn6855_ops;
  extern const struct ath11k_hw_ops wcn6750_ops;
  extern const struct ath11k_hw_ops ipq5018_ops;
@@ -693,7 +693,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  
  extern const struct ce_ie_addr ath11k_ce_ie_addr_ipq8074;
  extern const struct ce_ie_addr ath11k_ce_ie_addr_ipq5018;
-@@ -439,6 +448,7 @@ extern const struct ath11k_hw_regs qcn90
+@@ -440,6 +449,7 @@ extern const struct ath11k_hw_regs qcn90
  extern const struct ath11k_hw_regs wcn6855_regs;
  extern const struct ath11k_hw_regs wcn6750_regs;
  extern const struct ath11k_hw_regs ipq5018_regs;
@@ -770,7 +770,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  
  	ret = of_property_read_u32(ab->dev->of_node, "qrtr_instance_id", &node_id);
  	if (!ret)
-@@ -649,7 +612,7 @@ static int ath11k_pci_power_up(struct at
+@@ -651,7 +614,7 @@ static int ath11k_pci_power_up(struct at
  	}
  
  	if (ab->hw_params.static_window_map)
@@ -824,7 +824,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  static void ath11k_pcic_ce_irq_enable(struct ath11k_base *ab, u16 ce_id)
  {
  	u32 irq_idx;
-@@ -703,7 +725,8 @@ EXPORT_SYMBOL(ath11k_pcic_stop);
+@@ -702,7 +724,8 @@ EXPORT_SYMBOL(ath11k_pcic_stop);
  
  int ath11k_pcic_start(struct ath11k_base *ab)
  {
@@ -834,7 +834,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  
  	ath11k_pcic_ce_irqs_enable(ab);
  	ath11k_ce_rx_post_buf(ab);
-@@ -763,7 +786,7 @@ int ath11k_pcic_register_pci_ops(struct
+@@ -762,7 +785,7 @@ int ath11k_pcic_register_pci_ops(struct
  		return 0;
  
  	/* Return error if mandatory pci_ops callbacks are missing */
@@ -843,7 +843,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	    !pci_ops->window_read32)
  		return -EINVAL;
  
-@@ -805,3 +828,258 @@ void ath11k_pci_disable_ce_irqs_except_w
+@@ -804,3 +827,258 @@ void ath11k_pci_disable_ce_irqs_except_w
  	}
  }
  EXPORT_SYMBOL(ath11k_pci_disable_ce_irqs_except_wake_irq);
@@ -1128,7 +1128,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  #include "debug.h"
  #include "hif.h"
  #include <linux/of.h>
-@@ -2914,6 +2914,10 @@ static int ath11k_qmi_assign_target_mem_
+@@ -2910,6 +2910,10 @@ static int ath11k_qmi_assign_target_mem_
  			idx++;
  			break;
  		case BDF_MEM_REGION_TYPE:
@@ -1139,7 +1139,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  			ab->qmi.target_mem[idx].paddr = ab->hw_params.bdf_addr;
  			ab->qmi.target_mem[idx].vaddr = NULL;
  			ab->qmi.target_mem[idx].size = ab->qmi.target_mem[i].size;
-@@ -2934,8 +2938,10 @@ static int ath11k_qmi_assign_target_mem_
+@@ -2929,8 +2933,10 @@ static int ath11k_qmi_assign_target_mem_
  				} else if (ath11k_host_ddr_addr) {
  					ab->qmi.target_mem[idx].paddr = ath11k_host_ddr_addr +
  							ATH11K_HOST_DDR_CALDB_OFFSET;
@@ -1152,7 +1152,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  				} else {
  					ab->qmi.target_mem[idx].paddr =
  						ATH11K_QMI_CALDB_ADDRESS;
-@@ -2944,6 +2950,9 @@ static int ath11k_qmi_assign_target_mem_
+@@ -2939,6 +2945,9 @@ static int ath11k_qmi_assign_target_mem_
  				ab->qmi.target_mem[idx].iaddr =
  					ioremap(ab->qmi.target_mem[idx].paddr,
  						ab->qmi.target_mem[i].size);
@@ -1162,7 +1162,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  			} else {
  				ab->qmi.target_mem[idx].paddr = 0;
  				ab->qmi.target_mem[idx].vaddr = NULL;
-@@ -2999,7 +3008,7 @@ static int ath11k_qmi_request_device_inf
+@@ -2994,7 +3003,7 @@ static int ath11k_qmi_request_device_inf
  	int ret;
  
  	/* device info message req is only sent for hybrid bus devices */
@@ -1171,7 +1171,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  		return 0;
  
  	ret = qmi_txn_init(&ab->qmi.handle, &txn,
-@@ -3057,8 +3066,15 @@ static int ath11k_qmi_request_device_inf
+@@ -3052,8 +3061,15 @@ static int ath11k_qmi_request_device_inf
  	}
  
  	ab->mem = bar_addr_va;
@@ -1187,7 +1187,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  	return 0;
  out:
  	return ret;
-@@ -3336,10 +3352,27 @@ static int ath11k_qmi_load_bdf_qmi(struc
+@@ -3331,10 +3347,27 @@ static int ath11k_qmi_load_bdf_qmi(struc
  		fw_size = ATH11K_QMI_MAX_BDF_FILE_NAME_SIZE;
  	} else {
  		file_type = ATH11K_QMI_FILE_TYPE_CALDATA;
@@ -1216,7 +1216,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  		fw_entry = ath11k_core_firmware_request(ab, filename);
  		if (!IS_ERR(fw_entry))
  			goto success;
-@@ -4023,6 +4056,25 @@ int ath11k_qmi_pci_alloc_qdss_mem(struct
+@@ -4045,6 +4078,25 @@ int ath11k_qmi_pci_alloc_qdss_mem(struct
  	return 0;
  }
  
@@ -1242,7 +1242,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  int ath11k_qmi_qdss_mem_alloc(struct ath11k_qmi *qmi)
  {
  	int ret, i;
-@@ -4031,7 +4083,7 @@ int ath11k_qmi_qdss_mem_alloc(struct ath
+@@ -4053,7 +4105,7 @@ int ath11k_qmi_qdss_mem_alloc(struct ath
  	struct resource q6_etr;
  
  	if (ab->hw_params.fixed_bdf_addr) {
@@ -1251,7 +1251,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  		if (!dev_node) {
  			ath11k_err(ab, "No q6_etr_dump available in dts\n");
  			return -ENOMEM;
-@@ -4046,6 +4098,19 @@ int ath11k_qmi_qdss_mem_alloc(struct ath
+@@ -4068,6 +4120,19 @@ int ath11k_qmi_qdss_mem_alloc(struct ath
  			ab->qmi.qdss_mem[i].paddr = q6_etr.start;
  			ab->qmi.qdss_mem[i].size = resource_size(&q6_etr);
  			ab->qmi.qdss_mem[i].type = QDSS_ETR_MEM_REGION_TYPE;
@@ -1271,7 +1271,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  		}
  	} else {
  		ret = ath11k_qmi_pci_alloc_qdss_mem(qmi);
-@@ -4639,6 +4704,23 @@ static const struct qmi_ops ath11k_qmi_o
+@@ -4661,6 +4726,23 @@ static const struct qmi_ops ath11k_qmi_o
  	.del_server = ath11k_qmi_ops_del_server,
  };
  
@@ -1295,7 +1295,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  static void ath11k_qmi_driver_event_work(struct work_struct *work)
  {
  	struct ath11k_qmi *qmi = container_of(work, struct ath11k_qmi,
-@@ -4707,6 +4789,14 @@ static void ath11k_qmi_driver_event_work
+@@ -4729,6 +4811,14 @@ static void ath11k_qmi_driver_event_work
  				clear_bit(ATH11K_FLAG_CRASH_FLUSH,
  					  &ab->dev_flags);
  				clear_bit(ATH11K_FLAG_RECOVERY, &ab->dev_flags);
@@ -1310,7 +1310,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <ssreeela@codeaurora.org>
  				ret = ath11k_core_qmi_firmware_ready(ab);
  				if (ret) {
  					set_bit(ATH11K_FLAG_QMI_FAIL, &ab->dev_flags);
-@@ -4848,6 +4938,7 @@ int ath11k_qmi_init_service(struct ath11
+@@ -4870,6 +4960,7 @@ int ath11k_qmi_init_service(struct ath11
  		return ret;
  	}
  

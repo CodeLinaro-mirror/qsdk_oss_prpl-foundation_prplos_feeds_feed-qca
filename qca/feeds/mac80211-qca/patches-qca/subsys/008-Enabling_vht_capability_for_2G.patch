@@ -1,6 +1,6 @@
 --- a/net/mac80211/mlme.c
 +++ b/net/mac80211/mlme.c
-@@ -4577,7 +4577,6 @@ static int ieee80211_prep_channel(struct
+@@ -4839,7 +4839,6 @@ static int ieee80211_prep_channel(struct
  	const struct cfg80211_bss_ies *ies;
  	int ret;
  	u32 i;
@@ -8,8 +8,8 @@
  
  	rcu_read_lock();
  
-@@ -4709,22 +4708,6 @@ static int ieee80211_prep_channel(struct
- 			eht_oper = NULL;
+@@ -4988,22 +4987,6 @@ static int ieee80211_prep_channel(struct
+ 		}
  	}
  
 -	/* Allow VHT if at least one channel on the sband supports 80 MHz */
@@ -33,15 +33,15 @@
  		if (!s1g_oper)
 --- a/net/mac80211/vht.c
 +++ b/net/mac80211/vht.c
-@@ -121,7 +121,6 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(stru
+@@ -122,7 +122,6 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(stru
  	struct ieee80211_sta_vht_cap *vht_cap = &link_sta->pub->vht_cap;
  	struct ieee80211_sta_vht_cap own_cap;
  	u32 cap_info, i;
 -	bool have_80mhz;
+ 	u32 mpdu_len;
  
  	memset(vht_cap, 0, sizeof(*vht_cap));
- 
-@@ -131,20 +130,6 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(stru
+@@ -133,20 +132,6 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(stru
  	if (!vht_cap_ie || !sband->vht_cap.vht_supported)
  		return;
  
@@ -62,7 +62,7 @@
  	/*
  	 * A VHT STA must support 40 MHz, but if we verify that here
  	 * then we break a few things - some APs (e.g. Netgear R6300v2
-@@ -392,6 +377,12 @@ out:
+@@ -406,6 +391,12 @@ out:
  				IEEE80211_STA_RX_BW_40 :
  				IEEE80211_STA_RX_BW_20;
  

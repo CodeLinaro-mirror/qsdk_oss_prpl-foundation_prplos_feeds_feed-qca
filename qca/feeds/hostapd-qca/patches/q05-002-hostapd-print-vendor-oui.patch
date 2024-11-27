@@ -13,13 +13,11 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  src/ap/sta_info.h      | 3 +++
  3 files changed, 18 insertions(+)
 
-diff --git a/src/ap/ctrl_iface_ap.c b/src/ap/ctrl_iface_ap.c
-index e85395f..3ddddaf 100644
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -374,6 +374,12 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
- 		return len;
- 	len += ret;
+@@ -285,6 +285,12 @@ static int hostapd_ctrl_iface_sta_mib(st
+ 		len += ret;
+ 	}
  
 +	ret = os_snprintf(buf + len, buflen - len, "vendor_oui=%02x:%02x:%02x\n",
 +			  sta->vendor_oui[0], sta->vendor_oui[1], sta->vendor_oui[2]);
@@ -30,13 +28,11 @@ index e85395f..3ddddaf 100644
  	res = ieee802_11_get_mib_sta(hapd, sta, buf + len, buflen - len);
  	if (res >= 0)
  		len += res;
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index ce2af50..8483a08 100644
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3819,6 +3819,15 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
- 	size_t wpa_ie_len;
- 	const u8 *p2p_dev_addr = NULL;
+@@ -3882,6 +3882,15 @@ static int __check_assoc_ies(struct host
+ 	struct hostapd_data *assoc_hapd;
+ 	struct sta_info *assoc_sta = NULL;
  
 +	const struct element *elem;
 +
@@ -50,11 +46,9 @@ index ce2af50..8483a08 100644
  	resp = check_ssid(hapd, sta, elems->ssid, elems->ssid_len);
  	if (resp != WLAN_STATUS_SUCCESS)
  		return resp;
-diff --git a/src/ap/sta_info.h b/src/ap/sta_info.h
-index c9326fe..60644cd 100644
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
-@@ -331,6 +331,9 @@ struct sta_info {
+@@ -330,6 +330,9 @@ struct sta_info {
  	struct pasn_data *pasn;
  #endif /* CONFIG_PASN */
  

@@ -14,11 +14,9 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  drivers/net/wireless/ath/ath12k/pci.c   | 7 +++++--
  2 files changed, 9 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_tx.c b/drivers/net/wireless/ath/ath12k/dp_tx.c
-index 7d33296..4e9b45b 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
-@@ -980,10 +980,14 @@ int ath12k_dp_tx_completion_handler(struct ath12k_base *ab, int ring_id,
+@@ -1030,10 +1030,14 @@ int ath12k_dp_tx_completion_handler(stru
  		return 0;
  	}
  
@@ -33,21 +31,19 @@ index 7d33296..4e9b45b 100644
  		if (!ath12k_dp_tx_completion_valid(tx_status))
  			continue;
  
-@@ -1024,8 +1028,6 @@ int ath12k_dp_tx_completion_handler(struct ath12k_base *ab, int ring_id,
- 							     tx_desc);
+@@ -1074,8 +1078,6 @@ int ath12k_dp_tx_completion_handler(stru
  			continue;
  		}
+ 
 -		budget--;
 -
  		ar = ab->pdevs[mac_id].ar;
  		if (atomic_dec_and_test(&ar->dp.num_tx_pending))
  			wake_up(&ar->dp.tx_empty_waitq);
-diff --git a/drivers/net/wireless/ath/ath12k/pci.c b/drivers/net/wireless/ath/ath12k/pci.c
-index 68f11b4..5badd39 100644
 --- a/drivers/net/wireless/ath/ath12k/pci.c
 +++ b/drivers/net/wireless/ath/ath12k/pci.c
-@@ -47,7 +47,10 @@
- 
+@@ -32,7 +32,10 @@
+ #define TCSR_SOC_HW_VERSION_MINOR_MASK	GENMASK(7, 4)
  /* choose a little lower value for tx completion processing
   * to give priority for enqueue */
 -#define ATH12K_TX_COMP_NAPI_BUDGET 0x5F
@@ -56,9 +52,9 @@ index 68f11b4..5badd39 100644
 +module_param_named(tx_comp_budget, tx_comp_budget, uint, 0644);
 +MODULE_PARM_DESC(tx_comp_budget, "tx_comp_budget");
  
- char dp_irq_name[ATH12K_MAX_PCI_DOMAINS + 1][ATH12K_EXT_IRQ_GRP_NUM_MAX][DP_IRQ_NAME_LEN] = {};
  
-@@ -530,7 +533,7 @@ static int ath12k_pci_ext_irq_config(struct ath12k_base *ab)
+ /* BAR0 + 4k is always accessible, and no
+@@ -552,7 +555,7 @@ static int ath12k_pci_ext_irq_config(str
  		/* Apply a reduced budget for tx completion to prioritize tx
  		 * enqueue operation */
  		if (ab->hw_params->ring_mask->tx[i])
@@ -67,6 +63,3 @@ index 68f11b4..5badd39 100644
  
  		netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
  			       ath12k_pci_ext_grp_napi_poll, budget);
--- 
-2.7.4
-

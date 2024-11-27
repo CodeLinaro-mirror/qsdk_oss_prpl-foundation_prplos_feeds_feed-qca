@@ -16,11 +16,9 @@ Signed-off-by: Aaradhana Sahu <quic_aarasahu@quicinc.com>
  net/mac80211/offchannel.c | 10 ++++++----
  1 file changed, 6 insertions(+), 4 deletions(-)
 
-diff --git a/net/mac80211/offchannel.c b/net/mac80211/offchannel.c
-index e61d867..777b71d 100644
 --- a/net/mac80211/offchannel.c
 +++ b/net/mac80211/offchannel.c
-@@ -922,7 +922,8 @@ int ieee80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
+@@ -922,7 +922,8 @@ int ieee80211_mgmt_tx(struct wiphy *wiph
  			if (!chanctx_conf)
  				continue;
  
@@ -30,17 +28,7 @@ index e61d867..777b71d 100644
  			    ether_addr_equal(sdata->vif.addr, mgmt->sa)) {
  				link_id = i;
  				break;
-@@ -935,7 +936,8 @@ int ieee80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
- 				 */
- 				if (sdata->vif.valid_links &&
- 				    params->link_id >= 0 && params->link_id == i &&
--				    params->chan == chanctx_conf->def.chan)
-+				    cfg80211_channel_identical(params->chan,
-+							       chanctx_conf->def.chan))
- 					link_id = i;
- 				break;
- 			}
-@@ -945,8 +947,8 @@ int ieee80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
+@@ -946,8 +947,8 @@ int ieee80211_mgmt_tx(struct wiphy *wiph
  
  		if (chanctx_conf) {
  			need_offchan = params->chan &&
@@ -51,6 +39,3 @@ index e61d867..777b71d 100644
  		} else {
  			need_offchan = true;
  		}
--- 
-2.17.1
-

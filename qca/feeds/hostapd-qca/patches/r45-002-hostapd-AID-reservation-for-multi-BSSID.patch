@@ -1,0 +1,110 @@
+From d774758e15654d5915ca4956401c45d8e15264bd Mon Sep 17 00:00:00 2001
+From: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
+Date: Tue, 10 Sep 2024 14:34:59 +0530
+Subject: [PATCH 2/4] hostapd: AID reservation for multi BSSID
+
+When setting up multi bssid, reserve AIDs for group transmission
+on Tx BSS and make sure TX bss is used as AID allocator for
+a MBSSID group.
+
+Patch-dependency: None
+
+Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
+---
+ src/ap/hostapd.c    | 29 +++++++++++++++++++++++++----
+ src/ap/ieee802_11.c |  4 ++--
+ 2 files changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 925f11e..608603b 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -3499,7 +3499,7 @@ fail:
+ }
+ 
+ 
+-void hostapd_multi_mbssid_setup_bss(struct hostapd_data *hapd)
++static void hostapd_multi_mbssid_add_bss(struct hostapd_data *hapd)
+ {
+ 	struct hostapd_iface *iface = hapd->iface;
+ 	struct hostapd_multi_mbssid_group *group = NULL, **all_group;
+@@ -3559,6 +3559,27 @@ fail:
+ 	hapd->mbssid_group = NULL;
+ }
+ 
++static void hostapd_mbssid_setup_bss(struct hostapd_data *hapd)
++{
++	struct hostapd_data *tx_bss;
++	size_t num_bss, i;
++
++	hostapd_multi_mbssid_add_bss(hapd);
++
++	/*
++	 * When setting up multi bssid, reserve AIDs for group transmssion
++	 * on Tx VAP
++	 */
++	tx_bss = hostapd_mbssid_get_tx_bss(hapd);
++	if (tx_bss != hapd)
++		return;
++
++	num_bss = (1 << hostapd_max_bssid_indicator(tx_bss));
++
++	for (i = 0; i < num_bss; i++)
++		tx_bss->sta_aid[0] |= BIT(i);
++}
++
+ static void hostapd_cleanup_unused_mlds(struct hapd_interfaces *interfaces)
+ {
+ #ifdef CONFIG_IEEE80211BE
+@@ -3686,7 +3707,7 @@ struct hostapd_iface * hostapd_init(struct hapd_interfaces *interfaces,
+ 		 */
+ 		hapd->mbssid_idx = i;
+ 		hostapd_bss_setup_multi_link(hapd, interfaces);
+-		hostapd_multi_mbssid_setup_bss(hapd);
++		hostapd_mbssid_setup_bss(hapd);
+ 	}
+ 
+ 	hapd_iface->is_ch_switch_dfs = false;
+@@ -3842,7 +3863,7 @@ hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
+ 		iface->bss[iface->num_bss] = hapd;
+ 		hapd->msg_ctx = hapd;
+ 		hostapd_bss_setup_multi_link(hapd, interfaces);
+-		hostapd_multi_mbssid_setup_bss(hapd);
++		hostapd_mbssid_setup_bss(hapd);
+ 
+ 
+ 		bss_idx = iface->num_bss++;
+@@ -4251,7 +4272,7 @@ static int hostapd_data_alloc(struct hostapd_iface *hapd_iface,
+ 		}
+ 		hapd->msg_ctx = hapd;
+ 		hostapd_bss_setup_multi_link(hapd, hapd_iface->interfaces);
+-		hostapd_multi_mbssid_setup_bss(hapd);
++		hostapd_mbssid_setup_bss(hapd);
+ 	}
+ 
+ 	hapd_iface->conf = conf;
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index db9a8da..e8fbd01 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -3369,7 +3369,7 @@ static u32 hostapd_get_aid_word(struct hostapd_data *hapd,
+ 					   "MLD: Failed to get link BSS for AID");
+ 				continue;
+ 			}
+-
++			link_bss = hostapd_mbssid_get_tx_bss(link_bss);
+ 			aid_word |= link_bss->sta_aid[i];
+ 		}
+ 
+@@ -3461,7 +3463,7 @@ int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
+ 	}
+ 	if (j == 32)
+ 		return -1;
+-	aid = i * 32 + j + (1 << hostapd_max_bssid_indicator(hapd));
++	aid = i * 32 + j;
+ 	if (aid > 2007)
+ 		return -1;
+ 
+-- 
+2.34.1
+

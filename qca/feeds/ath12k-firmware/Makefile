@@ -18,7 +18,7 @@ endef
 define Package/ath12k-firmware-qcn92xx
 $(Package/ath12k-firmware-default)
   TITLE:=ath12k firmware for QCN92XX devices
-  DEPENDS:=@TARGET_ipq95xx
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx
 endef
 
 define Package/ath12k-firmware-qcn92xx/description

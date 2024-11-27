@@ -10,8 +10,6 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
  src/utils/wpa_debug.c | 23 +++++++++++++++++++----
  1 file changed, 19 insertions(+), 4 deletions(-)
 
-diff --git a/src/utils/wpa_debug.c b/src/utils/wpa_debug.c
-index 65d5af0..c32e0dd 100644
 --- a/src/utils/wpa_debug.c
 +++ b/src/utils/wpa_debug.c
 @@ -9,6 +9,7 @@
@@ -22,7 +20,7 @@ index 65d5af0..c32e0dd 100644
  
  #ifdef CONFIG_DEBUG_SYSLOG
  #include <syslog.h>
-@@ -70,18 +71,28 @@ void wpa_debug_print_timestamp(void)
+@@ -74,18 +75,28 @@ void wpa_debug_print_timestamp(void)
  {
  #ifndef CONFIG_ANDROID_LOG
  	struct os_time tv;

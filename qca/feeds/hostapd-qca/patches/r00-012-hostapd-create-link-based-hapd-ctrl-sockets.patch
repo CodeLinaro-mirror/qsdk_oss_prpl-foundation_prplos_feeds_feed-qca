@@ -34,7 +34,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -4771,18 +4771,26 @@ static char * hostapd_ctrl_iface_path(st
+@@ -5334,18 +5334,26 @@ static char * hostapd_ctrl_iface_path(st
  {
  	char *buf;
  	size_t len;
@@ -63,7 +63,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	buf[len - 1] = '\0';
  	return buf;
  }
-@@ -4953,7 +4961,11 @@ fail:
+@@ -5516,7 +5524,11 @@ fail:
  #endif /* ANDROID */
  
  	if (os_strlen(hapd->conf->ctrl_interface) + 1 +
@@ -104,7 +104,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	print_help(stderr, NULL);
  }
  
-@@ -2155,6 +2165,97 @@ static void hostapd_cli_action(struct wp
+@@ -2227,6 +2237,97 @@ static void hostapd_cli_action(struct wp
  	eloop_unregister_read_sock(fd);
  }
  
@@ -202,7 +202,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  int main(int argc, char *argv[])
  {
-@@ -2162,12 +2263,20 @@ int main(int argc, char *argv[])
+@@ -2234,12 +2335,20 @@ int main(int argc, char *argv[])
  	int c;
  	int daemonize = 0;
  	int reconnect = 0;
@@ -223,7 +223,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		if (c < 0)
  			break;
  		switch (c) {
-@@ -2202,6 +2311,16 @@ int main(int argc, char *argv[])
+@@ -2274,6 +2383,16 @@ int main(int argc, char *argv[])
  		case 's':
  			client_socket_dir = optarg;
  			break;
@@ -240,7 +240,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		default:
  			usage();
  			return -1;
-@@ -2218,7 +2337,11 @@ int main(int argc, char *argv[])
+@@ -2290,7 +2409,11 @@ int main(int argc, char *argv[])
  		return -1;
  
  	for (;;) {
@@ -252,7 +252,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  			struct dirent *dent;
  			DIR *dir = opendir(ctrl_iface_dir);
  			if (dir) {
-@@ -2227,9 +2350,33 @@ int main(int argc, char *argv[])
+@@ -2299,9 +2422,33 @@ int main(int argc, char *argv[])
  					    ||
  					    os_strcmp(dent->d_name, "..") == 0)
  						continue;
@@ -288,7 +288,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  				closedir(dir);
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1756,6 +1756,24 @@ static int start_ctrl_iface_bss(struct h
+@@ -1819,6 +1819,24 @@ static int start_ctrl_iface_bss(struct h
  		return 0;
  
  	if (hapd->iface->interfaces->ctrl_iface_init(hapd)) {
@@ -313,7 +313,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		wpa_printf(MSG_ERROR,
  			   "Failed to setup control interface for %s",
  			   hapd->conf->iface);
-@@ -1775,6 +1793,25 @@ static int start_ctrl_iface(struct hosta
+@@ -1838,6 +1856,25 @@ static int start_ctrl_iface(struct hosta
  
  	for (i = 0; i < iface->num_bss; i++) {
  		struct hostapd_data *hapd = iface->bss[i];
@@ -341,17 +341,17 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  				   "Failed to setup control interface for %s",
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -500,6 +500,7 @@ struct hostapd_data {
+@@ -506,6 +506,7 @@ struct hostapd_data {
  	struct hostapd_mld *mld;
  	struct dl_list link;
  	u8 mld_link_id;
 +	char ctrl_sock_iface[IFNAMSIZ + 1];
- #endif /* CONFIG_IEEE80211BE */
- };
- 
+ #ifdef CONFIG_TESTING_OPTIONS
+ 	u8 eht_mld_link_removal_count;
+ #endif /* CONFIG_TESTING_OPTIONS */
 --- a/src/common/wpa_ctrl.h
 +++ b/src/common/wpa_ctrl.h
-@@ -664,4 +664,8 @@ char * wpa_ctrl_get_remote_ifname(struct
+@@ -674,4 +674,8 @@ char * wpa_ctrl_get_remote_ifname(struct
  }
  #endif
  

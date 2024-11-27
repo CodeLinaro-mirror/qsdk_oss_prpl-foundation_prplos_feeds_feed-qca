@@ -30,7 +30,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -767,9 +767,9 @@ struct key_params {
+@@ -819,9 +819,9 @@ struct key_params {
  /**
   * struct cfg80211_chan_def - channel definition
   * @chan: the (control) channel
@@ -43,7 +43,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
   *	(only with 80+80 MHz)
   * @edmg: define the EDMG channels configuration.
   *	If edmg is requested (i.e. the .channels member is non-zero),
-@@ -781,6 +781,10 @@ struct key_params {
+@@ -833,6 +833,10 @@ struct key_params {
   *	indicates that the channel is punctured, otherwise the channel is active
   * @ru_punct_bitmap_supp_he: Indicates whether RU puncturing bitmap validation
   *	should include OFDMA bitmaps.
@@ -54,7 +54,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
   */
  struct cfg80211_chan_def {
  	struct ieee80211_channel *chan;
-@@ -792,6 +796,8 @@ struct cfg80211_chan_def {
+@@ -844,6 +848,8 @@ struct cfg80211_chan_def {
  	u16 ru_punct_bitmap;
  	bool ru_punct_bitmap_supp_he;
  	u16 radar_bitmap;
@@ -63,7 +63,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  };
  
  /*
-@@ -1009,6 +1015,28 @@ cfg80211_chandef_compatible(const struct
+@@ -1061,6 +1067,28 @@ cfg80211_chandef_compatible(const struct
  bool cfg80211_chandef_valid(const struct cfg80211_chan_def *chandef);
  
  /**
@@ -92,51 +92,6 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
   * cfg80211_ru_punct_bitmap_valid - check if Puncturing bitmap on given
   * channel definition is valid
   * @chandef: the channel definition to check
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -2883,6 +2883,14 @@ enum nl80211_commands {
-  * @NL80211_ATTR_SET_CRITICAL_UPDATE: set critical update for the bss (u8)
-  *	(see &enum nl80211_set_cu).
-  *
-+ * @NL80211_ATTR_CHANNEL_WIDTH_DEVICE: Device channel width (u32). Value
-+ *	must be zero or twice @NL80211_ATTR_CHANNEL_WIDTH which is the
-+ *	operating channel width. Minimum value is 40 MHz.
-+ *
-+ * @NL80211_ATTR_CENTER_FREQ_DEVICE: Device center frequency (u32). This
-+ *	value must be such that the operating bandwidth is a subset of the
-+ *	device bandwidth.
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3451,6 +3459,9 @@ enum nl80211_attrs {
- 	NL80211_ATTR_DEL_MULTI_CHAN,
- 	NL80211_ATTR_RXMGMT_CRITICAL_UPDATE,
- 	NL80211_ATTR_SET_CRITICAL_UPDATE,
-+	NL80211_ATTR_CHANNEL_WIDTH_DEVICE,
-+	NL80211_ATTR_CENTER_FREQ_DEVICE,
-+
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
-@@ -6628,6 +6639,9 @@ enum nl80211_feature_flags {
-  * @NL80211_EXT_FEATURE_BEACON_RATE_EHT: Driver supports beacon rate
-  *	configuration (AP/mesh) with EHT rates.
-  *
-+ * @NL80211_EXT_FEATURE_DEVICE_BW: Driver/device supports different parameters
-+ *	for device bandwidth compared to the operating bandwidth.
-+ *
-  * @NUM_NL80211_EXT_FEATURES: number of extended features.
-  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
-  */
-@@ -6702,6 +6716,7 @@ enum nl80211_ext_feature_index {
- 	NL80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA,
- 	NL80211_EXT_FEATURE_STA_MGMT_RTS_CTS,
- 	NL80211_EXT_FEATURE_BEACON_RATE_EHT,
-+	NL80211_EXT_FEATURE_DEVICE_BW,
- 
- 	/* add new features before the definition below */
- 	NUM_NL80211_EXT_FEATURES,
 --- a/net/wireless/chan.c
 +++ b/net/wireless/chan.c
 @@ -40,6 +40,8 @@ void cfg80211_chandef_create(struct cfg8
@@ -234,7 +189,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  };
  
  /* policy for the key attributes */
-@@ -3481,6 +3483,34 @@ static int nl80211_parse_ru_punct_bitmap
+@@ -3477,6 +3479,34 @@ static int nl80211_parse_ru_punct_bitmap
  	return 0;
  }
  
@@ -242,7 +197,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +					struct genl_info *info,
 +					struct cfg80211_chan_def *chandef)
 +{
-+	chandef->width_device = NL80211_CHAN_NO_HT;
++	chandef->width_device = NL80211_CHAN_WIDTH_20_NOHT;
 +	chandef->center_freq_device = 0;
 +
 +	if (!info->attrs[NL80211_ATTR_CHANNEL_WIDTH_DEVICE] &&
@@ -269,7 +224,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  int nl80211_parse_chandef(struct cfg80211_registered_device *rdev,
  			  struct genl_info *info,
  			  struct cfg80211_chan_def *chandef,
-@@ -3615,6 +3645,12 @@ int nl80211_parse_chandef(struct cfg8021
+@@ -3611,6 +3641,12 @@ int nl80211_parse_chandef(struct cfg8021
  		return -EINVAL;
  	}
  
@@ -284,7 +239,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		NL_SET_ERR_MSG(extack, "(extension) channel is disabled");
 --- a/net/mac80211/util.c
 +++ b/net/mac80211/util.c
-@@ -4857,6 +4857,8 @@ ieee80211_conn_flags_t ieee80211_chandef
+@@ -4849,6 +4849,8 @@ ieee80211_conn_flags_t ieee80211_chandef
  
  	c->ru_punct_bitmap = 0;
  	c->ru_punct_bitmap_supp_he = 0;

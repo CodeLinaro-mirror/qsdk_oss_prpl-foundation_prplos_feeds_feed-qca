@@ -134,7 +134,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  /**
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
-@@ -5593,20 +5593,24 @@ void ieee80211_csa_finish(struct ieee802
+@@ -5584,20 +5584,24 @@ void ieee80211_csa_finish(struct ieee802
  /**
   * ieee80211_beacon_cntdwn_is_complete - find out if countdown reached 1
   * @vif: &struct ieee80211_vif pointer from the add_interface callback.
@@ -162,7 +162,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  /**
   * ieee80211_proberesp_get - retrieve a Probe Response template
-@@ -7558,10 +7562,12 @@ ieee80211_get_unsol_bcast_probe_resp_tmp
+@@ -7549,10 +7553,12 @@ ieee80211_get_unsol_bcast_probe_resp_tmp
   * @color_bitmap: a 64 bit bitmap representing the colors that the local BSS is
   *	aware of.
   * @gfp: allocation flags
@@ -178,7 +178,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
   * ieee80211_is_tx_data - check if frame is a data frame
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1680,6 +1680,9 @@ static int ieee80211_stop_ap(struct wiph
+@@ -1663,6 +1663,9 @@ static int ieee80211_stop_ap(struct wiph
  		link->csa_block_tx = false;
  	}
  
@@ -188,7 +188,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	mutex_unlock(&local->mtx);
  
  	/* The below work requires sdata lock which we have already acquired
-@@ -1689,6 +1692,9 @@ static int ieee80211_stop_ap(struct wiph
+@@ -1672,6 +1675,9 @@ static int ieee80211_stop_ap(struct wiph
  	 */
  	cancel_work_sync(&link->csa_finalize_work);
  
@@ -198,7 +198,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	ieee80211_free_next_beacon(link);
  
  	/* turn off carrier for this interface and dependent VLANs */
-@@ -4113,13 +4119,13 @@ static int ieee80211_set_csa_beacon(stru
+@@ -4096,13 +4102,13 @@ static int ieee80211_set_csa_beacon(stru
  	return 0;
  }
  
@@ -216,7 +216,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  }
  
  static int
-@@ -4201,7 +4207,7 @@ __ieee80211_channel_switch(struct wiphy
+@@ -4184,7 +4190,7 @@ __ieee80211_channel_switch(struct wiphy
  
  	/* if there is a color change in progress, abort it */
  	if (link_conf->color_change_active)
@@ -225,7 +225,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	err = ieee80211_set_csa_beacon(link, params, &changed);
  	if (err) {
-@@ -4934,24 +4940,28 @@ static int ieee80211_set_sar_specs(struc
+@@ -4917,24 +4923,28 @@ static int ieee80211_set_sar_specs(struc
  }
  
  static int
@@ -259,7 +259,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		break;
  	}
  	default:
-@@ -4963,18 +4973,19 @@ ieee80211_set_after_color_change_beacon(
+@@ -4946,18 +4956,19 @@ ieee80211_set_after_color_change_beacon(
  }
  
  static int
@@ -282,7 +282,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  			return -ENOMEM;
  
  		if (params->count <= 1)
-@@ -4986,13 +4997,16 @@ ieee80211_set_color_change_beacon(struct
+@@ -4969,13 +4980,16 @@ ieee80211_set_color_change_beacon(struct
  			params->counter_offset_presp;
  		color_change.count = params->count;
  
@@ -301,7 +301,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		break;
  	default:
  		return -EOPNOTSUPP;
-@@ -5002,16 +5016,20 @@ ieee80211_set_color_change_beacon(struct
+@@ -4985,16 +4999,20 @@ ieee80211_set_color_change_beacon(struct
  }
  
  static void
@@ -327,7 +327,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		struct ieee80211_sub_if_data *child;
  
  		mutex_lock(&sdata->local->iflist_mtx);
-@@ -5028,8 +5046,9 @@ ieee80211_color_change_bss_config_notify
+@@ -5011,8 +5029,9 @@ ieee80211_color_change_bss_config_notify
  	}
  }
  
@@ -338,7 +338,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	struct ieee80211_local *local = sdata->local;
  	u64 changed = 0;
  	int err;
-@@ -5037,40 +5056,49 @@ static int ieee80211_color_change_finali
+@@ -5020,40 +5039,49 @@ static int ieee80211_color_change_finali
  	sdata_assert_lock(sdata);
  	lockdep_assert_held(&local->mtx);
  
@@ -399,7 +399,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  unlock:
  	mutex_unlock(&local->mtx);
-@@ -5086,31 +5114,61 @@ void ieee80211_color_collision_detection
+@@ -5069,31 +5097,61 @@ void ieee80211_color_collision_detection
  	struct ieee80211_sub_if_data *sdata = link->sdata;
  
  	sdata_lock(sdata);
@@ -414,7 +414,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
 +	struct ieee80211_link_data *link;
 +
-+	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
++	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
 +        	return;
 +
 +	rcu_read_lock();
@@ -443,7 +443,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 -	struct ieee80211_link_data *link = &sdata->deflink;
 +	struct ieee80211_link_data *link;
 +
-+	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
++	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
 +		return;
 +
 +	rcu_read_lock();
@@ -468,7 +468,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	link->color_bitmap = color_bitmap;
  	/* queue the color collision detection event every 500 ms in order to
-@@ -5119,21 +5177,34 @@ ieee80211_obss_color_collision_notify(st
+@@ -5102,21 +5160,34 @@ ieee80211_obss_color_collision_notify(st
  	ieee80211_queue_delayed_work(&sdata->local->hw,
  				     &link->color_collision_detect_work,
  				     msecs_to_jiffies(500));
@@ -505,7 +505,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		return -EINVAL;
  
  	mutex_lock(&local->mtx);
-@@ -5141,25 +5212,26 @@ ieee80211_color_change(struct wiphy *wip
+@@ -5124,25 +5195,26 @@ ieee80211_color_change(struct wiphy *wip
  	/* don't allow another color change if one is already active or if csa
  	 * is active
  	 */
@@ -579,7 +579,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (!ieee80211_sdata_running(sdata))
  		return false;
  
-+	if (WARN_ON(link_id > IEEE80211_MLD_MAX_NUM_LINKS))
++	if (WARN_ON(link_id >= IEEE80211_MLD_MAX_NUM_LINKS))
 +		return false;
 +
  	rcu_read_lock();

@@ -18,24 +18,20 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  src/ap/hostapd.h |  1 +
  3 files changed, 29 insertions(+)
 
-diff --git a/hostapd/main.c b/hostapd/main.c
-index bfd3039..b2cbf52 100644
 --- a/hostapd/main.c
 +++ b/hostapd/main.c
-@@ -913,6 +913,8 @@ int main(int argc, char *argv[])
+@@ -1043,6 +1043,8 @@ int main(int argc, char *argv[])
   out:
- 	hostapd_ubus_free(&interfaces);
+ 	hostapd_ucode_free();
  	hostapd_global_ctrl_iface_deinit(&interfaces);
 +	/* Sending deauth to all stations before deinit */
 +	hostapd_deauthenticate_stations(&interfaces);
  	/* Deinitialize all interfaces */
  	for (i = 0; i < interfaces.count; i++) {
  		if (!interfaces.iface[i])
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 2e0c89a..6770ea5 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -2901,6 +2901,32 @@ void hostapd_interface_deinit_free(struct hostapd_iface *iface)
+@@ -3430,6 +3430,32 @@ void hostapd_interface_deinit_free(struc
  	hostapd_interface_free(iface);
  }
  
@@ -68,11 +64,9 @@ index 2e0c89a..6770ea5 100644
  
  static void hostapd_deinit_driver(const struct wpa_driver_ops *driver,
  				  void *drv_priv,
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index 1edb5de..0669f00 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -705,6 +705,7 @@ hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
+@@ -773,6 +773,7 @@ void hostapd_bss_deinit(struct hostapd_d
  void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
  			   int reassoc);
  void hostapd_interface_deinit_free(struct hostapd_iface *iface);

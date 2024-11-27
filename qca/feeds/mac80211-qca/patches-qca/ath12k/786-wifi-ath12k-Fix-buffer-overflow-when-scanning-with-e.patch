@@ -40,30 +40,12 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -2950,7 +2950,7 @@ int ath12k_wmi_send_scan_start_cmd(struc
- 	void *ptr;
- 	int i, ret, len;
- 	u32 *tmp_ptr;
--	u8 extraie_len_with_pad = 0;
-+	u16 extraie_len_with_pad = 0;
-	struct ath12k_wmi_hint_short_ssid_arg *s_ssid = NULL;
-	struct ath12k_wmi_hint_bssid_arg *hint_bssid = NULL;
-
-@@ -2969,7 +2969,7 @@ int ath12k_wmi_send_scan_start_cmd(struc
- 		len += sizeof(*bssid) * arg->num_bssid;
+@@ -3381,7 +3381,7 @@ int ath12k_wmi_send_scan_start_cmd(struc
+ 		       arg->num_hint_s_ssid * sizeof(*s_ssid);
  
  	len += TLV_HDR_SIZE;
 -	if (arg->extraie.len)
 +	if (arg->extraie.len && arg->extraie.len <= 0xFFFF)
  		extraie_len_with_pad =
  			roundup(arg->extraie.len, sizeof(u32));
- 	len += extraie_len_with_pad;
-@@ -3072,7 +3072,7 @@ int ath12k_wmi_send_scan_start_cmd(struc
- 	tlv->header = ath12k_wmi_tlv_hdr(WMI_TAG_ARRAY_BYTE, len);
- 	ptr += TLV_HDR_SIZE;
- 
--	if (arg->extraie.len)
-+	if (extraie_len_with_pad)
- 		memcpy(ptr, arg->extraie.ptr,
- 		       arg->extraie.len);
- 
+ 	if (extraie_len_with_pad <= (wmi->wmi_ab->max_msg_len[ar->pdev_idx] - len)) {

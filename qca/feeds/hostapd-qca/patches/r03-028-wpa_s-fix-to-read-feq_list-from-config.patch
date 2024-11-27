@@ -15,11 +15,9 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  wpa_supplicant/config_file.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/wpa_supplicant/config_file.c b/wpa_supplicant/config_file.c
-index 06e1690..d5e8662 100644
 --- a/wpa_supplicant/config_file.c
 +++ b/wpa_supplicant/config_file.c
-@@ -303,7 +303,7 @@ struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp,
+@@ -303,7 +303,7 @@ struct wpa_config * wpa_config_read(cons
  				    bool ro)
  {
  	FILE *f;
@@ -28,6 +26,3 @@ index 06e1690..d5e8662 100644
  	int errors = 0, line = 0;
  	struct wpa_ssid *ssid, *tail, *head;
  	struct wpa_cred *cred, *cred_tail, *cred_head;
--- 
-2.17.1
-

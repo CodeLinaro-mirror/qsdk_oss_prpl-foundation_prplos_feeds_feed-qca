@@ -15,7 +15,7 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
 
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4240,11 +4240,12 @@ static void hostapd_switch_color_timeout
+@@ -4652,11 +4652,12 @@ static void hostapd_switch_color_timeout
  	  * DOT11BSS_COLOR_COLLISION_AP_PERIOD (50 s by default). */
  	delta_t = hapd->last_color_collision.sec -
  		hapd->first_color_collision.sec;
@@ -30,7 +30,7 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
  
  	 r = os_random() % HE_OPERATION_BSS_COLOR_MAX - 1;
  	 r++;
-@@ -4261,10 +4262,23 @@ static void hostapd_switch_color_timeout
+@@ -4673,11 +4674,24 @@ static void hostapd_switch_color_timeout
  			   "No free colors left, turning off BSS coloring");
  		hapd->iface->conf->he_op.he_bss_color_disabled = 1;
  		hapd->iface->conf->he_op.he_bss_color = os_random() % 63 + 1;
@@ -40,23 +40,24 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
 +
 +		 /* Enabling for next check after timeout*/
 +		 hapd->iface->conf->he_op.he_bss_color_disabled = 0;
-+ 
++
 +		 /* start timer for DOT11BSS_COLOR_COLLISION_AP_PERIOD, and check free color on timeout */
 +		 if (!eloop_is_timeout_registered(hostapd_switch_color_timeout_handler, hapd, NULL))
 +			 eloop_register_timeout(DOT11BSS_COLOR_COLLISION_AP_PERIOD, 0,
 +					       hostapd_switch_color_timeout_handler, hapd, NULL);
-+ 
++
  		return;
  	}
-+ 
+ 
 + 	if (hapd->no_free_color)
 +		 hapd->no_free_color = 0;
- 
++
  	for (b = 0; b < hapd->iface->num_bss; b++) {
  		struct hostapd_data *bss = hapd->iface->bss[b];
+ 		struct cca_settings settings;
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -337,6 +337,7 @@ struct hostapd_data {
+@@ -342,6 +342,7 @@ struct hostapd_data {
  
  #ifdef CONFIG_IEEE80211AX
  	bool cca_in_progress;

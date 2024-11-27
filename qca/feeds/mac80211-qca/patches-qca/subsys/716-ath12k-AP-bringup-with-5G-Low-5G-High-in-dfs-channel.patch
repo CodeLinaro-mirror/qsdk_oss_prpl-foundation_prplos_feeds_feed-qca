@@ -25,7 +25,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -2665,6 +2665,7 @@ struct cfg80211_scan_request {
+@@ -2676,6 +2676,7 @@ struct cfg80211_scan_request {
  	bool scan_6ghz;
  	u32 n_6ghz_params;
  	struct cfg80211_scan_6ghz_params *scan_6ghz_params;
@@ -33,7 +33,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
  	/* keep last */
  	struct ieee80211_channel *channels[];
-@@ -9181,14 +9182,13 @@ bool cfg80211_per_hw_iface_comb_advertis
+@@ -9192,14 +9193,13 @@ bool cfg80211_per_hw_iface_comb_advertis
   * cfg80211_get_hw_idx_by_chan - get the hw index by the channel
   *
   * @wiphy: the wiphy
@@ -119,7 +119,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	struct ieee80211_roc_work *roc, *tmp;
  	bool queued = false, combine_started = true;
  	int ret;
-+	struct cfg80211_scan_request *req;
++	struct cfg80211_scan_request *req = local->scan_req;
  
  	lockdep_assert_held(&local->mtx);
  
@@ -184,7 +184,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  		return;
  
  	ieee80211_queue_delayed_work(&local->hw, &local->scan_work,
-@@ -699,10 +705,10 @@ static int __ieee80211_start_scan(struct
+@@ -700,10 +706,10 @@ static int __ieee80211_start_scan(struct
  	if (local->scan_req)
  		return -EBUSY;
  
@@ -199,7 +199,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  		rcu_assign_pointer(local->scan_sdata, sdata);
 --- a/net/mac80211/util.c
 +++ b/net/mac80211/util.c
-@@ -5154,9 +5154,9 @@ ieee80211_get_per_hw_sdata_active_iface(
+@@ -5130,9 +5130,9 @@ ieee80211_get_per_hw_sdata_active_iface(
  			ctx = ctx->replace_ctx;
  
  		idx = -1;
@@ -211,7 +211,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
  		if (idx >= 0)
  			params->per_hw[idx].iftype_num[sdata->wdev.iftype]++;
-@@ -5179,7 +5179,7 @@ ieee80211_prepare_per_hw_iface_combinati
+@@ -5155,7 +5155,7 @@ ieee80211_prepare_per_hw_iface_combinati
  	struct ieee80211_sub_if_data *sdata_iter;
  	enum nl80211_iftype iftype = sdata->wdev.iftype;
  	struct ieee80211_chanctx *ctx;
@@ -220,7 +220,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	size_t size;
  	bool sdata_included = false;
  
-@@ -5191,20 +5191,24 @@ ieee80211_prepare_per_hw_iface_combinati
+@@ -5167,20 +5167,24 @@ ieee80211_prepare_per_hw_iface_combinati
  	if (!params->per_hw)
  		return -ENOMEM;
  
@@ -252,7 +252,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  		if (WARN_ON(hchan_idx < 0))
  			continue;
  
-@@ -5363,8 +5367,10 @@ ieee80211_max_num_channels_hw_list(struc
+@@ -5339,8 +5343,10 @@ ieee80211_max_num_channels_hw_list(struc
  	list_for_each_entry(ctx, &local->chanctx_list, list) {
  		if (ctx->replace_state == IEEE80211_CHANCTX_WILL_BE_REPLACED)
  			continue;
@@ -266,7 +266,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  
 --- a/net/wireless/chan.c
 +++ b/net/wireless/chan.c
-@@ -309,6 +309,9 @@ bool cfg80211_chandef_valid(const struct
+@@ -310,6 +310,9 @@ bool cfg80211_chandef_valid(const struct
  	u32 control_freq, oper_freq;
  	int oper_width, control_width;
  
@@ -368,7 +368,7 @@ Signed-off-by: Vishal Kumar <quic_visk@quicinc.com>
  	for (iftype = 0; iftype < NUM_NL80211_IFTYPES; iftype++) {
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -2627,7 +2627,8 @@ void ieee80211_recalc_smps_chanctx(struc
+@@ -2623,7 +2623,8 @@ void ieee80211_recalc_smps_chanctx(struc
  void ieee80211_recalc_chanctx_min_def(struct ieee80211_local *local,
  				      struct ieee80211_chanctx *ctx,
  				      struct ieee80211_link_data *rsvd_for);

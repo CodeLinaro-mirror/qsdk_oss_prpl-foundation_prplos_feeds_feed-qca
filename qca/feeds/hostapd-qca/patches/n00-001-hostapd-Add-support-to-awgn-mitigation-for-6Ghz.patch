@@ -45,11 +45,9 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  create mode 100644 src/ap/interference.c
  create mode 100644 src/ap/interference.h
 
-diff --git a/hostapd/Makefile b/hostapd/Makefile
-index 2bb597f..ac6c480 100644
 --- a/hostapd/Makefile
 +++ b/hostapd/Makefile
-@@ -1289,6 +1289,7 @@ OBJS += ../src/pasn/pasn_responder.o
+@@ -1319,6 +1319,7 @@ OBJS += ../src/pasn/pasn_common.o
  OBJS += ../src/ap/ieee802_11.o
  OBJS += ../src/ap/hw_features.o
  OBJS += ../src/ap/dfs.o
@@ -57,11 +55,9 @@ index 2bb597f..ac6c480 100644
  CFLAGS += -DNEED_AP_MLME
  endif
  OBJS += ../src/ap/ieee802_11_ht.o
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 8b7ec0b..5400344 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3613,6 +3613,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -3843,6 +3843,8 @@ static int hostapd_config_fill(struct ho
  			return 1;
  		}
  		bss->unsol_bcast_probe_resp_interval = val;
@@ -70,8 +66,6 @@ index 8b7ec0b..5400344 100644
  	} else if (os_strcmp(buf, "mbssid") == 0) {
  		int mbssid = atoi(pos);
  		if (mbssid < 0 || mbssid > ENHANCED_MBSSID_ENABLED) {
-diff --git a/src/ap/Makefile b/src/ap/Makefile
-index a1e9b7c..22a21d3 100644
 --- a/src/ap/Makefile
 +++ b/src/ap/Makefile
 @@ -36,6 +36,7 @@ LIB_OBJS= \
@@ -82,44 +76,17 @@ index a1e9b7c..22a21d3 100644
  	neighbor_db.o \
  	ndisc_snoop.o \
  	p2p_hostapd.o \
-diff --git a/src/ap/ap_config.c b/src/ap/ap_config.c
-index 4b33c3c..5deca40 100644
---- a/src/ap/ap_config.c
-+++ b/src/ap/ap_config.c
-@@ -282,6 +282,7 @@ struct hostapd_config * hostapd_config_defaults(void)
- 	conf->he_6ghz_max_ampdu_len_exp = 7;
- 	conf->he_6ghz_rx_ant_pat = 1;
- 	conf->he_6ghz_tx_ant_pat = 1;
-+	conf->discard_6g_awgn_event = 0;
- #endif /* CONFIG_IEEE80211AX */
- 
- 	/* The third octet of the country string uses an ASCII space character
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index b4a932f..abc97e6 100644
---- a/src/ap/ap_config.h
-+++ b/src/ap/ap_config.h
-@@ -1151,6 +1151,7 @@ struct hostapd_config {
- 	u8 he_6ghz_rx_ant_pat;
- 	u8 he_6ghz_tx_ant_pat;
- 	u8 he_6ghz_reg_pwr_type;
-+	bool discard_6g_awgn_event;
- 	bool require_he;
- #endif /* CONFIG_IEEE80211AX */
- 
-diff --git a/src/ap/drv_callbacks.c b/src/ap/drv_callbacks.c
-index 32b84cf..21f11e8 100644
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -43,7 +43,7 @@
- #include "dpp_hostapd.h"
+@@ -44,6 +44,7 @@
  #include "fils_hlp.h"
  #include "neighbor_db.h"
--
+ #include "nan_usd_ap.h"
 +#include "interference.h"
  
+ 
  #ifdef CONFIG_FILS
- void hostapd_notify_assoc_fils_finish(struct hostapd_data *hapd,
-@@ -1854,6 +1854,13 @@ static void hostapd_event_dfs_radar_detected(struct hostapd_data *hapd,
+@@ -2195,6 +2196,13 @@ static void hostapd_event_dfs_radar_dete
  				   radar->cf1, radar->cf2);
  }
  
@@ -133,8 +100,8 @@ index 32b84cf..21f11e8 100644
  
  static void hostapd_event_dfs_pre_cac_expired(struct hostapd_data *hapd,
  					      struct dfs_event *radar)
-@@ -2197,6 +2204,11 @@ void hostapd_wpa_event(void *ctx, enum wpa_event_type event,
- 			break;
+@@ -2645,6 +2653,11 @@ void hostapd_wpa_event(void *ctx, enum w
+ 		hapd = switch_link_hapd(hapd, data->dfs_event.link_id);
  		hostapd_event_dfs_radar_detected(hapd, &data->dfs_event);
  		break;
 +	case EVENT_AWGN_DETECTED:
@@ -145,9 +112,6 @@ index 32b84cf..21f11e8 100644
  	case EVENT_DFS_PRE_CAC_EXPIRED:
  		if (!data)
  			break;
-diff --git a/src/ap/interference.c b/src/ap/interference.c
-new file mode 100644
-index 0000000..315eb9a
 --- /dev/null
 +++ b/src/ap/interference.c
 @@ -0,0 +1,397 @@
@@ -548,9 +512,6 @@ index 0000000..315eb9a
 +
 +	return 0;
 +}
-diff --git a/src/ap/interference.h b/src/ap/interference.h
-new file mode 100644
-index 0000000..5383ffe
 --- /dev/null
 +++ b/src/ap/interference.h
 @@ -0,0 +1,42 @@
@@ -596,22 +557,20 @@ index 0000000..5383ffe
 +			        u32 chan_bw_interference_bitmap);
 +
 +
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 711f37c..81b9637 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -5741,6 +5741,7 @@ enum wpa_event_type {
-	* beacon.
-	*/
-	EVENT_UPDATE_MUEDCA_PARAMS,
+@@ -5882,6 +5882,7 @@ enum wpa_event_type {
+ 	 * beacon.
+ 	 */
+ 	EVENT_UPDATE_MUEDCA_PARAMS,
 +	EVENT_AWGN_DETECTED,
  
  
-	/**
-@@ -6691,6 +6692,17 @@ union wpa_event_data {
-	} update_muedca;
+ 	/**
+@@ -6872,6 +6873,17 @@ union wpa_event_data {
+ 	} update_muedca;
  
-	/**
+ 	/**
 +	 * Data for EVENT_AWGN
 +	 */
 +	struct awgn_event {
@@ -623,14 +582,12 @@ index 711f37c..81b9637 100644
 +	} awgn_event;
 +
 +	/**
-	 * struct port_authorized - Data for EVENT_PORT_AUTHORIZED
-	 */
-	struct port_authorized {
-diff --git a/src/drivers/driver_common.c b/src/drivers/driver_common.c
-index 19b5150..51ea5ec 100644
+ 	 * struct port_authorized - Data for EVENT_PORT_AUTHORIZED
+ 	 * @td_bitmap: For STA mode, transition disable bitmap, if received in
+ 	 *	EAPOL-Key msg 3/4
 --- a/src/drivers/driver_common.c
 +++ b/src/drivers/driver_common.c
-@@ -99,6 +99,7 @@ const char * event_to_string(enum wpa_event_type event)
+@@ -99,6 +99,7 @@ const char * event_to_string(enum wpa_ev
  	E2S(LINK_CH_SWITCH);
  	E2S(LINK_CH_SWITCH_STARTED);
  	E2S(UPDATE_MUEDCA_PARAMS);
@@ -638,19 +595,17 @@ index 19b5150..51ea5ec 100644
  	E2S(TID_LINK_MAP);
  	E2S(LINK_RECONFIG);
  	}
-diff --git a/src/drivers/driver_nl80211_event.c b/src/drivers/driver_nl80211_event.c
-index ec035b9..76dae8e 100644
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -186,6 +186,7 @@ static const char * nl80211_command_to_string(enum nl80211_commands cmd)
+@@ -186,6 +186,7 @@ static const char * nl80211_command_to_s
  	C2S(NL80211_CMD_REMOVE_LINK_STA)
  	C2S(NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS)
  	C2S(NL80211_CMD_SET_HW_TIMESTAMP)
 +	C2S(NL80211_CMD_AWGN_DETECT)
+ 	C2S(NL80211_CMD_LINKS_REMOVED)
  	C2S(__NL80211_CMD_AFTER_LAST)
  	}
- #undef C2S
-@@ -2455,6 +2456,32 @@ static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
+@@ -2546,6 +2547,32 @@ static void nl80211_radar_event(struct w
  	}
  }
  
@@ -683,69 +638,19 @@ index ec035b9..76dae8e 100644
  
  static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
  				   int wds)
-@@ -4007,6 +4034,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
-	case NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS:
-		nl80211_update_muedca_params_event(drv, tb);
-		break;
+@@ -4144,6 +4171,9 @@ static void do_process_drv_event(struct
+ 	case NL80211_CMD_LINKS_REMOVED:
+ 		wpa_supplicant_event(drv->ctx, EVENT_LINK_RECONFIG, NULL);
+ 		break;
 +	case NL80211_CMD_AWGN_DETECT:
 +		nl80211_awgn_event(drv, tb);
 +		break;
  	default:
  		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "
  			"(cmd=%d)", cmd);
-diff --git a/src/drivers/nl80211_copy.h b/src/drivers/nl80211_copy.h
-index 96ac870..b32cc6c 100644
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -1314,6 +1314,10 @@
-  *     were indicated by driver and now need to be reflected in
-  *     Beacon frame.
-  *
-+ * @NL80211_CMD_AWGN_DETECT: Once AWGN interference is detected on the operating
-+ *	channel, userspace is notified with the interference bitmap using
-+ *	%NL80211_ATTR_AWGN_INTERFERENCE_BITMAP
-+ *
-  * @NL80211_CMD_MAX: highest used command number
-  * @__NL80211_CMD_AFTER_LAST: internal use
-  */
-@@ -1568,6 +1572,9 @@ enum nl80211_commands {
- 	NL80211_CMD_SET_HW_TIMESTAMP,
- 
- 	NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS,
-+
-+	NL80211_CMD_AWGN_DETECT,
-+
- 	/* add new commands above here */
- 
- 	/* used to define NL80211_CMD_MAX below */
-@@ -2817,6 +2824,9 @@ enum nl80211_commands {
-  *	index. If the userspace includes more RNR elements than number of
-  *	MBSSID elements then these will be added in every EMA beacon.
-  *
-+ * @NL80211_ATTR_AWGN_INTERFERENCE_BITMAP: u32 attribute specifying the
-+ *	interference bitmap of operating bandwidth for %NL80211_CMD_AWGN_DETECT
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3359,6 +3369,12 @@ enum nl80211_attrs {
- 
- 	NL80211_ATTR_6G_REG_POWER_MODE,
- 
-+	NL80211_ATTR_WIPHY_ANTENNA_GAIN,
-+
-+	NL80211_ATTR_STA_MGMT_RTS_CTS_CONFIG,
-+
-+	NL80211_ATTR_AWGN_INTERFERENCE_BITMAP,
-+
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
-diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
-index faaa4cc..11cd5d0 100644
 --- a/wpa_supplicant/Makefile
 +++ b/wpa_supplicant/Makefile
-@@ -1024,6 +1024,7 @@ OBJS += ../src/pasn/pasn_responder.o
+@@ -1094,6 +1094,7 @@ OBJS += ../src/pasn/pasn_responder.o
  OBJS += ../src/ap/ieee802_11.o
  OBJS += ../src/ap/hw_features.o
  OBJS += ../src/ap/dfs.o
@@ -753,3 +658,23 @@ index faaa4cc..11cd5d0 100644
  CFLAGS += -DNEED_AP_MLME
  endif
  ifdef CONFIG_WPS
+--- a/src/ap/ap_config.c
++++ b/src/ap/ap_config.c
+@@ -287,6 +287,7 @@ struct hostapd_config * hostapd_config_d
+ 	conf->he_6ghz_max_ampdu_len_exp = 7;
+ 	conf->he_6ghz_rx_ant_pat = 1;
+ 	conf->he_6ghz_tx_ant_pat = 1;
++	conf->discard_6g_awgn_event = 0;
+ 	conf->he_6ghz_reg_pwr_type = HE_REG_INFO_6GHZ_AP_TYPE_VLP;
+ 	conf->reg_def_cli_eirp_psd = -1;
+ 	conf->reg_sub_cli_eirp_psd = -1;
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -1183,6 +1183,7 @@ struct hostapd_config {
+ 	u8 he_6ghz_rx_ant_pat;
+ 	u8 he_6ghz_tx_ant_pat;
+ 	u8 he_6ghz_reg_pwr_type;
++	bool discard_6g_awgn_event;
+ 
+ 	int reg_def_cli_eirp_psd;
+ 	int reg_sub_cli_eirp_psd;

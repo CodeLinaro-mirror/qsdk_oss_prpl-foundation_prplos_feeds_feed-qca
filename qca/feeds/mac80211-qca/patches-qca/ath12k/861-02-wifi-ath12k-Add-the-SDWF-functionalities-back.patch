@@ -1,11 +1,17 @@
 From e358b36abc95875d8c882f9fc6d541022f5f6f4b Mon Sep 17 00:00:00 2001
 From: Nagarajan Maran <quic_nmaran@quicinc.com>
 Date: Wed, 27 Dec 2023 17:01:27 +0530
-Subject: [PATCH] wifi: ath12k: Add the SDWF functionalities back with the
+Subject: [PATCH] QSDK: wifi: ath12k: Add the SDWF functionalities back with the
  approved identifiers.
 
 With the new approved subcmd enum values in hostap.git for SDWF,
 rewrite the SDWF vendor commands handling.
+
+Patch-dependency:
+750-01-ath12k-Add-SAWF-support.patch
+750-02-ath12k-Add-vendor-command-support-for-SAWF.patch
+754-01-ath12k-sawf-add-uplink-configuration-paraeters-in-se.patch
+861-01-wifi-ath12k-Removing-the-unassigned-identifiers.patch
 
 Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 ---
@@ -15,11 +21,9 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  drivers/net/wireless/ath/ath12k/vendor.h | 183 +++++
  4 files changed, 1147 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/sawf.c b/drivers/net/wireless/ath/ath12k/sawf.c
-index e01fea9b4cbf..a0b8ec324464 100644
 --- a/drivers/net/wireless/ath/ath12k/sawf.c
 +++ b/drivers/net/wireless/ath/ath12k/sawf.c
-@@ -117,7 +117,6 @@ void ath12k_update_svc_class(struct ath12k_sawf_svc_params *sawf_params)
+@@ -117,7 +117,6 @@ void ath12k_update_svc_class(struct ath1
  
  	new_param = &sawf_ctx->svc_classes[SVC_INDEX(sawf_params->svc_id)];
  	new_param->svc_id = sawf_params->svc_id;
@@ -27,8 +31,6 @@ index e01fea9b4cbf..a0b8ec324464 100644
  	new_param->min_throughput_rate = sawf_params->min_throughput_rate;
  	new_param->max_throughput_rate = sawf_params->max_throughput_rate;
  	new_param->burst_size = sawf_params->burst_size;
-diff --git a/drivers/net/wireless/ath/ath12k/sawf.h b/drivers/net/wireless/ath/ath12k/sawf.h
-index 168588d1c3cf..531c9894d491 100644
 --- a/drivers/net/wireless/ath/ath12k/sawf.h
 +++ b/drivers/net/wireless/ath/ath12k/sawf.h
 @@ -19,7 +19,6 @@ struct telemetry_sawfdelay_stats;
@@ -47,15 +49,12 @@ index 168588d1c3cf..531c9894d491 100644
  	u32 min_throughput_rate;
  	u32 max_throughput_rate;
  	u32 burst_size;
-diff --git a/drivers/net/wireless/ath/ath12k/vendor.c b/drivers/net/wireless/ath/ath12k/vendor.c
-index 1b7432bec25f..d9dd52f7dd13 100644
 --- a/drivers/net/wireless/ath/ath12k/vendor.c
 +++ b/drivers/net/wireless/ath/ath12k/vendor.c
-@@ -11,6 +11,91 @@
- #include "sawf.h"
+@@ -13,6 +13,91 @@
  
  #ifdef CPTCFG_ATH12K_SAWF
-+static const struct nla_policy
+ static const struct nla_policy
 +ath12k_vendor_sdwf_phy_policy[QCA_WLAN_VENDOR_ATTR_SDWF_PHY_MAX + 1] = {
 +	[QCA_WLAN_VENDOR_ATTR_SDWF_PHY_OPERATION] = {.type = NLA_U8},
 +	[QCA_WLAN_VENDOR_ATTR_SDWF_PHY_SVC_PARAMS] = {.type = NLA_NESTED},
@@ -140,10 +139,11 @@ index 1b7432bec25f..d9dd52f7dd13 100644
 +	[QCA_WLAN_VENDOR_ATTR_SDWF_MLO_LINK_ID] = {.type = NLA_U32},
 +};
 +
- static const struct nla_policy
++static const struct nla_policy
  ath12k_telemetric_req_policy[QCA_WLAN_VENDOR_ATTR_TELEMETRIC_MAX + 1] = {
  	[QCA_WLAN_VENDOR_ATTR_TELEMETRIC_LEVEL] = {.type = NLA_U8},
-@@ -22,6 +107,19 @@ ath12k_telemetric_req_policy[QCA_WLAN_VENDOR_ATTR_TELEMETRIC_MAX + 1] = {
+ 	[QCA_WLAN_VENDOR_ATTR_TELEMETRIC_OBJECT] = {.type = NLA_U8},
+@@ -23,6 +108,19 @@ ath12k_telemetric_req_policy[QCA_WLAN_VE
  						     .len = ETH_ALEN},
  	[QCA_WLAN_VENDOR_ATTR_TELEMETRIC_SERVICEID] = {.type = NLA_U8},
  };
@@ -163,7 +163,7 @@ index 1b7432bec25f..d9dd52f7dd13 100644
  #endif
  
  static const struct nla_policy
-@@ -40,6 +138,592 @@ ath12k_vendor_scs_config_policy[QCA_WLAN_VENDOR_ATTR_SCS_RULE_CONFIG_MAX + 1] =
+@@ -46,6 +144,597 @@ ath12k_ds_policy[QCA_WLAN_VENDOR_ATTR_DS
  
  #ifdef CPTCFG_ATH12K_SAWF
  
@@ -299,6 +299,9 @@ index 1b7432bec25f..d9dd52f7dd13 100644
 +	if (!ath12k_sawf_enable)
 +		return -EOPNOTSUPP;
 +
++	if (!storage)
++		return -ENODATA;
++
 +	sdwf_ctx = ath12k_get_sawf_context();
 +	if (!sdwf_ctx) {
 +		ath12k_err(NULL, "SAWF context not available\n");
@@ -343,7 +346,7 @@ index 1b7432bec25f..d9dd52f7dd13 100644
 +		return -EINVAL;
 +	}
 +	/* return 0 to end the dump */
-+	if (storage && (*storage == ATH12K_SAWF_SVC_CLASS_MAX))
++	if (*storage == ATH12K_SAWF_SVC_CLASS_MAX)
 +		return 0;
 +
 +	sdwf_svc_classes = nla_nest_start(msg,
@@ -363,6 +366,8 @@ index 1b7432bec25f..d9dd52f7dd13 100644
 +		svc_class = &sdwf_ctx->svc_classes[i];
 +		nest_start_length = msg->len;
 +		sdwf_svc_class = nla_nest_start(msg, j);
++		if (!sdwf_svc_class)
++			goto nla_put_failure;
 +		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_SDWF_SVC_ID,
 +			       svc_class->svc_id) ||
 +		    nla_put_u32(msg,
@@ -756,9 +761,9 @@ index 1b7432bec25f..d9dd52f7dd13 100644
  static int telemetry_build_nd_send_reply_msg(struct wiphy *wiphy, struct stats_config *cfg,
  					     u8 *mac_addr, struct unified_stats *stats)
  {
-@@ -223,13 +907,271 @@ end_stats:
+@@ -261,13 +950,273 @@ static int ath12k_vendor_ds_handler(stru
  
- 	return ret;
+ 	return 0;
  }
 +
 +static int ath12k_vendor_telemetry_sla_reset_stats(struct nlattr *clr_stats)
@@ -843,6 +848,8 @@ index 1b7432bec25f..d9dd52f7dd13 100644
 +	}
 +
 +	notify_params = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_SDWF_DEV_SLA_BREACHED_PARAMS);
++	if (!notify_params)
++		goto err;
 +	if (nla_put(skb, QCA_WLAN_VENDOR_ATTR_SDWF_SLA_BREACH_PARAM_PEER_MAC, ETH_ALEN, mac_addr) ||
 +	    (mld_addr && nla_put(skb, QCA_WLAN_VENDOR_ATTR_SDWF_SLA_BREACH_PARAM_PEER_MLD_MAC,
 +	    ETH_ALEN, mld_addr)) ||
@@ -1028,12 +1035,10 @@ index 1b7432bec25f..d9dd52f7dd13 100644
  #endif /* CPTCFG_ATH12K_SAWF */
  
  #define NL_VENDOR_GET_ATTR(res, info, attr, bit) \
-@@ -277,6 +1219,22 @@ static int ath12k_vendor_set_scs_qos_params(struct wiphy *wihpy,
- 
- static struct wiphy_vendor_command ath12k_vendor_commands[] = {
+@@ -317,6 +1266,22 @@ static struct wiphy_vendor_command ath12
  #ifdef CPTCFG_ATH12K_SAWF
-+	{
-+		.info.vendor_id = QCA_NL80211_VENDOR_ID,
+ 	{
+ 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 +		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_SDWF_PHY_OPS,
 +		.doit = ath12k_vendor_sdwf_phy_operations,
 +		.dumpit = ath12k_vendor_view_sdwf_config,
@@ -1048,10 +1053,12 @@ index 1b7432bec25f..d9dd52f7dd13 100644
 +		.maxattr = QCA_WLAN_VENDOR_ATTR_SDWF_DEV_MAX,
 +		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV,
 +	},
- 	{
- 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
++	{
++		.info.vendor_id = QCA_NL80211_VENDOR_ID,
  		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_TELEMETRIC_DATA,
-@@ -297,6 +1255,12 @@ static struct wiphy_vendor_command ath12k_vendor_commands[] = {
+ 		.doit = ath12k_vendor_telemetry_getstats,
+ 		.policy = ath12k_telemetric_req_policy,
+@@ -343,6 +1308,12 @@ static struct wiphy_vendor_command ath12
  };
  
  static const struct nl80211_vendor_cmd_info ath12k_vendor_events[] = {
@@ -1064,8 +1071,6 @@ index 1b7432bec25f..d9dd52f7dd13 100644
  };
  
  int ath12k_vendor_register(struct ath12k_hw *ah)
-diff --git a/drivers/net/wireless/ath/ath12k/vendor.h b/drivers/net/wireless/ath/ath12k/vendor.h
-index a0cad5f69d73..8b85a5c349dc 100644
 --- a/drivers/net/wireless/ath/ath12k/vendor.h
 +++ b/drivers/net/wireless/ath/ath12k/vendor.h
 @@ -12,11 +12,194 @@ enum qca_nl80211_vendor_subcmds {
@@ -1263,6 +1268,3 @@ index a0cad5f69d73..8b85a5c349dc 100644
  /**
   * enum qca_wlan_vendor_attr_telemetric: Defines attributes to be used in
   * request message of QCA_NL80211_VENDOR_SUBCMD_TELEMETRIC_DATA vendor command.
--- 
-2.17.1
-

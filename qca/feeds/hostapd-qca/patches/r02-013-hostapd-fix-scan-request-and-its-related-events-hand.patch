@@ -30,7 +30,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/ap/ap_drv_ops.c
 +++ b/src/ap/ap_drv_ops.c
-@@ -733,6 +733,12 @@ bool hostapd_drv_nl80211(struct hostapd_
+@@ -788,6 +788,12 @@ bool hostapd_drv_nl80211(struct hostapd_
  int hostapd_driver_scan(struct hostapd_data *hapd,
  			struct wpa_driver_scan_params *params)
  {
@@ -45,9 +45,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	return -1;
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -714,6 +714,14 @@ struct wpa_driver_scan_params {
+@@ -738,6 +738,14 @@ struct wpa_driver_scan_params {
  	 */
- 	unsigned int non_coloc_6ghz:1;
+ 	s8 link_id;
  
 +	/**
 +	 * mlo_link_id - Link ID (in case of MLO)
@@ -62,22 +62,37 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	 * wpa_scan_clone_params() and wpa_scan_free_params() get updated with
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5439,7 +5439,7 @@ fail:
+@@ -4228,6 +4228,22 @@ struct i802_link * nl80211_get_link(stru
  }
  
  
--static bool nl80211_link_valid(struct i802_bss *bss, s8 link_id)
-+bool nl80211_link_valid(struct i802_bss *bss, s8 link_id)
++u8 nl80211_get_link_id_from_link(struct i802_bss *bss, struct i802_link *link)
++{
++	u8 link_id;
++
++	if (link == bss->flink)
++		return 0;
++
++	for_each_link(bss->valid_links, link_id) {
++		if (&bss->links[link_id] == link)
++			return link_id;
++	}
++
++	return 0;
++}
++
++
+ static void nl80211_link_set_freq(struct i802_bss *bss, s8 link_id, int freq)
  {
- 	unsigned int i;
- 
-@@ -10330,7 +10330,8 @@ static int wpa_driver_nl80211_get_survey
+ 	struct i802_link *link = nl80211_get_link(bss, link_id);
+@@ -10494,7 +10510,9 @@ static int wpa_driver_nl80211_get_survey
  	if (err)
  		wpa_printf(MSG_ERROR, "nl80211: Failed to process survey data");
  	else
 -		wpa_supplicant_event(drv->ctx, EVENT_SURVEY, &data);
-+		wpa_supplicant_event(bss->scan_link->ctx ? bss->scan_link->ctx :
-+				     bss->ctx, EVENT_SURVEY, &data);
++		wpa_supplicant_event((bss->scan_link && bss->scan_link->ctx) ?
++				     bss->scan_link->ctx : bss->ctx,
++				     EVENT_SURVEY, &data);
  
  	clean_survey_results(arg.survey_results);
  	return err;
@@ -85,23 +100,23 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +++ b/src/drivers/driver_nl80211.h
 @@ -67,7 +67,7 @@ struct i802_bss {
  
- 	size_t n_links;
+ 	u16 valid_links;
  	struct i802_link links[MAX_NUM_MLD_LINKS];
 -	struct i802_link *flink;
 +	struct i802_link *flink, *scan_link;
  
  	int ifindex;
  	int br_ifindex;
-@@ -368,5 +368,6 @@ int wpa_driver_nl80211_vendor_scan(struc
- int nl80211_set_default_scan_ies(void *priv, const u8 *ies, size_t ies_len);
+@@ -414,5 +414,6 @@ int nl80211_set_default_scan_ies(void *p
+ int wpa_driver_set_phyname(struct wpa_driver_nl80211_data *drv);
  struct hostapd_multi_hw_info *
  nl80211_get_multi_hw_info(void *priv, u8 *num_multi_hws);
-+bool nl80211_link_valid(struct i802_bss *bss, s8 link_id);
++u8 nl80211_get_link_id_from_link(struct i802_bss *bss, struct i802_link *link);
  
  #endif /* DRIVER_NL80211_H */
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1950,9 +1950,10 @@ static void mlme_event_dh_event(struct w
+@@ -1985,9 +1985,10 @@ static void mlme_event_dh_event(struct w
  }
  
  
@@ -113,7 +128,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	union wpa_event_data event;
  	struct nlattr *nl;
  	int rem;
-@@ -1960,6 +1961,8 @@ static void send_scan_event(struct wpa_d
+@@ -1995,6 +1996,8 @@ static void send_scan_event(struct wpa_d
  #define MAX_REPORT_FREQS 110
  	int freqs[MAX_REPORT_FREQS];
  	int num_freqs = 0;
@@ -122,7 +137,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	if (!external_scan && drv->scan_for_auth) {
  		drv->scan_for_auth = 0;
-@@ -2023,7 +2026,23 @@ static void send_scan_event(struct wpa_d
+@@ -2058,7 +2061,25 @@ static void send_scan_event(struct wpa_d
  			  ETH_ALEN);
  	}
  
@@ -135,9 +150,11 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +			goto process_scan_event;
 +		}
 +
-+		if (mld_link->link_id != NL80211_DRV_LINK_ID_NA) {
++		if (mld_link->ctx) {
++			u8 link_id = nl80211_get_link_id_from_link(bss, mld_link);
++
 +			wpa_printf(MSG_DEBUG, "nl80211: Scan event for link_id %d",
-+				   mld_link->link_id);
++				   link_id);
 +			ctx = mld_link->ctx;
 +		}
 +	}
@@ -147,7 +164,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  }
  
  
-@@ -3932,48 +3951,16 @@ nl80211_color_change_announcement_comple
+@@ -4121,48 +4142,16 @@ static void nl80211_color_change_announc
  #endif /* CONFIG_IEEE80211AX */
  
  
@@ -200,7 +217,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		drv->scan_state = SCAN_STARTED;
  		if (drv->scan_for_auth) {
  			/*
-@@ -3985,40 +3972,40 @@ static void do_process_drv_event(struct
+@@ -4174,40 +4163,40 @@ static void do_process_drv_event(struct
  			wpa_printf(MSG_DEBUG, "nl80211: Do not indicate scan-start event due to internal scan_for_auth");
  			break;
  		}
@@ -251,7 +268,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		if (drv->last_scan_cmd != NL80211_CMD_VENDOR)
  			drv->scan_state = SCAN_ABORTED;
  		if (drv->last_scan_cmd == NL80211_CMD_TRIGGER_SCAN) {
-@@ -4027,12 +4014,62 @@ static void do_process_drv_event(struct
+@@ -4216,12 +4205,66 @@ static void do_process_drv_event(struct
  			 * order not to make wpa_supplicant stop its scanning.
  			 */
  			eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout,
@@ -263,6 +280,10 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		}
 -		send_scan_event(drv, 1, tb, external_scan_event);
 +		send_scan_event(bss, 1, tb, external_scan_event);
++		break;
++	default:
++		wpa_dbg(ctx, MSG_DEBUG, "nl80211: Unknown scan cmd %d (%s)",
++			cmd, nl80211_command_to_string(cmd));
 +		break;
 +	}
 +}
@@ -318,7 +339,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	case NL80211_CMD_ASSOCIATE:
 --- a/src/drivers/driver_nl80211_scan.c
 +++ b/src/drivers/driver_nl80211_scan.c
-@@ -154,6 +154,7 @@ fail:
+@@ -153,6 +153,7 @@ fail:
  void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
  {
  	struct wpa_driver_nl80211_data *drv = eloop_ctx;
@@ -326,7 +347,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	wpa_printf(MSG_DEBUG, "nl80211: Scan timeout - try to abort it");
  #ifdef CONFIG_DRIVER_NL80211_QCA
-@@ -161,14 +162,22 @@ void wpa_driver_nl80211_scan_timeout(voi
+@@ -160,14 +161,22 @@ void wpa_driver_nl80211_scan_timeout(voi
  	    nl80211_abort_vendor_scan(drv, drv->vendor_scan_cookie) == 0)
  		return;
  #endif /* CONFIG_DRIVER_NL80211_QCA */
@@ -351,7 +372,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	wpa_printf(MSG_DEBUG, "nl80211: Try to get scan results");
  	wpa_supplicant_event(timeout_ctx, EVENT_SCAN_RESULTS, NULL);
-@@ -340,7 +349,7 @@ int wpa_driver_nl80211_scan(struct i802_
+@@ -347,7 +356,7 @@ int wpa_driver_nl80211_scan(struct i802_
  	int ret = -1, timeout;
  	struct nl_msg *msg = NULL;
  
@@ -360,7 +381,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	drv->scan_for_auth = 0;
  
  	if (TEST_FAIL())
-@@ -423,11 +432,19 @@ int wpa_driver_nl80211_scan(struct i802_
+@@ -440,11 +449,19 @@ int wpa_driver_nl80211_scan(struct i802_
  	}
  	wpa_printf(MSG_DEBUG, "Scan requested (ret=%d) - scan timeout %d "
  		   "seconds", ret, timeout);
@@ -373,7 +394,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
 +	bss->scan_link = bss->flink;
 +	if (is_ap_interface(drv->nlmode) &&
-+	    nl80211_link_valid(bss, params->mlo_link_id)) {
++	    nl80211_link_valid(bss->valid_links, params->mlo_link_id)) {
 +		wpa_dbg(bss->ctx, MSG_DEBUG, "nl80211: scan requested for link %d",
 +			params->mlo_link_id);
 +		bss->scan_link = nl80211_get_link(bss, params->mlo_link_id);
@@ -384,10 +405,10 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	return ret;
 --- a/wpa_supplicant/scan.c
 +++ b/wpa_supplicant/scan.c
-@@ -3064,6 +3064,7 @@ wpa_scan_clone_params(const struct wpa_d
- 	params->relative_adjust_rssi = src->relative_adjust_rssi;
+@@ -3409,6 +3409,7 @@ wpa_scan_clone_params(const struct wpa_d
  	params->p2p_include_6ghz = src->p2p_include_6ghz;
  	params->non_coloc_6ghz = src->non_coloc_6ghz;
+ 	params->min_probe_req_content = src->min_probe_req_content;
 +	params->mlo_link_id = src->mlo_link_id;
  	return params;
  

@@ -22,9 +22,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1357,6 +1357,9 @@ static int hostapd_setup_bss(struct host
- 			os_memcpy(hapd->own_addr, if_addr, ETH_ALEN);
+@@ -1468,6 +1468,9 @@ setup_mld:
  	}
+ #endif /* CONFIG_IEEE80211BE */
  
 +	 if (is_zero_ether_addr(conf->bssid))
 +		 os_memcpy(conf->bssid, hapd->own_addr, ETH_ALEN);

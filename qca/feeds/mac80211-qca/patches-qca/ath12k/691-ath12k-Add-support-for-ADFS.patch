@@ -23,7 +23,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -826,6 +826,7 @@ struct ath12k {
+@@ -827,6 +827,7 @@ struct ath12k {
  	unsigned long last_tx_power_update;
  
  	struct completion mvr_complete;
@@ -31,7 +31,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  };
  
  struct ath12k_hw {
-@@ -883,6 +884,8 @@ struct ath12k_pdev_cap {
+@@ -884,6 +885,8 @@ struct ath12k_pdev_cap {
  	u32 rx_chain_mask;
  	u32 tx_chain_mask_shift;
  	u32 rx_chain_mask_shift;
@@ -42,7 +42,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	u8 nss_ratio_info;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -9821,6 +9821,23 @@ ath12k_mac_vdev_config_after_start(struc
+@@ -9812,6 +9812,23 @@ ath12k_mac_vdev_config_after_start(struc
  	if (ret)
  		ath12k_warn(ab, "failed to set 6G non-ht dup conf for vdev %d: %d\n",
  		            arvif->vdev_id, ret);
@@ -66,7 +66,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	return ret;
  }
-@@ -13020,6 +13037,123 @@ err_fallback:
+@@ -13035,6 +13052,123 @@ err_fallback:
  	return 0;
  }
  
@@ -190,7 +190,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  static const struct ieee80211_ops ath12k_ops = {
  	.tx				= ath12k_mac_op_tx,
  	.wake_tx_queue			= ieee80211_handle_wake_tx_queue,
-@@ -13063,6 +13197,7 @@ static const struct ieee80211_ops ath12k
+@@ -13078,6 +13212,7 @@ static const struct ieee80211_ops ath12k
  	.sta_add_debugfs		= ath12k_debugfs_sta_op_add,
  #endif
  	.get_txpower			= ath12k_mac_op_get_txpower,
@@ -198,19 +198,21 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  };
  
  static void ath12k_mac_update_ch_list(struct ath12k *ar,
-@@ -13493,6 +13628,11 @@ static int __ath12k_mac_register(struct
+@@ -13510,7 +13645,12 @@ static int __ath12k_mac_register(struct
  				      NL80211_EXT_FEATURE_UNSOL_BCAST_PROBE_RESP);
  	}
  
+-	wiphy_ext_feature_set(ar->hw->wiphy, NL80211_EXT_FEATURE_PUNCT);
++	wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_PUNCT);
++
 +	if ((ar->pdev->cap.supported_bands & WMI_HOST_WLAN_5G_CAP) &&
 +	    test_bit(ar->cfg_rx_chainmask, &cap->adfs_chain_mask))
 +		wiphy_ext_feature_set(hw->wiphy,
 +				      NL80211_EXT_FEATURE_RADAR_BACKGROUND);
-+
+ 
  	return 0;
  }
- static int ath12k_setup_per_hw_if_comb(struct ath12k_hw *ah) {
-@@ -14110,3 +14250,42 @@ u16 ath12k_calculate_subchannel_count(en
+@@ -14130,3 +14270,42 @@ u16 ath12k_calculate_subchannel_count(en
  	}
  	return width_num/20;
  }
@@ -295,7 +297,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	bool mac_phy_chainmask_combo_done;
  	bool mac_phy_chainmask_cap_done;
  	bool oem_dma_ring_cap_done;
-@@ -397,6 +401,40 @@ static const int ath12k_hw_mode_pri_map[
+@@ -306,6 +310,40 @@ static const int ath12k_hw_mode_pri_map[
  	PRIMAP(WMI_HOST_HW_MODE_MAX),
  };
  
@@ -336,15 +338,15 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  static int
  ath12k_wmi_tlv_iter(struct ath12k_base *ab, const void *ptr, size_t len,
  		    int (*iter)(struct ath12k_base *ab, u16 tag, u16 len,
-@@ -618,6 +656,7 @@ ath12k_pull_mac_phy_cap_svc_ready_ext(st
+@@ -529,6 +567,7 @@ ath12k_pull_mac_phy_cap_svc_ready_ext(st
  	pdev->hw_link_id = mac_caps->hw_link_id;
  	pdev_cap->supported_bands |= le32_to_cpu(mac_caps->supported_bands);
  	pdev_cap->ampdu_density = le32_to_cpu(mac_caps->ampdu_density);
 +	pdev_cap->chainmask_table_id = mac_caps->chainmask_table_id;
  
- 	/* Take non-zero tx/rx chainmask. If tx/rx chainmask differs from
- 	 * band to band for a single radio, need to see how this should be
-@@ -5027,6 +5066,102 @@ static void ath12k_wmi_pdev_dma_ring_buf
+ 	fw_pdev = &ab->fw_pdev[ab->fw_pdev_count];
+ 	fw_pdev->supported_bands = le32_to_cpu(mac_caps->supported_bands);
+@@ -4977,6 +5016,102 @@ static void ath12k_wmi_pdev_dma_ring_buf
  	}
  }
  
@@ -447,7 +449,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  static int ath12k_wmi_hw_mode_caps_parse(struct ath12k_base *soc,
  					 u16 tag, u16 len,
  					 const void *ptr, void *data)
-@@ -5327,6 +5462,7 @@ static int ath12k_wmi_svc_rdy_ext_parse(
+@@ -5288,6 +5423,7 @@ static int ath12k_wmi_svc_rdy_ext_parse(
  		svc_rdy_ext->hw_caps = ptr;
  		svc_rdy_ext->arg.num_hw_modes =
  			le32_to_cpu(svc_rdy_ext->hw_caps->num_hw_modes);
@@ -455,7 +457,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		break;
  
  	case WMI_TAG_SOC_HAL_REG_CAPABILITIES:
-@@ -5361,8 +5497,21 @@ static int ath12k_wmi_svc_rdy_ext_parse(
+@@ -5322,8 +5458,21 @@ static int ath12k_wmi_svc_rdy_ext_parse(
  
  			svc_rdy_ext->ext_hal_reg_done = true;
  		} else if (!svc_rdy_ext->mac_phy_chainmask_combo_done) {
@@ -477,7 +479,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  			svc_rdy_ext->mac_phy_chainmask_cap_done = true;
  		} else if (!svc_rdy_ext->oem_dma_ring_cap_done) {
  			svc_rdy_ext->oem_dma_ring_cap_done = true;
-@@ -5400,9 +5549,12 @@ static int ath12k_service_ready_ext_even
+@@ -5361,9 +5510,12 @@ static int ath12k_service_ready_ext_even
  		complete(&ab->wmi_ab.service_ready);
  
  	kfree(svc_rdy_ext.mac_phy_caps);
@@ -490,7 +492,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	ath12k_wmi_free_dbring_caps(ab);
  	return ret;
  }
-@@ -8493,10 +8645,15 @@ static void ath12k_dfs_calculate_subchan
+@@ -8829,10 +8981,15 @@ static void ath12k_dfs_calculate_subchan
  
  	arg.ar = ar;
  	arg.def = NULL;
@@ -509,7 +511,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		ath12k_err(ab, "Channel information not available\n");
  		return;
  	}
-@@ -8540,7 +8697,12 @@ static void ath12k_dfs_calculate_subchan
+@@ -8876,7 +9033,12 @@ static void ath12k_dfs_calculate_subchan
  		   radar_bitmap,subchannel_count);
  
  mark_radar:
@@ -523,7 +525,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  static void
-@@ -9723,6 +9885,57 @@ exit:
+@@ -9842,6 +10004,57 @@ exit:
  	kfree(tb);
  }
  
@@ -581,7 +583,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  static void ath12k_wmi_op_rx(struct ath12k_base *ab, struct sk_buff *skb)
  {
  	struct wmi_cmd_hdr *cmd_hdr;
-@@ -9869,6 +10082,9 @@ static void ath12k_wmi_op_rx(struct ath1
+@@ -9988,6 +10201,9 @@ static void ath12k_wmi_op_rx(struct ath1
  	case WMI_PDEV_MULTIPLE_VDEV_RESTART_RESP_EVENTID:
  		ath12k_wmi_event_mvr_response(ab, skb);
  		break;
@@ -591,7 +593,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	/* TODO: Add remaining events */
  	default:
  		ath12k_dbg(ab, ATH12K_DBG_WMI, "Unknown eventid: 0x%x\n", id);
-@@ -10358,3 +10574,96 @@ int ath12k_wmi_pdev_multiple_vdev_restar
+@@ -10477,3 +10693,96 @@ int ath12k_wmi_pdev_multiple_vdev_restar
  
  	return ret;
  }
@@ -690,7 +692,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2659,6 +2659,19 @@ struct ath12k_ppe_threshold {
+@@ -2645,6 +2645,19 @@ struct ath12k_ppe_threshold {
  	u32 ppet16_ppet8_ru3_ru0[PSOC_HOST_MAX_NUM_SS];
  };
  
@@ -710,7 +712,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  struct wmi_ppe_threshold {
  	u32 numss_m1; /** NSS - 1*/
  	union {
-@@ -2830,6 +2843,18 @@ struct ath12k_wmi_hw_mode_cap_params {
+@@ -2816,6 +2829,18 @@ struct ath12k_wmi_hw_mode_cap_params {
  	__le32 hw_mode_config_type;
  } __packed;
  
@@ -729,7 +731,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #define WMI_MAX_HECAP_PHY_SIZE                 (3)
  #define WMI_NSS_RATIO_ENABLE_DISABLE_BITPOS    BIT(0)
  #define WMI_NSS_RATIO_ENABLE_DISABLE_GET(_val) \
-@@ -4966,6 +4991,9 @@ enum wmi_host_channel_width {
+@@ -5005,6 +5030,9 @@ enum wmi_host_channel_width {
          WMI_HOST_CHAN_WIDTH_80    = 2,
          WMI_HOST_CHAN_WIDTH_160   = 3,
          WMI_HOST_CHAN_WIDTH_80P80 = 4,
@@ -739,7 +741,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  };
  
  enum wmi_dcs_interference_chan_segment {
-@@ -6157,6 +6185,59 @@ struct wmi_critical_update_arg {
+@@ -6196,6 +6224,59 @@ struct wmi_critical_update_arg {
  #define ATH12K_GET_LOWER_32_BITS(val)		(val & ATH12K_LOWER_32_MASK)
  #define ATH12K_GET_UPPER_32_BITS(val)		((val & ATH12K_UPPER_32_MASK) >> 32)
  
@@ -799,7 +801,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #define ATH12K_FW_STATS_BUF_SIZE (1024 * 1024)
  
  void ath12k_wmi_init_qcn9274(struct ath12k_base *ab,
-@@ -6327,4 +6408,7 @@ int ath12k_wmi_mlo_teardown(struct ath12
+@@ -6366,4 +6447,7 @@ int ath12k_wmi_mlo_teardown(struct ath12
  bool ath12k_wmi_is_mvr_supported(struct ath12k_base *ab);
  int ath12k_wmi_pdev_multiple_vdev_restart(struct ath12k *ar,
  					  struct wmi_pdev_multiple_vdev_restart_req_arg *arg);

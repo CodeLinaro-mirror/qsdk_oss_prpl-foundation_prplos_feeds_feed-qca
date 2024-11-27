@@ -1,6 +1,6 @@
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -2491,6 +2491,7 @@ struct cfg80211_scan_6ghz_params {
+@@ -2569,6 +2569,7 @@ struct cfg80211_scan_6ghz_params {
   * @channels: channels to scan on.
   * @n_channels: total number of channels to scan
   * @scan_width: channel width for scanning
@@ -8,7 +8,7 @@
   * @ie: optional information element(s) to add into Probe Request or %NULL
   * @ie_len: length of ie in octets
   * @duration: how long to listen on each channel, in TUs. If
-@@ -2521,6 +2522,7 @@ struct cfg80211_scan_request {
+@@ -2599,6 +2600,7 @@ struct cfg80211_scan_request {
  	int n_ssids;
  	u32 n_channels;
  	enum nl80211_bss_scan_width scan_width;
@@ -16,46 +16,9 @@
  	const u8 *ie;
  	size_t ie_len;
  	u16 duration;
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -6405,6 +6405,9 @@ enum nl80211_feature_flags {
-  *	in authentication and deauthentication frames sent to unassociated peer
-  *	using @NL80211_CMD_FRAME.
-  *
-+ * @NL80211_EXT_FEATURE_WIDE_BAND_SCAN: Driver/device supports wide band scan
-+ *	 on a frequency along with its corresponding phymode (40Mhz, 80Mhz)
-+ *
-  * @NUM_NL80211_EXT_FEATURES: number of extended features.
-  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
-  */
-@@ -6471,6 +6474,7 @@ enum nl80211_ext_feature_index {
- 	NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE,
- 	NL80211_EXT_FEATURE_BSS_COLOR,
- 	NL80211_EXT_FEATURE_FILS_CRYPTO_OFFLOAD,
-+	NL80211_EXT_FEATURE_WIDE_BAND_SCAN,
- 	NL80211_EXT_FEATURE_RADAR_BACKGROUND,
- 	NL80211_EXT_FEATURE_POWERED_ADDR_CHANGE,
- 	NL80211_EXT_FEATURE_PUNCT,
-@@ -6600,6 +6604,8 @@ enum nl80211_timeout_reason {
-  *	these channels would passively be scanned. Also note that when the flag
-  *	is set, in addition to the colocated APs, PSC channels would also be
-  *	scanned if the user space has asked for it.
-+ * @NL80211_SCAN_FLAG_WIDE_BAND_SCAN: This flag intends the driver to perform
-+ *	wide band scan only if the driver supports it.
-  */
- enum nl80211_scan_flags {
- 	NL80211_SCAN_FLAG_LOW_PRIORITY				= 1<<0,
-@@ -6617,6 +6623,7 @@ enum nl80211_scan_flags {
- 	NL80211_SCAN_FLAG_MIN_PREQ_CONTENT			= 1<<12,
- 	NL80211_SCAN_FLAG_FREQ_KHZ				= 1<<13,
- 	NL80211_SCAN_FLAG_COLOCATED_6GHZ			= 1<<14,
-+	NL80211_SCAN_FLAG_WIDE_BAND_SCAN			= 1<<15,
- };
- 
- /**
 --- a/net/mac80211/scan.c
 +++ b/net/mac80211/scan.c
-@@ -718,11 +718,13 @@ static int __ieee80211_start_scan(struct
+@@ -717,11 +717,13 @@ static int __ieee80211_start_scan(struct
  
  		local->hw_scan_req = kmalloc(
  				sizeof(*local->hw_scan_req) +
@@ -71,7 +34,7 @@
  		ies = (u8 *)local->hw_scan_req +
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -9112,7 +9112,10 @@ nl80211_check_scan_flags(struct wiphy *w
+@@ -9117,7 +9117,10 @@ nl80211_check_scan_flags(struct wiphy *w
  				     NL80211_EXT_FEATURE_SCAN_RANDOM_SN) ||
  	    !nl80211_check_scan_feat(wiphy, *flags,
  				     NL80211_SCAN_FLAG_MIN_PREQ_CONTENT,
@@ -83,7 +46,7 @@
  		return -EOPNOTSUPP;
  
  	if (*flags & NL80211_SCAN_FLAG_RANDOM_ADDR) {
-@@ -9137,10 +9140,12 @@ static int nl80211_trigger_scan(struct s
+@@ -9142,10 +9145,12 @@ static int nl80211_trigger_scan(struct s
  	struct cfg80211_scan_request *request;
  	struct nlattr *scan_freqs = NULL;
  	bool scan_freqs_khz = false;
@@ -97,7 +60,7 @@
  
  	wiphy = &rdev->wiphy;
  
-@@ -9153,7 +9158,12 @@ static int nl80211_trigger_scan(struct s
+@@ -9158,7 +9163,12 @@ static int nl80211_trigger_scan(struct s
  	if (rdev->scan_req || rdev->scan_msg)
  		return -EBUSY;
  
@@ -111,7 +74,7 @@
  		if (!wiphy_ext_feature_isset(wiphy,
  					     NL80211_EXT_FEATURE_SCAN_FREQ_KHZ))
  			return -EOPNOTSUPP;
-@@ -9166,6 +9176,8 @@ static int nl80211_trigger_scan(struct s
+@@ -9171,6 +9181,8 @@ static int nl80211_trigger_scan(struct s
  		n_channels = validate_scan_freqs(scan_freqs);
  		if (!n_channels)
  			return -EINVAL;
@@ -120,7 +83,7 @@
  	} else {
  		n_channels = ieee80211_get_num_supported_channels(wiphy);
  	}
-@@ -9188,10 +9200,17 @@ static int nl80211_trigger_scan(struct s
+@@ -9193,10 +9205,17 @@ static int nl80211_trigger_scan(struct s
  	size = struct_size(request, channels, n_channels);
  	size = size_add(size, array_size(sizeof(*request->ssids), n_ssids));
  	size = size_add(size, ie_len);
@@ -138,7 +101,7 @@
  	if (n_ssids)
  		request->ssids = (void *)&request->channels[n_channels];
  	request->n_ssids = n_ssids;
-@@ -9225,7 +9244,7 @@ static int nl80211_trigger_scan(struct s
+@@ -9230,7 +9249,7 @@ static int nl80211_trigger_scan(struct s
  			request->channels[i] = chan;
  			i++;
  		}

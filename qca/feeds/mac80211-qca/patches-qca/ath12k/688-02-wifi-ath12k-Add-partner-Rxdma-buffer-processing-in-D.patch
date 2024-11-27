@@ -17,7 +17,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -939,6 +939,7 @@ struct ath12k_hw_group {
+@@ -997,6 +997,7 @@ struct ath12k_hw_group {
  	unsigned long dev_flags;
  	struct ath12k_hw *ah[ATH12K_GROUP_MAX_RADIO];
  	struct ath12k_base *ab[ATH12K_MAX_SOCS];
@@ -27,7 +27,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  };
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3003,11 +3003,12 @@ static void ath12k_dp_rx_process_receive
+@@ -3131,11 +3131,12 @@ static void ath12k_dp_rx_process_receive
  int ath12k_dp_rx_process(struct ath12k_base *ab, int ring_id,
  			 struct napi_struct *napi, int budget)
  {
@@ -41,7 +41,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	struct sk_buff_head msdu_list;
  	struct ath12k_skb_rxcb *rxcb;
  	int total_msdu_reaped = 0;
-@@ -3020,6 +3021,7 @@ int ath12k_dp_rx_process(struct ath12k_b
+@@ -3148,6 +3149,7 @@ int ath12k_dp_rx_process(struct ath12k_b
  	struct ath12k_link_sta *arsta = NULL;
  	struct ath12k_peer *peer = NULL;
  	struct ath12k *ar;
@@ -49,7 +49,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  	__skb_queue_head_init(&msdu_list);
  
-@@ -3037,18 +3039,40 @@ try_again:
+@@ -3165,18 +3167,40 @@ try_again:
  		cookie = le32_get_bits(desc->buf_addr_info.info1,
  				       BUFFER_ADDR_INFO1_SW_COOKIE);
  
@@ -93,9 +93,9 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 -			desc_info = ath12k_dp_get_rx_desc(ab, cookie);
 +			desc_info = ath12k_dp_get_rx_desc(src_ab, cookie);
  			if (!desc_info) {
- 				ath12k_warn(ab, "Invalid cookie in manual desc retrieval");
+ 				ath12k_warn(ab, "Invalid cookie in manual desc retrieval cookie 0x%x", cookie);
  				continue;
-@@ -3061,16 +3085,16 @@ try_again:
+@@ -3189,16 +3213,16 @@ try_again:
  		msdu = desc_info->skb;
  		desc_info->skb = NULL;
  
@@ -117,7 +117,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  		push_reason = le32_get_bits(desc->info0,
  					    HAL_REO_DEST_RING_INFO0_PUSH_REASON);
-@@ -3095,13 +3119,13 @@ try_again:
+@@ -3223,13 +3247,13 @@ try_again:
  		
  		if (ath12k_debugfs_is_extd_rx_stats_enabled(ar) && rxcb->peer_id) {
  			rcu_read_lock();
@@ -134,7 +134,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  			if (arsta)
  				atomic_inc(&arsta->drv_rx_pkts.pkts_frm_hw);
  			rcu_read_unlock();
-@@ -3138,9 +3162,20 @@ try_again:
+@@ -3266,9 +3290,20 @@ try_again:
  	if (!total_msdu_reaped)
  		goto exit;
  
@@ -160,7 +160,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  					      ring_id);
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -13252,8 +13252,17 @@ static int ath12k_mac_chip_setup(struct
+@@ -13331,8 +13331,17 @@ static int ath12k_mac_chip_setup(struct
  {
  	struct ath12k *ar;
  	struct ath12k_pdev *pdev;
@@ -178,15 +178,16 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  	ar = ath12k_mac_get_ar(ah, link_id);
  	if (!ar)
  		return -EINVAL;
-@@ -13300,6 +13309,7 @@ static int ath12k_mac_chip_setup(struct
+@@ -13379,6 +13388,8 @@ static int ath12k_mac_chip_setup(struct
  	clear_bit(MONITOR_VDEV_STARTED, &ar->monitor_flags);
  	ar->monitor_vdev_id = -1;
  	clear_bit(MONITOR_VDEV_CREATED, &ar->monitor_flags);
 +	rcu_assign_pointer(ag->hw_links[hw_link_id], ar);
-  
++
   	return 0;
  }
-@@ -13415,6 +13425,7 @@ void ath12k_mac_destroy(struct ath12k_hw
+ 
+@@ -13493,6 +13504,7 @@ void ath12k_mac_destroy(struct ath12k_hw
  	struct ath12k_pdev *pdev;
  	struct ieee80211_ops *ops;
  	int i, j;
@@ -194,7 +195,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  	if (!ah)
  		return;
-@@ -13426,6 +13437,13 @@ void ath12k_mac_destroy(struct ath12k_hw
+@@ -13504,6 +13516,13 @@ void ath12k_mac_destroy(struct ath12k_hw
  
  		for (j = 0; j < ab->num_radios; j++) {
  			pdev = &ab->pdevs[j];

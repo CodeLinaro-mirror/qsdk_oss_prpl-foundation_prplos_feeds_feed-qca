@@ -409,6 +409,7 @@ get_band_defaults() {
 		local chan="${c%%:*}"
 		c="${c#*:}"
 		local mode="${c%%:*}"
+		append band_num $band
 		case "$band" in
 			1) band=2g;;
 			2) band=5g;;
@@ -443,12 +444,18 @@ pre_mac80211() {
                                 rm -rf /var/run/hostapd-*updated-cfg
                         fi
                         rm -rf /var/run/wpa_supplicant-*-updated-cfg  2>/dev/null
+			rm -rf /tmp/*_freq_list 2>/dev/null
 			if [ -f "$MLD_VAP_DETAILS" ]; then
 				rm -rf $MLD_VAP_DETAILS
 			fi
 			sawf_supp="/sys/module/ath12k/parameters/sawf"
 			if [ -f $sawf_supp ] && [ $(cat $sawf_supp) == "Y" ]; then
 				configure_service_class 0
+			fi
+			if [ -f "/tmp/apsta_mode.pid" ]; then
+				pid=$(cat /tmp/apsta_mode.pid)
+				kill -15 $pid 2>/dev/null
+				rm /tmp/apsta_mode.pid 2>/dev/null
 			fi
 		;;
 	esac
@@ -547,6 +554,67 @@ mac80211_get_channel_list() {
 		echo ""
 	fi
 }
+generate_5g_6g_split_phy_config() {
+	splitphy=1
+	for chan in ${need_extraconfig}
+	do
+		if [ ${_mode_band} == '5g' ]; then
+			if [ $chan -eq 100 ]; then
+				chan=149
+			fi
+		else
+			if [ $chan -eq 2 ]; then
+				chan=49
+			else
+				chan=197
+			fi
+		fi
+		chan_list=$(mac80211_get_channel_list $dev $no_hw_idx $chan)
+		uci -q batch <<-EOF
+		set wireless.${name}=wifi-device
+		set wireless.${name}.type=mac80211
+		${dev_id}
+		set wireless.${name}.channel=${chan}
+		set wireless.${name}.channels=${chan_list}
+		set wireless.${name}.band=${_mode_band}
+		set wireless.${name}.htmode=$_htmode
+		set wireless.${name}.disabled=1
+
+		set wireless.default_${name}=wifi-iface
+		set wireless.default_${name}.device=${name}
+		set wireless.default_${name}.network=lan
+		set wireless.default_${name}.mode=ap
+		set wireless.default_${name}.ssid=OpenWrt
+		if [ ${_mode_band} == '5g'  ]; then
+			set wireless.default_${name}.encryption=none
+		else
+			set wireless.default_${name}.encryption=sae
+			set wireless.default_${name}.sae_pwe=1
+			set wireless.default_${name}.key=0123456789
+		fi
+	EOF
+		if [ $is_swiphy ] && [ $splitphy -gt 0 ]; then
+			bandidx=$(($bandidx + 1))
+			name=""radio$devidx\_band$(($bandidx - 1))""
+			splitphy=$(($splitphy - 1))
+		else
+			name="radio${devidx}"
+		fi
+		case "$dev" in
+			phy*)
+				if [ -n "$path" ]; then
+					dev_id="set wireless.${name}.path='$path'"
+				else
+					dev_id="set wireless.${name}.macaddr='$macaddr'"
+				fi
+				;;
+			*)
+				dev_id="set wireless.${name}.phy='$dev'"
+				;;
+		esac
+		uci -q commit wireless
+	done
+}
 
 detect_mac80211() {
 	devidx=0
@@ -560,6 +628,7 @@ detect_mac80211() {
 
 		dev="${_dev##*/}"
 
+		band_num=""
 		mode_band=""
 		channel=""
 		htmode=""
@@ -589,6 +658,7 @@ detect_mac80211() {
 		do
 			_mode_band=$(eval echo $mode_band | awk -v I=$mode_bandidx '{print $I}')
 			_channel=$(eval echo $channel | awk -v I=$mode_bandidx '{print $I}')
+			_band_num=$(eval echo $band_num | awk -v I=$mode_bandidx '{print $I}')
 			if [ $_mode_band == '6g' ]; then
 				_channel=49
 			elif [ $_mode_band == '2g' ]; then
@@ -614,7 +684,7 @@ detect_mac80211() {
 			fi
 			if [ $is_swiphy ]; then
 				name=""radio$devidx\_band$(($bandidx - 1))""
-				expr="iw phy ${dev} info | awk  '/Band ${bandidx}/{ f = 1; next } /Band /{ f = 0 } f'"
+				expr="iw phy ${dev} info | awk  '/Band ${_band_num}/{ f = 1; next } /Band /{ f = 0 } f'"
 			else
 				name="radio${devidx}"
 				expr="iw phy ${dev} info"
@@ -639,61 +709,8 @@ detect_mac80211() {
 					;;
 			esac
 
-			# We may need to handle similar logic for 6g band in future if it has split phy.
-
-			if [ ${_mode_band} == '5g' ] && [ -n "$need_extraconfig" ]; then
-				splitphy=1
-				for chan in ${need_extraconfig}
-				do
-					if [ $chan -eq 100 ]; then
-						chan=149
-					fi
-					chan_list=$(mac80211_get_channel_list $dev $no_hw_idx $chan)
-					uci -q batch <<-EOF
-						set wireless.${name}=wifi-device
-						set wireless.${name}.type=mac80211
-						${dev_id}
-						set wireless.${name}.channel=${chan}
-						set wireless.${name}.channels=${chan_list}
-						set wireless.${name}.band=${_mode_band}
-						set wireless.${name}.htmode=$_htmode
-						set wireless.${name}.disabled=1
-
-						set wireless.default_${name}=wifi-iface
-						set wireless.default_${name}.device=${name}
-						set wireless.default_${name}.network=lan
-						set wireless.default_${name}.mode=ap
-						set wireless.default_${name}.ssid=prplOS
-						set wireless.default_${name}.encryption=none
-
-						set wireless.guest_${name}=wifi-iface
-						set wireless.guest_${name}.device=${name}
-						set wireless.guest_${name}.network=guest
-						set wireless.guest_${name}.mode=ap
-						set wireless.guest_${name}.ssid=prplOS-guest
-						set wireless.guest_${name}.encryption=none
-				EOF
-					if [ $is_swiphy ] && [ $splitphy -gt 0 ]; then
-						bandidx=$(($bandidx + 1))
-						name=""radio$devidx\_band$(($bandidx - 1))""
-						splitphy=$(($splitphy - 1))
-					else
-						name="radio${devidx}"
-					fi
-		                        case "$dev" in
-						phy*)
-							if [ -n "$path" ]; then
-								dev_id="set wireless.${name}.path='$path'"
-							else
-								dev_id="set wireless.${name}.macaddr='$macaddr'"
-							fi
-							;;
-						*)
-							dev_id="set wireless.${name}.phy='$dev'"
-							;;
-					esac
-					uci -q commit wireless
-				done
+			if ([ ${_mode_band} == '5g' ] || [ ${_mode_band} == '6g' ]) && [ -n "$need_extraconfig" ]; then
+				generate_5g_6g_split_phy_config
 			else
 				chan_list=$(mac80211_get_channel_list $dev $no_hw_idx $_channel)
 				uci -q batch <<-EOF
@@ -710,28 +727,16 @@ detect_mac80211() {
 					set wireless.default_${name}.device=${name}
 					set wireless.default_${name}.network=lan
 					set wireless.default_${name}.mode=ap
-					set wireless.default_${name}.ssid=prplOS
-
-					set wireless.guest_${name}=wifi-iface
-					set wireless.guest_${name}.device=${name}
-					set wireless.guest_${name}.network=guest
-					set wireless.guest_${name}.mode=ap
-					set wireless.guest_${name}.ssid=prplOS-guest
+					set wireless.default_${name}.ssid=OpenWrt
 			EOF
 				if [ ${_mode_band} == '6g'  ]; then
 					uci -q batch <<-EOF
 						set wireless.default_${name}.encryption=sae
 						set wireless.default_${name}.sae_pwe=1
 						set wireless.default_${name}.key=0123456789
-
-						set wireless.guest_${name}.encryption=sae
-						set wireless.guest_${name}.sae_pwe=1
-						set wireless.guest_${name}.key=0123456789
 				EOF
 				else
 					uci -q set wireless.default_${name}.encryption=none
-
-					uci -q set wireless.guest_${name}.encryption=none
 				fi
 				uci -q commit wireless
 			fi
@@ -740,3 +745,14 @@ detect_mac80211() {
 		devidx=$(($devidx + 1))
 	done
 }
+
+smp_affinity_settings() {
+	enable_smp_affinity=$(uci -q get wireless.mac80211.enable_smp_affinity)
+
+	if [ "$enable_smp_affinity" -eq 1 ] && [ -f "/lib/smp_affinity_settings.sh" ]; then
+		. /lib/smp_affinity_settings.sh
+		enable_smp_affinity_wifi
+	fi
+}
+
+smp_affinity_settings

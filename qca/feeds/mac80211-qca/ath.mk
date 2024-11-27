@@ -26,6 +26,7 @@ ifdef CONFIG_PACKAGE_MAC80211_DEBUGFS
 	ATH11K_CFR \
 	ATH11K_SMART_ANT_ALG \
 	ATH12K_DEBUGFS \
+	ATH12K_CFR \
 	ATH12K_PKTLOG \
 	CARL9170_DEBUGFS \
 	ATH5K_DEBUG \
@@ -44,8 +45,8 @@ ifdef CONFIG_PACKAGE_MAC80211_TRACING
 	WIL6210_TRACING
 endif
 
-config-$(call config_package,ath-qca) += ATH_CARDS ATH_COMMON
-config-$(CONFIG_PACKAGE_ATH_DEBUG) += ATH_DEBUG ATH10K_DEBUG ATH11K_DEBUG ATH12K_DEBUG
+config-$(call config_package,ath-qca,regular smallbuffers) += ATH_CARDS ATH_COMMON
+config-$(CONFIG_PACKAGE_ATH_DEBUG) += ATH_DEBUG ATH10K_DEBUG ATH11K_DEBUG ATH9K_STATION_STATISTICS ATH12K_DEBUG
 config-$(CONFIG_PACKAGE_ATH_DFS) += ATH9K_DFS_CERTIFIED ATH10K_DFS_CERTIFIED
 config-$(CONFIG_PACKAGE_ATH_SPECTRAL) += ATH9K_COMMON_SPECTRAL ATH10K_SPECTRAL ATH11K_SPECTRAL
 config-$(CONFIG_PACKAGE_ATH_DYNACK) += ATH9K_DYNACK
@@ -64,12 +65,12 @@ config-$(CONFIG_ATH10K_LEDS) += ATH10K_LEDS
 config-$(CONFIG_ATH10K_THERMAL) += ATH10K_THERMAL
 config-$(CONFIG_ATH11K_THERMAL) += ATH11K_THERMAL
 
-
-config-$(CONFIG_TARGET_ipq53xx) += ATH12K_AHB
+config-$(CONFIG_TARGET_ipq53xx) += ATH12K_AHB ATH12K_POWER_OPTIMIZATION
+config-$(CONFIG_TARGET_ipq54xx) += ATH12K_AHB
 
 config-$(call config_package,ath9k-qca-htc) += ATH9K_HTC
-config-$(call config_package,ath10k-qca) += ATH10K ATH10K_PCI
-config-$(call config_package,ath10k-qca-smallbuffers) += ATH10K ATH10K_PCI ATH10K_SMALLBUFFERS
+config-$(call config_package,ath10k-qca,regular) += ATH10K ATH10K_PCI
+config-$(call config_package,ath10k-qca-smallbuffers,smallbuffers) += ATH10K ATH10K_PCI ATH10K_SMALLBUFFERS
 config-$(call config_package,ath11k-qca) += ATH11K ATH11K_AHB ATH11K_PCI
 config-$(call config_package,ath12k-qca) += ATH12K
 
@@ -79,12 +80,7 @@ ifeq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),512)
 config-y += ATH12K_MEM_PROFILE_512M
 endif
 
-config-$(call config_package,ath5k-qca) += ATH5K
-ifdef CONFIG_TARGET_ath25
-  config-y += ATH5K_AHB
-else
-  config-y += ATH5K_PCI
-endif
+config-$(call config_package,ath5k-qca) += ATH5K ATH5K_PCI
 
 config-$(call config_package,ath6kl-qca) += ATH6KL
 config-$(call config_package,ath6kl-qca-sdio) += ATH6KL_SDIO
@@ -113,7 +109,7 @@ define KernelPackage/ath-qca/config
 		bool "Atheros wireless debugging"
 		help
 		  Say Y, if you want to debug atheros wireless drivers.
-		  Only ath9k & ath10k make use of this.
+		  Only ath9k & ath10k & ath11k make use of this.
 
 	config PACKAGE_ATH_DFS
 		bool "Enable DFS support"
@@ -148,7 +144,7 @@ endef
 define KernelPackage/ath-qca
   $(call KernelPackage/mac80211-qca/Default)
   TITLE:=Atheros common driver part
-  DEPENDS+= @PCI_SUPPORT||USB_SUPPORT||TARGET_ath79||TARGET_ath25 +kmod-mac80211-qca
+  DEPENDS+= @PCI_SUPPORT||USB_SUPPORT||TARGET_ath79 +kmod-mac80211-qca
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath.ko
   MENU:=1
 endef
@@ -161,7 +157,7 @@ define KernelPackage/ath5k-qca
   $(call KernelPackage/mac80211-qca/Default)
   TITLE:=Atheros 5xxx wireless cards support
   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath5k
-  DEPENDS+= @(PCI_SUPPORT||TARGET_ath25) +kmod-ath-qca
+  DEPENDS+= @PCI_SUPPORT +kmod-ath-qca
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath5k/ath5k.ko
   AUTOLOAD:=$(call AutoProbe,ath5k)
 endef
@@ -334,7 +330,7 @@ define KernelPackage/ath11k-qca/config
        config ATH11K_THERMAL
                bool "Enable thermal sensors and throttling support"
                depends on PACKAGE_kmod-ath11k-qca
-               default y if TARGET_ipq807x
+               default y if TARGET_qualcommax
 
 endef
 
@@ -345,7 +341,6 @@ define KernelPackage/ath12k-qca
   DEPENDS+= +kmod-ath-qca +@DRIVER_11N_SUPPORT +@DRIVER_11W_SUPPORT +@DRIVER_11AC_SUPPORT +@DRIVER_11AX_SUPPORT
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ath12k.ko
   AUTOLOAD:=$(call AutoProbe,ath12k)
-  MODPARAMS.ath12k:=frame_mode=1 cold_boot_cal=0
 endef
 
 define KernelPackage/ath12k-qca/description
@@ -361,12 +356,11 @@ define KernelPackage/ath12k-qca/config
 			This option enables support for SAWF and Telemetry
 			in ATH12K.
 endef
-
 define KernelPackage/ath11k-qca-ahb
   $(call KernelPackage/mac80211-qca/Default)
   TITLE:=Qualcomm 802.11ax AHB wireless chipset support
   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath11k
-  DEPENDS+= @TARGET_ipq807x +kmod-ath11k-qca +kmod-qrtr-smd
+  DEPENDS+= @TARGET_qualcommax +kmod-ath11k-qca +kmod-qrtr-smd
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath11k/ath11k_ahb.ko
   AUTOLOAD:=$(call AutoProbe,ath11k_ahb)
 endef

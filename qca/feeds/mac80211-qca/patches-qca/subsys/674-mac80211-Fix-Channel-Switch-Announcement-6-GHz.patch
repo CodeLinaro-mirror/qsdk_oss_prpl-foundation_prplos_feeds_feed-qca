@@ -46,7 +46,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	NL80211_REG_AP_SP,
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -2564,6 +2564,11 @@ bool ieee80211_chandef_vht_oper(struct i
+@@ -2561,6 +2561,11 @@ bool ieee80211_chandef_vht_oper(struct i
  void ieee80211_chandef_eht_oper(const struct ieee80211_eht_operation *eht_oper,
  				bool support_160, bool support_320,
  				struct cfg80211_chan_def *chandef);
@@ -60,16 +60,17 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  				    const struct ieee80211_eht_operation *eht_oper,
 --- a/net/mac80211/spectmgmt.c
 +++ b/net/mac80211/spectmgmt.c
-@@ -40,7 +40,7 @@ int ieee80211_parse_ch_switch_ie(struct
+@@ -40,7 +40,8 @@ int ieee80211_parse_ch_switch_ie(struct
  	struct ieee80211_eht_operation eht_oper;
  	struct ieee80211_eht_operation_info eht_oper_info;
  	int secondary_channel_offset = -1;
 -	u8 new_seg1, new_chan_width;
 +	u8 new_seg0, new_seg1, new_chan_width;
++	struct ieee80211_he_6ghz_oper *csa_he_6ghz_oper;
  
  	memset(csa_ie, 0, sizeof(*csa_ie));
  
-@@ -89,8 +89,17 @@ int ieee80211_parse_ch_switch_ie(struct
+@@ -89,8 +90,17 @@ int ieee80211_parse_ch_switch_ie(struct
  				elems->mesh_chansw_params_ie->mesh_reason);
  	}
  
@@ -89,7 +90,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	if (!new_chan || new_chan->flags & IEEE80211_CHAN_DISABLED) {
  		sdata_info(sdata,
  			   "BSS %pM switches to unsupported channel (%d MHz), disconnecting\n",
-@@ -140,13 +149,17 @@ int ieee80211_parse_ch_switch_ie(struct
+@@ -140,13 +150,20 @@ int ieee80211_parse_ch_switch_ie(struct
  	}
  
  	if (wide_bw_chansw_ie) {
@@ -106,12 +107,15 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 +				he_6ghz_oper.control = IEEE80211_HE_6GHZ_OPER_CTRL_CHANWIDTH_160MHZ;
 +			else if (new_chan_width == IEEE80211_CHANWIDTH_80MHZ)
 +				he_6ghz_oper.control = IEEE80211_HE_6GHZ_OPER_CTRL_CHANWIDTH_80MHZ;
-+
++			csa_he_6ghz_oper = ieee80211_he_6ghz_oper(elems->he_operation);
++			if (csa_he_6ghz_oper)
++				he_6ghz_oper.control |= (csa_he_6ghz_oper->control &
++							 IEEE80211_HE_6GHZ_OPER_CTRL_REG_INFO);
 +			he_6ghz_oper.ccfs0 = new_seg0;
  			he_6ghz_oper.ccfs1 = new_seg1;
  
  			he_oper.he_oper_params = u32_encode_bits(1,
-@@ -156,11 +169,25 @@ int ieee80211_parse_ch_switch_ie(struct
+@@ -156,11 +173,25 @@ int ieee80211_parse_ch_switch_ie(struct
  			he_oper.optional[2] = he_6ghz_oper.ccfs0;
  			he_oper.optional[3] = he_6ghz_oper.ccfs1;
  
@@ -144,7 +148,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  			eht_oper.optional[2] = eht_oper_info.ccfs1;
 --- a/net/mac80211/util.c
 +++ b/net/mac80211/util.c
-@@ -3849,6 +3849,59 @@ void ieee80211_chandef_eht_oper(const st
+@@ -3864,6 +3864,59 @@ void ieee80211_chandef_eht_oper(const st
  	}
  }
  

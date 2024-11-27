@@ -3,7 +3,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=nat46-qca
 
-PKG_MIRROR_HASH:=b1a9232dca7357f5e7e5af7de90b6be36517c3fec2805743faac4dfcd2b56707
+PKG_MIRROR_HASH:=09b93f31d10030d3b4f326066b544b70b1f60236d0482f27c384ed93b298c0a6
 PKG_SOURCE_URL:=https://github.com/ayourtch/nat46.git
 PKG_SOURCE_DATE:=2022-09-19
 PKG_SOURCE_PROTO:=git
@@ -30,7 +30,7 @@ define Build/Compile
 		MODFLAGS="-DMODULE -mlong-calls" \
 		EXTRA_CFLAGS="-DNAT46_VERSION=\\\"$(PKG_SOURCE_VERSION)\\\" -Wno-error=implicit-function-declaration -Wno-error=incompatible-pointer-types" \
 		modules
-		cp $(PKG_BUILD_DIR)/nat46/modules/Module.symvers $(PKG_BUILD_DIR)/Module.symvers
+	cp $(PKG_BUILD_DIR)/nat46/modules/Module.symvers $(PKG_BUILD_DIR)/Module.symvers
 endef
 
 define Build/InstallDev

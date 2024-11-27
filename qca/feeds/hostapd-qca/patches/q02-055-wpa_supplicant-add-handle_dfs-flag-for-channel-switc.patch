@@ -15,7 +15,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
 
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -1193,6 +1193,7 @@ int hostapd_parse_csa_settings(const cha
+@@ -1260,6 +1260,7 @@ int hostapd_parse_csa_settings(const cha
  	settings->freq_params.ru_punct_ofdma = !!os_strstr(pos,
  							    " ru_punct_ofdma");
  	settings->block_tx = !!os_strstr(pos, " blocktx");
@@ -25,24 +25,23 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2749,6 +2749,7 @@ struct csa_settings {
+@@ -2827,6 +2827,7 @@ struct csa_settings {
+ 	u16 counter_offset_beacon[2];
  	u16 counter_offset_presp[2];
  
- 	u16 punct_bitmap;
 +	bool handle_dfs;
- };
+ 	u16 punct_bitmap;
+ 	int link_id;
  
- /**
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -11129,6 +11129,10 @@ static int nl80211_switch_channel(void *
+@@ -11482,6 +11482,9 @@ static int nl80211_switch_channel(void *
  		goto fail;
+ #endif /* CONFIG_IEEE80211AX */
  
- 	nla_nest_end(msg, beacon_csa);
-+
 +	if (settings->handle_dfs && nla_put_flag(msg, NL80211_ATTR_HANDLE_DFS))
 +		goto fail;
 +
- 	ret = send_and_recv_msgs(drv, msg, NULL, NULL, NULL, NULL);
+ 	ret = send_and_recv_cmd(drv, msg);
  	if (ret) {
  		wpa_printf(MSG_DEBUG, "nl80211: switch_channel failed err=%d (%s)",

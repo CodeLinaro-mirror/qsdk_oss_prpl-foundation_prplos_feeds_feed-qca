@@ -39,7 +39,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	struct ath12k_he ar_he;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -4559,6 +4559,33 @@ clean_up:
+@@ -4575,6 +4575,33 @@ clean_up:
  	return ret;
  }
  
@@ -73,7 +73,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  static struct ath12k_link_vif *
  ath12k_mac_assign_link_vif( struct ath12k_hw *ah, struct ieee80211_vif *vif, u8 link_id)
  {
-@@ -4825,7 +4852,7 @@ static int ath12k_mac_op_hw_scan(struct
+@@ -4841,7 +4868,7 @@ static int ath12k_mac_op_hw_scan(struct
  	struct cfg80211_scan_request *req = &hw_req->req;
  	struct ath12k_wmi_scan_req_arg arg = {};
  	int ret;
@@ -82,7 +82,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
      bool create = true;
  
  	mutex_lock(&ah->conf_mutex);
-@@ -4840,8 +4867,10 @@ static int ath12k_mac_op_hw_scan(struct
+@@ -4856,8 +4883,10 @@ static int ath12k_mac_op_hw_scan(struct
  		return -EINVAL;
  	}
  
@@ -95,7 +95,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	/* If the vif is already assigned to a specific vdev of an ar,
  	 * check whether its already started, vdev which is started
  	 * are not allowed to switch to a new radio.
-@@ -13321,7 +13350,7 @@ static int ath12k_mac_setup_channels_rat
+@@ -13439,7 +13468,7 @@ static int ath12k_mac_setup_channels_rat
  	struct ieee80211_supported_band *band;
  	struct ath12k_wmi_hal_reg_capabilities_ext_arg *reg_cap, *temp_reg_cap;
  	void *channels;
@@ -104,7 +104,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	struct ieee80211_6ghz_channel *chan_6g;
  	int i = 0;
  
-@@ -13378,7 +13407,14 @@ static int ath12k_mac_setup_channels_rat
+@@ -13474,7 +13503,14 @@ static int ath12k_mac_setup_channels_rat
  					  temp_reg_cap->low_2ghz_chan,
  					  temp_reg_cap->high_2ghz_chan);
  
@@ -119,7 +119,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	}
  
  	if (supported_bands & WMI_HOST_WLAN_5G_CAP) {
-@@ -13417,7 +13453,14 @@ static int ath12k_mac_setup_channels_rat
+@@ -13513,7 +13549,14 @@ static int ath12k_mac_setup_channels_rat
  
  			ath12k_mac_update_5_9_ch_list(ar, band);
  
@@ -134,7 +134,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		} else if (reg_cap->low_5ghz_chan >= ATH12K_MIN_6G_FREQ &&
                             reg_cap->high_5ghz_chan <= ATH12K_MAX_6G_FREQ) {
                          band = &ar->mac.sbands[NL80211_BAND_6GHZ];
-@@ -13466,10 +13509,20 @@ static int ath12k_mac_setup_channels_rat
+@@ -13562,7 +13605,15 @@ static int ath12k_mac_setup_channels_rat
                         band->n_channels = band->chan_6g[0]->n_channels;
                         band->channels = band->chan_6g[0]->channels;
  
@@ -146,12 +146,18 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  			ah->supported_band_mask |= BIT(NL80211_BAND_6GHZ);
 +			ar->chan_info.low_freq = freq_low;
 +			ar->chan_info.high_freq = freq_high;
++
  		}
  	}
+ 
+@@ -13571,6 +13622,10 @@ static int ath12k_mac_setup_channels_rat
+ 		wiphy_ext_feature_set(hw->wiphy,
+ 				      NL80211_EXT_FEATURE_RADAR_BACKGROUND);
  
 +	ath12k_dbg(ar->ab, ATH12K_DBG_MAC, "mac pdev %u freq limits %u->%u MHz\n",
 +		   ar->pdev->pdev_id, ar->chan_info.low_freq,
 +		   ar->chan_info.high_freq);
++
  	return 0;
  }
  

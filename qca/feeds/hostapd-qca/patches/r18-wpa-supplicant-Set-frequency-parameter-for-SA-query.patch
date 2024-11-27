@@ -23,11 +23,9 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  wpa_supplicant/sme.h    | 2 +-
  3 files changed, 6 insertions(+), 6 deletions(-)
 
-diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
-index a044167..40090d5 100644
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -4749,7 +4749,7 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
+@@ -5353,7 +5353,7 @@ static void wpas_event_rx_mgmt_action(st
  
  #ifdef CONFIG_SME
  	if (category == WLAN_ACTION_SA_QUERY) {
@@ -36,11 +34,9 @@ index a044167..40090d5 100644
  		return;
  	}
  #endif /* CONFIG_SME */
-diff --git a/wpa_supplicant/sme.c b/wpa_supplicant/sme.c
-index 42c0cdf..22d31a7 100644
 --- a/wpa_supplicant/sme.c
 +++ b/wpa_supplicant/sme.c
-@@ -3400,7 +3400,7 @@ void sme_event_ch_switch(struct wpa_supplicant *wpa_s)
+@@ -3470,7 +3470,7 @@ void sme_event_ch_switch(struct wpa_supp
  
  static void sme_process_sa_query_request(struct wpa_supplicant *wpa_s,
  					 const u8 *sa, const u8 *data,
@@ -49,7 +45,7 @@ index 42c0cdf..22d31a7 100644
  {
  	u8 resp[2 + WLAN_SA_QUERY_TR_ID_LEN + OCV_OCI_EXTENDED_LEN];
  	u8 resp_len = 2 + WLAN_SA_QUERY_TR_ID_LEN;
-@@ -3439,7 +3439,7 @@ static void sme_process_sa_query_request(struct wpa_supplicant *wpa_s,
+@@ -3509,7 +3509,7 @@ static void sme_process_sa_query_request
  	}
  #endif /* CONFIG_OCV */
  
@@ -58,7 +54,7 @@ index 42c0cdf..22d31a7 100644
  				wpa_s->own_addr, wpa_s->bssid,
  				resp, resp_len, 0) < 0)
  		wpa_msg(wpa_s, MSG_INFO,
-@@ -3482,7 +3482,7 @@ static void sme_process_sa_query_response(struct wpa_supplicant *wpa_s,
+@@ -3552,7 +3552,7 @@ static void sme_process_sa_query_respons
  
  
  void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *da, const u8 *sa,
@@ -67,7 +63,7 @@ index 42c0cdf..22d31a7 100644
  {
  	if (len < 1 + WLAN_SA_QUERY_TR_ID_LEN)
  		return;
-@@ -3528,7 +3528,7 @@ void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *da, const u8 *sa,
+@@ -3598,7 +3598,7 @@ void sme_sa_query_rx(struct wpa_supplica
  #endif /* CONFIG_OCV */
  
  	if (data[0] == WLAN_SA_QUERY_REQUEST)
@@ -76,19 +72,14 @@ index 42c0cdf..22d31a7 100644
  	else if (data[0] == WLAN_SA_QUERY_RESPONSE)
  		sme_process_sa_query_response(wpa_s, sa, data, len);
  }
-diff --git a/wpa_supplicant/sme.h b/wpa_supplicant/sme.h
-index c797d2e..410686d 100644
 --- a/wpa_supplicant/sme.h
 +++ b/wpa_supplicant/sme.h
-@@ -30,7 +30,7 @@ void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
+@@ -31,7 +31,7 @@ void sme_event_unprot_disconnect(struct
  				 const u8 *da, u16 reason_code);
  void sme_event_ch_switch(struct wpa_supplicant *wpa_s);
  void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *da, const u8 *sa,
 -		     const u8 *data, size_t len);
 +		     const u8 *data, size_t len, int freq);
  void sme_state_changed(struct wpa_supplicant *wpa_s);
- void sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
- 				       const u8 *prev_pending_bssid);
--- 
-2.43.0
-
+ void sme_clear_on_disassoc(struct wpa_supplicant *wpa_s);
+ void sme_deinit(struct wpa_supplicant *wpa_s);

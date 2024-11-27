@@ -18,11 +18,9 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  drivers/net/wireless/ath/ath12k/hal_rx.h |  28 +-
  3 files changed, 367 insertions(+), 107 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_mon.c b/drivers/net/wireless/ath/ath12k/dp_mon.c
-index 233ed97..293f0b2 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.c
-@@ -584,10 +584,9 @@ static void ath12k_dp_mon_parse_he_sig_su(u8 *tlv_data,
+@@ -584,10 +584,9 @@ static void ath12k_dp_mon_parse_he_sig_s
  
  static enum hal_rx_mon_status
  ath12k_dp_mon_rx_parse_status_tlv(struct ath12k_base *ab,
@@ -34,7 +32,7 @@ index 233ed97..293f0b2 100644
  	u32 info[7];
  
  	switch (tlv_tag) {
-@@ -602,7 +601,7 @@ ath12k_dp_mon_rx_parse_status_tlv(struct ath12k_base *ab,
+@@ -602,7 +601,7 @@ ath12k_dp_mon_rx_parse_status_tlv(struct
  		info[1] = __le32_to_cpu(ppdu_start->info1);
  		ppdu_info->chan_num = u32_get_bits(info[1],
  						   HAL_RX_PPDU_START_INFO1_CHAN_NUM);
@@ -43,7 +41,7 @@ index 233ed97..293f0b2 100644
  					       HAL_RX_PPDU_START_INFO1_CHAN_FREQ);
  		ppdu_info->ppdu_ts = ((__le32_to_cpu(ppdu_start->ppdu_start_ts_31_0) |
  				      (__le32_to_cpu(ppdu_start->ppdu_start_ts_63_32) << 31)));
-@@ -761,6 +760,9 @@ ath12k_dp_mon_rx_parse_status_tlv(struct ath12k_base *ab,
+@@ -761,6 +760,9 @@ ath12k_dp_mon_rx_parse_status_tlv(struct
  			ppdu_info->reception_type = HAL_RX_RECEPTION_TYPE_SU;
  			break;
  		}
@@ -53,7 +51,7 @@ index 233ed97..293f0b2 100644
  		break;
  	}
  	case HAL_RXPCU_PPDU_END_INFO: {
-@@ -796,49 +798,17 @@ ath12k_dp_mon_rx_parse_status_tlv(struct ath12k_base *ab,
+@@ -796,49 +798,17 @@ ath12k_dp_mon_rx_parse_status_tlv(struct
  
  		break;
  	}
@@ -113,7 +111,7 @@ index 233ed97..293f0b2 100644
  	case HAL_DUMMY:
  		return HAL_RX_MON_STATUS_BUF_DONE;
  	case HAL_RX_PPDU_END_STATUS_DONE:
-@@ -851,25 +821,152 @@ ath12k_dp_mon_rx_parse_status_tlv(struct ath12k_base *ab,
+@@ -851,25 +821,152 @@ ath12k_dp_mon_rx_parse_status_tlv(struct
  	return HAL_RX_MON_STATUS_PPDU_NOT_DONE;
  }
  
@@ -222,11 +220,11 @@ index 233ed97..293f0b2 100644
 +	    center_freq <= ATH12K_MAX_6G_FREQ) {
 +		rx_status->band = NL80211_BAND_6GHZ;
 +		rx_status->freq = center_freq;
-+	} else if (channel_num >= ATH12K_MIN_2G_CHAN &&
-+		  channel_num <= ATH12K_MAX_2G_CHAN) {
++	} else if (center_freq >= ATH12K_MIN_2G_FREQ &&
++		   center_freq <= ATH12K_MAX_2G_FREQ) {
 +		rx_status->band = NL80211_BAND_2GHZ;
-+	} else if (channel_num >= ATH12K_MIN_5G_CHAN &&
-+		  channel_num <= ATH12K_MAX_5G_CHAN) {
++	} else if (center_freq >= ATH12K_MIN_5G_FREQ &&
++		   center_freq <= ATH12K_MAX_5G_FREQ) {
 +		rx_status->band = NL80211_BAND_5GHZ;
 +	}
 +
@@ -277,7 +275,7 @@ index 233ed97..293f0b2 100644
  	struct ieee80211_hdr_3addr *wh;
  	u32 err_bitmap;
  
-@@ -878,24 +975,23 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12k *ar,
+@@ -878,24 +975,23 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12
  	if (!head_msdu)
  		goto err_merge_fail;
  
@@ -307,7 +305,7 @@ index 233ed97..293f0b2 100644
  
  			prev_buf = msdu;
  			msdu = msdu->next;
-@@ -903,15 +999,14 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12k *ar,
+@@ -903,15 +999,14 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12
  
  		prev_buf->next = NULL;
  
@@ -326,7 +324,7 @@ index 233ed97..293f0b2 100644
  
  		if (ieee80211_is_data_qos(wh->frame_control))
  			qos_pkt = 1;
-@@ -919,12 +1014,13 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12k *ar,
+@@ -919,12 +1014,13 @@ ath12k_dp_mon_rx_merg_msdus(struct ath12
  		msdu = head_msdu;
  
  		while (msdu) {
@@ -342,7 +340,7 @@ index 233ed97..293f0b2 100644
  			}
  			prev_buf = msdu;
  			msdu = msdu->next;
-@@ -1049,7 +1145,8 @@ static void ath12k_dp_mon_update_radiotap(struct ath12k *ar,
+@@ -1049,7 +1145,8 @@ static void ath12k_dp_mon_update_radiota
  }
  
  static void ath12k_dp_mon_rx_deliver_msdu(struct ath12k *ar, struct napi_struct *napi,
@@ -352,7 +350,7 @@ index 233ed97..293f0b2 100644
  					  struct ieee80211_rx_status *status)
  {
  	static const struct ieee80211_radiotap_he known = {
-@@ -1074,7 +1171,7 @@ static void ath12k_dp_mon_rx_deliver_msdu(struct ath12k *ar, struct napi_struct
+@@ -1074,7 +1171,7 @@ static void ath12k_dp_mon_rx_deliver_msd
  	}
  
  	if (!(status->flag & RX_FLAG_ONLY_MONITOR))
@@ -361,7 +359,7 @@ index 233ed97..293f0b2 100644
  	spin_lock_bh(&ar->ab->base_lock);
  	peer = ath12k_dp_rx_h_find_peer(ar->ab, msdu);
  	if (peer && peer->sta)
-@@ -1123,7 +1220,7 @@ static void ath12k_dp_mon_rx_deliver_msdu(struct ath12k *ar, struct napi_struct
+@@ -1123,7 +1220,7 @@ static void ath12k_dp_mon_rx_deliver_msd
  	ieee80211_rx_napi(ar->hw, pubsta, msdu, napi);
  }
  
@@ -370,7 +368,7 @@ index 233ed97..293f0b2 100644
  				    struct sk_buff *head_msdu,
  				    struct hal_rx_mon_ppdu_info *ppduinfo,
  				    struct napi_struct *napi)
-@@ -1133,8 +1230,8 @@ static int ath12k_dp_mon_rx_deliver(struct ath12k *ar, u32 mac_id,
+@@ -1133,8 +1230,8 @@ static int ath12k_dp_mon_rx_deliver(stru
  	struct ieee80211_rx_status *rxs = &dp->rx_status;
  	bool fcs_err = false;
  
@@ -381,7 +379,7 @@ index 233ed97..293f0b2 100644
  	if (!mon_skb)
  		goto mon_deliver_fail;
  
-@@ -1159,7 +1256,8 @@ static int ath12k_dp_mon_rx_deliver(struct ath12k *ar, u32 mac_id,
+@@ -1159,7 +1256,8 @@ static int ath12k_dp_mon_rx_deliver(stru
  		}
  		rxs->flag |= RX_FLAG_ONLY_MONITOR;
  		ath12k_dp_mon_update_radiotap(ar, ppduinfo, mon_skb, rxs);
@@ -553,7 +551,7 @@ index 233ed97..293f0b2 100644
  		ptr += sizeof(*tlv);
  
  		/* The actual length of PPDU_END is the combined length of many PHY
-@@ -1205,50 +1433,53 @@ ath12k_dp_mon_parse_rx_dest(struct ath12k_base *ab, struct ath12k_mon_data *pmon
+@@ -1205,50 +1433,53 @@ ath12k_dp_mon_parse_rx_dest(struct ath12
  		if (tlv_tag == HAL_RX_PPDU_END)
  			tlv_len = sizeof(struct hal_rx_rxpcu_classification_overview);
  
@@ -649,8 +647,6 @@ index 233ed97..293f0b2 100644
  		if (hal_status != HAL_RX_MON_STATUS_PPDU_DONE) {
  			ppdu_info->ppdu_continuation = true;
  			dev_kfree_skb_any(skb);
-diff --git a/drivers/net/wireless/ath/ath12k/dp_mon.h b/drivers/net/wireless/ath/ath12k/dp_mon.h
-index c18c385..04098e2 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.h
 @@ -14,6 +14,8 @@ enum dp_monitor_mode {
@@ -671,8 +667,6 @@ index c18c385..04098e2 100644
  				  int mac_id, struct sk_buff *skb,
  				  struct napi_struct *napi);
  int ath12k_dp_mon_buf_replenish(struct ath12k_base *ab,
-diff --git a/drivers/net/wireless/ath/ath12k/hal_rx.h b/drivers/net/wireless/ath/ath12k/hal_rx.h
-index 45503c8..de9c1a2 100644
 --- a/drivers/net/wireless/ath/ath12k/hal_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/hal_rx.h
 @@ -108,9 +108,12 @@ enum hal_rx_mon_status {
@@ -741,6 +735,3 @@ index 45503c8..de9c1a2 100644
  void ath12k_hal_reo_status_queue_stats(struct ath12k_base *ab,
  				       struct hal_tlv_64_hdr *tlv,
  				       struct hal_reo_status *status);
--- 
-2.17.1
-

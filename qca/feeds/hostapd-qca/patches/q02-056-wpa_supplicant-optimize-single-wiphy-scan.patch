@@ -24,7 +24,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
 
 --- a/wpa_supplicant/scan.c
 +++ b/wpa_supplicant/scan.c
-@@ -555,6 +555,22 @@ static void wpa_supplicant_optimize_freq
+@@ -569,6 +569,22 @@ static void wpa_supplicant_optimize_freq
  		wpa_s->known_wps_freq = 0; /* only do this once */
  	}
  #endif /* CONFIG_WPS */

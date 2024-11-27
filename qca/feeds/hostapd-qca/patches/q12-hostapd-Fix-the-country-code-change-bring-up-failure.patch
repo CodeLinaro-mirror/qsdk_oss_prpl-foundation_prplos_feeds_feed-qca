@@ -18,7 +18,7 @@ Signed-off-by: Sivashankari Madhavan <quic_sivamadh@quicinc.com>
 
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -3966,6 +3966,10 @@ static void do_process_drv_event(struct
+@@ -4097,6 +4097,10 @@ static void do_process_drv_event(struct
  		break;
  	case NL80211_CMD_REG_CHANGE:
  	case NL80211_CMD_WIPHY_REG_CHANGE:

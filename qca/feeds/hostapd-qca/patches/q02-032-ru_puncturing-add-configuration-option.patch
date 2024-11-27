@@ -15,53 +15,14 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  src/ap/ap_config.h    |  2 ++
  3 files changed, 17 insertions(+)
 
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index c00c24f..0aa4e80 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4762,6 +4762,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
- 		conf->eht_phy_capab.su_beamformee = atoi(pos);
- 	} else if (os_strcmp(buf, "eht_mu_beamformer") == 0) {
+@@ -5047,7 +5047,7 @@ static int hostapd_config_fill(struct ho
  		conf->eht_phy_capab.mu_beamformer = atoi(pos);
-+	} else if (os_strcmp(buf, "ru_punct_bitmap") == 0) {
-+		conf->ru_punct_bitmap = atoi(pos);
-+	} else if (os_strcmp(buf, "ru_punct_ofdma") == 0) {
-+		conf->ru_punct_ofdma = atoi(pos);
- 	} else if (os_strcmp(buf, "punct_bitmap") == 0) {
- 		conf->punct_bitmap = atoi(pos);
+ 	} else if (os_strcmp(buf, "eht_default_pe_duration") == 0) {
+ 		conf->eht_default_pe_duration = atoi(pos);
+-	} else if (os_strcmp(buf, "punct_bitmap") == 0) {
++	} else if (os_strcmp(buf, "punct_bitmap") == 0 || os_strcmp(buf, "ru_punct_bitmap") == 0) {
+ 		if (get_u16(pos, line, &conf->punct_bitmap))
+ 			return 1;
  	} else if (os_strcmp(buf, "punct_acs_threshold") == 0) {
-diff --git a/hostapd/hostapd.conf b/hostapd/hostapd.conf
-index 2893a4a..cda9e35 100644
---- a/hostapd/hostapd.conf
-+++ b/hostapd/hostapd.conf
-@@ -1067,6 +1067,17 @@ wmm_ac_vo_acm=0
- # 1 = Enabled
- #ema=0
- 
-+# RU puncturing bitmap (16 bits) where each bit corresponds to
-+# a 20 MHz channel in the given bandwidth, bit 0 corresponding to the channel
-+# with lowest frequency.
-+# Bit set to 1 indicates that the channel is punctured, otherwise active.
-+# Default value is 0 indicating that no channel is punctured.
-+#ru_punct_bitmap=4
-+
-+# If the kernel should consider OFDMA patterns while validating the provided
-+# RU puncturing bitmap. Default value is 0.
-+#ru_punct_ofdma=1
-+
- ##### IEEE 802.1X-2004 related configuration ##################################
- 
- # Require IEEE 802.1X authorization
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index 7f10cc7..40937c8 100644
---- a/src/ap/ap_config.h
-+++ b/src/ap/ap_config.h
-@@ -1196,6 +1196,8 @@ struct hostapd_config {
- #define CH_SWITCH_EHT_DISABLED BIT(1)
- 	unsigned int ch_switch_eht_config;
- 	u8 ema;
-+	u16 ru_punct_bitmap;
-+	u8 ru_punct_ofdma;
- 
- 	enum mbssid {
- 		MBSSID_DISABLED = 0,

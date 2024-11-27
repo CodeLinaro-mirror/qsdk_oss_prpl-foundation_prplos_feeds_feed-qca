@@ -13,11 +13,9 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  drivers/net/wireless/ath/ath12k/hal.h   | 56 ++++++++++++++++++++++++++++++++
  2 files changed, 79 insertions(+), 34 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_tx.c b/drivers/net/wireless/ath/ath12k/dp_tx.c
-index 0224a67..a461c7d 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
-@@ -77,6 +77,25 @@ static void ath12k_dp_tx_release_txbuf(struct ath12k_dp *dp,
+@@ -77,6 +77,25 @@ static void ath12k_dp_tx_release_txbuf(s
  	spin_unlock_bh(&dp->tx_desc_lock[ring_id]);
  }
  
@@ -43,16 +41,16 @@ index 0224a67..a461c7d 100644
  static struct ath12k_tx_desc_info *ath12k_dp_tx_assign_buffer(struct ath12k_dp *dp,
  							      u8 ring_id)
  {
-@@ -175,8 +194,6 @@ int ath12k_dp_tx(struct ath12k *ar, struct ath12k_link_vif *arvif,
-	struct dp_tx_ring *tx_ring;
-	u8 hal_ring_id;
-	int ret;
+@@ -175,8 +194,6 @@ int ath12k_dp_tx(struct ath12k *ar, stru
+ 	struct dp_tx_ring *tx_ring;
+ 	u8 hal_ring_id;
+ 	int ret;
 -	u8 ring_selector, ring_map = 0;
 -	bool tcl_ring_retry;
  	u16 peer_id;
  	bool msdu_ext_desc = false;
  	bool is_diff_encap = false;
-@@ -189,20 +206,10 @@ int ath12k_dp_tx(struct ath12k *ar, struct ath12k_link_vif *arvif,
+@@ -189,20 +206,10 @@ int ath12k_dp_tx(struct ath12k *ar, stru
  	    !ieee80211_is_data(hdr->frame_control)))
  		return -ENOTSUPP;
  
@@ -90,11 +88,11 @@ index 0224a67..a461c7d 100644
  	}
  
  	ti.bank_id = arvif->bank_id;
-@@ -409,17 +411,6 @@ tcl_ring_sel:
+@@ -411,17 +413,6 @@ tcl_ring_sel:
  		spin_unlock_bh(&tcl_ring->lock);
  		ret = -ENOMEM;
  
--		/* Checking for available tcl descritors in another ring in
+-		/* Checking for available tcl descriptors in another ring in
 -		 * case of failure due to full tcl ring now, is better than
 -		 * checking this ring earlier for each pkt tx.
 -		 * Restart ring selection if some rings are not checked yet.
@@ -108,7 +106,7 @@ index 0224a67..a461c7d 100644
  		goto fail_unmap_dma_ext_desc;
  	}
  
-@@ -456,8 +447,6 @@ fail_remove_tx_buf:
+@@ -468,8 +459,6 @@ fail_remove_tx_buf:
  		skb_pull(skb, ti.pkt_offset);
  
  	arvif->link_stats.tx_dropped++;
@@ -117,8 +115,6 @@ index 0224a67..a461c7d 100644
  
  	return ret;
  }
-diff --git a/drivers/net/wireless/ath/ath12k/hal.h b/drivers/net/wireless/ath/ath12k/hal.h
-index ae7c54c..75f01a6 100644
 --- a/drivers/net/wireless/ath/ath12k/hal.h
 +++ b/drivers/net/wireless/ath/ath12k/hal.h
 @@ -9,6 +9,7 @@
@@ -137,7 +133,7 @@ index ae7c54c..75f01a6 100644
  
  #define HAL_TCL_SW_CONFIG_BANK_ADDR		0x00a4408c
  
-@@ -575,6 +577,7 @@ enum hal_ring_type {
+@@ -558,6 +560,7 @@ enum hal_ring_type {
  	HAL_MAX_RING_TYPES,
  };
  
@@ -145,7 +141,7 @@ index ae7c54c..75f01a6 100644
  #define HAL_RX_MAX_BA_WINDOW	256
  
  #define HAL_DEFAULT_BE_BK_VI_REO_TIMEOUT_USEC	(100 * 1000)
-@@ -1192,4 +1195,57 @@ void ath12k_hal_reo_ring_ctrl_hash_ix3_setup(struct ath12k_base *ab,
+@@ -1175,4 +1178,57 @@ void ath12k_hal_reo_ring_ctrl_hash_ix3_s
  void ath12k_hal_reo_ring_ctrl_hash_ix2_setup(struct ath12k_base *ab,
  					     u32 ring_hash_map);
  void ath12k_hal_reo_shared_qaddr_cache_clear(struct ath12k_base *ab);
@@ -203,6 +199,3 @@ index ae7c54c..75f01a6 100644
 +}
 +
  #endif
--- 
-2.7.4
-

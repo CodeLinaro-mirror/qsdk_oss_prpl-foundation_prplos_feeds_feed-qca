@@ -21,11 +21,9 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  wpa_supplicant/wpa_supplicant.c | 51 ++++++++++++++++++++++++++++-------------
  3 files changed, 40 insertions(+), 19 deletions(-)
 
-diff --git a/src/common/ieee802_11_common.c b/src/common/ieee802_11_common.c
-index 7e34ee7..dc1875f 100644
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -1492,7 +1492,8 @@ ieee80211_freq_to_channel_ext(unsigned int freq, int sec_channel,
+@@ -1500,7 +1500,8 @@ ieee80211_freq_to_channel_ext(unsigned i
  		if ((freq - 5000) % 5)
  			return NUM_HOSTAPD_MODES;
  
@@ -35,11 +33,9 @@ index 7e34ee7..dc1875f 100644
  			*op_class = vht_opclass;
  		else if (sec_channel == 1)
  			*op_class = 122;
-diff --git a/wpa_supplicant/ap.c b/wpa_supplicant/ap.c
-index ccb2753..a9e3155 100644
 --- a/wpa_supplicant/ap.c
 +++ b/wpa_supplicant/ap.c
-@@ -104,9 +104,10 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
+@@ -104,9 +104,10 @@ static void wpas_conf_ap_vht(struct wpa_
  		hostapd_set_oper_centr_freq_seg0_idx(conf, freq_seg_idx);
  
  		wpa_printf(MSG_DEBUG,

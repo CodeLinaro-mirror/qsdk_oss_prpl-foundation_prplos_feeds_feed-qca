@@ -16,11 +16,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  src/ap/ap_config.c | 6 ++++++
  1 file changed, 6 insertions(+)
 
-diff --git a/src/ap/ap_config.c b/src/ap/ap_config.c
-index 8a60c6d8c15f..0d7e9b1b0e02 100644
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -1468,6 +1468,12 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
+@@ -1494,6 +1494,12 @@ static int hostapd_config_check_bss(stru
  #endif /* CONFIG_FILS */
  
  #ifdef CONFIG_IEEE80211BE
@@ -33,6 +31,3 @@ index 8a60c6d8c15f..0d7e9b1b0e02 100644
  	if (full_config && !bss->disable_11be && bss->disable_11ax) {
  		bss->disable_11be = true;
  		wpa_printf(MSG_INFO,
--- 
-2.34.1
-

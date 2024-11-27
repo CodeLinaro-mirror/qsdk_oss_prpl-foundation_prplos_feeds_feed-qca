@@ -14,11 +14,9 @@ Signed-off-by: Muna Sinada <quic_msinada@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.h    | 1 +
  5 files changed, 13 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index 1e31ee2..790bb86 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -2430,7 +2430,7 @@ static void ath12k_dp_rx_deliver_msdu(struct ath12k *ar, struct napi_struct *nap
+@@ -2573,7 +2573,7 @@ static void ath12k_dp_rx_deliver_msdu(st
  	spin_unlock_bh(&ab->base_lock);
  
  	ath12k_dbg(ab, ATH12K_DBG_DATA,
@@ -27,7 +25,7 @@ index 1e31ee2..790bb86 100644
  		   msdu,
  		   msdu->len,
  		   peer ? peer->addr : NULL,
-@@ -2444,6 +2444,7 @@ static void ath12k_dp_rx_deliver_msdu(struct ath12k *ar, struct napi_struct *nap
+@@ -2587,6 +2587,7 @@ static void ath12k_dp_rx_deliver_msdu(st
  		   (status->bw == RATE_INFO_BW_40) ? "40" : "",
  		   (status->bw == RATE_INFO_BW_80) ? "80" : "",
  		   (status->bw == RATE_INFO_BW_160) ? "160" : "",
@@ -35,8 +33,6 @@ index 1e31ee2..790bb86 100644
  		   status->enc_flags & RX_ENC_FLAG_SHORT_GI ? "sgi " : "",
  		   status->rate_idx,
  		   status->nss,
-diff --git a/drivers/net/wireless/ath/ath12k/hal_rx.h b/drivers/net/wireless/ath/ath12k/hal_rx.h
-index fcfb6c8..3bfff16 100644
 --- a/drivers/net/wireless/ath/ath12k/hal_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/hal_rx.h
 @@ -61,6 +61,7 @@ enum hal_rx_bw {
@@ -47,11 +43,9 @@ index fcfb6c8..3bfff16 100644
  	HAL_RX_BW_MAX,
  };
  
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 4105fb5..aa2ed5e 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -327,6 +327,8 @@ ath12k_mac_bw_to_mac80211_bw(enum ath12k_supported_bw bw)
+@@ -348,6 +348,8 @@ ath12k_mac_bw_to_mac80211_bw(enum ath12k
  	case ATH12K_BW_160:
  		ret = RATE_INFO_BW_160;
  		break;
@@ -60,7 +54,7 @@ index 4105fb5..aa2ed5e 100644
  	}
  
  	return ret;
-@@ -343,6 +345,8 @@ enum ath12k_supported_bw ath12k_mac_mac80211_bw_to_ath12k_bw(enum rate_info_bw b
+@@ -364,6 +366,8 @@ enum ath12k_supported_bw ath12k_mac_mac8
  		return ATH12K_BW_80;
  	case RATE_INFO_BW_160:
  		return ATH12K_BW_160;
@@ -69,7 +63,7 @@ index 4105fb5..aa2ed5e 100644
  	default:
  		return ATH12K_BW_20;
  	}
-@@ -4044,6 +4048,9 @@ static u32 ath12k_mac_ieee80211_sta_bw_to_wmi(struct ath12k *ar,
+@@ -4272,6 +4276,9 @@ static u32 ath12k_mac_ieee80211_sta_bw_t
  	case IEEE80211_STA_RX_BW_160:
  		bw = WMI_PEER_CHWIDTH_160MHZ;
  		break;
@@ -79,19 +73,8 @@ index 4105fb5..aa2ed5e 100644
  	default:
  		ath12k_warn(ar->ab, "Invalid bandwidth %d in rc update for %pM\n",
  			    sta->deflink.bandwidth, sta->addr);
-diff --git a/drivers/net/wireless/ath/ath12k/mac.h b/drivers/net/wireless/ath/ath12k/mac.h
-index 3b42ced..4a075f8 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.h
 +++ b/drivers/net/wireless/ath/ath12k/mac.h
-@@ -33,7 +33,7 @@ struct ath12k_generic_iter {
- #define IEEE80211_VHT_MCS_SUPPORT_0_11_MASK	GENMASK(23, 16)
- #define IEEE80211_DISABLE_VHT_MCS_SUPPORT_0_11	BIT(24)
- 
--#define ATH12K_CHAN_WIDTH_NUM			8
-+#define ATH12K_CHAN_WIDTH_NUM			14
- #define ATH12K_BW_NSS_MAP_ENABLE		BIT(31)
- #define ATH12K_PEER_RX_NSS_160MHZ		GENMASK(2, 0)
- #define ATH12K_PEER_RX_NSS_80_80MHZ		GENMASK(5, 3)
 @@ -46,6 +46,7 @@ enum ath12k_supported_bw {
  	ATH12K_BW_40    = 1,
  	ATH12K_BW_80    = 2,
@@ -100,11 +83,9 @@ index 3b42ced..4a075f8 100644
  };
  
  extern const struct htt_rx_ring_tlv_filter ath12k_mac_mon_status_filter_default;
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.h b/drivers/net/wireless/ath/ath12k/wmi.h
-index 34d0c9d..fe7edc6 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2229,6 +2229,7 @@ enum wmi_peer_chwidth {
+@@ -2238,6 +2238,7 @@ enum wmi_peer_chwidth {
  	WMI_PEER_CHWIDTH_40MHZ = 1,
  	WMI_PEER_CHWIDTH_80MHZ = 2,
  	WMI_PEER_CHWIDTH_160MHZ = 3,
@@ -112,6 +93,3 @@ index 34d0c9d..fe7edc6 100644
  };
  
  enum wmi_beacon_gen_mode {
--- 
-2.17.1
-

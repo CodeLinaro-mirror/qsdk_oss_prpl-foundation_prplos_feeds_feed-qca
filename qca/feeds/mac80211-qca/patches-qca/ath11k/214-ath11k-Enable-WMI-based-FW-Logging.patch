@@ -24,7 +24,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
 
 --- a/drivers/net/wireless/ath/ath11k/core.c
 +++ b/drivers/net/wireless/ath/ath11k/core.c
-@@ -124,6 +124,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -125,6 +125,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_ipq8074,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = true,
@@ -32,7 +32,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = false,
  		.fw_wmi_diag_event = false,
  		.current_cc_support = false,
-@@ -206,6 +207,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -208,6 +209,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_ipq8074,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = true,
@@ -40,7 +40,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = false,
  		.fw_wmi_diag_event = false,
  		.current_cc_support = false,
-@@ -287,6 +289,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -290,6 +292,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_qca6390,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = false,
@@ -48,7 +48,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = true,
  		.fw_wmi_diag_event = true,
  		.current_cc_support = true,
-@@ -371,6 +374,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -375,6 +378,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_ipq8074,
  		.supports_dynamic_smps_6ghz = true,
  		.alloc_cacheable_memory = true,
@@ -56,7 +56,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = false,
  		.fw_wmi_diag_event = false,
  		.current_cc_support = false,
-@@ -452,6 +456,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -457,6 +461,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_qca6390,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = false,
@@ -64,7 +64,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = true,
  		.fw_wmi_diag_event = true,
  		.current_cc_support = true,
-@@ -534,6 +539,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -540,6 +545,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_qca6390,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = false,
@@ -72,7 +72,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = true,
  		.fw_wmi_diag_event = true,
  		.current_cc_support = true,
-@@ -617,6 +623,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -624,6 +630,7 @@ static struct ath11k_hw_params ath11k_hw
  		.hal_params = &ath11k_hw_hal_params_wcn6750,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = false,
@@ -80,7 +80,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = true,
  		.fw_wmi_diag_event = false,
  		.current_cc_support = true,
-@@ -697,6 +704,7 @@ static struct ath11k_hw_params ath11k_hw
+@@ -705,6 +712,7 @@ static struct ath11k_hw_params ath11k_hw
  		.fix_l1ss = true,
  		.supports_dynamic_smps_6ghz = false,
  		.alloc_cacheable_memory = true,
@@ -88,7 +88,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  		.supports_rssi_stats = false,
  		.fw_wmi_diag_event = false,
  		.current_cc_support = false,
-@@ -1703,7 +1711,6 @@ int ath11k_core_ssr_notifier_cb(struct n
+@@ -1789,7 +1797,6 @@ int ath11k_core_ssr_notifier_cb(struct n
  	struct platform_device *pdev = NULL;
  	struct platform_device *ssr_pdev = (struct platform_device *)data;
  #endif
@@ -96,7 +96,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  	if (test_bit(ATH11K_FLAG_FW_RESTART_FOR_HOST, &qmi->ab->dev_flags)) {
  		return 0;
  	}
-@@ -1772,6 +1779,10 @@ void ath11k_core_wait_dump_collect(struc
+@@ -1858,6 +1865,10 @@ void ath11k_core_wait_dump_collect(struc
  #endif
  EXPORT_SYMBOL(ath11k_core_wait_dump_collect);
  
@@ -107,7 +107,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  int ath11k_core_qmi_firmware_ready(struct ath11k_base *ab)
  {
  	int ret;
-@@ -1828,6 +1839,14 @@ int ath11k_core_qmi_firmware_ready(struc
+@@ -1914,6 +1925,14 @@ int ath11k_core_qmi_firmware_ready(struc
  
  	ath11k_config_qdss(ab);
  
@@ -124,7 +124,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  	return 0;
 --- a/drivers/net/wireless/ath/ath11k/hw.h
 +++ b/drivers/net/wireless/ath/ath11k/hw.h
-@@ -243,6 +243,7 @@ struct ath11k_hw_params {
+@@ -244,6 +244,7 @@ struct ath11k_hw_params {
  	u32 tx_ring_size;
  	bool smp2p_wow_exit;
  	bool support_fw_mac_sequence;
@@ -134,7 +134,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  struct ath11k_hw_ops {
 --- a/drivers/net/wireless/ath/ath11k/qmi.c
 +++ b/drivers/net/wireless/ath/ath11k/qmi.c
-@@ -2180,6 +2180,50 @@ struct qmi_elem_info qmi_wlanfw_qdss_tra
+@@ -2176,6 +2176,50 @@ struct qmi_elem_info qmi_wlanfw_qdss_tra
  	},
  };
  
@@ -185,7 +185,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  int wlfw_send_qdss_trace_config_download_req(struct ath11k_base *ab,
  					     const u8 *buffer, unsigned int file_len)
  {
-@@ -4429,6 +4473,55 @@ static void ath11k_qmi_driver_event_work
+@@ -4452,6 +4496,55 @@ static void ath11k_qmi_driver_event_work
  	spin_unlock(&qmi->event_lock);
  }
  
@@ -262,10 +262,10 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
  #define QMI_WLANFW_QDSS_TRACE_MODE_REQ_V01 0x0045
  #define QMI_WLANFW_QDSS_TRACE_MODE_REQ_MSG_V01_MAX_LEN 18
  #define QMI_WLANFW_QDSS_TRACE_MODE_RESP_MSG_V01_MAX_LEN 7
-@@ -670,4 +682,5 @@ int wlfw_send_qdss_trace_config_download
+@@ -668,4 +680,5 @@ int wlfw_send_qdss_trace_config_download
+ 		const u8 *buffer, unsigned int len);
  int ath11k_send_qdss_trace_mode_req(struct ath11k_base *ab,
- 				    enum wlfw_qdss_trace_mode_enum_v01 mode);
- int ath11k_qmi_fwreset_from_cold_boot(struct ath11k_base *ab);
+ 		enum wlfw_qdss_trace_mode_enum_v01 mode);
 +int ath11k_enable_fwlog(struct ath11k_base *ab);
  #endif
 --- a/drivers/net/wireless/ath/ath11k/testmode.c

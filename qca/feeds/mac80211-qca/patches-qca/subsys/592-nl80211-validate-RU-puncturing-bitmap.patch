@@ -18,35 +18,6 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  include/uapi/linux/nl80211.h | 10 ++++++++
  net/wireless/nl80211.c       | 49 ++++++++++++++++++++++++++++++++++++
  2 files changed, 59 insertions(+)
-
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -2776,6 +2776,14 @@ enum nl80211_commands {
-  *      the driver supports preamble puncturing, value should be of type
-  *      &enum nl80211_ru_punct_supp_bw
-  *
-+ * @NL80211_ATTR_RU_PUNCT_SUPP_HE: flag attribute, used to indicate that RU
-+ *	puncturing bitmap validation should include OFDMA bitmaps.
-+ *
-+ * @NL80211_ATTR_RU_PUNCT_BITMAP: (u16) RU puncturing bitmap where the lowest
-+ *	bit corresponds to the lowest 20 MHz channel. Each bit set to 1
-+ *	indicates that the sub-channel is punctured, set 0 indicates that the
-+ *	channel is active.
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3320,6 +3328,10 @@ enum nl80211_attrs {
- 
- 	NL80211_ATTR_RU_PUNCT_SUPP_BW,
- 
-+	NL80211_ATTR_RU_PUNCT_SUPP_HE,
-+
-+	NL80211_ATTR_RU_PUNCT_BITMAP,
-+
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
 @@ -854,6 +854,8 @@ static const struct nla_policy nl80211_p

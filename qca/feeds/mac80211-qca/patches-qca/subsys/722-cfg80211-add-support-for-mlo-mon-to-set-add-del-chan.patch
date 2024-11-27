@@ -33,7 +33,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -4673,6 +4673,12 @@ struct cfg80211_ops {
+@@ -4747,6 +4747,12 @@ struct cfg80211_ops {
  	int	(*set_monitor_channel)(struct wiphy *wiphy,
  				       struct cfg80211_chan_def *chandef);
  
@@ -46,7 +46,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	int	(*scan)(struct wiphy *wiphy,
  			struct cfg80211_scan_request *request);
  	void	(*abort_scan)(struct wiphy *wiphy, struct wireless_dev *wdev);
-@@ -9222,6 +9228,17 @@ bool cfg80211_per_hw_iface_comb_advertis
+@@ -9317,6 +9323,17 @@ bool cfg80211_per_hw_iface_comb_advertis
  int cfg80211_get_hw_idx_by_chan(struct wiphy *wiphy,
  				const struct ieee80211_channel *chan);
  
@@ -64,34 +64,9 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  /*
   * cfg80211_stop_iface - trigger interface disconnection
   *
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -2869,6 +2869,12 @@ enum nl80211_commands {
-  *      corresponds to the lowest 20MHZ channel. Each bit set to 1
-  *      indicates that radar is detected in that sub-channel.
-  *
-+ * @NL80211_ATTR_ADD_MULTI_CHAN: Add channel to the radio, this is used
-+ *  for monitor interface (u32).
-+ *
-+ * @NL80211_ATTR_DEL_MULTI_CHAN: Delete channel from the radio, this is used
-+ *  for monitor interface (u32).
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3432,6 +3438,9 @@ enum nl80211_attrs {
- 	NL80211_ATTR_RADAR_BITMAP,
- 
- 	NL80211_ATTR_EHT_240MHZ_CAPABILITY,
-+
-+	NL80211_ATTR_ADD_MULTI_CHAN,
-+	NL80211_ATTR_DEL_MULTI_CHAN,
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
 --- a/net/wireless/chan.c
 +++ b/net/wireless/chan.c
-@@ -1584,6 +1584,28 @@ int cfg80211_set_monitor_channel(struct
+@@ -1629,6 +1629,28 @@ int cfg80211_set_monitor_channel(struct
  	return rdev_set_monitor_channel(rdev, chandef);
  }
  
@@ -122,7 +97,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  				  u32 prohibited_flags)
 --- a/net/wireless/core.h
 +++ b/net/wireless/core.h
-@@ -525,6 +525,12 @@ static inline unsigned int elapsed_jiffi
+@@ -521,6 +521,12 @@ static inline unsigned int elapsed_jiffi
  int cfg80211_set_monitor_channel(struct cfg80211_registered_device *rdev,
  				 struct cfg80211_chan_def *chandef);
  
@@ -137,7 +112,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  			   u32 *mask);
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -861,6 +861,8 @@ static const struct nla_policy nl80211_p
+@@ -860,6 +860,8 @@ static const struct nla_policy nl80211_p
  			{ .type = NLA_BINARY,
  			  .len = NL80211_EHT240_MAX_CAPABILITY_LEN },
  #endif
@@ -146,7 +121,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  };
  
  /* policy for the key attributes */
-@@ -3666,7 +3668,12 @@ static int __nl80211_set_channel(struct
+@@ -3665,7 +3667,12 @@ static int __nl80211_set_channel(struct
  	case NL80211_IFTYPE_MESH_POINT:
  		return cfg80211_set_mesh_channel(rdev, wdev, &chandef);
  	case NL80211_IFTYPE_MONITOR:

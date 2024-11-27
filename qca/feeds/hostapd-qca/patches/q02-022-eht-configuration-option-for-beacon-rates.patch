@@ -14,11 +14,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  src/drivers/driver.h  |  5 +++--
  4 files changed, 17 insertions(+), 3 deletions(-)
 
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 00af762..c00c24f 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3259,6 +3259,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -3484,6 +3484,16 @@ static int hostapd_config_fill(struct ho
  			}
  			conf->rate_type = BEACON_RATE_HE;
  			conf->beacon_rate = val;
@@ -35,8 +33,6 @@ index 00af762..c00c24f 100644
  		} else {
  			val = atoi(pos);
  			if (val < 10 || val > 10000) {
-diff --git a/hostapd/hostapd.conf b/hostapd/hostapd.conf
-index a3a7dab..2893a4a 100644
 --- a/hostapd/hostapd.conf
 +++ b/hostapd/hostapd.conf
 @@ -298,6 +298,8 @@ beacon_tx_mode=1
@@ -48,11 +44,9 @@ index a3a7dab..2893a4a 100644
  #
  # For example, beacon_rate=10 for 1 Mbps or beacon_rate=60 for 6 Mbps (OFDM).
  #beacon_rate=10
-diff --git a/src/common/defs.h b/src/common/defs.h
-index c0c6dbe..981ce1e 100644
 --- a/src/common/defs.h
 +++ b/src/common/defs.h
-@@ -427,7 +427,8 @@ enum beacon_rate_type {
+@@ -434,7 +434,8 @@ enum beacon_rate_type {
  	BEACON_RATE_LEGACY,
  	BEACON_RATE_HT,
  	BEACON_RATE_VHT,
@@ -62,11 +56,9 @@ index c0c6dbe..981ce1e 100644
  };
  
  enum eap_proxy_sim_state {
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 9549683..a9c8e9c 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1428,8 +1428,9 @@ struct wpa_driver_ap_params {
+@@ -1486,8 +1486,9 @@ struct wpa_driver_ap_params {
  	 * This parameter can be used to set a specific Beacon frame data rate
  	 * for the BSS. The interpretation of this value depends on the
  	 * rate_type (legacy: in 100 kbps units, HT: HT-MCS, VHT: VHT-MCS,

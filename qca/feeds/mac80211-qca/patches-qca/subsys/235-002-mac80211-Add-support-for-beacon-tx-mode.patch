@@ -23,7 +23,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
 
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -1365,6 +1365,7 @@ struct cfg80211_unsol_bcast_probe_resp {
+@@ -1444,6 +1444,7 @@ struct cfg80211_unsol_bcast_probe_resp {
   * @punct_bitmap: Preamble puncturing bitmap. Each bit represents
   *	a 20 MHz channel, lowest bit corresponding to the lowest channel.
   *	Bit set to 1 indicates that the channel is punctured.
@@ -31,7 +31,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
   */
  struct cfg80211_ap_settings {
  	struct cfg80211_chan_def chandef;
-@@ -1400,6 +1401,7 @@ struct cfg80211_ap_settings {
+@@ -1479,6 +1480,7 @@ struct cfg80211_ap_settings {
  	struct cfg80211_unsol_bcast_probe_resp unsol_bcast_probe_resp;
  	struct cfg80211_mbssid_config mbssid_config;
  	u16 punct_bitmap;
@@ -39,7 +39,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  };
  
  /**
-@@ -2358,6 +2360,7 @@ struct mesh_config {
+@@ -2436,6 +2438,7 @@ struct mesh_config {
   *	to operate on DFS channels.
   * @control_port_over_nl80211: TRUE if userspace expects to exchange control
   *	port frames over NL80211 instead of the network interface.
@@ -47,7 +47,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
   *
   * These parameters are fixed when the mesh is created.
   */
-@@ -2381,6 +2384,7 @@ struct mesh_setup {
+@@ -2459,6 +2462,7 @@ struct mesh_setup {
  	struct cfg80211_bitrate_mask beacon_rate;
  	bool userspace_handles_dfs;
  	bool control_port_over_nl80211;
@@ -73,43 +73,9 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  };
  
  /**
---- a/include/uapi/linux/nl80211.h
-+++ b/include/uapi/linux/nl80211.h
-@@ -2825,6 +2825,9 @@ enum nl80211_commands {
-  *
-  * @NL80211_ATTR_HE_MUEDCA_PARAMS: MU-EDCA AC parameters for the
-  *	%NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS command.
-+ * @NL80211_ATTR_BEACON_TX_MODE: used to configure the beacon tx mode as
-+ *	staggered mode = 1 or burst mode = 2 in %NL80211_CMD_START_AP or
-+ *	%NL80211_CMD_JOIN_MESH from user-space.
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3367,6 +3370,8 @@ enum nl80211_attrs {
- 
- 	NL80211_ATTR_HE_MUEDCA_PARAMS,
- 
-+	NL80211_ATTR_BEACON_TX_MODE,
-+
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
-@@ -7863,4 +7868,12 @@ enum nl80211_ap_settings_flags {
- 	NL80211_AP_SETTINGS_SA_QUERY_OFFLOAD_SUPPORT	= 1 << 1,
- };
- 
-+/**
-+ * enum nl80211_beacon_tx_mode - Beacon Tx Mode enum.
-+ * 	Used to configure beacon staggered mode or beacon burst mode.
-+ */
-+enum nl80211_beacon_tx_mode {
-+	NL80211_BEACON_STAGGERED_MODE = 1,
-+	NL80211_BEACON_BURST_MODE = 2,
-+};
- #endif /* __LINUX_NL80211_H */
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1294,6 +1294,7 @@ static int ieee80211_start_ap(struct wip
+@@ -1297,6 +1297,7 @@ static int ieee80211_start_ap(struct wip
  
  	prev_beacon_int = link_conf->beacon_int;
  	link_conf->beacon_int = params->beacon_interval;
@@ -117,7 +83,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  
  	if (params->ht_cap)
  		link_conf->ht_ldpc =
-@@ -2501,6 +2502,7 @@ static int copy_mesh_setup(struct ieee80
+@@ -2504,6 +2505,7 @@ static int copy_mesh_setup(struct ieee80
  
  	sdata->vif.bss_conf.beacon_int = setup->beacon_interval;
  	sdata->vif.bss_conf.dtim_period = setup->dtim_period;
@@ -128,14 +94,14 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
 @@ -818,6 +818,7 @@ static const struct nla_policy nl80211_p
+ 	[NL80211_ATTR_HW_TIMESTAMP_ENABLED] = { .type = NLA_FLAG },
  	[NL80211_ATTR_EMA_RNR_ELEMS] = { .type = NLA_NESTED },
  	[NL80211_ATTR_MLO_LINK_DISABLED] = { .type = NLA_FLAG },
- 	[NL80211_ATTR_WIPHY_ANTENNA_GAIN] = { .type = NLA_U32 },
 +	[NL80211_ATTR_BEACON_TX_MODE] = NLA_POLICY_RANGE(NLA_U32, 1, 2),
  };
  
  /* policy for the key attributes */
-@@ -5970,6 +5971,9 @@ static int nl80211_start_ap(struct sk_bu
+@@ -5971,6 +5972,9 @@ static int nl80211_start_ap(struct sk_bu
  		nla_get_u32(info->attrs[NL80211_ATTR_BEACON_INTERVAL]);
  	params->dtim_period =
  		nla_get_u32(info->attrs[NL80211_ATTR_DTIM_PERIOD]);
@@ -145,7 +111,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  
  	err = cfg80211_validate_beacon_int(rdev, dev->ieee80211_ptr->iftype,
  					   params->beacon_interval);
-@@ -13085,6 +13089,10 @@ static int nl80211_join_mesh(struct sk_b
+@@ -13113,6 +13117,10 @@ static int nl80211_join_mesh(struct sk_b
  			return -EINVAL;
  	}
  

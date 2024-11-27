@@ -19,7 +19,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4903,8 +4903,14 @@ struct hostapd_config * hostapd_config_r
+@@ -5199,8 +5199,14 @@ struct hostapd_config * hostapd_config_r
  
  	fclose(f);
  
