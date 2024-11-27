@@ -17,22 +17,56 @@ define Device/qcom_rdp433
 	DEVICE_MODEL := IPQ9574-RDP433
 	DEVICE_DTS_CONFIG := config-rdp433
 	SOC := ipq9574
-	DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k \
+	DEVICE_PACKAGES += kmod-ath12k \
 		mkf2fs f2fsck kmod-fs-f2fs
 endef
 TARGET_DEVICES += qcom_rdp433
 
-define Device/prpl_freedom
+define Device/qcom_rdp433-mht-phy
 	$(call Device/FitImage)
 	$(call Device/EmmcImage)
-	DEVICE_VENDOR := Prpl
-	DEVICE_MODEL := Freedom
-	DEVICE_DTS := ipq9574-freedom
-	DEVICE_DTS_CONFIG := config@al02-c4
+	DEVICE_VENDOR := Qualcomm
+	DEVICE_MODEL := IPQ9574-RDP433-MHT-PHY
+	DEVICE_DTS_CONFIG := config-rdp433-mht-phy
 	SOC := ipq9574
-	DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k \
+	DEVICE_PACKAGES += kmod-ath12k \
 		mkf2fs f2fsck kmod-fs-f2fs
 endef
-TARGET_DEVICES += prpl_freedom
+TARGET_DEVICES += qcom_rdp433-mht-phy
 
+define Device/qcom_rdp475
+	$(call Device/FitImage)
+	$(call Device/EmmcImage)
+	DEVICE_VENDOR := Qualcomm
+	DEVICE_MODEL := IPQ9574-RDP475
+	DEVICE_DTS_CONFIG := config-rdp475
+	SOC := ipq9574
+	DEVICE_PACKAGES += kmod-ath12k \
+		mkf2fs f2fsck kmod-fs-f2fs
+endef
+TARGET_DEVICES += qcom_rdp475
 
+define Device/qcom_rdp476
+	$(call Device/FitImage)
+	$(call Device/EmmcImage)
+	DEVICE_VENDOR := Qualcomm
+	DEVICE_MODEL := IPQ9574-RDP476
+	DEVICE_DTS_CONFIG := config-rdp476
+	SOC := ipq9574
+	DEVICE_PACKAGES += kmod-ath12k \
+		mkf2fs f2fsck kmod-fs-f2fs
+endef
+TARGET_DEVICES += qcom_rdp476
+
+#define Device/prpl_freedom
+#	$(call Device/FitImage)
+#	$(call Device/EmmcImage)
+#	DEVICE_VENDOR := Prpl
+#	DEVICE_MODEL := Freedom
+#	DEVICE_DTS := ipq9574-freedom
+#	DEVICE_DTS_CONFIG := config@al02-c4
+#	SOC := ipq9574
+#	DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k \
+#		mkf2fs f2fsck kmod-fs-f2fs
+#endef
+#TARGET_DEVICES += prpl_freedom

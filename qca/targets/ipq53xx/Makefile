@@ -1,10 +1,10 @@
 include $(TOPDIR)/rules.mk
 
 ARCH:=aarch64
-BOARD:=ipq95xx
-BOARDNAME:=Qualcomm Technologies, Inc. IPQ95XX
+BOARD:=ipq53xx
+BOARDNAME:=Qualcomm Technologies, Inc. IPQ53XX
 FEATURES:=squashfs fpu ramdisk nand pcie
-CPU_TYPE:=cortex-a73
+CPU_TYPE:=cortex-a53
 CPU_SUBTYPE:=neon-vfpv4
 SUBTARGETS:=generic
 

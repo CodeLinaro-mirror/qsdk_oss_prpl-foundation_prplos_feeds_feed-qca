@@ -1,10 +1,10 @@
 include $(TOPDIR)/rules.mk
 
 ARCH:=aarch64
-BOARD:=ipq95xx
-BOARDNAME:=Qualcomm Technologies, Inc. IPQ95XX
-FEATURES:=squashfs fpu ramdisk nand pcie
-CPU_TYPE:=cortex-a73
+BOARD:=ipq54xx
+BOARDNAME:=Qualcomm Technologies, Inc. IPQ54XX
+FEATURES:=squashfs fpu ramdisk nand
+CPU_TYPE:=cortex-a55
 CPU_SUBTYPE:=neon-vfpv4
 SUBTARGETS:=generic
 
@@ -17,7 +17,7 @@ include $(INCLUDE_DIR)/target.mk
 DEFAULT_PACKAGES += \
 	e2fsprogs uboot-envtools kmod-leds-gpio kmod-gpio-button-hotplug kmod-button-hotplug\
 	kmod-ata-core kmod-ata-ahci kmod-ata-ahci-platform kmod-usb3 \
-	kmod-usb-phy-ipq807x kmod-usb-dwc3-qcom-internal \
+	kmod-usb-dwc3-qcom-internal kmod-usb-phy-ipq807x \
 	kmod-qca-nss-ppe kmod-qca-nss-ppe-ds kmod-qca-nss-ppe-vp \
 	kmod-qca-ssdk-qca-nohnat kmod-qca-nss-dp-qca \
 	kmod-qca-nss-ppe-bridge-mgr kmod-qca-nss-ppe-vlan-mgr \

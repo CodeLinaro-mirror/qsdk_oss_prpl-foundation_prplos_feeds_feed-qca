@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2020, The Linux Foundation. All rights reserved.
 #
-# Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,7 @@
 . /lib/upgrade/common.sh
 . /usr/share/libubox/jshn.sh
 
-RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock /etc/board.json /usr/share/libubox/jshn.sh"
+RAMFS_COPY_DATA="/etc/fw_env.config /var/lock/fw_printenv.lock /etc/board.json /usr/share/libubox/jshn.sh /tmp/firm_list.txt"
 RAMFS_COPY_BIN="/usr/bin/dumpimage /usr/sbin/ubiattach /usr/sbin/ubidetach
 	/usr/sbin/ubiformat /usr/sbin/ubiupdatevol /bin/rm /usr/bin/find
 	/usr/sbin/mkfs.ext4 /usr/sbin/fw_printenv /sbin/lsmod /usr/bin/jshn"
@@ -41,28 +41,13 @@ get_board_details() {
 			json_get_var info_value $1
 			;;
 	esac
-
 	echo $info_value
-}
-
-get_full_section_name() {
-	local img=$1
-	local sec=$2
-
-	dumpimage -l ${img} | grep "^ Image.*(${sec})" | \
-		sed 's,^ Image.*(\(.*\)),\1,'
 }
 
 image_contains() {
 	local img=$1
 	local sec=$2
 	dumpimage -l ${img} | grep -q "^ Image.*(${sec}.*)" || return 1
-}
-
-print_sections() {
-	local img=$1
-
-	dumpimage -l ${img} | awk '/^ Image.*(.*)/ { print gensub(/Image .* \((.*)\)/,"\\1", $0) }'
 }
 
 image_has_mandatory_section() {
@@ -76,27 +61,68 @@ image_has_mandatory_section() {
 	done
 }
 
+parse_scr() {
+	local input_file=$1
+	local output_file=$2
+
+	if [ -e $output_file ]; then
+		echo " Output file exists removing it.... " > /dev/console
+		rm $output_file
+	fi
+
+	while IFS= read -r line; do
+		if echo "$line" | grep -q 'xtract_n_flash'; then
+			value=$(echo "$line" | awk '{print $3}')
+			label=$(echo "$line" | awk '{print $4}')
+
+			echo "$value $label" >> "$output_file"
+		fi
+	done < "$input_file"
+}
+
+extract_scr_file() {
+	local img=$1
+	local file_name=$2
+	local position=$3
+	local version=$(dumpimage -V 2>&1 | awk '{split($3, a, "."); print a[1]}')
+
+	if [ "$version" == "2016" ]; then
+		dumpimage -i ${img} -o ${file_name} -T flat_dt -p $position ${file_name} >/dev/null
+	else
+		dumpimage -o ${file_name} -T flat_dt -p $position ${img} >/dev/null
+	fi
+}
+
+extract_images() {
+	local img=$1
+	local output_file=$2
+	local version=$(dumpimage -V 2>&1 | awk '{split($3, a, "."); print a[1]}')
+
+	echo "Extracted Firmwares are ..."
+	while IFS= read -r line; do
+		image_name=$(echo $line | cut -d ' ' -f1)
+		echo $image_name
+		position=$(dumpimage -l ${img} |grep $image_name |cut -d ' ' -f3)
+		if [ "$version" == "2016" ]; then
+			dumpimage -i ${img} -o /tmp/${image_name}.bin -T flat_dt -p $position ${image_name} >/dev/null
+		else
+			dumpimage -o /tmp/${image_name}.bin -T flat_dt -p $position ${img} >/dev/null
+		fi
+	done < $output_file
+}
+
 image_demux() {
 	local img=$1
+	local machid=$(fw_printenv | grep machid | cut -d'=' -f2)
+	local script_file="script_${machid}"
+	local input_scr=/tmp/${script_file}.scr
+	local output_list=/tmp/firm_list.txt
+	local position=$(dumpimage -l ${img} |grep $script_file |cut -d ' ' -f3)
 
-	for sec in $(print_sections ${img}); do
-		local fullname=$(get_full_section_name ${img} ${sec})
+	extract_scr_file $img $input_scr $position
+	parse_scr $input_scr $output_list
+	extract_images $img $output_list
 
-		local position=$(dumpimage -l ${img} | grep "(${fullname})" | awk '{print $2}')
-		version=$(dumpimage -V 2>&1 | awk '{split($3, a, "."); print a[1]}')
-
-		if [ "$version" == "2016" ]; then
-			dumpimage -i ${img} -o /tmp/${fullname}.bin -T "flat_dt" -p "${position}" ${fullname} > /dev/null || { \
-				echo "Error while extracting \"${sec}\" from ${img}"
-				return 1
-			}
-		else
-			dumpimage -o /tmp/${fullname}.bin -T "flat_dt" -p "${position}" ${img} > /dev/null || { \
-				echo "Error while extracting \"${sec}\" from ${img}"
-				return 1
-			}
-		fi
-	done
 	return 0
 }
 
@@ -125,20 +151,8 @@ do_flash_mtd() {
 
 	local mtdpart_rootfs=$(grep "\"${mtdname_rootfs}\"" /proc/mtd | awk -F: '{print $1}')
 
-	# This switch is required only for QSPI NAND boot with 4K page size
-	# since PBL doesn't have 4K page support.
-	if [ $mtdname == "0:SBL1" -a -n $boot_layout -a -n $flash_type ]; then
-		mtd erase "/dev/${mtdpart}"
-		ubidetach -f -p /dev/${mtdpart_rootfs}
-		# Switch to 2K layout for flashing (writing) SBL partition
-		echo 1 > $boot_layout
-		dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd write - "/dev/${mtdpart}"
-		# Switch back to 4K layout for flashing (writing) all other partitions
-		echo 0 > $boot_layout
-	else
-		[ -f "$UPGRADE_BACKUP" -a "$2" == "rootfs" ] && append="-j $UPGRADE_BACKUP"
-		dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd $append -e "/dev/${mtdpart}" write - "/dev/${mtdpart}"
-	fi
+	[ -f "$UPGRADE_BACKUP" -a "$2" == "rootfs" ] && append="-j $UPGRADE_BACKUP"
+	dd if=/tmp/${bin}.bin bs=${pgsz} conv=sync | mtd $append -e "/dev/${mtdpart}" write - "/dev/${mtdpart}"
 }
 
 do_flash_emmc() {
@@ -161,67 +175,40 @@ do_flash_partition() {
 	fi
 }
 
-get_alternate_bootconfig() {
-	local age0=$(cat /proc/boot_info/bootconfig0/age)
-        local age1=$(cat /proc/boot_info/bootconfig1/age)
-
-	if [ -e /proc/upgrade_info/trybit ]; then
-		if [ $age0 -le $age1 ]; then
-			echo "bootconfig0"
-		else
-			echo "bootconfig1"
-		fi
-	else
-		echo "bootconfig0 bootconfig1"
-	fi
-}
-
-get_current_bootconfig() {
-	local bcname=$1
-	local age0=$(cat /proc/boot_info/bootconfig0/age)
-	local age1=$(cat /proc/boot_info/bootconfig1/age)
-
-	if [ -e /proc/upgrade_info/trybit ]; then
-		if [ $age0 -le $age1 ]; then
-			echo "bootconfig1"
-		else
-			echo "bootconfig0"
-		fi
-	else
-		echo $bcname
-	fi
-}
-
 do_flash_bootconfig() {
-	local bin=$1
-	local mtdname=$2
+	local mtdname=$1
+	local bin=bootconfig
 
-	# Fail safe upgrade
-	if [ -f /proc/boot_info/$bin/getbinary_bootconfig ]; then
-		cat /proc/boot_info/$bin/getbinary_bootconfig > /tmp/${bin}.bin
+	#flash bootconfig with updated boot-info
+	if [ -f /tmp/bootconfig.bin ]; then
 		do_flash_partition $bin $mtdname
+	else
+		echo " Bootconfig binary is missing.... "
 	fi
+}
+
+get_upgrade_bank() {
+	local mtdname=$1
+	local boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+	local image_status_A=$(grep "Image-set-status-A" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+	local image_status_B=$(grep "Image-set-status-B" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+
+	if [ "$boot_set" -eq 0 ] && [ "$image_status_A" -eq 0 ]; then
+		mtdname="${mtdname}_1"
+	elif [ "$boot_set" -eq 1 ] && [ "$image_status_B" -ne 0 ]; then
+		mtdname="${mtdname}_1"
+	fi
+
+	echo $mtdname
 }
 
 do_flash_failsafe_partition() {
 	local bin=$1
 	local mtdname=$2
 	local emmcblock
-	local primaryboot
-	local default_mtd
-	local primary_bcname
 
 	#Failsafe upgrade
-	default_mtd=$mtdname
-	for bcname in $(get_alternate_bootconfig)
-	do
-		[ -f /proc/boot_info/$bcname/$default_mtd/upgradepartition ] && {
-			primary_bcname=$(get_current_bootconfig $bcname)
-			primaryboot=$(cat /proc/boot_info/$primary_bcname/$default_mtd/primaryboot)
-			mtdname=$(cat /proc/boot_info/$bcname/$default_mtd/upgradepartition)
-			echo $((primaryboot ^= 1)) > /proc/boot_info/$bcname/$default_mtd/primaryboot
-		}
-	done
+	mtdname=$(get_upgrade_bank $mtdname)
 	emmcblock="$(find_mmc_part "$mtdname")"
 
 	if [ -e "$emmcblock" ]; then
@@ -229,7 +216,6 @@ do_flash_failsafe_partition() {
 	else
 		do_flash_mtd $bin $mtdname
 	fi
-
 }
 
 do_flash_ubi() {
@@ -237,9 +223,6 @@ do_flash_ubi() {
 	local mtdname=$2
 	local alive=$(cat /tmp/.alive_upgrade)
 	local mtdpart
-	local primaryboot
-	local default_mtd
-	local primary_bcname
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 
@@ -248,16 +231,7 @@ do_flash_ubi() {
 	fi
 
 	# Fail safe upgrade
-	default_mtd=$mtdname
-	for bcname in $(get_alternate_bootconfig)
-	do
-		[ -f /proc/boot_info/$bcname/$default_mtd/upgradepartition ] && {
-			primary_bcname=$(get_current_bootconfig $bcname)
-			primaryboot=$(cat /proc/boot_info/$primary_bcname/$default_mtd/primaryboot)
-			mtdname=$(cat /proc/boot_info/$bcname/$default_mtd/upgradepartition)
-			echo $((primaryboot ^= 1)) > /proc/boot_info/$bcname/$default_mtd/primaryboot
-		}
-	done
+	mtdname=$(get_upgrade_bank $mtdname)
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 	ubiformat /dev/${mtdpart} -y -f /tmp/${bin}.bin
@@ -269,15 +243,9 @@ do_flash_failsafe_ubi_volume() {
 	local vol_name=$3
 	local tmpfile="${bin}.bin"
 	local mtdpart
-	local default_mtd
 
-	default_mtd=$mtdname
-	for bcname in $(get_alternate_bootconfig)
-	do
-		[ -f /proc/boot_info/$bcname/$default_mtd/upgradepartition ] && {
-			mtdname=$(cat /proc/boot_info/$bcname/$default_mtd/upgradepartition)
-		}
-	done
+	# Fail safe upgrade
+	mtdname=$(get_upgrade_bank $mtdname)
 
 	mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
 
@@ -298,26 +266,6 @@ do_flash_failsafe_ubi_volume() {
 	ubiupdatevol /dev/${m_vol} /tmp/${tmpfile}
 }
 
-do_flash_tz() {
-	local sec=$1
-	local mtdpart=$(grep "\"0:QSEE\"" /proc/mtd | awk -F: '{print $1}')
-	local emmcblock="$(find_mmc_part "0:QSEE")"
-
-	if [ -n "$mtdpart" -o -e "$emmcblock" ]; then
-		do_flash_failsafe_partition ${sec} "0:QSEE"
-	fi
-}
-
-do_flash_ddr() {
-	local sec=$1
-	local mtdpart=$(grep "\"0:CDT\"" /proc/mtd | awk -F: '{print $1}')
-	local emmcblock="$(find_mmc_part "0:CDT")"
-
-	if [ -n "$mtdpart" -o -e "$emmcblock" ]; then
-		do_flash_failsafe_partition ${sec} "0:CDT"
-	fi
-}
-
 to_lower ()
 {
 	echo $1 | awk '{print tolower($0)}'
@@ -328,44 +276,24 @@ to_upper ()
 	echo $1 | awk '{print toupper($0)}'
 }
 
-image_is_nand()
-{
-	local nand_part="$(find_mtd_part "ubi_rootfs")"
-	[ -e "$nand_part" ] || return 1
-
-}
-
-get_fw_name() {
-	local wifi_ipq=$(get_board_details "wififw_name")
-	wifi_ipq=${wifi_ipq%_squashfs*}
-
-	echo $wifi_ipq
-}
-
 flash_section() {
-	local sec=$1
-	local board=$(get_board_details "board_name")
-	local board_model=$(to_lower $(get_board_details "model_name"))
+	local img=$1
+	local output_list=/tmp/firm_list.txt
 
-	case "${sec}" in
-		hlos*) image_is_nand && return || do_flash_failsafe_partition ${sec} "0:HLOS";;
-		rootfs*) image_is_nand && return || do_flash_failsafe_partition ${sec} "rootfs";;
-		wifi_fw_$(get_fw_name)-*) do_flash_failsafe_partition ${sec} "0:WIFIFW"; do_flash_failsafe_ubi_volume ${sec} "rootfs" "wifi_fw" ;;
-		ubi*) image_is_nand || return && do_flash_ubi ${sec} "rootfs";;
-		sbl1*) do_flash_partition ${sec} "0:SBL1"; \
-			do_flash_partition ${sec} "0:SBL1_1";;
-		u-boot*) do_flash_failsafe_partition ${sec} "0:APPSBL";;
-		ddr-$(to_upper $board_model)_*) do_flash_ddr ${sec};;
-		ddr-${board_model}-*) do_flash_failsafe_partition ${sec} "0:DDRCONFIG";;
-		tz*) do_flash_tz ${sec};;
-		tme*) do_flash_failsafe_partition ${sec} "0:TME";;
-		devcfg*) do_flash_failsafe_partition ${sec} "0:DEVCFG";;
-		apdp*) do_flash_failsafe_partition ${sec} "0:APDP";;
-		rpm*) do_flash_failsafe_partition ${sec} "0:RPM";;
-		*) echo "Section ${sec} ignored"; return 1;;
-	esac
-
-	echo "Flashed ${sec}"
+	while IFS= read -r line; do
+		image_name=$(echo $line | cut -d ' ' -f1)
+		partition=$(echo $line | cut -d ' ' -f2)
+		case "${image_name}" in
+			mibib*) echo " Section $image_name is ignored "; continue ;;
+			bootconfig*) echo " Section $image_name is ignored "; continue ;;
+			gpt*) echo " Section $image_name is ignored "; continue ;;
+			gptbackup*) echo " Section $image_name is ignored "; continue ;;
+			wifi_fw*) do_flash_failsafe_partition ${image_name} $partition; do_flash_failsafe_ubi_volume ${image_name} "rootfs" $partition ;;
+			ubi*) do_flash_ubi ${image_name} $partition;;
+			*) do_flash_failsafe_partition ${image_name} $partition;;
+		esac
+		echo "Flashed ${image_name}"
+	done < $output_list
 }
 
 erase_emmc_config() {
@@ -379,7 +307,6 @@ erase_emmc_config() {
 platform_check_image() {
 	local board=$(get_board_details "board_name")
 	local board_model=$(to_lower $(get_board_details "model_name"))
-	local mandatory_nand="ubi"
 	local mandatory_nor_emmc="hlos fs"
 	local mandatory_nor="hlos"
 	local mandatory_section_found=0
@@ -464,9 +391,23 @@ do_upgrade() {
 	v "Upgrade completed"
 }
 
+extract_bootconfig() {
+	local mtdname=$1
+	local mtdpart=$(grep "\"${mtdname}\"" /proc/mtd | awk -F: '{print $1}')
+	local emmcblock="$(find_mmc_part "$mtdname")"
+
+	if [ -e "$emmcblock" ]; then
+		dd if=${emmcblock} of=/tmp/bootconfig.bin
+	else
+		dd if=/dev/${mtdpart} of=/tmp/bootconfig.bin
+	fi
+}
+
 platform_do_upgrade() {
 	local upgrade_set=$(get_board_details "sysupgrade")
 	local alive=$(cat /tmp/.alive_upgrade)
+	local output_list=/tmp/firm_list.txt
+	local image_set_default=5
 
 	# verify some things exist before erasing
 	if [ ! -e $1 ]; then
@@ -474,28 +415,42 @@ platform_do_upgrade() {
 		reboot
 	fi
 
-	for sec in $(print_sections $1); do
-		if [ ! -e /tmp/${sec}.bin ]; then
-			echo "Error: Cant' find ${sec} after switching to ramfs, aborting upgrade!"
+	while IFS= read -r line; do
+		image_name=$(echo $line | cut -d ' ' -f1)
+		if [ ! -e /tmp/${image_name}.bin ]; then
+			echo "Error: Cant' find ${image_name} after switching to ramfs, aborting upgrade!"
 			reboot
 		fi
-	done
+	done < $output_list
+
+	# extract bootconfig binary from MTD
+	extract_bootconfig "0:BOOTCONFIG"
+
+	#passing default value to parse the bootconfig
+	# as setting the bank invalid is being handled in driver
+	dumpimage -b $image_set_default
+	if [[ "$?" == 1 ]];then
+		echo "bootconfig functionality failed, rebooting.."
+		reboot
+		return 1
+	fi
+
+	#flash the bootconfig once upgrade bank is set unusable
+	do_flash_bootconfig "0:BOOTCONFIG"
 
 	case "$upgrade_set" in
 	true)
-		for sec in $(print_sections $1); do
-			flash_section ${sec}
-		done
+		flash_section $1
 
-		# update bootconfig to register that fw upgrade has been done
-		for bcname in $(get_alternate_bootconfig)
-		do
-			if [ $bcname = "bootconfig0" ]; then
-				do_flash_bootconfig $bcname "0:BOOTCONFIG"
-			else
-				do_flash_bootconfig $bcname "0:BOOTCONFIG1"
-			fi
-		done
+		#passing value '0' to parse the bootconfig and
+		# setting ther bank back as valid is being handled in driver
+		dumpimage -b 0
+		if [[ "$?" == 1 ]];then
+			echo "bootconfig functionality failed, rebooting.."
+			reboot
+			return 1
+		fi
+		do_flash_bootconfig "0:BOOTCONFIG"
 
 		#setting Try bit for upgrade without config preserve
 		if [ $alive -eq 0 ]; then
@@ -513,43 +468,22 @@ platform_do_upgrade() {
 	return 1;
 }
 
-age_do_upgrade(){
-	age0=$(cat /proc/boot_info/bootconfig0/age)
-	age1=$(cat /proc/boot_info/bootconfig1/age)
-
-	if [ -e /proc/upgrade_info/trybit ]; then
-		if [ $age0 -eq $age1 ]; then
-			ageinc=$((age0+1))
-			echo $ageinc > /proc/boot_info/bootconfig0/age
-			do_flash_bootconfig bootconfig0 "0:BOOTCONFIG"
-		elif [ $age0 -lt $age1 ]; then
-			ageinc=$((age0+2))
-			echo $ageinc > /proc/boot_info/bootconfig0/age
-			do_flash_bootconfig bootconfig0 "0:BOOTCONFIG"
-		else
-			ageinc=$((age1+2))
-			echo $ageinc > /proc/boot_info/bootconfig1/age
-			do_flash_bootconfig bootconfig1 "0:BOOTCONFIG1"
-		fi
-	else
-		echo "Not in Try mode"
-	fi
-}
-
 # activate_bootconfig() - activates bootconfig0 or bootconfig1 for OMCI upgrade
 # It sets trybit only if the upgraded bootconfig is having lower age
 activate_bootconfig() {
-	age0=$(cat /proc/boot_info/bootconfig0/age)
-	age1=$(cat /proc/boot_info/bootconfig1/age)
+	local boot_set
 
-	if [ "$1" -eq "0" ]; then
-		if [ $age0 -le $age1 ]; then
-			echo 1 > /proc/upgrade_info/trybit
-		fi
+	dumpimage -b 4
+	if [ -e /tmp/bootconfig_members.txt ]; then
+		boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
 	else
-		if [ $age1 -le $age0 ]; then
-			echo 1 > /proc/upgrade_info/trybit
-		fi
+		echo " Boot info is not available "
+	fi
+
+	if [ "$boot_set" -eq "0" ]; then
+		dumpimage -b boot_set 1
+	else
+		dumpimage -b boot_set 0
 	fi
 }
 
@@ -557,22 +491,21 @@ activate_bootconfig() {
 # It increaments age of the currently booted bootconfig and updates into
 # flash after age increament.
 commit_bootconfig() {
-	age0=$(cat /proc/boot_info/bootconfig0/age)
-	age1=$(cat /proc/boot_info/bootconfig1/age)
+        local boot_set
 
-	if [ "$1" -eq "0" ]; then
-		if [ $age0 -le $age1 ]; then
-			age1=$((age1+1))
-			echo $age1 > /proc/boot_info/bootconfig0/age
-			do_flash_bootconfig bootconfig0 "0:BOOTCONFIG"
-		fi
+	dumpimage -b 4
+	if [ -e /tmp/bootconfig_members.txt ]; then
+		boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
 	else
-		if [ $age1 -le $age0 ]; then
-			age0=$((age0+1))
-			echo $age0 > /proc/boot_info/bootconfig1/age
-			do_flash_bootconfig bootconfig1 "0:BOOTCONFIG1"
-		fi
+		echo " Boot info is not available "
 	fi
+
+	if [ "$boot_set" -eq "0" ]; then
+		dumpimage -b boot_set 1
+	else
+		dumpimage -b boot_set 0
+	fi
+	do_flash_bootconfig "0:BOOTCONFIG"
 }
 
 get_magic_long_at() {
@@ -596,11 +529,12 @@ platform_get_offset() {
 	echo $(( $offsetcount * 65536 ))
 }
 
+
 platform_copy_config() {
 	local nand_part="$(find_mtd_part "ubi_rootfs")"
 	local emmcblock="$(find_mmc_part "rootfs")"
 	local alive=$(cat /tmp/.alive_upgrade)
-	local upgradepart
+	local upgradepart="rootfs"
 	mkdir -p /tmp/overlay
 
 	#setting Try bit
@@ -610,18 +544,28 @@ platform_copy_config() {
 		fi
 	fi
 
-	for bcname in $(get_alternate_bootconfig)
-	do
-		[ -f /proc/boot_info/$bcname/rootfs/upgradepartition ] && {
-			upgradepart=$(cat /proc/boot_info/$bcname/rootfs/upgradepartition)
-		}
-	done
+	upgradepart=$(get_upgrade_bank $upgradepart)
+	if [ "$upgradepart" = "rootfs" ]; then
+		upgradepart="rootfs_1"
+	else
+		upgradepart="rootfs"
+	fi
 
 	if [ -e "${nand_part%% *}" ]; then
 		local mtdpart
 		mtdpart=$(grep "\"${upgradepart}\"" /proc/mtd | awk -F: '{print $1}')
 		ubiattach -p /dev/${mtdpart}
-		mount -t ubifs ubi0:rootfs_data /tmp/overlay
+		volumes=$(ls /sys/class/ubi/*/ | grep ubi._.*)
+		for vol in ${volumes}
+		do
+			[ -f /sys/class/ubi/${vol}/name ] && name=$(cat /sys/class/ubi/${vol}/name)
+			if [[ ${vol} == *"/sys/class/"* ]]; then
+				continue
+			else
+				[ ${name} == "rootfs_data" ] && m_vol=$(echo ${vol} | sed 's/_[^_]*//')
+			fi
+		done
+		mount -t ubifs $m_vol:rootfs_data /tmp/overlay
 	elif [ -e "$emmcblock" ]; then
 		losetup --detach-all
 		local data_blockoffset="$(platform_get_offset $(ls /tmp/rootfs-*))"
