@@ -1,0 +1,3 @@
+---
+include:
+  - remote: 'https://gitlab.com/prpl-foundation/tooling/yml-templates/raw/main/.feed-pipeline.yml'
