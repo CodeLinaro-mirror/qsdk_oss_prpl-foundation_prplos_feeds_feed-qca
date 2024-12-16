@@ -2,13 +2,15 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=omciibc
-PKG_RELEASE:=1
+PKG_SOURCE_PROTO:=git
+PKG_BRANCH:=NHSS.QSDK.12.5.5
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/trex/omciibc
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=9b854ce1d8cb3ac552263cca10508f8287a33388
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
- PKG_REV:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
- PKG_VERSION:=g$(PKG_REV)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 

@@ -1,10 +1,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ipq-gpon
-PKG_VERSION:=v1.0.5
-PKG_RELEASE:=1
+PKG_SOURCE_PROTO:=git
+PKG_BRANCH:=master
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/fontana/middleware/onu-hal.git
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=5f5bea0cdd7cd338d9cceb9f4b41d67fb8fe84ad
 
-LOCAL_SRC:=$(TOPDIR)/feeds/feed_qca/qca/src/ipq-gpon
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -25,11 +30,6 @@ endef
 
 TARGET_LDFLAGS += -L$(STAGING_DIR) \
 		  -lubox -lubus
-
-define Build/Configure
-        mkdir -p $(PKG_BUILD_DIR)
-	$(CP) $(LOCAL_SRC)/* $(PKG_BUILD_DIR)/
-endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/bin
