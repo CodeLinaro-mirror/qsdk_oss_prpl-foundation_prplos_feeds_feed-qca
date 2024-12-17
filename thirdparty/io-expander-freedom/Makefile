@@ -4,6 +4,7 @@ include $(INCLUDE_DIR)/version.mk
 PKG_NAME:=io-expander-freedom
 PKG_RELEASE:=1
 PKG_FLAGS:=nonshared
+PKG_LICENSE:=BSD-2-Clause-Patent
 
 include $(INCLUDE_DIR)/package.mk
 
