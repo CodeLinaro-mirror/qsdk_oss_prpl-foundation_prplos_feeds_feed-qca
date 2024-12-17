@@ -1,3 +1,0 @@
-export PRJ_PATH=$(shell pwd)
-export CC=$(TOOLPREFIX)gcc
-export QCA_NSS_MACSEC_INCLUDE=-I$(PRJ_PATH)/include
