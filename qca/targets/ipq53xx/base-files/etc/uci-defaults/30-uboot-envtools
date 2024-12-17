@@ -36,7 +36,8 @@ ubootenv_mtdinfo () {
 	echo /dev/$mtd_dev 0x0 $ubootenv_size $mtd_erase $sectors
 }
 case "$board" in
-qcom,ipq5332-ap-mi01.2)
+qcom,ipq5332-ap-mi01.2 |\
+qcom,ipq5332-ap-mi01.2-c2)
 	ubootenv_add_uci_config $(ubootenv_mtdinfo)
 	;;
 *)

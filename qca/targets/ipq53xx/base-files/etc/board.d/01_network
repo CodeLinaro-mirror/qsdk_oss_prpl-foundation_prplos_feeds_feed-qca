@@ -9,7 +9,8 @@ ipq53xx_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
-	qcom,ipq5332-ap-mi01.2)
+	qcom,ipq5332-ap-mi01.2 |\
+	qcom,ipq5332-ap-mi01.2-c2)
 		ucidef_set_interfaces_lan_wan "eth1" "eth0"
 		ucidef_add_switch "switch1"
 		ucidef_add_switch_attr "switch1" "enable" false
