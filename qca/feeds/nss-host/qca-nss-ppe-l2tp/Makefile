@@ -3,14 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe-l2tp
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=win.nss.1.0.r24
 PKG_RELEASE:=2
-LOCAL_SRC:=$(TOPDIR)/feeds/feed_qca/qca/src/qca-nss-ppe
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=3d4eecf57560b6c02ce1567ab5995d4a24b42ab5
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 PKG_BUILD_DEPENDS :=
 MAKE_OPTS:=

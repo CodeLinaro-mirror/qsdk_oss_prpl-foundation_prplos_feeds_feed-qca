@@ -25,7 +25,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -9535,8 +9535,11 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -9560,8 +9560,11 @@ static size_t hostapd_eid_mbssid_elem_le
  			ie_count++;
  
  		/* For ML Probe resp, solicited hapd's MLE will be in the frame body */
@@ -38,7 +38,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  		if (ie_count)
  			nontx_profile_len += 4 + ie_count;
-@@ -9708,8 +9711,11 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -9733,8 +9736,11 @@ static u8 * hostapd_eid_mbssid_elem(stru
  			non_inherit_ie[ie_count++] = WLAN_EID_RSNX;
  
  		/* For ML Probe resp, solicited hapd's MLE will be in the frame body */
@@ -53,7 +53,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			*eid++ = WLAN_EID_EXTENSION;
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1432,10 +1432,82 @@ mlme_event_mgmt_critical_update(struct i
+@@ -1431,10 +1431,82 @@ mlme_event_mgmt_critical_update(struct i
  }
  
  
@@ -137,7 +137,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	const struct ieee80211_mgmt *mgmt;
-@@ -1477,6 +1549,10 @@ static void mlme_event_mgmt(struct i802_
+@@ -1476,6 +1548,10 @@ static void mlme_event_mgmt(struct i802_
  		|| (stype == WLAN_FC_STYPE_REASSOC_REQ)))
  		mlme_event_mgmt_critical_update(bss, rx_cu_param);
  
@@ -148,7 +148,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	event.rx_mgmt.ctx = bss->ctx;
  	event.rx_mgmt.link_id = link_id;
  
-@@ -1751,7 +1827,8 @@ static void mlme_event(struct i802_bss *
+@@ -1750,7 +1826,8 @@ static void mlme_event(struct i802_bss *
  		       struct nlattr *freq, struct nlattr *ack,
  		       struct nlattr *cookie, struct nlattr *sig,
  		       struct nlattr *wmm, struct nlattr *req_ie,
@@ -158,7 +158,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	u16 stype = 0, auth_type = 0;
-@@ -1850,7 +1927,8 @@ static void mlme_event(struct i802_bss *
+@@ -1849,7 +1926,8 @@ static void mlme_event(struct i802_bss *
  		break;
  	case NL80211_CMD_FRAME:
  		mlme_event_mgmt(bss, freq, sig, nla_data(frame),
@@ -168,7 +168,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		break;
  	case NL80211_CMD_FRAME_TX_STATUS:
  		mlme_event_mgmt_tx_status(bss, cookie, nla_data(frame),
-@@ -4857,7 +4935,7 @@ static void do_process_drv_event(struct
+@@ -4755,7 +4833,7 @@ static void do_process_drv_event(struct
  			   tb[NL80211_ATTR_RX_SIGNAL_DBM],
  			   tb[NL80211_ATTR_STA_WME],
  			   tb[NL80211_ATTR_REQ_IE], NULL,
@@ -177,7 +177,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		break;
  	case NL80211_CMD_CONNECT:
  	case NL80211_CMD_ROAM:
-@@ -5164,7 +5242,8 @@ int process_bss_event(struct nl_msg *msg
+@@ -5065,7 +5143,8 @@ int process_bss_event(struct nl_msg *msg
  			   tb[NL80211_ATTR_RX_SIGNAL_DBM],
  			   tb[NL80211_ATTR_STA_WME], NULL,
  			   tb[NL80211_ATTR_RXMGMT_CRITICAL_UPDATE],
@@ -189,7 +189,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		nl80211_spurious_frame(bss, tb, 0);
 --- a/src/drivers/nl80211_copy.h
 +++ b/src/drivers/nl80211_copy.h
-@@ -3491,6 +3491,7 @@ enum nl80211_attrs {
+@@ -3535,6 +3535,7 @@ enum nl80211_attrs {
  	NL80211_ATTR_INTERFERENCE_TYPE,
  	NL80211_ATTR_AP_REMOVAL_COUNT,
  	NL80211_ATTR_TSF,
@@ -197,7 +197,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	/* add attributes here, update the policy in nl80211.c */
  
-@@ -8240,6 +8241,7 @@ enum nl80211_cu_mld_link_attrs {
+@@ -8464,6 +8465,7 @@ enum nl80211_cu_mld_link_attrs {
  	NL80211_CU_MLD_LINK_ATTR_CRITICAL_FLAG,
  	NL80211_CU_MLD_LINK_ATTR_BPCC,
  	NL80211_CU_MLD_LINK_ATTR_SWITCH_COUNT,
@@ -207,17 +207,17 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	__NL80211_CU_MLD_LINK_ATTR_LAST,
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -719,6 +719,9 @@ static size_t hostapd_probe_resp_elems_l
- 
- 			buflen += hostapd_eid_eht_ml_beacon_len(
- 				ml_elem_ap, params->mld_info, !!params->mld_ap);
+@@ -797,6 +797,9 @@ static size_t hostapd_probe_resp_elems_l
+ 			/* For Max Channel Switch Time element during channel
+ 			 * switch */
+ 			buflen += 6;
 +
 +			if (hapd->eht_mld_link_removal_inprogress)
 +				buflen += hostapd_eid_eht_ml_reconfig_len(ml_elem_ap);
  		}
  		/* QCN Vendor IE for 240MHz */
  		if (is_5ghz_freq(hapd->iface->freq))
-@@ -892,11 +895,15 @@ static u8 * hostapd_probe_resp_fill_elem
+@@ -958,11 +961,15 @@ static u8 * hostapd_probe_resp_fill_elem
  		struct hostapd_data *ml_elem_ap =
  			params->mld_ap ? params->mld_ap : hapd;
  

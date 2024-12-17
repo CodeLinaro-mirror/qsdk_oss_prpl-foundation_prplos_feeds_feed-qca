@@ -627,6 +627,19 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  }
  
  #ifdef CPTCFG_MAC80211_NSS_SUPPORT
+@@ -1865,8 +1894,10 @@ static void ieee80211_setup_sdata(struct
+ 			ieee80211_mesh_init_sdata(sdata);
+ 		break;
+ 	case NL80211_IFTYPE_MONITOR:
+-		sdata->dev->type = ARPHRD_IEEE80211_RADIOTAP;
+-		sdata->dev->netdev_ops = &ieee80211_monitorif_ops;
++		if (sdata->dev) {
++			sdata->dev->type = ARPHRD_IEEE80211_RADIOTAP;
++			sdata->dev->netdev_ops = &ieee80211_monitorif_ops;
++		}
+ 		sdata->u.mntr.flags = MONITOR_FLAG_CONTROL |
+ 				      MONITOR_FLAG_OTHER_BSS;
+ 		break;
 --- a/net/mac80211/main.c
 +++ b/net/mac80211/main.c
 @@ -987,7 +987,8 @@ int ieee80211_register_hw(struct ieee802

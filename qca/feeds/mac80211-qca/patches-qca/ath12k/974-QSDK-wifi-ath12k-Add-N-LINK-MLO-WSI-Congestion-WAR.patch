@@ -67,7 +67,9 @@ Details of the changes:
 
 Patch-dependency:
 	955-wifi-ath12k-Add-support-for-four-link-MLO-in-AP-MLD.patch
+	972-01-wifi-ath12k-Introduce-RCU-Protection-to-safeguard-ar.patch
 	973-QSDK-wifi-ath12k-Add-WMI-support-to-notify-WSI-stats.patch
+
 Patch-work: None
 
 Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
@@ -79,7 +81,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -137,6 +137,11 @@ void ath12k_core_put_hw_group(struct ath
+@@ -141,6 +141,11 @@ void ath12k_core_put_hw_group(struct ath
  		ag->fst = NULL;
  	}
  
@@ -91,7 +93,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  	mutex_lock(&ag->mutex_lock);
  
  	if (chip_id >= ag->num_chip) {
-@@ -218,6 +223,7 @@ ath12k_core_hw_group_alloc(u8 id, u8 max
+@@ -228,6 +233,7 @@ ath12k_core_hw_group_alloc(u8 id, u8 max
  	ag->recovery_mode = ATH12K_MLO_RECOVERY_MODE0;
  	INIT_WORK(&ag->reset_work, ath12k_core_hw_group_reset);
  	ag->fst = NULL;
@@ -99,7 +101,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  #ifdef CPTCFG_ATH12K_POWER_OPTIMIZATION
  	ath12k_global_ps_ctx.ag = ag;
  #endif
-@@ -363,6 +369,10 @@ again:
+@@ -382,6 +388,10 @@ again:
  		ag->fst = ath12k_dp_rx_fst_attach(ab);
  
  	ab->ag = ag;
@@ -110,7 +112,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  	return ag;
  }
  
-@@ -1526,6 +1536,8 @@ static int ath12k_core_start(struct ath1
+@@ -1545,6 +1555,8 @@ static int ath12k_core_start(struct ath1
  	/* Indicate the core start in the appropriate group */
  	ab->ag->num_started++;
  
@@ -119,7 +121,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  	return 0;
  
  err_reo_cleanup:
-@@ -4413,6 +4425,69 @@ struct ath12k_base *ath12k_core_get_ab_b
+@@ -4429,6 +4441,69 @@ struct ath12k_base *ath12k_core_get_ab_b
  	return NULL;
  }
  
@@ -191,7 +193,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  {
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1421,6 +1421,25 @@ struct ath12k_mlo_dp_umac_reset {
+@@ -1428,6 +1428,25 @@ struct ath12k_mlo_dp_umac_reset {
  
  #define ATH12K_IS_UMAC_RESET_IN_PROGRESS	BIT(0)
  
@@ -217,7 +219,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  /* Holds info on the group of SOCs that are registered as a single wiphy
   * or single SOC where each radio registered as separate wiphy in non-MLO
   */
-@@ -1458,6 +1477,7 @@ struct ath12k_hw_group {
+@@ -1464,6 +1483,7 @@ struct ath12k_hw_group {
  	struct completion umac_reset_complete;
  	bool trigger_umac_reset;
  	struct dp_rx_fst *fst;
@@ -225,7 +227,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  };
  
  struct wsi_info {
-@@ -1974,4 +1994,8 @@ void ath12k_erp_handle_trigger(struct wo
+@@ -2001,4 +2021,8 @@ void ath12k_erp_handle_trigger(struct wo
  void ath12k_vendor_wlan_intf_stats(struct work_struct *work);
  void ath12k_debug_print_dcs_wlan_intf_stats(struct ath12k_base *ab,
  				       struct wmi_dcs_wlan_interference_stats *wlan_info);
@@ -236,7 +238,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  #endif /* _CORE_H_ */
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -8154,6 +8154,210 @@ static int ath12k_mac_free_unassign_link
+@@ -8277,6 +8277,209 @@ static int ath12k_mac_free_unassign_link
  	return 0;
  }
  
@@ -247,7 +249,6 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
 +	struct ath12k_hw *ah;
 +	u8 i, j;
 +
-+	lockdep_assert_held(&ah->conf_mutex);
 +	for (i = 0; i < ag->num_hw; i++) {
 +		ah = ag->ah[i];
 +		if (!ah)
@@ -348,7 +349,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
 +		return ret;
 +
 +	/* Primary link device id identification */
-+	primary_arvif = ahvif->link[ahsta->primary_link_id];
++	primary_arvif = ath12k_get_arvif_from_link_id(ahvif, ahsta->primary_link_id);
 +	primary_ab = primary_arvif->ar->ab;
 +	ag = primary_ab->ag;
 +
@@ -368,11 +369,11 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
 +
 +	/* Secondary links device id identification */
 +	links = ahsta->links_map;
-+	for_each_set_bit(link_id, &links, IEEE80211_MLD_MAX_NUM_LINKS) {
++	for_each_set_bit(link_id, &links, ATH12K_NUM_MAX_LINKS) {
 +		if (ahsta->primary_link_id == link_id)
 +			continue;
 +
-+		arvif = ahvif->link[link_id];
++		arvif = ath12k_get_arvif_from_link_id(ahvif, link_id);
 +
 +		if (WARN_ON(!arvif))
 +			continue;
@@ -447,7 +448,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  int ath12k_mac_create_bridge_peer(struct ath12k_hw *ah, struct ath12k_sta *ahsta,
  				  struct ath12k_vif *ahvif, u8 link_id)
  {
-@@ -8291,6 +8495,8 @@ static void ath12k_mac_ml_station_remove
+@@ -8421,6 +8624,8 @@ static void ath12k_mac_ml_station_remove
  
  	sta = container_of((void *)ahsta, struct ieee80211_sta, drv_priv);
  
@@ -456,7 +457,7 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  	ath12k_ml_link_peers_delete(ahvif, ahsta);
  
  	/* validate link station removal and clear arsta links */
-@@ -8809,6 +9015,8 @@ int ath12k_mac_update_sta_state(struct i
+@@ -8960,6 +9165,8 @@ int ath12k_mac_update_sta_state(struct i
  	}
  
  	if (old_state == IEEE80211_STA_AUTH &&  new_state == IEEE80211_STA_ASSOC) {
@@ -465,3 +466,18 @@ Signed-off-by: Mahendran P <quic_mahep@quicinc.com>
  		/* TODO sync wait for ML peer map success, else clear ml peer info on
  		 * all partners? TBD on testing
  		 */
+@@ -9164,12 +9371,14 @@ static int ath12k_mac_op_change_sta_link
+ 				ieee80211_report_low_ack(sta, ATH12K_REPORT_LOW_ACK_NUM_PKT);
+ 				return -EINVAL;
+ 			}
++			ath12k_wsi_load_info_stats_update(ahvif, ahsta, false);
+ 
+ 			if (ath12k_station_unauthorize(ar, arvif, arsta) ||
+ 			    ath12k_station_disassoc(ar, arvif, arsta) ||
+ 			    ath12k_mac_station_remove(ar, arvif, arsta))
+ 				ath12k_warn(ar->ab, "Failed to remove station: %pM for VDEV: %d\n",
+ 					    arsta->addr, arvif->vdev_id);
++			ath12k_wsi_load_info_stats_update(ahvif, ahsta, true);
+ 		} else if (vif->type == NL80211_IFTYPE_STATION) {
+ 			if (ath12k_mac_free_unassign_link_sta(ahsta->ahvif->ah, arsta->ahsta,
+ 							      arsta->link_id))

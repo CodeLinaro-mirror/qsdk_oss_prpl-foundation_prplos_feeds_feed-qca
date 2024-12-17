@@ -27,7 +27,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -4682,6 +4682,13 @@ static int ath12k_mac_config_obss_pd(str
+@@ -4689,6 +4689,13 @@ static int ath12k_mac_config_obss_pd(str
  	return 0;
  }
  
@@ -41,7 +41,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  void ath12k_mac_bss_info_changed(struct ath12k *ar,
  				 struct ath12k_link_vif *arvif,
  				 struct ieee80211_bss_conf *info,
-@@ -4704,12 +4711,36 @@ void ath12k_mac_bss_info_changed(struct
+@@ -4711,12 +4718,36 @@ void ath12k_mac_bss_info_changed(struct
  	u32 rate;
  	bool color_collision_detect;
  	u8 link_id = arvif->link_id;
@@ -218,16 +218,16 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  int ath12k_vendor_register(struct ath12k_hw *ah)
 --- a/drivers/net/wireless/ath/ath12k/vendor.h
 +++ b/drivers/net/wireless/ath/ath12k/vendor.h
-@@ -14,6 +14,8 @@ enum qca_nl80211_vendor_subcmds {
- 	QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION = 74,
- 	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC = 206,
+@@ -16,12 +16,16 @@ enum qca_nl80211_vendor_subcmds {
  	QCA_NL80211_VENDOR_SUBCMD_SCS_RULE_CONFIG = 218,
-+	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 233,
-+	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 234,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_PHY_OPS = 235,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS = 236,
++	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 253,
++	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 254,
++
  	QCA_NL80211_VENDOR_SUBCMD_TELEMETRIC_DATA = 334,
-@@ -22,6 +24,7 @@ enum qca_nl80211_vendor_subcmds {
+ };
+ 
  enum qca_nl80211_vendor_events {
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS_INDEX = 0,
  	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX,
@@ -235,7 +235,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  };
  
  #ifdef CPTCFG_ATH12K_SAWF
-@@ -702,4 +705,63 @@ enum qca_wlan_vendor_attr_erp_ath_config
+@@ -702,4 +706,63 @@ enum qca_wlan_vendor_attr_erp_ath_config
  			QCA_WLAN_VENDOR_ATTR_ERP_CONFIG_AFTER_LAST - 1,
  };
  

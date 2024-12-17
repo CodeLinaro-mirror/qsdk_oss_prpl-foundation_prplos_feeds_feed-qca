@@ -18,7 +18,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -6705,6 +6705,13 @@ void supplicant_event(void *ctx, enum wp
+@@ -6899,6 +6899,13 @@ void supplicant_event(void *ctx, enum wp
  			wpa_tdls_disable_unreachable_link(wpa_s->wpa,
  							  data->low_ack.addr);
  #endif /* CONFIG_TDLS */

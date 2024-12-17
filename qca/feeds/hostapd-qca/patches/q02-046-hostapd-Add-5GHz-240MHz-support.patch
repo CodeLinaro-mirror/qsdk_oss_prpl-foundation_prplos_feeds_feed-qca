@@ -27,7 +27,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -442,11 +442,13 @@ static u8 * hostapd_eid_ecsa(struct host
+@@ -546,11 +546,13 @@ static u8 * hostapd_eid_max_cs_time(stru
  static u8 * hostapd_eid_supported_op_classes(struct hostapd_data *hapd, u8 *eid)
  {
  	u8 op_class, channel;
@@ -41,7 +41,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	if (ieee80211_freq_to_channel_ext(hapd->iface->freq,
  					  hapd->iconf->secondary_channel,
  					  hostapd_get_oper_chwidth(hapd->iconf),
-@@ -454,6 +456,10 @@ static u8 * hostapd_eid_supported_op_cla
+@@ -558,6 +560,10 @@ static u8 * hostapd_eid_supported_op_cla
  	    NUM_HOSTAPD_MODES)
  		return eid;
  
@@ -54,7 +54,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -496,7 +496,6 @@ static int dfs_get_start_chan_idx(struct
+@@ -503,7 +503,6 @@ static int dfs_get_start_chan_idx(struct
  			   iface->conf->ieee80211n,
  			   iface->conf->secondary_channel,
  			   hostapd_get_oper_chwidth(iface->conf));
@@ -62,7 +62,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		for (i = 0; i < mode->num_channels; i++) {
  			wpa_printf(MSG_DEBUG, "Available channel: %d",
  				   mode->channels[i].chan);
-@@ -793,6 +792,10 @@ static int set_dfs_state(struct hostapd_
+@@ -800,6 +799,10 @@ static int set_dfs_state(struct hostapd_
  		n_chans = 8;
  		frequency = cf1 - 70;
  		break;
@@ -73,7 +73,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	default:
  		wpa_printf(MSG_INFO, "DFS chan_width %d not supported",
  			   chan_width);
-@@ -978,13 +981,14 @@ int hostapd_handle_dfs(struct hostapd_if
+@@ -985,13 +988,14 @@ int hostapd_handle_dfs(struct hostapd_if
  	wpa_printf(MSG_DEBUG, "DFS start CAC on %d MHz%s", iface->freq,
  		   dfs_use_radar_background(iface) ? " (background)" : "");
  	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_CAC_START
@@ -90,7 +90,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  	res = hostapd_start_dfs_cac(
  		iface, iface->conf->hw_mode, iface->freq, iface->conf->channel,
-@@ -1816,6 +1820,9 @@ int hostapd_is_dfs_overlap(struct hostap
+@@ -1823,6 +1827,9 @@ int hostapd_is_dfs_overlap(struct hostap
  	case CHAN_WIDTH_160:
  		half_width = 80;
  		break;
@@ -102,7 +102,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  			   width);
 --- a/src/ap/hw_features.c
 +++ b/src/ap/hw_features.c
-@@ -982,8 +982,7 @@ static bool hostapd_is_usable_punct_bitm
+@@ -1004,8 +1004,7 @@ static bool hostapd_is_usable_punct_bitm
  {
  #ifdef CONFIG_IEEE80211BE
  	struct hostapd_config *conf = iface->conf;
@@ -112,7 +112,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  	if (!conf->punct_bitmap)
  		return true;
-@@ -1021,6 +1020,10 @@ static bool hostapd_is_usable_punct_bitm
+@@ -1043,6 +1042,10 @@ static bool hostapd_is_usable_punct_bitm
  			bw = 160;
  			start_chan = conf->eht_oper_centr_freq_seg0_idx - 14;
  			break;
@@ -125,7 +125,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  		}
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7863,6 +7863,7 @@ static u8 * hostapd_eid_rnr_iface(struct
+@@ -8058,6 +8058,7 @@ static u8 * hostapd_eid_rnr_iface(struct
  	struct hostapd_iface *iface = hapd->iface;
  	size_t i, start;
  	size_t len = *current_len;
@@ -133,7 +133,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	u8 *eid_start = eid, *size_offset = (eid - len) + 1;
  	u8 *tbtt_count_pos = size_offset + 1;
  	u8 tbtt_count, total_tbtt_count = 0, op_class, channel;
-@@ -7872,12 +7873,15 @@ static u8 * hostapd_eid_rnr_iface(struct
+@@ -8067,12 +8068,15 @@ static u8 * hostapd_eid_rnr_iface(struct
  	if (!(iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA) || !iface->freq)
  		return eid;
  
@@ -191,7 +191,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	if (!hapd->iface->conf->eht_phy_capab.su_beamformer)
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -2902,6 +2902,13 @@ int center_idx_to_bw_6ghz(u8 idx)
+@@ -2934,6 +2934,13 @@ int center_idx_to_bw_6ghz(u8 idx)
  	return -1;
  }
  
@@ -207,7 +207,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  {
 --- a/src/common/ieee802_11_common.h
 +++ b/src/common/ieee802_11_common.h
-@@ -287,6 +287,7 @@ u8 country_to_global_op_class(const char
+@@ -299,6 +299,7 @@ u8 country_to_global_op_class(const char
  
  const struct oper_class_map * get_oper_class(const char *country, u8 op_class);
  int oper_class_bw_to_int(const struct oper_class_map *map);
@@ -217,7 +217,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  bool is_6ghz_op_class(u8 op_class);
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -2685,6 +2685,7 @@ struct ieee80211_eht_operation {
+@@ -2732,6 +2732,7 @@ struct ieee80211_eht_operation {
  /* Figure 9-1002ah: Supported EHT-MCS and NSS Set field format */
  #define EHT_PHYCAP_MCS_NSS_LEN_20MHZ_ONLY	4
  #define EHT_PHYCAP_MCS_NSS_LEN_20MHZ_PLUS	3

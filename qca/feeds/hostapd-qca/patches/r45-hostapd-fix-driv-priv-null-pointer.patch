@@ -19,11 +19,9 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  src/ap/hostapd.c | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index fc6bfcf..d9ebbf7 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3846,6 +3846,7 @@ int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
+@@ -4082,6 +4082,7 @@ int hostapd_enable_iface(struct hostapd_
  		return -1;
  
  	if (hostapd_setup_interface(hapd_iface)) {
@@ -31,6 +29,3 @@ index fc6bfcf..d9ebbf7 100644
  		hostapd_deinit_driver(hapd_iface->bss[0]->driver,
  				      hapd_iface->bss[0]->drv_priv,
  				      hapd_iface);
--- 
-2.34.1
-

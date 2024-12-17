@@ -1,6 +1,6 @@
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -2594,6 +2594,8 @@ static int hostapd_config_fill(struct ho
+@@ -2619,6 +2619,8 @@ static int hostapd_config_fill(struct ho
  		conf->ieee80211d = atoi(pos);
  	} else if (os_strcmp(buf, "ieee80211h") == 0) {
  		conf->ieee80211h = atoi(pos);
@@ -11,7 +11,7 @@
  	} else if (os_strcmp(buf, "eapol_version") == 0) {
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1087,6 +1087,7 @@ struct hostapd_config {
+@@ -1104,6 +1104,7 @@ struct hostapd_config {
  	int ieee80211d;
  
  	int ieee80211h; /* DFS */
@@ -31,7 +31,7 @@
  
  enum dfs_channel_type {
  	DFS_ANY_CHANNEL,
-@@ -1132,6 +1133,79 @@ hostapd_dfs_is_background_event(struct h
+@@ -1139,6 +1140,79 @@ hostapd_dfs_is_background_event(struct h
  		iface->radar_background.freq == freq;
  }
  
@@ -111,7 +111,7 @@
  
  static int
  hostapd_dfs_start_channel_switch_background(struct hostapd_iface *iface)
-@@ -1410,6 +1484,9 @@ static int hostapd_dfs_start_channel_swi
+@@ -1417,6 +1491,9 @@ static int hostapd_dfs_start_channel_swi
  	if (iface->dfs_domain == HOSTAPD_DFS_REGION_ETSI)
  		channel_type = DFS_ANY_CHANNEL;
  
@@ -121,7 +121,7 @@
  	/* Perform channel switch/CSA */
  	channel = dfs_get_valid_channel(iface, &secondary_channel,
  					&oper_centr_freq_seg0_idx,
-@@ -1483,6 +1560,12 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1490,6 +1567,12 @@ int hostapd_dfs_radar_detected(struct ho
  			   cf1, cf2, HOSTAPD_CHAN_DFS_UNAVAILABLE))
  		return 0;
  
@@ -150,7 +150,7 @@
  int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3578,6 +3578,7 @@ int hostapd_disable_iface(struct hostapd
+@@ -3673,6 +3673,7 @@ int hostapd_disable_iface(struct hostapd
  		hostapd_cleanup_cs_params(hapd_iface->bss[j]);
  #endif /* NEED_AP_MLME */
  

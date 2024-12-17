@@ -70,7 +70,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  	len = sizeof(*segment);
 --- a/drivers/net/wireless/ath/ath12k/qmi.c
 +++ b/drivers/net/wireless/ath/ath12k/qmi.c
-@@ -3046,8 +3046,7 @@ static int ath12k_qmi_send_qdss_config(s
+@@ -3046,21 +3046,21 @@ static int ath12k_qmi_send_qdss_config(s
  		 "%s/%s/%s", ATH12K_FW_DIR, ab->hw_params->fw.dir,
  		 ATH12K_QMI_DEFAULT_QDSS_CONFIG_FILE_NAME);
  	ret = request_firmware(&fw_entry, filename, dev);
@@ -80,7 +80,14 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  	if (ret) {
  		/* for backward compatibility */
  		snprintf(filename, sizeof(filename),
-@@ -3061,6 +3060,8 @@ static int ath12k_qmi_send_qdss_config(s
+ 			 "%s", ATH12K_QMI_DEFAULT_QDSS_CONFIG_FILE_NAME);
+ 		ret = request_firmware(&fw_entry, filename, dev);
+-		ath12k_dbg(ab, ATH12K_DBG_BOOT, "boot firmware request %s size %zu\n",
+-			   filename, fw_entry->size);
++
+ 		if (ret) {
+ 			ath12k_warn(ab, "qmi failed to load QDSS config: %s\n", filename);
+ 			return ret;
  		}
  	}
  
@@ -89,7 +96,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  	ret = ath12k_qmi_send_qdss_trace_config_download_req(ab, fw_entry->data,
  							     fw_entry->size);
  	if (ret < 0) {
-@@ -4461,7 +4462,7 @@ static int ath12k_qmi_assign_target_mem_
+@@ -4461,7 +4461,7 @@ static int ath12k_qmi_assign_target_mem_
  	hremote_node = of_parse_phandle(dev->of_node, "memory-region", 0);
  	if (!hremote_node) {
  		ath12k_warn(ab, "qmi fail to get hremote_node\n");
@@ -98,7 +105,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  	}
  
  	ret = of_address_to_resource(hremote_node, 0, &res);
-@@ -5855,7 +5856,7 @@ int ath12k_qmi_pci_alloc_qdss_mem(struct
+@@ -5855,7 +5855,7 @@ int ath12k_qmi_pci_alloc_qdss_mem(struct
  		ab->hremote_node = of_parse_phandle(dev->of_node, "memory-region", 0);
  		if (!ab->hremote_node) {
  			ath12k_warn(ab, "qmi fail to get hremote_node for pci device\n");

@@ -46,7 +46,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
  				    enum wpa_msg_type type,
  				    const char *buf, size_t len);
-@@ -4380,8 +4385,21 @@ static int hostapd_ctrl_iface_link_remov
+@@ -4417,8 +4422,21 @@ static int hostapd_ctrl_iface_link_remov
  	int ret;
  	u32 count = atoi(cmd);
  
@@ -72,7 +72,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	if (ret == 0) {
 --- a/hostapd/hostapd_cli.c
 +++ b/hostapd/hostapd_cli.c
-@@ -666,6 +666,21 @@ static int hostapd_cli_cmd_wps_config(st
+@@ -664,6 +664,21 @@ static int hostapd_cli_cmd_wps_config(st
  }
  
  
@@ -94,7 +94,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static int hostapd_cli_cmd_disassoc_imminent(struct wpa_ctrl *ctrl, int argc,
  					     char *argv[])
  {
-@@ -1754,6 +1769,8 @@ static const struct hostapd_cli_cmd host
+@@ -1761,6 +1776,8 @@ static const struct hostapd_cli_cmd host
  	  "= show current WPS status" },
  	{ "disassoc_imminent", hostapd_cli_cmd_disassoc_imminent, NULL,
  	  "= send Disassociation Imminent notification" },
@@ -266,18 +266,18 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			       hapd, NULL);
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -539,6 +539,7 @@ struct hostapd_data {
- 	u8 mld_link_id;
- 	char ctrl_sock_iface[IFNAMSIZ + 1];
+@@ -563,6 +563,7 @@ struct hostapd_data {
+ 	char ctrl_sock_iface[IFNAMSIZ + 7 + 1];
+ 
  	u8 eht_mld_link_removal_count;
 +	u8 eht_mld_link_removal_inprogress;
  #endif /* CONFIG_IEEE80211BE */
  
  #ifdef CONFIG_NAN_USD
-@@ -956,5 +957,7 @@ static inline bool hostapd_mld_is_first_
- 
+@@ -990,5 +991,7 @@ static inline bool hostapd_mld_is_first_
  u16 hostapd_get_punct_bitmap(struct hostapd_data *hapd);
  bool hostapd_is_usable_punct_bitmap(struct hostapd_iface *iface);
+ void hostapd_gen_per_sta_profiles(struct hostapd_data *hapd);
 +size_t hostapd_eid_eht_ml_reconfig_len(struct hostapd_data *hapd);
 +u8 * hostapd_eid_eht_reconf_ml(struct hostapd_data *hapd, u8 *eid);
  
@@ -381,7 +381,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  }
  
  
-@@ -1568,3 +1502,105 @@ void hostapd_get_eht_240mhz_capab(struct
+@@ -1596,3 +1530,105 @@ void hostapd_get_eht_240mhz_capab(struct
  
  	os_memcpy(dest, src, len);
  }
@@ -489,7 +489,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +}
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -3254,6 +3254,15 @@ struct driver_sta_mlo_info {
+@@ -3260,6 +3260,15 @@ struct driver_sta_mlo_info {
  	} links[MAX_NUM_MLD_LINKS];
  };
  
@@ -505,7 +505,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  /**
   * struct wpa_driver_ops - Driver interface API definition
   *
-@@ -5500,6 +5509,17 @@ struct wpa_driver_ops {
+@@ -5581,6 +5590,17 @@ struct wpa_driver_ops {
  
  #ifdef CONFIG_IEEE80211BE
  	int (*set_scs)(void *priv, struct scs_latency_params *scs_drv);
@@ -525,7 +525,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -9819,6 +9819,66 @@ int nl80211_remove_link(struct i802_bss
+@@ -9905,6 +9905,66 @@ int nl80211_remove_link(struct i802_bss
  }
  
  
@@ -592,7 +592,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void nl80211_remove_links(struct i802_bss *bss)
  {
  	int ret;
-@@ -14829,6 +14889,7 @@ const struct wpa_driver_ops wpa_driver_n
+@@ -15244,6 +15304,7 @@ const struct wpa_driver_ops wpa_driver_n
  	.link_sta_remove = wpa_driver_nl80211_link_sta_remove,
  	.can_share_drv = wpa_driver_nl80211_can_share_drv,
  	.set_scs = nl80211_set_scs,
@@ -602,7 +602,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	.register_frame = testing_nl80211_register_frame,
 --- a/src/drivers/nl80211_copy.h
 +++ b/src/drivers/nl80211_copy.h
-@@ -3485,7 +3485,8 @@ enum nl80211_attrs {
+@@ -3529,7 +3529,8 @@ enum nl80211_attrs {
  	NL80211_ATTR_CHANNEL_WIDTH_DEVICE,
  	NL80211_ATTR_CENTER_FREQ_DEVICE,
  	NL80211_ATTR_INTERFERENCE_TYPE,

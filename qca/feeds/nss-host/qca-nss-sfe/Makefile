@@ -3,13 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-sfe
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
-PKG_RELEASE:=1
+PKG_BRANCH:=win.nss.1.0.r24
+PKG_RELEASE:=2
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/shortcut-fe
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=6b4426ae629418cbbc1d4169f111199cdafafbfd
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 

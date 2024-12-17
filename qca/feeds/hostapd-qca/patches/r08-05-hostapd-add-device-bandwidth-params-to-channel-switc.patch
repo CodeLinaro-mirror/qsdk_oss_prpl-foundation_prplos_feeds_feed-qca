@@ -20,7 +20,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -1155,7 +1155,7 @@ void hostapd_event_sta_opmode_changed(st
+@@ -1207,7 +1207,7 @@ void hostapd_event_sta_opmode_changed(st
  
  void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
  			     int offset, int width, int cf1, int cf2,
@@ -29,7 +29,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  {
  #ifdef NEED_AP_MLME
  	int channel, chwidth, is_dfs0, is_dfs;
-@@ -1164,14 +1164,14 @@ void hostapd_event_ch_switch(struct host
+@@ -1216,14 +1216,14 @@ void hostapd_event_ch_switch(struct host
  
  	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
  		       HOSTAPD_LEVEL_INFO,
@@ -46,7 +46,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	if (!hapd->iface->current_mode) {
  		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
-@@ -1287,6 +1287,27 @@ void hostapd_event_ch_switch(struct host
+@@ -1358,6 +1358,27 @@ void hostapd_event_ch_switch(struct host
  #ifdef CONFIG_IEEE80211BE
  	hapd->iconf->punct_bitmap = punct_bitmap;
  #endif /* CONFIG_IEEE80211BE */
@@ -74,7 +74,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (hapd->iconf->ieee80211ac) {
  		hapd->iconf->vht_capab &= ~VHT_CAP_SUPP_CHAN_WIDTH_MASK;
  		if (chwidth == CONF_OPER_CHWIDTH_160MHZ)
-@@ -1301,11 +1322,11 @@ void hostapd_event_ch_switch(struct host
+@@ -1372,11 +1393,11 @@ void hostapd_event_ch_switch(struct host
  				  hapd->iface->num_hw_features);
  
  	wpa_msg(hapd->msg_ctx, MSG_INFO,
@@ -88,7 +88,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	if (!finished)
  		return;
  
-@@ -2748,6 +2769,8 @@ void hostapd_wpa_event(void *ctx, enum w
+@@ -2806,6 +2827,8 @@ void hostapd_wpa_event(void *ctx, enum w
  					data->ch_switch.cf1,
  					data->ch_switch.cf2,
  					data->ch_switch.punct_bitmap,
@@ -99,7 +99,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	case EVENT_CONNECT_FAILED_REASON:
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1199,6 +1199,8 @@ static void mlme_event_ch_switch(struct
+@@ -1200,6 +1200,8 @@ static void mlme_event_ch_switch(struct
  				 struct nlattr *cf2,
  				 struct nlattr *punct_bitmap,
  				 struct nlattr *count,
@@ -108,7 +108,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  				 int finished)
  {
  	struct i802_bss *bss;
-@@ -1292,6 +1294,10 @@ static void mlme_event_ch_switch(struct
+@@ -1291,6 +1293,10 @@ static void mlme_event_ch_switch(struct
  					data.ch_switch.ch_width);
  		}
  	}
@@ -119,7 +119,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  	if (link && is_sta_interface(drv->nlmode)) {
  		u8 link_id = data.ch_switch.link_id;
-@@ -4436,6 +4442,8 @@ static void do_process_drv_event(struct
+@@ -4331,6 +4337,8 @@ static void do_process_drv_event(struct
  				     tb[NL80211_ATTR_CENTER_FREQ2],
  				     tb[NL80211_ATTR_PUNCT_BITMAP],
  				     tb[NL80211_ATTR_CH_SWITCH_COUNT],
@@ -128,7 +128,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  				     0);
  		break;
  	case NL80211_CMD_CH_SWITCH_NOTIFY:
-@@ -4449,6 +4457,8 @@ static void do_process_drv_event(struct
+@@ -4344,6 +4352,8 @@ static void do_process_drv_event(struct
  				     tb[NL80211_ATTR_CENTER_FREQ2],
  				     tb[NL80211_ATTR_PUNCT_BITMAP],
  				     NULL,
@@ -172,7 +172,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  #ifdef CONFIG_AP
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -6356,6 +6356,8 @@ void supplicant_event(void *ctx, enum wp
+@@ -6530,6 +6530,8 @@ void supplicant_event(void *ctx, enum wp
  					  data->ch_switch.cf1,
  					  data->ch_switch.cf2,
  					  data->ch_switch.punct_bitmap,
@@ -183,7 +183,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  #endif /* CONFIG_AP */
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -882,7 +882,8 @@ int hostapd_probe_req_rx(struct hostapd_
+@@ -911,7 +911,8 @@ int hostapd_probe_req_rx(struct hostapd_
  			 int ssi_signal);
  void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
  			     int offset, int width, int cf1, int cf2,

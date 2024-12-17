@@ -111,7 +111,7 @@ Signed-off-by: Nishant Pandey <nishpand@codeaurora.org>
  static int hostapd_config_eap_user_salted(struct hostapd_eap_user *user,
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7250,6 +7250,77 @@ u8 * hostapd_eid_wb_chsw_wrapper(struct
+@@ -7445,6 +7445,77 @@ u8 * hostapd_eid_chsw_wrapper(struct hos
  	return eid;
  }
  

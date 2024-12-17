@@ -12,7 +12,7 @@ Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
 
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -1501,12 +1501,6 @@ static int hostapd_config_check_bss(stru
+@@ -1520,12 +1520,6 @@ static int hostapd_config_check_bss(stru
  	}
  #endif /* CONFIG_IEEE80211BE */
  

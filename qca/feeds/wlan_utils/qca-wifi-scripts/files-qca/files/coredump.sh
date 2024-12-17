@@ -1,6 +1,7 @@
 #!/bin/sh
 : '
  Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ Copyright (c) 2024, Qualcomm Innovation Center, Inc. All rights reserved.
 
  Permission to use, copy, modify, and/or distribute this software for any
  purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +18,7 @@
 
 SERVER=$(fw_printenv serverip | cut -c10-24);
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
+ARCH=$(grep -o '\bIPQ\w*' /tmp/sysinfo/model)
 
 if [ ! -n "$SERVER" ]; then
 	printf "%s\n" "Wrong configuaration SERVER = $SERVER" > /dev/console
@@ -84,6 +86,11 @@ if [ -e /sys/devices/platform/soc@0/soc@0:remoteproc@d100000/remoteproc/remotepr
 	DUMPPATH="/sys/devices/platform/soc@0/soc@0:remoteproc@d100000/remoteproc/remoteproc0/devcoredump/data"
 fi
 
+if [ -e /sys/devices/platform/soc@0/c000000.wifi/devcoredump/data ] && [ "$ACTION" = add ]; then
+	FILENAME="$ARCH-userpd1-q6dump-$TIMESTAMP.bin"
+	DUMPPATH="/sys/devices/platform/soc@0/c000000.wifi/devcoredump/data"
+fi
+
 # Collect IPQ5332 Internal Radio's Coredump
 if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd4/d100000.remoteproc:remoteproc_pd4:remoteproc_pd1/remoteproc/remoteproc2/devcoredump/data ] && [ "$ACTION" = add ]; then
         FILENAME="ipq5332-q6dump-$TIMESTAMP.bin"
@@ -118,6 +125,17 @@ fi
 if [ -e /sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd3/remoteproc/remoteproc3/devcoredump/data ] && [ "$ACTION" = add ]; then
 	FILENAME="qcn6432-userpd3-q6dump-$TIMESTAMP.bin"
 	DUMPPATH="/sys/devices/platform/soc@0/d100000.remoteproc/d100000.remoteproc:remoteproc_pd2/remoteproc/remoteproc2/devcoredump/data"
+fi
+
+# Collect QCN6432 External Radio's Coredump(UserPD handled by ath12k)
+if [ -e /sys/devices/platform/soc@0/soc@0:wifi1@c0000000/devcoredump/data ] && [ "$ACTION" = add ]; then
+	FILENAME="qcn6432-userpd2-q6dump-$TIMESTAMP.bin"
+	DUMPPATH="/sys/devices/platform/soc@0/soc@0:wifi1@c0000000/devcoredump/data"
+fi
+
+if [ -e /sys/devices/platform/soc@0/soc@0:wifi2@c0000000/devcoredump/data ] && [ "$ACTION" = add ]; then
+	FILENAME="qcn6432-userpd3-q6dump-$TIMESTAMP.bin"
+	DUMPPATH="/sys/devices/platform/soc@0/soc@0:wifi2@c0000000/devcoredump/data"
 fi
 
 if [ -n "$FILENAME" ]; then

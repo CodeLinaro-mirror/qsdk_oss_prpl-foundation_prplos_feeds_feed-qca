@@ -62,7 +62,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	default:
  		wpa_printf(MSG_DEBUG, "Unknown width for %d channels", n_chans);
  		break;
-@@ -374,7 +388,8 @@ static void dfs_adjust_center_freq(struc
+@@ -381,7 +395,8 @@ static void dfs_adjust_center_freq(struc
  				   u8 *oper_centr_freq_seg0_idx,
  				   u8 *oper_centr_freq_seg1_idx)
  {
@@ -72,7 +72,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		return;
  
  	if (!chan)
-@@ -401,7 +416,9 @@ static void dfs_adjust_center_freq(struc
+@@ -408,7 +423,9 @@ static void dfs_adjust_center_freq(struc
  		*oper_centr_freq_seg0_idx = chan->chan + 6;
  		*oper_centr_freq_seg1_idx = sec_chan_idx_80p80 + 6;
  		break;
@@ -83,7 +83,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	default:
  		wpa_printf(MSG_INFO,
  			   "DFS: Unsupported channel width configuration");
-@@ -793,7 +810,7 @@ static int set_dfs_state(struct hostapd_
+@@ -800,7 +817,7 @@ static int set_dfs_state(struct hostapd_
  		frequency = cf1 - 70;
  		break;
  	case CHAN_WIDTH_320:
@@ -92,7 +92,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		frequency = cf1 - 150;
  		break;
  	default:
-@@ -857,6 +874,10 @@ static int dfs_are_channels_overlapped(s
+@@ -864,6 +881,10 @@ static int dfs_are_channels_overlapped(s
  		radar_n_chans = 8;
  		frequency = cf1 - 70;
  		break;
@@ -103,7 +103,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	default:
  		wpa_printf(MSG_INFO, "DFS chan_width %d not supported",
  			   chan_width);
-@@ -1401,6 +1422,7 @@ dfs_downgrade_bandwidth(struct hostapd_i
+@@ -1408,6 +1429,7 @@ dfs_downgrade_bandwidth(struct hostapd_i
  			enum dfs_channel_type *channel_type)
  {
  	struct hostapd_channel_data *channel;

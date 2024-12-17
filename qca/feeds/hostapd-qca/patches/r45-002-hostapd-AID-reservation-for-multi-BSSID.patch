@@ -15,11 +15,9 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  src/ap/ieee802_11.c |  4 ++--
  2 files changed, 27 insertions(+), 6 deletions(-)
 
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 925f11e..608603b 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3499,7 +3499,7 @@ fail:
+@@ -3514,7 +3514,7 @@ fail:
  }
  
  
@@ -28,7 +26,7 @@ index 925f11e..608603b 100644
  {
  	struct hostapd_iface *iface = hapd->iface;
  	struct hostapd_multi_mbssid_group *group = NULL, **all_group;
-@@ -3559,6 +3559,27 @@ fail:
+@@ -3574,6 +3574,27 @@ fail:
  	hapd->mbssid_group = NULL;
  }
  
@@ -56,7 +54,7 @@ index 925f11e..608603b 100644
  static void hostapd_cleanup_unused_mlds(struct hapd_interfaces *interfaces)
  {
  #ifdef CONFIG_IEEE80211BE
-@@ -3686,7 +3707,7 @@ struct hostapd_iface * hostapd_init(struct hapd_interfaces *interfaces,
+@@ -3703,7 +3724,7 @@ struct hostapd_iface * hostapd_init(stru
  		 */
  		hapd->mbssid_idx = i;
  		hostapd_bss_setup_multi_link(hapd, interfaces);
@@ -65,7 +63,7 @@ index 925f11e..608603b 100644
  	}
  
  	hapd_iface->is_ch_switch_dfs = false;
-@@ -3842,7 +3863,7 @@ hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
+@@ -3859,7 +3880,7 @@ hostapd_interface_init_bss(struct hapd_i
  		iface->bss[iface->num_bss] = hapd;
  		hapd->msg_ctx = hapd;
  		hostapd_bss_setup_multi_link(hapd, interfaces);
@@ -74,7 +72,7 @@ index 925f11e..608603b 100644
  
  
  		bss_idx = iface->num_bss++;
-@@ -4251,7 +4272,7 @@ static int hostapd_data_alloc(struct hostapd_iface *hapd_iface,
+@@ -4269,7 +4290,7 @@ static int hostapd_data_alloc(struct hos
  		}
  		hapd->msg_ctx = hapd;
  		hostapd_bss_setup_multi_link(hapd, hapd_iface->interfaces);
@@ -83,11 +81,9 @@ index 925f11e..608603b 100644
  	}
  
  	hapd_iface->conf = conf;
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index db9a8da..e8fbd01 100644
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3369,7 +3369,7 @@ static u32 hostapd_get_aid_word(struct hostapd_data *hapd,
+@@ -3486,7 +3486,7 @@ static u32 hostapd_get_aid_word(struct h
  					   "MLD: Failed to get link BSS for AID");
  				continue;
  			}
@@ -96,7 +92,7 @@ index db9a8da..e8fbd01 100644
  			aid_word |= link_bss->sta_aid[i];
  		}
  
-@@ -3461,7 +3463,7 @@ int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
+@@ -3578,7 +3578,7 @@ int hostapd_get_aid(struct hostapd_data
  	}
  	if (j == 32)
  		return -1;
@@ -105,6 +101,36 @@ index db9a8da..e8fbd01 100644
  	if (aid > 2007)
  		return -1;
  
--- 
-2.34.1
-
+@@ -4777,7 +4777,7 @@ static int ieee80211_ml_process_link(str
+ 			status = WLAN_STATUS_UNSPECIFIED_FAILURE;
+ 			goto out;
+ 		}
+-		hapd->sta_aid[(sta->aid - 1) / 32] |= BIT((sta->aid - 1) % 32);
++		hapd->sta_aid[sta->aid / 32] |= BIT(sta->aid % 32);
+ 		sta->listen_interval = origin_sta->listen_interval;
+ 		if (update_ht_state(hapd, sta) > 0)
+ 			ieee802_11_update_beacons(hapd->iface);
+--- a/src/ap/sta_info.c
++++ b/src/ap/sta_info.c
+@@ -301,8 +301,8 @@ void ap_free_sta(struct hostapd_data *ha
+ 	ap_sta_list_del(hapd, sta);
+ 
+ 	if (sta->aid > 0)
+-		hapd->sta_aid[(sta->aid - 1) / 32] &=
+-			~BIT((sta->aid - 1) % 32);
++		hapd->sta_aid[sta->aid / 32] &=
++			~BIT(sta->aid % 32);
+ 
+ 	if (sta->wds_mld_uid > 0)
+ 		hapd->wds_sta_uid[(sta->wds_mld_uid - 1) / 32] &=
+--- a/src/ap/hostapd.h
++++ b/src/ap/hostapd.h
+@@ -262,7 +262,7 @@ struct hostapd_data {
+ 
+ 	/*
+ 	 * Bitfield for indicating which AIDs are allocated. Only AID values
+-	 * 1-2007 are used and as such, the bit at index 0 corresponds to AID
++	 * 1-2007 are used and as such, the bit at index 1 corresponds to AID
+ 	 * 1.
+ 	 */
+ #define AID_WORDS ((2008 + 31) / 32)

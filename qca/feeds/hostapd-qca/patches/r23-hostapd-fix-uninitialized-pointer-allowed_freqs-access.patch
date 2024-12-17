@@ -20,7 +20,7 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -2914,6 +2914,8 @@ static int __ieee802_11_set_beacon(struc
+@@ -2971,6 +2971,8 @@ static int __ieee802_11_set_beacon(struc
  		params.freq = &freq;
  	}
  
@@ -29,7 +29,7 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
  	for (i = 0; i < hapd->iface->num_hw_features; i++) {
  		mode = &hapd->iface->hw_features[i];
  
-@@ -2926,6 +2928,7 @@ static int __ieee802_11_set_beacon(struc
+@@ -2983,6 +2985,7 @@ static int __ieee802_11_set_beacon(struc
  						   iconf->acs_ch_list.num),
  						 true, &params.allowed_freqs);
  	}

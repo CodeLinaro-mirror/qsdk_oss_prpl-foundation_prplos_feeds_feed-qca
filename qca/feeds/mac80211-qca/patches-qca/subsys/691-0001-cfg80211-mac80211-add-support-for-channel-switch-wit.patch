@@ -407,7 +407,8 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		goto out;
  	}
  
- 	if (params->punct_bitmap && !sdata->vif.bss_conf.eht_support)
+-	if (params->punct_bitmap && !sdata->vif.bss_conf.eht_support)
++	if (params->punct_bitmap && !link_conf->eht_support)
  		goto out;
  
 -	sdata->deflink.csa_chandef = params->chandef;

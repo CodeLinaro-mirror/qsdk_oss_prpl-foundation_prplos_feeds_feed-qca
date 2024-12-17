@@ -3,15 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-drv
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=win.nss.1.0.r24
 PKG_RELEASE:=2
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-drv
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=d5ee67bd84d1ee7ed81eb6758e62a6db5a0cf4c7
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
-
-NSS_CLIENTS_DIR:=$(TOPDIR)/feeds/feed_qca/qca/src/qca-nss-clients
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 

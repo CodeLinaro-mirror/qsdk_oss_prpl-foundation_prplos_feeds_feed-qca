@@ -569,3 +569,66 @@ Signed-off-by: Pavankumar Nandeshwar <quic_pnandesh@quicinc.com>
  {
  	return 0;
  }
+diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
+--- a/drivers/net/wireless/ath/ath12k/core.h
++++ b/drivers/net/wireless/ath/ath12k/core.h
+@@ -436,6 +436,7 @@ struct ath12k_link_vif {
+ 	bool pending_up;
+ 	bool pending_stop;
+ 	bool spectral_enabled;
++	bool primary_sta_link;
+ 	u8 bssid[ETH_ALEN];
+ 	struct cfg80211_bitrate_mask bitrate_mask;
+ 	struct delayed_work connection_loss_work;
+diff --git a/drivers/net/wireless/ath/ath12k/dp.c b/drivers/net/wireless/ath/ath12k/dp.c
+--- a/drivers/net/wireless/ath/ath12k/dp.c
++++ b/drivers/net/wireless/ath/ath12k/dp.c
+@@ -92,6 +92,7 @@ int ath12k_dp_peer_setup(struct ath12k *ar, struct ath12k_link_vif *arvif,
+ 			 struct ath12k_link_sta *arsta)
+ {
+ 	struct ath12k_base *ab = ar->ab;
++	struct ieee80211_vif *vif = arvif->ahvif->vif;
+ 	struct ath12k_peer *peer;
+ 	struct crypto_shash *tfm;
+ 	int ret = 0, tid;
+@@ -112,10 +113,15 @@ int ath12k_dp_peer_setup(struct ath12k *ar, struct ath12k_link_vif *arvif,
+ 	if (peer->mlo && peer->link_id != arsta->ahsta->primary_link_id) {
+ 		ret = 0;
+ 		peer->primary_link = false;
++		arvif->primary_sta_link = false;
+ 		goto free_shash;
+ 	}
+ 
+ 	peer->primary_link = true;
++	arvif->primary_sta_link = true;
++
++	if (vif->type == NL80211_IFTYPE_STATION)
++		ath12k_dp_tx_ppeds_cfg_astidx_cache_mapping(ar->ab, arvif, true);
+ 
+ 	for (tid = 0; tid <= IEEE80211_NUM_TIDS; tid++) {
+ 		ret = ath12k_dp_rx_peer_tid_setup(ar, tid, 1, 0, HAL_PN_TYPE_NONE, peer);
+diff --git a/drivers/net/wireless/ath/ath12k/peer.c b/drivers/net/wireless/ath/ath12k/peer.c
+index 564a630..761bf90 100644
+--- a/drivers/net/wireless/ath/ath12k/peer.c
++++ b/drivers/net/wireless/ath/ath12k/peer.c
+@@ -852,7 +852,6 @@ int ath12k_peer_create(struct ath12k *ar, struct ath12k_link_vif *arvif,
+ 		arvif->ast_idx = peer->hw_peer_id;
+ 		arvif->desc.info4 = FIELD_PREP(HAL_TCL_DATA_CMD_INFO4_SEARCH_INDEX, arvif->ast_idx) |
+ 				    FIELD_PREP(HAL_TCL_DATA_CMD_INFO4_CACHE_SET_NUM, arvif->ast_hash);
+-		ath12k_dp_tx_ppeds_cfg_astidx_cache_mapping(ar->ab, arvif, true);
+ 	}
+ 
+ 	peer->sec_type = HAL_ENCRYPT_TYPE_OPEN;
+diff --git a/drivers/net/wireless/ath/ath12k/ppe.c b/drivers/net/wireless/ath/ath12k/ppe.c
+--- a/drivers/net/wireless/ath/ath12k/ppe.c
++++ b/drivers/net/wireless/ath/ath12k/ppe.c
+@@ -1137,7 +1137,8 @@ void ath12k_dp_tx_ppeds_cfg_astidx_cache_mapping(struct ath12k_base *ab,
+ 	int ppe_vp_profile_idx = arvif->ppe_vp_profile_idx;
+ 	struct ath12k_dp_ppe_vp_profile *vp_profile;
+ 
+-	if (!test_bit(ATH12K_FLAG_PPE_DS_ENABLED, &ab->dev_flags))
++	if (!test_bit(ATH12K_FLAG_PPE_DS_ENABLED, &ab->dev_flags) ||
++			!arvif->primary_sta_link)
+ 		return;
+ 
+ 	vp_profile = &ab->dp.ppe_vp_profile[ppe_vp_profile_idx];

@@ -32,15 +32,14 @@ Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -7754,10 +7754,11 @@ done:
+@@ -7821,10 +7821,11 @@ done:
  void nl80211_restore_ap_mode(struct i802_bss *bss)
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
 -	int was_ap = is_ap_interface(drv->nlmode);
--
+ 
 -	wpa_driver_nl80211_set_mode(bss, drv->ap_scan_as_station);
 -	if (!was_ap && is_ap_interface(drv->ap_scan_as_station) &&
-+	
 +	/* Set back AP mode if not currently in AP mode */
 +	if (drv->nlmode != drv->ap_scan_as_station)
 +		wpa_driver_nl80211_set_mode(bss, drv->ap_scan_as_station);
@@ -50,25 +49,17 @@ Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
  		wpa_printf(MSG_DEBUG,
 --- a/src/drivers/driver_nl80211_scan.c
 +++ b/src/drivers/driver_nl80211_scan.c
-@@ -356,8 +356,9 @@ int wpa_driver_nl80211_scan(struct i802_
- 	struct wpa_driver_nl80211_data *drv = bss->drv;
+@@ -362,7 +362,8 @@ int wpa_driver_nl80211_scan(struct i802_
  	int ret = -1, timeout;
  	struct nl_msg *msg = NULL;
--
+ 
 -	wpa_dbg(bss->ctx, MSG_DEBUG, "nl80211: scan request");
-+	
 +	wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: scan request for %s, iftype %s",
 +			bss->ifname, nl80211_iftype_str(drv->nlmode));
  	drv->scan_for_auth = 0;
  
  	if (TEST_FAIL())
-@@ -462,10 +463,18 @@ int wpa_driver_nl80211_scan(struct i802_
- 			}
- 
- 			/* Restore AP mode when processing scan results */
-+			wpa_printf(MSG_DEBUG, "nl80211: restore AP mode for %s\n",
-+					bss->ifname);
- 			drv->ap_scan_as_station = old_mode;
+@@ -466,6 +467,12 @@ int wpa_driver_nl80211_scan(struct i802_
  			ret = 0;
  		} else
  			goto fail;

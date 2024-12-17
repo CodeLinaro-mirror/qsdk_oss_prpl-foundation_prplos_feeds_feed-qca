@@ -10,11 +10,9 @@ Signed-off-by: Bhagavathi Perumal S <quic_bperumal@quicinc.com>
  wpa_supplicant/bss.c | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/wpa_supplicant/bss.c b/wpa_supplicant/bss.c
-index 3bfcf7e..884181f 100644
 --- a/wpa_supplicant/bss.c
 +++ b/wpa_supplicant/bss.c
-@@ -756,7 +756,7 @@ wpa_bss_update(struct wpa_supplicant *wp
+@@ -807,7 +807,7 @@ wpa_bss_update(struct wpa_supplicant *wp
  		}
  
  		dl_list_del(&bss->list_id);
@@ -23,7 +21,7 @@ index 3bfcf7e..884181f 100644
  				  res->beacon_ie_len);
  		if (nbss) {
  			if (i != wpa_s->last_scan_res_used)
-@@ -771,6 +771,8 @@ wpa_bss_update(struct wpa_supplicant *wp
+@@ -822,6 +822,8 @@ wpa_bss_update(struct wpa_supplicant *wp
  			if (cwork)
  				wpa_bss_update_pending_connect(cwork, nbss);
  

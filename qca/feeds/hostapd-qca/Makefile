@@ -9,9 +9,9 @@ PKG_RELEASE:=2
 
 PKG_SOURCE_URL:=https://w1.fi/hostap.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2024-06-05
-PKG_SOURCE_VERSION:=1b96745f1de8806e2c500ad781aa09b88fdae7b9
-PKG_MIRROR_HASH:=d5ff4046dc8000a1c38e6920bf60a610b621ebb094525d3a076a8bd6c0792d54
+PKG_SOURCE_DATE:=2024-09-13
+PKG_SOURCE_VERSION:=ccba6921de6372a2220350bb5ed5776ea8c76bbb
+PKG_MIRROR_HASH:=e6ccdc31646e96c663d4948c897eddd0b1e73dd6af50686a6108e064073679e2
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-3-Clause
 PKG_CPE_ID:=cpe:/a:w1.fi:hostapd
@@ -598,8 +598,20 @@ endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
+	$(INSTALL_DIR) $(1)/usr/lib/
 	$(CP) $(PKG_BUILD_DIR)/src/common/qca-vendor.h $(1)/usr/include
 	$(CP) $(PKG_BUILD_DIR)/src/drivers/nl80211_copy.h $(1)/usr/include/
+	$(CP) $(PKG_BUILD_DIR)/src/common/wpa_ctrl.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/utils/os.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/utils/common.h $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/src/utils/wpa_debug.h $(1)/usr/include
+ifneq ($(LOCAL_VARIANT),macsec)
+	ar rcs $(1)/usr/lib/libwpa_ctrl.a \
+		$(PKG_BUILD_DIR)/build/hostapd/src/common/wpa_ctrl.o \
+		$(PKG_BUILD_DIR)/build/hostapd/src/utils/os_unix.o \
+		$(PKG_BUILD_DIR)/build/hostapd/src/utils/wpa_debug.o \
+		$(PKG_BUILD_DIR)/build/hostapd/src/utils/common.o
+endif
 endef
 
 TARGET_CPPFLAGS := \
@@ -611,6 +623,7 @@ TARGET_CPPFLAGS := \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
 TARGET_LDFLAGS += -lubox -lubus -lblobmsg_json -lucode -lm -lnl-tiny -ludebug
+TARGET_CFLAGS += -fPIC
 
 ifdef CONFIG_DEBUG
 	TARGET_CFLAGS += -g3

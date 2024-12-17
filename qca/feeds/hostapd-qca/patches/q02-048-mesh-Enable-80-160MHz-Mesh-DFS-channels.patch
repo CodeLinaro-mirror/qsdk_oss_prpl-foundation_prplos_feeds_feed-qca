@@ -26,7 +26,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 
 --- a/wpa_supplicant/mesh.c
 +++ b/wpa_supplicant/mesh.c
-@@ -393,6 +393,7 @@ static int wpa_supplicant_mesh_init(stru
+@@ -392,6 +392,7 @@ static int wpa_supplicant_mesh_init(stru
  	int basic_rates_erp[] = { 10, 20, 55, 60, 110, 120, 240, -1 };
  	int rate_len;
  	int frequency;
@@ -34,7 +34,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
  	if (!wpa_s->conf->user_mpm) {
  		/* not much for us to do here */
-@@ -484,8 +485,32 @@ static int wpa_supplicant_mesh_init(stru
+@@ -483,8 +484,32 @@ static int wpa_supplicant_mesh_init(stru
  	bss->conf->ap_max_inactivity = wpa_s->conf->mesh_max_inactivity;
  	bss->conf->mesh_fwding = wpa_s->conf->mesh_fwding;
  

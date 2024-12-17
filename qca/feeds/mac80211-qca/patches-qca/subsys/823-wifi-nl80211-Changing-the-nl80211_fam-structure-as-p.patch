@@ -21,7 +21,7 @@ index 40922a3..edbfa6a 100644
  	.n_small_ops = ARRAY_SIZE(nl80211_small_ops),
  #if LINUX_VERSION_IS_GEQ(6,1,0)
 -	.resv_start_op = NL80211_CMD_REMOVE_LINK_STA + 5,
-+	.resv_start_op = NL80211_CMD_REMOVE_LINK_STA + 6,
++	.resv_start_op = NL80211_CMD_REMOVE_LINK_STA + 9,
  #endif
  	.mcgrps = nl80211_mcgrps,
  	.n_mcgrps = ARRAY_SIZE(nl80211_mcgrps),

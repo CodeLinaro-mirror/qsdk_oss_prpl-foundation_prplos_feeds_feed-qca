@@ -14,7 +14,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7109,6 +7109,8 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7211,6 +7211,8 @@ u8 * hostapd_eid_txpower_envelope(struct
  	if (i == mode->num_channels)
  		return eid;
  
@@ -23,7 +23,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  #ifdef CONFIG_IEEE80211AX
  	/* IEEE Std 802.11ax-2021, Annex E.2.7 (6 GHz band in the United
  	 * States): An AP that is an Indoor Access Point per regulatory rules
-@@ -7233,7 +7235,6 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7335,7 +7337,6 @@ u8 * hostapd_eid_txpower_envelope(struct
  	 * channel in Country element and local pwr constraint is specified
  	 * for channel in this Power Constraint element.
  	 */

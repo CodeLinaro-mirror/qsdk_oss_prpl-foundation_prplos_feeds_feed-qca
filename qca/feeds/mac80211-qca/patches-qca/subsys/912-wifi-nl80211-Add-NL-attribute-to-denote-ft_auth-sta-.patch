@@ -23,7 +23,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  
  	/* When you run into this, adjust the code below for the new flag */
 -	BUILD_BUG_ON(NL80211_STA_FLAG_MAX != 7);
-+	BUILD_BUG_ON(NL80211_STA_FLAG_MAX != 8);
++	BUILD_BUG_ON(NL80211_STA_FLAG_MAX != 9);
  
  	switch (statype) {
  	case CFG80211_STA_MESH_PEER_KERNEL:
@@ -42,7 +42,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  
  	/* When you run into this, adjust the code below for the new flag */
 -	BUILD_BUG_ON(NL80211_STA_FLAG_MAX != 7);
-+	BUILD_BUG_ON(NL80211_STA_FLAG_MAX != 8);
++	BUILD_BUG_ON(NL80211_STA_FLAG_MAX != 9);
  
  	switch (dev->ieee80211_ptr->iftype) {
  	case NL80211_IFTYPE_AP:

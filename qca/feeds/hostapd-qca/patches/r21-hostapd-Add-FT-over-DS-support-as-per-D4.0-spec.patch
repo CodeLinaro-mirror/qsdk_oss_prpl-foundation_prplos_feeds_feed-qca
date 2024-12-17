@@ -96,7 +96,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  
  	if (!hapd->mld)
  		return NULL;
-@@ -5542,34 +5542,48 @@ get_sta_from_ft_ds_list(struct hostapd_d
+@@ -5542,44 +5542,58 @@ get_sta_from_ft_ds_list(struct hostapd_d
  		return NULL;
  
  	entry = ap_get_ft_ds_ml_sta(hapd, sta_mld);
@@ -108,6 +108,16 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
 +	}
  
  	wpa_sm = entry->wpa_sm;
+
+	if (hapd->mld_link_id != wpa_sm->wpa_auth->link_id) {
+		wpa_printf(MSG_DEBUG, "FT: assoc link id different from"
+			   " the MLD id hence changing wpa_auth of sm to assoc link");
+		wpa_group_put_sm(wpa_sm);
+		wpa_sm->wpa_auth = hapd->wpa_auth;
+		wpa_sm->group = hapd->wpa_auth->group;
+		wpa_group_get_sm(wpa_sm);
+	}
+
  	eloop_cancel_timeout(hostap_ft_ds_ml_sta_timeout, entry, NULL);
 -	dl_list_del(&entry->list);
 -	os_free(entry);
@@ -306,21 +316,21 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  			    struct wpa_state_machine *sm);
  void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm);
 @@ -530,7 +531,8 @@ void wpa_ft_process_auth(struct wpa_stat
- 			 void *ctx);
+			 void *ctx);
  int wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
- 			    size_t ies_len);
+			    size_t ies_len, struct mld_info *mld_info);
 -int wpa_ft_action_rx(struct wpa_state_machine *sm, const u8 *data, size_t len);
 +int wpa_ft_action_rx(struct wpa_state_machine *sm, const u8 *data,
 +		const u8 *sa, const u8 *da, size_t len);
  int wpa_ft_rrb_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
- 		  const u8 *data, size_t data_len);
+		  const u8 *data, size_t data_len);
  void wpa_ft_rrb_oui_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
 --- a/src/ap/wpa_auth_ft.c
 +++ b/src/ap/wpa_auth_ft.c
 @@ -28,7 +28,7 @@
- #include "wpa_auth.h"
  #include "wpa_auth_i.h"
  #include "pmksa_cache_auth.h"
+ #include "sta_info.h"
 -
 +#include "hostapd.h"
  
@@ -476,9 +486,9 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  		}
 +		ml_links_data.has_rsn = false;
 +		ml_links_data.has_rsnx = false;
- 		ml_links_data.num_links = sm->n_mld_affiliated_links + 1;
- 		ml_links_data.link_data = assoc_link_data;
- 	}
+		ml_links_data.num_links = pos;
+		ml_links_data.link_data = assoc_link_data;
+	}
 @@ -4158,7 +4169,8 @@ out:
  }
  
@@ -686,7 +696,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  		/*
  		 * Cancel the existing timer
  		 */
- 		eloop_cancel_timeout(hostap_ft_ds_ml_sta_timeout, sta_ml_obj, NULL);
+		eloop_cancel_timeout(hostap_ft_ds_ml_sta_timeout, entry, NULL);
 -	else
 +	} else {
  		dl_list_add(&hapd->mld->ft_ds_ml_stas, &entry->list);

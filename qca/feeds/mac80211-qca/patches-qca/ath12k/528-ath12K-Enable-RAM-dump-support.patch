@@ -59,7 +59,7 @@ Signed-off-by: Balamurugan Selvarajan <quic_bselvara@quicinc.com>
  	ath12k_core_pre_reconfigure_recovery(ab);
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -498,6 +498,14 @@ struct ath12k_per_peer_tx_stats {
+@@ -499,6 +499,13 @@ struct ath12k_per_peer_tx_stats {
  	bool is_ampdu;
  };
  
@@ -68,13 +68,12 @@ Signed-off-by: Balamurugan Selvarajan <quic_bselvara@quicinc.com>
 +	 ATH12K_FW_RECOVERY_ENABLE_AUTO, /* Automatically recover after FW assert */
 +	 /* Enable only recovery. Send MPD SSR WMI */
 +	 /* command to unlink UserPD assert from RootPD */
-+	 ATH12K_FW_RECOVERY_ENABLE_SSR_ONLY,
 +};
 +
  #define ATH12K_FLUSH_TIMEOUT (5 * HZ)
  #define ATH12K_VDEV_DELETE_TIMEOUT_HZ (5 * HZ)
  
-@@ -827,6 +835,8 @@ struct ath12k_base {
+@@ -861,6 +868,8 @@ struct ath12k_base {
  
  	struct completion htc_suspend;
  
@@ -409,7 +408,7 @@ Signed-off-by: Balamurugan Selvarajan <quic_bselvara@quicinc.com>
  	ret = ath12k_mhi_get_msi(ab_pci);
  	if (ret) {
  		ath12k_err(ab, "failed to get msi for mhi\n");
-@@ -653,3 +655,8 @@ void ath12k_mhi_resume(struct ath12k_pci
+@@ -656,3 +658,8 @@ void ath12k_mhi_resume(struct ath12k_pci
  {
  	ath12k_mhi_set_state(ab_pci, ATH12K_MHI_RESUME);
  }

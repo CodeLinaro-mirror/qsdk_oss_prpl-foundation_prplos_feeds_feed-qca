@@ -38,8 +38,6 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  drivers/net/wireless/ath/ath12k/rx_desc.h |  7 ++++++
  8 files changed, 65 insertions(+), 12 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index 66b724b..6e13b17 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
 @@ -26,6 +26,7 @@
@@ -50,7 +48,7 @@ index 66b724b..6e13b17 100644
  #include <ppe_drv_sc.h>
  #endif
  
-@@ -2901,10 +2902,15 @@ static void ath12k_dp_rx_h_mpdu(struct ath12k *ar,
+@@ -2933,10 +2934,15 @@ static void ath12k_dp_rx_h_mpdu(struct a
  			if (likely(peer->dev)) {
  #if defined(CPTCFG_MAC80211_PPE_SUPPORT) || defined(CPTCFG_ATH12K_PPE_DS_SUPPORT)
  				if (peer->ppe_vp_num > 0) {
@@ -70,8 +68,6 @@ index 66b724b..6e13b17 100644
  					}
  				}
  #endif
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.h b/drivers/net/wireless/ath/ath12k/dp_rx.h
-index 86cf895..764a3ec 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
 @@ -148,6 +148,9 @@ struct ath12k_dp_rx_info {
@@ -84,11 +80,9 @@ index 86cf895..764a3ec 100644
  };
  
  #define ATH12K_DP_MIN_FST_CORE_MASK 0x1
-diff --git a/drivers/net/wireless/ath/ath12k/hal.c b/drivers/net/wireless/ath/ath12k/hal.c
-index 7f89c33..01e8119 100644
 --- a/drivers/net/wireless/ath/ath12k/hal.c
 +++ b/drivers/net/wireless/ath/ath12k/hal.c
-@@ -543,7 +543,7 @@ static u8 ath12k_hal_qcn9274_rx_desc_get_ip_valid(struct hal_rx_desc *desc)
+@@ -543,7 +543,7 @@ static u8 ath12k_hal_qcn9274_rx_desc_get
  }
  
  #define MPDU_START_WMASK 0xFFC
@@ -97,7 +91,7 @@ index 7f89c33..01e8119 100644
  
  static inline u16 ath12k_hal_rx_mpdu_start_wmask_get(void)
  {
-@@ -805,6 +805,19 @@ static void ath12k_hw_qcn9274_get_rx_msdulen_l3pad(struct hal_rx_desc *desc,
+@@ -805,6 +805,19 @@ static void ath12k_hw_qcn9274_get_rx_msd
  					      RX_MSDU_END_INFO5_L3_HDR_PADDING);
  }
  
@@ -133,8 +127,6 @@ index 7f89c33..01e8119 100644
  };
  
  static bool ath12k_hw_wcn7850_rx_desc_get_first_msdu(struct hal_rx_desc *desc)
-diff --git a/drivers/net/wireless/ath/ath12k/hal.h b/drivers/net/wireless/ath/ath12k/hal.h
-index a0eda0c..591010c 100644
 --- a/drivers/net/wireless/ath/ath12k/hal.h
 +++ b/drivers/net/wireless/ath/ath12k/hal.h
 @@ -1208,6 +1208,8 @@ struct hal_ops {
@@ -146,11 +138,9 @@ index a0eda0c..591010c 100644
  };
  
  extern const struct hal_ops hal_qcn9274_ops;
-diff --git a/drivers/net/wireless/ath/ath12k/peer.c b/drivers/net/wireless/ath/ath12k/peer.c
-index 32d8f91..d1e0c53 100644
 --- a/drivers/net/wireless/ath/ath12k/peer.c
 +++ b/drivers/net/wireless/ath/ath12k/peer.c
-@@ -871,8 +871,8 @@ int ath12k_peer_create(struct ath12k *ar, struct ath12k_link_vif *arvif,
+@@ -854,8 +854,8 @@ int ath12k_peer_create(struct ath12k *ar
  	/* Do not deliver frames to PPE in fast rx incase of RFS
  	 * RFS is supported only in SFE Mode
  	 */
@@ -161,28 +151,17 @@ index 32d8f91..d1e0c53 100644
  #endif
  #ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
  	if (arvif->ahvif->ppe_vp_type == PPE_VP_USER_TYPE_DS)
-diff --git a/drivers/net/wireless/ath/ath12k/ppe.c b/drivers/net/wireless/ath/ath12k/ppe.c
-index fd0e24b..b8bf901 100644
 --- a/drivers/net/wireless/ath/ath12k/ppe.c
 +++ b/drivers/net/wireless/ath/ath12k/ppe.c
-@@ -1482,6 +1482,16 @@ static bool ath12k_stats_update_ppe_vp(struct net_device *dev, ppe_vp_hw_stats_t
+@@ -1341,7 +1341,6 @@ static bool ath12k_stats_update_ppe_vp(s
  }
  #endif
  
-+/*
-+ * This callback is registered for Tx path.
-+ * PPE will invoke this callback and the skb is
-+ * routed to the driver.
-+ */
-+static bool ath12k_process_dst_ppe_vp(struct ppe_vp_cb_info *cb_info, void *cb_data)
-+{
-+	dev_queue_xmit(cb_info->skb);
-+	return true;
-+}
- 
+-
  void ath12k_vif_free_vp(struct ath12k_vif *ahvif)
  {
-@@ -1572,7 +1582,8 @@ int ath12k_vif_alloc_vp(struct ath12k_vif *ahvif, int ppe_vp_type, int *core_mas
+ 	struct wireless_dev *wdev = ieee80211_vif_to_wdev(ahvif->vif);
+@@ -1393,7 +1392,8 @@ int ath12k_vif_alloc_vp(struct ath12k_vi
  	vpai.net_dev_type = PPE_VP_NET_DEV_TYPE_WIFI;
  
  	/* RFS */
@@ -192,7 +171,7 @@ index fd0e24b..b8bf901 100644
  		vpai.usr_type = PPE_VP_USER_TYPE_PASSIVE;
  
  		/* user input takes highest precedence */
-@@ -1582,17 +1593,25 @@ int ath12k_vif_alloc_vp(struct ath12k_vif *ahvif, int ppe_vp_type, int *core_mas
+@@ -1403,17 +1403,23 @@ int ath12k_vif_alloc_vp(struct ath12k_vi
  			vpai.core_mask = ath12k_ppe_rfs_get_core_mask(ahvif);
  
  		ppe_vp_num = ppe_vp_alloc(wdev->netdev, &vpai);
@@ -211,8 +190,6 @@ index fd0e24b..b8bf901 100644
 +		break;
  #endif
 +	case PPE_VP_USER_TYPE_ACTIVE:
-+		vpai.dst_cb = ath12k_process_dst_ppe_vp;
-+		vpai.dst_cb_data = ahvif;
 +		vpai.usr_type = PPE_VP_USER_TYPE_ACTIVE;
 +		vpai.core_mask = ATH12K_PPE_DEFAULT_CORE_MASK;
 +		ppe_vp_num = ppe_vp_alloc(wdev->netdev, &vpai);
@@ -220,7 +197,7 @@ index fd0e24b..b8bf901 100644
  	}
  
  	if (ppe_vp_num <= 0) {
-@@ -1636,7 +1655,7 @@ ath12k_dp_rx_ppeds_fse_update_flow_info(struct ath12k_base *ab,
+@@ -1457,7 +1463,7 @@ ath12k_dp_rx_ppeds_fse_update_flow_info(
  	tuple_info->src_port = ppe_tuple->src_port;
  	tuple_info->dest_port = ppe_tuple->dest_port;
  	tuple_info->l4_protocol = ppe_tuple->protocol;
@@ -229,11 +206,9 @@ index fd0e24b..b8bf901 100644
  
  	if (ppe_flow_info->flags & PPE_DRV_FSE_IPV4) {
  		flow_info->is_addr_ipv4 = 1;
-diff --git a/drivers/net/wireless/ath/ath12k/ppe.h b/drivers/net/wireless/ath/ath12k/ppe.h
-index 48f261a..222c708 100644
 --- a/drivers/net/wireless/ath/ath12k/ppe.h
 +++ b/drivers/net/wireless/ath/ath12k/ppe.h
-@@ -82,7 +82,8 @@ struct ath12k_ppe {
+@@ -79,7 +79,8 @@ struct ath12k_ppe {
  
  #define ATH12K_DP_PPEDS_NAPI_DONE_BIT	1
  #define ATH12K_DP_PPEDS_TX_COMP_NAPI_BIT	2
@@ -243,8 +218,6 @@ index 48f261a..222c708 100644
  
  struct dp_ppe_ds_idxs {
  	u32 ppe2tcl_start_idx;
-diff --git a/drivers/net/wireless/ath/ath12k/rx_desc.h b/drivers/net/wireless/ath/ath12k/rx_desc.h
-index 3fa2278..8041130 100644
 --- a/drivers/net/wireless/ath/ath12k/rx_desc.h
 +++ b/drivers/net/wireless/ath/ath12k/rx_desc.h
 @@ -769,6 +769,9 @@ enum rx_msdu_start_reception_type {
@@ -268,6 +241,3 @@ index 3fa2278..8041130 100644
  	__le32 info8;
  	__le32 info9;
  	__le32 info10;
--- 
-2.34.1
-

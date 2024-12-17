@@ -17,11 +17,9 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  src/ap/beacon.c | 7 +++----
  1 file changed, 3 insertions(+), 4 deletions(-)
 
-diff --git a/src/ap/beacon.c b/src/ap/beacon.c
-index fd636fe..7eb2366 100644
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -281,11 +281,10 @@ static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
+@@ -275,11 +275,10 @@ static u8 * hostapd_eid_country(struct h
  	os_memcpy(pos, hapd->iconf->country, 3); /* e.g., 'US ' */
  	pos += 3;
  
@@ -36,6 +34,3 @@ index fd636fe..7eb2366 100644
  		/* Operating Triplet field */
  		/* Operating Extension Identifier (>= 201 to indicate this is
  		 * not a Subband Triplet field) */
--- 
-2.34.1
-

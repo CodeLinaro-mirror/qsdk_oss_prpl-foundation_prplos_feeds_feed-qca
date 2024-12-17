@@ -140,7 +140,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  
  	ret = ath12k_dp_alloc(ab);
  	if (ret) {
-@@ -3945,6 +3947,9 @@ static void ath12k_exit(void)
+@@ -3951,6 +3953,9 @@ static void ath12k_exit(void)
  	ath12k_pci_exit();
  	ath12k_ahb_exit();
  	ath12k_debugfs_destroy();
@@ -152,7 +152,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  module_init(ath12k_init)
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1277,9 +1277,9 @@ enum ath12k_mlo_recovery_mode {
+@@ -1286,9 +1286,9 @@ enum ath12k_mlo_recovery_mode {
  struct ath12k_internal_pci {
  	bool gic_enabled;
  	wait_queue_head_t gic_msi_waitq;
@@ -166,7 +166,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  struct ath12k_mlo_dp_umac_reset {
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
-@@ -38,7 +38,8 @@ enum ath12k_routing_pkt_type {
+@@ -41,7 +41,8 @@ enum ath12k_routing_pkt_type {
  };
  
  #define ATH12K_RX_PROTOCOL_TAG_START_OFFSET  128
@@ -178,7 +178,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/hal.c
 +++ b/drivers/net/wireless/ath/ath12k/hal.c
-@@ -712,7 +712,7 @@ static int ath12k_hal_srng_create_config
+@@ -716,7 +716,7 @@ static int ath12k_hal_srng_create_config
  	 * RXDMA_RX_MONITOR_BUF, TX_MONITOR_BUF, TX_MONITOR_DST, SW2RXDMA
  	 */
  	s = &hal->srng_config[HAL_PPE2TCL];
@@ -187,7 +187,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  	s->reg_start[1] = HAL_SEQ_WCSS_UMAC_TCL_REG + HAL_TCL_PPE2TCL1_RING_HP;
  
  	return 0;
-@@ -2646,7 +2646,7 @@ void ath12k_hal_dump_srng_stats(struct a
+@@ -2650,7 +2650,7 @@ void ath12k_hal_dump_srng_stats(struct a
  	}
  
  	ath12k_err(ab, "\nLast interrupt received for each group:\n");
@@ -196,7 +196,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		irq_grp = &ab->ext_irq_grp[i];
  		ath12k_err(ab, "group_id %d %ums before\n",
  			   irq_grp->grp_id,
-@@ -2704,7 +2704,7 @@ ssize_t ath12k_debugfs_hal_dump_srng_sta
+@@ -2708,7 +2708,7 @@ ssize_t ath12k_debugfs_hal_dump_srng_sta
  	}
  
  	len += scnprintf(buf + len, size - len, "\nLast interrupt received for each group:\n");
@@ -714,17 +714,6 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  void *ath12k_dp_get_ppe_ds_ctxt(struct ath12k_base *ab);
  irqreturn_t ath12k_ds_ppe2tcl_irq_handler(int irq, void *ctxt);
  irqreturn_t ath12k_ds_reo2ppe_irq_handler(int irq, void *ctxt);
---- a/drivers/net/wireless/ath/ath12k/dp_rx.c
-+++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3514,7 +3514,7 @@ int ath12k_dp_rx_pkt_type_filter(struct
- 
- 	param.opcode = ATH12K_WMI_PKTROUTE_ADD;
- 	param.meta_data = meta_data;
--	param.dst_ring = ATH12K_ROUTE_WBM_RELEASE;
-+	param.dst_ring = ATH12K_ROUTE_WBM_RELEASE(ar->ab);
- 	param.dst_ring_handler = ATH12K_WMI_PKTROUTE_USE_CCE;
- 	param.route_type_bmap = 1 << pkt_type;
- 
 --- a/drivers/net/wireless/ath/ath12k/bondif.c
 +++ b/drivers/net/wireless/ath/ath12k/bondif.c
 @@ -19,6 +19,33 @@ extern struct ath12k_link_vif *ath12k_ma
@@ -785,7 +774,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  	return true;
  }
  
-@@ -291,8 +319,12 @@ int ath12k_mac_op_change_vif_links(struc
+@@ -326,8 +354,12 @@ int ath12k_mac_op_change_vif_links(struc
  			return -EINVAL;
  		}
  
@@ -798,7 +787,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		link_ndev_pvt = netdev_priv(link_ndev);
  		memset(link_ndev_pvt, 0, sizeof(*link_ndev_pvt));
  		link_ndev->netdev_ops = &ieee80211_link_dataif_8023_ops;
-@@ -314,9 +346,12 @@ int ath12k_mac_op_change_vif_links(struc
+@@ -349,9 +381,12 @@ int ath12k_mac_op_change_vif_links(struc
  			return -EINVAL;
  		}
  
@@ -812,7 +801,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		if (mldev && !mldev->mcast_dev_set) {
  			mldev->mcast_dev_set = true;
  			mldev->primary_chipid = chip_id;
-@@ -704,12 +739,14 @@ void ieee80211_link_uninit(struct net_de
+@@ -739,12 +774,14 @@ void ieee80211_link_uninit(struct net_de
  
  static inline void ieee80211_tx_stats_bonded_if(struct net_device *dev, u32 len)
  {
@@ -875,7 +864,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  	}
  	disable_irq_nosync(irq);
  
-@@ -914,23 +902,7 @@ static int ath12k_pci_probe(struct pci_d
+@@ -916,23 +904,7 @@ static int ath12k_pci_probe(struct pci_d
  	u32 addr;
  	int ret;
  #ifdef CPTCFG_ATH12K_BONDED_DS_SUPPORT
@@ -900,7 +889,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  #endif
  	ab = ath12k_core_alloc(&pdev->dev, sizeof(*ab_pci), ATH12K_BUS_PCI,
  			       &ath12k_pci_bus_params);
-@@ -1177,8 +1149,4 @@ int ath12k_pci_init(void)
+@@ -1179,8 +1151,4 @@ int ath12k_pci_init(void)
  void ath12k_pci_exit(void)
  {
  	pci_unregister_driver(&ath12k_pci_driver);

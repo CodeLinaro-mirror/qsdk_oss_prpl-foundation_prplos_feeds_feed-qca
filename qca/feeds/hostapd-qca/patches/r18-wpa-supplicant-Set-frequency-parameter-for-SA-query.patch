@@ -25,7 +25,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
 
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -5353,7 +5353,7 @@ static void wpas_event_rx_mgmt_action(st
+@@ -5496,7 +5496,7 @@ static void wpas_event_rx_mgmt_action(st
  
  #ifdef CONFIG_SME
  	if (category == WLAN_ACTION_SA_QUERY) {
@@ -36,7 +36,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  #endif /* CONFIG_SME */
 --- a/wpa_supplicant/sme.c
 +++ b/wpa_supplicant/sme.c
-@@ -3470,7 +3470,7 @@ void sme_event_ch_switch(struct wpa_supp
+@@ -3563,7 +3563,7 @@ void sme_event_ch_switch(struct wpa_supp
  
  static void sme_process_sa_query_request(struct wpa_supplicant *wpa_s,
  					 const u8 *sa, const u8 *data,
@@ -45,7 +45,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  {
  	u8 resp[2 + WLAN_SA_QUERY_TR_ID_LEN + OCV_OCI_EXTENDED_LEN];
  	u8 resp_len = 2 + WLAN_SA_QUERY_TR_ID_LEN;
-@@ -3509,7 +3509,7 @@ static void sme_process_sa_query_request
+@@ -3602,7 +3602,7 @@ static void sme_process_sa_query_request
  	}
  #endif /* CONFIG_OCV */
  
@@ -54,7 +54,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  				wpa_s->own_addr, wpa_s->bssid,
  				resp, resp_len, 0) < 0)
  		wpa_msg(wpa_s, MSG_INFO,
-@@ -3552,7 +3552,7 @@ static void sme_process_sa_query_respons
+@@ -3645,7 +3645,7 @@ static void sme_process_sa_query_respons
  
  
  void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *da, const u8 *sa,
@@ -63,7 +63,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  {
  	if (len < 1 + WLAN_SA_QUERY_TR_ID_LEN)
  		return;
-@@ -3598,7 +3598,7 @@ void sme_sa_query_rx(struct wpa_supplica
+@@ -3691,7 +3691,7 @@ void sme_sa_query_rx(struct wpa_supplica
  #endif /* CONFIG_OCV */
  
  	if (data[0] == WLAN_SA_QUERY_REQUEST)

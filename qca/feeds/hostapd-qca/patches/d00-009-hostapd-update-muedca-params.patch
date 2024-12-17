@@ -14,7 +14,7 @@
  					   "Failed to update beacons with WMM parameters");
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2288,6 +2288,39 @@ static void hostapd_event_wds_sta_interf
+@@ -2311,6 +2311,39 @@ static void hostapd_event_wds_sta_interf
  		ifname, MAC2STR(addr));
  }
  
@@ -54,10 +54,10 @@
  
  #ifdef CONFIG_OWE
  static int hostapd_notif_update_dh_ie(struct hostapd_data *hapd,
-@@ -2742,6 +2775,9 @@ void hostapd_wpa_event(void *ctx, enum w
- 		hostapd_cleanup_cca_params(hapd);
+@@ -2878,6 +2911,9 @@ void hostapd_wpa_event(void *ctx, enum w
+ 		hostapd_mld_interface_freed(hapd);
  		break;
- #endif /* CONFIG_IEEE80211AX */
+ #endif /* CONFIG_IEEE80211BE */
 +	 case EVENT_UPDATE_MUEDCA_PARAMS:
 +		 hostapd_event_update_muedca_params(hapd, &data->update_muedca);
 +		 break;
@@ -66,7 +66,7 @@
  		break;
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -2895,6 +2895,9 @@ hostapd_alloc_bss_data(struct hostapd_if
+@@ -2978,6 +2978,9 @@ hostapd_alloc_bss_data(struct hostapd_if
  	dl_list_init(&hapd->sae_commit_queue);
  #endif /* CONFIG_SAE */
  
@@ -76,7 +76,7 @@
  	return hapd;
  }
  
-@@ -4415,6 +4418,10 @@ static int hostapd_fill_csa_settings(str
+@@ -4510,6 +4513,10 @@ static int hostapd_fill_csa_settings(str
  	hapd->cs_count = settings->cs_count;
  	hapd->cs_block_tx = settings->block_tx;
  
@@ -151,7 +151,7 @@
  			  size_t len);
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -5855,6 +5855,16 @@ enum wpa_event_type {
+@@ -5980,6 +5980,16 @@ enum wpa_event_type {
  	EVENT_LINK_CH_SWITCH_STARTED,
  
  	/**
@@ -168,7 +168,7 @@
  	 * EVENT_TID_LINK_MAP - MLD event to set TID-to-link mapping
  	 *
  	 * This event is used by the driver to indicate the received TID-to-link
-@@ -6832,6 +6842,16 @@ union wpa_event_data {
+@@ -6963,6 +6973,16 @@ union wpa_event_data {
  	struct pasn_auth pasn_auth;
  
  	/**
@@ -194,7 +194,7 @@
 +	E2S(UPDATE_MUEDCA_PARAMS);
  	E2S(TID_LINK_MAP);
  	E2S(LINK_RECONFIG);
- 	}
+ 	E2S(MLD_INTERFACE_FREED);
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
 @@ -184,6 +184,7 @@ static const char * nl80211_command_to_s
@@ -204,8 +204,8 @@
 +	C2S(NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS)
  	C2S(NL80211_CMD_SET_HW_TIMESTAMP)
  	C2S(NL80211_CMD_LINKS_REMOVED)
- 	C2S(__NL80211_CMD_AFTER_LAST)
-@@ -3547,6 +3548,35 @@ static void nl80211_external_auth(struct
+ 	C2S(NL80211_CMD_SET_TID_TO_LINK_MAPPING)
+@@ -3602,6 +3603,35 @@ static void nl80211_external_auth(struct
  	wpa_supplicant_event(drv->ctx, EVENT_EXTERNAL_AUTH, &event);
  }
  
@@ -241,8 +241,8 @@
  
  static void nl80211_port_authorized(struct wpa_driver_nl80211_data *drv,
  				    struct nlattr **tb)
-@@ -4111,6 +4141,9 @@ static void do_process_drv_event(struct
- 		nl80211_color_change_announcement_completed(bss);
+@@ -4174,6 +4204,9 @@ static void do_process_drv_event(struct
+ 		nl80211_obss_color_event(bss, cmd, tb);
  		break;
  #endif /* CONFIG_IEEE80211AX */
 +	case NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS:

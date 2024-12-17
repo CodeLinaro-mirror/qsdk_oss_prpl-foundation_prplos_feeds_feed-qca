@@ -37,25 +37,3 @@ Signed-off-by: Raj Kumar Bhagat <quic_rajkbhag@quicinc.com>
  	ext_feat_case(POWERED_ADDR_CHANGE, "can change MAC address while up");
  	ext_feat_case(PUNCT, "preamble puncturing in AP mode");
  	ext_feat_case(SECURE_NAN, "secure NAN support");
---- a/nl80211.h
-+++ b/nl80211.h
-@@ -6815,6 +6815,9 @@ enum nl80211_feature_flags {
-  *	might apply, e.g. no scans in progress, no offchannel operations
-  *	in progress, and no active connections.
-  *
-+ * @NL80211_EXT_FEATURE_WIDE_BAND_SCAN: Driver/device supports wide band scan
-+ *	on a frequency along with its corresponding phymode (40Mhz, 80Mhz)
-+ *
-  * @NUM_NL80211_EXT_FEATURES: number of extended features.
-  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
-  */
-@@ -6881,7 +6884,9 @@ enum nl80211_ext_feature_index {
- 	NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE,
- 	NL80211_EXT_FEATURE_BSS_COLOR,
- 	NL80211_EXT_FEATURE_FILS_CRYPTO_OFFLOAD,
-+	NL80211_EXT_FEATURE_WIDE_BAND_SCAN,
- 	NL80211_EXT_FEATURE_RADAR_BACKGROUND,
-+	NL80211_EXT_FEATURE_STA_MGMT_RTS_CTS,
- 	NL80211_EXT_FEATURE_POWERED_ADDR_CHANGE,
- 	NL80211_EXT_FEATURE_PUNCT,
- 	NL80211_EXT_FEATURE_SECURE_NAN,

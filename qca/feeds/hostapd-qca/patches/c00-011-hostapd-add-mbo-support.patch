@@ -1,6 +1,6 @@
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4432,10 +4432,12 @@ static int hostapd_config_fill(struct ho
+@@ -4502,10 +4502,12 @@ static int hostapd_config_fill(struct ho
  #ifdef CONFIG_MBO
  	} else if (os_strcmp(buf, "mbo") == 0) {
  		bss->mbo_enabled = atoi(pos);
@@ -17,7 +17,7 @@
  #define PARSE_TEST_PROBABILITY(_val)				\
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -746,6 +746,11 @@ struct hostapd_bss_config {
+@@ -761,6 +761,11 @@ struct hostapd_bss_config {
  	 *  - Set BIT(2) to enable OCE in AP mode
  	 */
  	unsigned int oce;
@@ -31,7 +31,7 @@
  
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -1465,6 +1465,7 @@ int hostapd_ctrl_iface_bss_tm_req(struct
+@@ -1472,6 +1472,7 @@ int hostapd_ctrl_iface_bss_tm_req(struct
  	int nei_len;
  	u8 mbo[10];
  	size_t mbo_len = 0;
@@ -39,7 +39,7 @@
  
  	if (hwaddr_aton(cmd, addr)) {
  		wpa_printf(MSG_DEBUG, "Invalid STA MAC address");
-@@ -1505,10 +1506,11 @@ int hostapd_ctrl_iface_bss_tm_req(struct
+@@ -1512,10 +1513,11 @@ int hostapd_ctrl_iface_bss_tm_req(struct
  	if (pos) {
  		pos += 10;
  		req_mode |= WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED;
@@ -53,7 +53,7 @@
  		end = os_strchr(pos, ',');
  		if (end == NULL) {
  			wpa_printf(MSG_DEBUG, "Invalid bss_term data");
-@@ -1518,7 +1520,11 @@ int hostapd_ctrl_iface_bss_tm_req(struct
+@@ -1525,7 +1527,11 @@ int hostapd_ctrl_iface_bss_tm_req(struct
  		WPA_PUT_LE16(&bss_term_dur[10], atoi(end));
  	}
  
@@ -287,7 +287,7 @@
  
  static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
  					    struct ieee802_11_elems *elems,
-@@ -2983,11 +2983,19 @@ bool is_same_band(int freq1, int freq2)
+@@ -3015,11 +3015,19 @@ bool is_same_band(int freq1, int freq2)
  }
  
  
@@ -309,7 +309,7 @@
  
  	/*
  	 * BSS Transition Candidate List Entries - Neighbor Report elements
-@@ -3043,6 +3051,9 @@ int ieee802_11_parse_candidate_list(cons
+@@ -3075,6 +3083,9 @@ int ieee802_11_parse_candidate_list(cons
  		pos++;
  
  		*nei_pos++ = atoi(pos); /* Channel Number */
@@ -319,7 +319,7 @@
  		pos = os_strchr(pos, ',');
  		if (pos == NULL) {
  			wpa_printf(MSG_DEBUG, "Missing PHY Type");
-@@ -3074,6 +3085,25 @@ int ieee802_11_parse_candidate_list(cons
+@@ -3106,6 +3117,25 @@ int ieee802_11_parse_candidate_list(cons
  					   "Invalid neighbor subelement info");
  				return -1;
  			}
@@ -347,7 +347,7 @@
  		}
 --- a/src/common/ieee802_11_common.h
 +++ b/src/common/ieee802_11_common.h
-@@ -297,8 +297,8 @@ bool is_same_band(int freq1, int freq2);
+@@ -309,8 +309,8 @@ bool is_same_band(int freq1, int freq2);
  #define IS_2P4GHZ(n) (n >= 2412 && n <= 2484)
  #define IS_5GHZ(n) (n > 4000 && n < 5895)
  
@@ -360,7 +360,7 @@
  bool ieee802_11_rsnx_capab_len(const u8 *rsnxe, size_t rsnxe_len,
 --- a/wpa_supplicant/wnm_sta.c
 +++ b/wpa_supplicant/wnm_sta.c
-@@ -1704,7 +1704,7 @@ int wnm_send_bss_transition_mgmt_query(s
+@@ -1742,7 +1742,7 @@ int wnm_send_bss_transition_mgmt_query(s
  			return ret;
  		}
  

@@ -35,17 +35,17 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -2826,6 +2826,49 @@ static int hostapd_ctrl_iface_color_chan
+@@ -2753,6 +2753,62 @@ static int hostapd_ctrl_check_freq_param
  #endif /* NEED_AP_MLME */
- }
+ 
  
 +static int hostapd_ctrl_iface_set_pwr_mode(struct hostapd_iface *iface,
 +					   char *pos)
 +{
 +#ifdef NEED_AP_MLME
 +	struct he_6ghz_pwr_mode_settings settings;
-+	struct hostapd_data *hapd = iface->bss[0];
-+	int ret, he_6ghz_pwr_mode;
++	int ret, he_6ghz_pwr_mode, err = 0;
++	unsigned int i, num_err = 0;
 +	char *end;
 +
 +	if (iface->power_mode_6ghz_before_change > -1) {
@@ -65,18 +65,31 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +		return -1;
 +	}
 +
++	if (he_6ghz_pwr_mode == HE_REG_INFO_6GHZ_AP_TYPE_SP &&
++	    !iface->is_afc_power_event_received) {
++		wpa_printf(MSG_ERROR, "Standard Power mode cant be set without AFC");
++		return -1;
++	}
++
 +	settings.pwr_mode = he_6ghz_pwr_mode;
 +	iface->power_mode_6ghz_before_change = he_6ghz_pwr_mode;
 +	wpa_printf(MSG_DEBUG, "Setting user selected 6 GHz power mode: %d\n",
 +		   he_6ghz_pwr_mode);
 +
-+	ret = hostapd_drv_set_6ghz_pwr_mode(hapd, &settings);
-+	if (ret) {
-+		iface->power_mode_6ghz_before_change = -1;
-+		return -1;
++	for (i = 0; i < iface->num_bss; i++) {
++		err = hostapd_drv_set_6ghz_pwr_mode(iface->bss[i], &settings);
++		if (err) {
++			ret = err;
++			num_err++;
++		}
 +	}
 +
-+	return 0;
++	if (iface->num_bss != num_err)
++		return 0;
++
++	iface->power_mode_6ghz_before_change = -1;
++
++	return ret;
 +#else /* NEED_AP_MLME */
 +	return -1;
 +#endif /* NEED_AP_MLME */
@@ -85,20 +98,20 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  static int hostapd_ctrl_iface_chan_switch(struct hostapd_iface *iface,
  					  char *pos)
  {
-@@ -4928,6 +4971,9 @@ static int hostapd_ctrl_iface_receive_pr
- 	 } else if (os_strncmp(buf, "COLOR_CHANGE ", 12) == 0) {
- 		 if (hostapd_ctrl_iface_color_change(hapd->iface, buf + 12))
- 			 reply_len = -1;
+@@ -4980,6 +5036,9 @@ static int hostapd_ctrl_iface_receive_pr
+ 	} else if (os_strncmp(buf, "COLOR_CHANGE ", 13) == 0) {
+ 		if (hostapd_ctrl_iface_color_change(hapd->iface, buf + 13))
+ 			reply_len = -1;
 +	} else if (os_strncmp(buf, "SET_6GHZ_PWR_MODE ", 18) == 0) {
 +		if (hostapd_ctrl_iface_set_pwr_mode(hapd->iface, buf + 18))
 +			reply_len = -1;
- 	} else if (os_strncmp(buf, "VENDOR ", 7) == 0) {
- 		reply_len = hostapd_ctrl_iface_vendor(hapd, buf + 7, reply,
- 						      reply_size);
+ #endif /* CONFIG_IEEE80211AX */
+ 	} else if (os_strncmp(buf, "NOTIFY_CW_CHANGE ", 17) == 0) {
+ 		if (hostapd_ctrl_iface_notify_cw_change(hapd, buf + 17))
 --- a/hostapd/hostapd_cli.c
 +++ b/hostapd/hostapd_cli.c
-@@ -1174,6 +1174,31 @@ static int hostapd_cli_cmd_fst(struct wp
- #endif /* CONFIG_FST */
+@@ -1181,6 +1181,31 @@ static int hostapd_cli_cmd_color_change(
+ #endif /* CONFIG_IEEE80211AX */
  
  
 +static int hostapd_cli_cmd_set_pwr_mode(struct wpa_ctrl *ctrl,
@@ -129,7 +142,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
  				       int argc, char *argv[])
  {
-@@ -1762,6 +1787,8 @@ static const struct hostapd_cli_cmd host
+@@ -1769,6 +1794,8 @@ static const struct hostapd_cli_cmd host
  	  "<addr> = send QoS Map Configure frame" },
  	{ "notify_cw_change", hostapd_cli_cmd_notify_cw_change, NULL,
  	  "<channel_width> = 0 - 20 MHz, 1 - 40 MHz, 2 - 80 MHz, 3 - 160 MHz" },
@@ -160,7 +173,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  					   struct cca_settings *settings)
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2382,6 +2382,34 @@ static void hostapd_event_update_muedca_
+@@ -2390,6 +2390,39 @@ static void hostapd_event_update_muedca_
  			   "Failed to update beacons with MU-EDCA parameters");
  }
  
@@ -185,6 +198,11 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +		hostapd_disable_iface(iface);
 +	}
 +
++	if (hostapd_set_current_hw_info(iface, iface->freq)) {
++		wpa_printf(MSG_ERROR, "Failed to get operating hw mac id");
++		hostapd_disable_iface(iface);
++	}
++
 +	if (ieee802_11_update_beacons(hapd->iface))
 +		wpa_printf(MSG_DEBUG,
 +			   "Failed to update beacons with new pwr_mode");
@@ -195,20 +213,20 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #ifdef CONFIG_OWE
  static int hostapd_notif_update_dh_ie(struct hostapd_data *hapd,
  				      const u8 *peer, const u8 *ie,
-@@ -2933,6 +2961,10 @@ void hostapd_wpa_event(void *ctx, enum w
- 			}
- 		}
+@@ -2973,6 +3006,10 @@ void hostapd_wpa_event(void *ctx, enum w
+ 			   hapd->conf->iface);
+ 		hostapd_event_color_change(hapd, true);
  		break;
 +	case EVENT_6GHZ_POWER_MODE_NOTIFY:
 +		hostapd_event_6ghz_power_mode(hapd,
 +					      data->ap_6ghz_pwr_mode_event.pwr_mode);
 +		break;
  #endif /* CONFIG_IEEE80211AX */
- 	case EVENT_UPDATE_MUEDCA_PARAMS:
- 		hostapd_event_update_muedca_params(hapd, &data->update_muedca);
+ #ifdef CONFIG_IEEE80211BE
+ 	case EVENT_MLD_INTERFACE_FREED:
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -2231,6 +2231,7 @@ static int setup_interface2(struct hosta
+@@ -2243,6 +2243,7 @@ static int setup_interface2(struct hosta
  {
  	iface->wait_channel_update = 0;
  	iface->is_no_ir = false;
@@ -216,7 +234,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
  	if (hostapd_get_hw_features(iface)) {
  		/* Not all drivers support this yet, so continue without hw
-@@ -3029,6 +3030,7 @@ void hostapd_interface_deinit(struct hos
+@@ -3048,6 +3049,7 @@ void hostapd_interface_deinit(struct hos
  
  	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
  	iface->wait_channel_update = 0;
@@ -226,7 +244,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #ifdef CONFIG_FST
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -738,6 +738,17 @@ struct hostapd_iface {
+@@ -766,6 +766,17 @@ struct hostapd_iface {
  	/* lowest observed noise floor in dBm */
  	s8 lowest_nf;
  
@@ -246,27 +264,27 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	u64 last_channel_time_busy;
 --- a/src/common/qca-vendor.h
 +++ b/src/common/qca-vendor.h
-@@ -1231,6 +1231,9 @@ enum qca_radiotap_vendor_ids {
-  *	collection of these statistics has been enabled by the command
-  *	@QCA_NL80211_VENDOR_SUBCMD_ASYNC_STATS_POLICY. The attributes for this
-  *	event are defined in enum qca_wlan_vendor_attr_flow_stats.
+@@ -1302,6 +1302,9 @@ enum qca_radiotap_vendor_ids {
+  *
+  *	The attributes used with this command are defined in
+  *	enum qca_wlan_vendor_attr_chan_usage_req.
 + *
 + * @QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE: This vendor command is used
 + *     to configure the 6 GHz power mode to the driver
   */
  enum qca_nl80211_vendor_subcmds {
  	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
-@@ -1446,6 +1449,8 @@ enum qca_nl80211_vendor_subcmds {
- 	QCA_NL80211_VENDOR_SUBCMD_TID_TO_LINK_MAP = 229,
- 	QCA_NL80211_VENDOR_SUBCMD_LINK_RECONFIG = 230,
- 	QCA_NL80211_VENDOR_SUBCMD_TDLS_DISC_RSP_EXT = 231,
-+	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 233,
-+	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 234,
- 	/* 232 - reserved for QCA */
- 	QCA_NL80211_VENDOR_SUBCMD_TX_LATENCY = 233,
- 	/* 234 - reserved for QCA */
-@@ -17828,4 +17833,18 @@ enum qca_wlan_intf_offload_type {
- 	QCA_WLAN_INTF_OFFLOAD_TYPE_PPE_DS = 3,
+@@ -1538,6 +1541,8 @@ enum qca_nl80211_vendor_subcmds {
+ 	QCA_NL80211_VENDOR_SUBCMD_CONNECT_EXT = 250,
+ 	QCA_NL80211_VENDOR_SUBCMD_SET_P2P_MODE = 251,
+ 	QCA_NL80211_VENDOR_SUBCMD_CHAN_USAGE_REQ = 252,
++	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 253,
++	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 254,
+ };
+ 
+ /* Compatibility defines for previously used subcmd names.
+@@ -18391,4 +18396,18 @@ enum qca_wlan_vendor_attr_chan_usage_req
+ 	QCA_WLAN_VENDOR_ATTR_CHAN_USAGE_REQ_AFTER_LAST - 1,
  };
  
 +/*
@@ -286,7 +304,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #endif /* QCA_VENDOR_H */
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2908,6 +2908,14 @@ struct csa_settings {
+@@ -2916,6 +2916,14 @@ struct csa_settings {
  };
  
  /**
@@ -301,7 +319,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
   * struct cca_settings - Settings for color switch command
   * @cca_count: Count in Beacon frames (TBTT) to perform the switch
   * @cca_color: The new color that we are switching to
-@@ -4696,6 +4704,15 @@ struct wpa_driver_ops {
+@@ -4702,6 +4710,15 @@ struct wpa_driver_ops {
  	int (*switch_channel)(void *priv, struct csa_settings *settings);
  
  	/**
@@ -317,10 +335,10 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	 * switch_color - Announce color switch and migrate the BSS to the
  	 * given color
  	 * @priv: Private driver interface data
-@@ -6090,6 +6107,11 @@ enum wpa_event_type {
- 	 * EVENT_BSS_FREE - Notification before bss is freed
+@@ -6171,6 +6188,11 @@ enum wpa_event_type {
+ 	 * probe/assoc response.
  	 */
- 	EVENT_BSS_FREE,
+ 	EVENT_RX_CRITICAL_UPDATE,
 +
 +	/**
 +	 * EVENT_6GHZ_POWER_MODE_NOTIFY - Notify the AP power mode change
@@ -329,7 +347,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  };
  
  
-@@ -7082,6 +7104,13 @@ union wpa_event_data {
+@@ -7164,6 +7186,13 @@ union wpa_event_data {
  	} awgn_event;
  
  	/**
@@ -345,9 +363,9 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	 *	EAPOL-Key msg 3/4
 --- a/src/drivers/driver_common.c
 +++ b/src/drivers/driver_common.c
-@@ -103,6 +103,7 @@ const char * event_to_string(enum wpa_ev
- 	E2S(TID_LINK_MAP);
+@@ -104,6 +104,7 @@ const char * event_to_string(enum wpa_ev
  	E2S(LINK_RECONFIG);
+ 	E2S(MLD_INTERFACE_FREED);
  	E2S(RX_CRITICAL_UPDATE);
 +	E2S(6GHZ_POWER_MODE_NOTIFY);
  	}
@@ -355,7 +373,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	return "UNKNOWN";
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -11750,6 +11750,47 @@ error:
+@@ -11854,6 +11854,47 @@ error:
  	return ret;
  }
  
@@ -403,7 +421,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
  #ifdef CONFIG_IEEE80211AX
  static int nl80211_switch_color(void *priv, struct cca_settings *settings)
-@@ -14721,6 +14762,7 @@ const struct wpa_driver_ops wpa_driver_n
+@@ -15129,6 +15170,7 @@ const struct wpa_driver_ops wpa_driver_n
  	.get_survey = wpa_driver_nl80211_get_survey,
  	.status = wpa_driver_nl80211_status,
  	.switch_channel = nl80211_switch_channel,
@@ -413,7 +431,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #endif /* CONFIG_IEEE80211AX */
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -3485,9 +3485,40 @@ static void qca_nl80211_pasn_auth(struct
+@@ -3479,9 +3479,40 @@ static void qca_nl80211_pasn_auth(struct
  }
  
  #endif /* CONFIG_PASN */
@@ -455,7 +473,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
  static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
  				     u32 subcmd, u8 *data, size_t len)
-@@ -3534,6 +3565,9 @@ static void nl80211_vendor_event_qca(str
+@@ -3528,6 +3559,9 @@ static void nl80211_vendor_event_qca(str
  		qca_nl80211_link_reconfig_event(drv, data, len);
  		break;
  #endif /* CONFIG_DRIVER_NL80211_QCA */

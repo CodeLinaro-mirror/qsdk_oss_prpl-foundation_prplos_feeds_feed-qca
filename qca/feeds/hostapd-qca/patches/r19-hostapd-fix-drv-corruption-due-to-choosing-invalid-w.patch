@@ -17,7 +17,7 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -936,6 +936,7 @@ nl80211_get_wiphy_data_ap(struct i802_bs
+@@ -938,6 +938,7 @@ nl80211_get_wiphy_data_ap(struct i802_bs
  	struct nl80211_wiphy_data *w;
  	int wiphy_idx, found = 0;
  	struct i802_bss *tmp_bss;
@@ -25,7 +25,7 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
  	u8 channel;
  
  	if (bss->wiphy_data != NULL)
-@@ -997,9 +998,13 @@ add:
+@@ -999,9 +1000,13 @@ add:
  			break;
  		}
  	}
@@ -41,7 +41,7 @@ Signed-off-by: Monika Korada <quic_koramoni@quicinc.com>
  
  	dl_list_add(&w->bsss, &bss->wiphy_list);
  	bss->wiphy_data = w;
-@@ -2347,6 +2352,7 @@ static void * wpa_driver_nl80211_drv_ini
+@@ -2349,6 +2354,7 @@ static void * wpa_driver_nl80211_drv_ini
  	drv->ctx = ctx;
  	drv->hostapd = !!hostapd;
  	drv->eapol_sock = -1;

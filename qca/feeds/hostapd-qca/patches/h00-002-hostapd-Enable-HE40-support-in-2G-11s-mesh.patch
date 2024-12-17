@@ -14,7 +14,7 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
 
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1358,6 +1358,11 @@ struct wpa_driver_associate_params {
+@@ -1383,6 +1383,11 @@ struct wpa_driver_associate_params {
  	enum sae_pwe sae_pwe;
  
  	/**
@@ -45,7 +45,7 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
 +	INT(disable_40mhz_scan);
  	INT(enable_4addr_mode);
  	INT(max_idle);
- 
+ 	INT(ssid_protection);
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
 @@ -1262,6 +1262,11 @@ struct wpa_ssid {
@@ -74,7 +74,7 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
  
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -2698,6 +2698,56 @@ static int drv_supports_vht(struct wpa_s
+@@ -2831,6 +2831,56 @@ static int drv_supports_vht(struct wpa_s
  	return mode->vht_capab != 0;
  }
  
@@ -131,7 +131,7 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
  
  static bool ibss_mesh_is_80mhz_avail(int channel, struct hostapd_hw_modes *mode, bool dfs_enabled)
  {
-@@ -3148,6 +3198,9 @@ void ibss_mesh_setup_freq(struct wpa_sup
+@@ -3275,6 +3325,9 @@ void ibss_mesh_setup_freq(struct wpa_sup
  	if (freq->vht_enabled || (freq->ht_enabled && is_24ghz) || is_6ghz)
  		freq->he_enabled = ibss_mesh_can_use_he(wpa_s, ssid, mode,
  							ieee80211_mode);
@@ -153,7 +153,7 @@ Signed-off-by: P Praneesh <ppranees@codeaurora.org>
  # Accept/deny lists are read from separate files (containing list of
  # MAC addresses, one per line). Use absolute path name to make sure that the
  # files can be read on SIGHUP configuration reloads.
-@@ -2063,6 +2066,15 @@ network={
+@@ -2072,6 +2075,15 @@ network={
  	psk="very secret passphrase"
  }
  

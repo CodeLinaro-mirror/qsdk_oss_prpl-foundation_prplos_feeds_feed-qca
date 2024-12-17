@@ -24,7 +24,7 @@ Change-Id: I555e984c719c7058fdd9c08482eac2cc1396083a
 
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -2551,7 +2551,6 @@ static int hostapd_setup_interface_compl
+@@ -2565,7 +2565,6 @@ static int hostapd_setup_interface_compl
  	if (err)
  		goto fail;
  
@@ -62,7 +62,7 @@ Change-Id: I555e984c719c7058fdd9c08482eac2cc1396083a
  }
 --- a/src/ap/ubus.h
 +++ b/src/ap/ubus.h
-@@ -41,7 +41,6 @@ struct hostapd_ubus_bss {
+@@ -40,7 +40,6 @@ struct hostapd_ubus_bss {
  	int notify_response;
  };
  
@@ -70,7 +70,7 @@ Change-Id: I555e984c719c7058fdd9c08482eac2cc1396083a
  void hostapd_ubus_free_iface(struct hostapd_iface *iface);
  void hostapd_ubus_add_bss(struct hostapd_data *hapd);
  void hostapd_ubus_free_bss(struct hostapd_data *hapd);
-@@ -74,10 +73,6 @@ void hostapd_ubus_notify_authorized(stru
+@@ -73,10 +72,6 @@ void hostapd_ubus_notify_authorized(stru
  
  struct hostapd_ubus_bss {};
  

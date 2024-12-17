@@ -3,13 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-cfi
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
-PKG_RELEASE:=2
+PKG_BRANCH:=win.nss.1.0.r24
+PKG_RELEASE:=1
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-cfi
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=6e8f294a298d1ecb745148f552d691f8395363b0
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -95,6 +97,11 @@ endif
 # Build individual packages if selected
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-cfi-cryptoapi),)
 MAKE_OPTS+=cryptoapi=y
+# ABLK cipher is depricated on 6.6
+ifneq ($(CONFIG_LINUX_6_6),y)
+MAKE_OPTS+=cryptoapi_ablk=y
+endif
+
 endif
 
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-cfi-ocf),)

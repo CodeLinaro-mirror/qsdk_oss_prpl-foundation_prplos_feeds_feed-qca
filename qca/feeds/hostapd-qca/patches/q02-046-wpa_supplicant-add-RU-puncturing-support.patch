@@ -39,7 +39,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 
 --- a/src/ap/hw_features.c
 +++ b/src/ap/hw_features.c
-@@ -999,6 +999,14 @@ static bool hostapd_is_usable_punct_bitm
+@@ -1021,6 +1021,14 @@ static bool hostapd_is_usable_punct_bitm
  		return false;
  	}
  
@@ -56,7 +56,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	 * to determine channel width.
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1398,6 +1398,13 @@ struct wpa_driver_associate_params {
+@@ -1423,6 +1423,13 @@ struct wpa_driver_associate_params {
  	int enable_160mhz_bw;
  
  	/**
@@ -70,7 +70,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	 * disable_eht - Disable EHT for this connection
  	 */
  	int disable_eht;
-@@ -1937,6 +1944,7 @@ struct wpa_driver_mesh_join_params {
+@@ -1968,6 +1975,7 @@ struct wpa_driver_mesh_join_params {
  #define WPA_DRIVER_MESH_FLAG_AMPE	0x00000008
  	unsigned int flags;
  	bool handle_dfs;
@@ -78,7 +78,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	int mcast_rate;
  	int beacon_tx_mode;
  };
-@@ -2612,6 +2620,7 @@ struct hostapd_sta_add_params {
+@@ -2647,6 +2655,7 @@ struct hostapd_sta_add_params {
  	const u8 *supp_oper_classes;
  	size_t supp_oper_classes_len;
  	int support_p2p_ps;
@@ -88,7 +88,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	s8 mld_link_id;
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5872,6 +5872,12 @@ static int wpa_driver_nl80211_sta_add(vo
+@@ -5897,6 +5897,12 @@ static int wpa_driver_nl80211_sta_add(vo
  		nla_nest_end(msg, wme);
  	}
  
@@ -101,7 +101,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	/* In case we are an AP MLD need to always specify the link ID */
  	if (params->mld_link_id >= 0) {
  		wpa_printf(MSG_DEBUG, "  * mld_link_id=%d",
-@@ -12181,6 +12187,13 @@ static int nl80211_join_mesh(struct i802
+@@ -12367,6 +12373,13 @@ static int nl80211_join_mesh(struct i802
  	      nla_put_u32(msg, NL80211_ATTR_BEACON_TX_MODE, params->beacon_tx_mode)))
  		goto fail;
  
@@ -141,7 +141,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	{ INT_RANGE(disable_eht, 0, 1)},
  	{ INT_RANGE(enable_4addr_mode, 0, 1)},
  	{ INT_RANGE(max_idle, 0, 65535)},
-@@ -3387,6 +3388,7 @@ void wpa_config_set_network_defaults(str
+@@ -3389,6 +3390,7 @@ void wpa_config_set_network_defaults(str
  	ssid->mac_addr = WPAS_MAC_ADDR_STYLE_NOT_SET;
  	ssid->max_oper_chwidth = DEFAULT_MAX_OPER_CHWIDTH;
  	ssid->beacon_tx_mode = DEFAULT_BEACON_TX_MODE;
@@ -158,7 +158,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +	INT(punct_bitmap);
  	INT(enable_4addr_mode);
  	INT(max_idle);
- 
+ 	INT(ssid_protection);
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
 @@ -1285,6 +1285,12 @@ struct wpa_ssid {
@@ -215,7 +215,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
 --- a/wpa_supplicant/mesh_mpm.c
 +++ b/wpa_supplicant/mesh_mpm.c
-@@ -755,6 +755,7 @@ static struct sta_info * mesh_mpm_add_pe
+@@ -731,6 +731,7 @@ static struct sta_info * mesh_mpm_add_pe
  	struct hostapd_data *data = wpa_s->ifmsh->bss[0];
  	struct sta_info *sta;
  	struct ieee80211_ht_operation *oper;
@@ -223,7 +223,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	int ret;
  
  	if (elems->mesh_config_len >= 7 &&
-@@ -846,6 +847,46 @@ static struct sta_info * mesh_mpm_add_pe
+@@ -822,6 +823,46 @@ static struct sta_info * mesh_mpm_add_pe
  	params.he_6ghz_capab = sta->he_6ghz_capab;
  	params.eht_capab = sta->eht_capab;
  	params.eht_capab_len = sta->eht_capab_len;
@@ -272,7 +272,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	params.mld_link_id = -1;
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -7370,6 +7370,7 @@ static int wpa_supplicant_init_iface(str
+@@ -7547,6 +7547,7 @@ static int wpa_supplicant_init_iface(str
  		wpa_s->wmm_ac_supported = capa.wmm_ac_supported;
  #endif /* CONFIG_NO_WMM_AC */
  		wpa_s->max_num_akms = capa.max_num_akms;
@@ -282,7 +282,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			wpa_s->mac_addr_rand_supported |= MAC_ADDR_RAND_SCAN;
 --- a/wpa_supplicant/wpa_supplicant.conf
 +++ b/wpa_supplicant/wpa_supplicant.conf
-@@ -1785,6 +1785,13 @@ fast_reauth=1
+@@ -1794,6 +1794,13 @@ fast_reauth=1
  # during radar detection
  #disable_csa_dfs=1
  
@@ -298,13 +298,13 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  # Relevant only if enable_edmg is true
 --- a/wpa_supplicant/wpa_supplicant_i.h
 +++ b/wpa_supplicant/wpa_supplicant_i.h
-@@ -1615,6 +1615,9 @@ struct wpa_supplicant {
- 	struct wpa_radio_work *nan_usd_listen_work;
- 	struct wpa_radio_work *nan_usd_tx_work;
- #endif /* CONFIG_NAN_USD */
+@@ -1629,6 +1629,9 @@ struct wpa_supplicant {
+ 	u64 first_beacon_tsf;
+ 	unsigned int beacons_checked;
+ 	unsigned int next_beacon_check;
++
 +	/* Minimum bandwidth the driver supports RU puncturing */
 +	u8 ru_punct_supp_bw;
-+
  };
  
  

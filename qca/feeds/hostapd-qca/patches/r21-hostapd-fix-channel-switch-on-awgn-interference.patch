@@ -219,8 +219,8 @@ Signed-off-by: Ajith C <quic_ajithc@quicinc.com>
 --- a/src/common/defs.h
 +++ b/src/common/defs.h
 @@ -542,4 +542,6 @@ enum sae_pwe {
- #define US_TO_TU(m) ((m) / US_80211_TU)
- #define TU_TO_US(m) ((m) * US_80211_TU)
+ #define USEC_TO_TU(m) ((m) / USEC_80211_TU)
+ #define TU_TO_USEC(m) ((m) * USEC_80211_TU)
  
 +#define BW_INTERFERENCE_MAXBITS 32
 +

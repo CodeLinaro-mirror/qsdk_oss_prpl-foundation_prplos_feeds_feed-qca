@@ -1,8 +1,126 @@
 #!/bin/sh
+. /lib/netifd/netifd-wireless.sh
+. /lib/netifd/wireless/mac80211.sh
 
 append DRIVERS "mac80211"
 
 MLD_VAP_DETAILS="/lib/netifd/wireless/wifi_mld_cfg.config"
+
+mlo_add_link() {
+	local data
+	local link
+	local conf_idx
+	local ssid
+	local encryption
+	local sae_pwe
+	local key
+	local channels
+	local mld
+
+	mld=$(uci show wireless | grep "$3" | cut -d "." -f 2)
+	[ -n "$mld" ] || {
+		echo "wrong interface name is given or mld doesn't found for given interface" > /dev/ttyMSM0
+		return
+	}
+
+	case "$2" in
+		2g)
+		channels="1-14"
+		;;
+		5g)
+		channels="36-177"
+		;;
+		5gl)
+		channels="36-64"
+		;;
+		5gh)
+		channels="100-177"
+		;;
+		6g)
+		channels="2-233"
+		;;
+		6gl)
+		channels="2-93"
+		;;
+		6gh)
+		channels="129-233"
+		;;
+		*) echo "wrong band is given" > /dev/ttyMSM0
+		return;;
+	esac
+	link=$(uci show wireless | grep $channels | cut -d "_" -f 2 | cut -d "." -f 1)
+	[ -n "$link" ] || {
+		echo "failed to find band number" > /dev/ttyMSM0
+		return
+	}
+	uci add wireless wifi-iface
+	conf_idx=$(uci show wireless | sed -n 's/.*@wifi-iface\[\([0-9]\+\)\].*/\1/p' | sort -n | tail -1)
+	echo 1 > /tmp/mlo_support.txt&
+	ssid=$(uci get wireless."$mld".ssid)
+	encryption=$(uci get wireless."$mld".encryption)
+	sae_pwe=$(uci get wireless."$mld".sae_pwe)
+	key=$(uci get wireless."$mld".key)
+
+	uci set wireless.@wifi-iface[$conf_idx]=wifi-iface
+	uci set wireless.@wifi-iface[$conf_idx].device=radio0_$link
+	uci set wireless.@wifi-iface[$conf_idx].network='lan'
+	uci set wireless.@wifi-iface[$conf_idx].mode='ap'
+	uci set wireless.@wifi-iface[$conf_idx].ssid=$(uci get wireless."$mld".ssid)
+	uci set wireless.@wifi-iface[$conf_idx].encryption=$(uci get wireless."$mld".encryption)
+	uci set wireless.@wifi-iface[$conf_idx].sae_pwe=$(uci get wireless."$mld".sae_pwe)
+	uci set wireless.@wifi-iface[$conf_idx].key=$(uci get wireless."$mld".key)
+	uci set wireless.@wifi-iface[$conf_idx].mld="$mld"
+	uci set wireless.@wifi-iface[$conf_idx].macaddr="$4"
+	uci commit wireless
+	input_file=/var/run/hostapd-${1}_${link}.conf
+	if [ -f $input_file ]; then
+		output_file=/tmp/hostapd-${1}_${link}.conf
+		if grep -q "bss=" "$input_file"; then
+			awk '/bss=/ {exit} {print}' "$input_file" > "$output_file"
+		else
+			cp "$input_file" "$output_file"
+		fi
+		echo "wpa_passphrase=$key" >> $output_file
+		echo "ssid=$ssid" >> $output_file
+		if [ $sae_pwe = 1 ]; then
+			echo "sae_pwe=$sae_pwe" >> $output_file
+		fi
+		if [ $encryption = "sae" ]; then
+			echo "wpa_key_mgmt=SAE" >> $output_file
+		fi
+		echo "bssid=$4" >> $output_file
+		echo "interface=$3" >> $output_file
+		hostapd_cli -i $3 mld_add_link bss_config=${1}:"$output_file"
+		rm "$output_file"
+	else
+		ubus call network reload
+		json_load "$(ubus_wifi_cmd "status" "radio0_${link}")"
+		data=$(json_dump)
+		data=$(echo "$data" | sed 's/.*\("config": { "path\)/\1/' | sed 's/}$//')
+		data=$(echo "$data" | sed '$ s/..$/}/')
+		data="{ $data"
+		data=$(echo "$data" | sed -e 's/"interfaces": \[/"interfaces": { "0": /' -e 's/\} ]/} }/')
+		start_string='"section"'
+		end_string='"section": "@wifi-iface['"$conf_idx"']"'
+		start_index=$(echo "$data" | awk -v pat="$start_string" 'BEGIN{IGNORECASE=1} index($0,pat) {print index($0,pat)}')
+		end_index=$(echo "$data" | awk -v pat="$end_string" 'BEGIN{IGNORECASE=1} index($0,pat) {print index($0,pat)}')
+		m_data="${data:0:start_index}${data:end_index}"
+		data="$m_data"
+		data=$(echo "$data" | sed -e "s/\"section\": \"@wifi-iface\[$conf_idx\]\"/\"bridge\": \"br-lan\", \"bridge_ifname\": \"br-lan\"/")
+		data=$(echo "$data" | sed -e 's/\[\ ]/{ }/g' -e 's/"stations"/"stas"/g')
+		json_select "radio0_${link}"
+		_wdev_handler_1 "$data" "mac80211" "setup" "radio0_$link" 2> /dev/null
+		json_select ..
+		if [ "6g" = "$2" ]; then
+			echo "mbssid=2" >> "$input_file"
+			echo "ema=1" >> "$input_file"
+		fi
+		hostapd_cli -i $3 mld_add_link bss_config=${1}:/var/run/hostapd-${1}_${link}.conf
+	fi
+	uci set wireless.radio0_${link}.disabled='0'
+	uci commit wireless
+	rm /tmp/mlo_support.txt 2>/dev/null
+}
 
 configure_service_param() {
 	enable_service=$2
@@ -482,42 +600,40 @@ post_mac80211() {
 mac80211_validate_num_channels() {
 	dev=$1
 	n_hw_idx=$2
-	efreq=$3
-	match_found=0
-	bandidx=$4
 	sub_matched=0
 	i=0
 
-	#fetch the band channel list
-	band_nchans=$(eval ${3} | awk '{ print $4 }' | sed -e "s/\[//g" | sed -e "s/\]//g")
-	band_first_chan=$(echo $band_nchans | awk '{print $1}')
-
-	#entire band channel list without any separator
-	band_nchans=$(echo $band_nchans | tr -d ' ')
-
 	while [ $i -lt $n_hw_idx ]; do
 
-		#fetch the hw idx channel list
-		hw_nchans=$(iw phy ${dev} info | awk -v p1="$i channel list" -v p2="$((i+1)) channel list"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f')
-		first_chan=$(echo $hw_nchans | awk '{print $1}')
-		hw_nchans=$(echo $hw_nchans | tr -d ' ')
+		start_freq=$(iw phy ${dev} info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 3)
+		end_freq=$(iw phy ${dev} info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 6)
+		start_freq=$((start_freq+10))
+		end_freq=$((end_freq-10))
+		first_chan=$(mac80211_freq_to_channel $start_freq)
+		end_chan=$(mac80211_freq_to_channel $end_freq)
 
-		if [ "$band_nchans" = "$hw_nchans" ]; then
-			match_found=1
-		else
-			#check if subchannels matches
-			if echo "$band_nchans" | grep -q "${hw_nchans}";
-			then
-				sub_matched=$((sub_matched+1))
-				append chans $first_chan
-			fi
+		if [ $end_chan = 177 ] && [ $_mode_band = "5g" ]; then
+			sub_matched=$((sub_matched+1))
+			append chans $first_chan
 		fi
+		if [ $end_chan = 233 ] && [ $_mode_band = "6g" ]; then
+			sub_matched=$((sub_matched+1))
+			append chans $first_chan
+		fi
+		if [ $end_chan = 64 ] && [ $_mode_band = "5g" ]; then
+			sub_matched=$((sub_matched+1))
+			append chans $first_chan
+		fi
+		if [ $end_chan = 93 ] && [ $_mode_band = "6g" ]; then
+			sub_matched=$((sub_matched+1))
+			append chans $first_chan
+		fi
+
 		i=$((i+1))
 	done
-	if [ $match_found -eq 0 ]; then
-		if [ $sub_matched -gt 1 ]; then
-                        echo "$chans"
-		fi
+
+	if [ $sub_matched -gt 1 ]; then
+		echo "$chans"
 	else
 		echo ""
 	fi
@@ -531,29 +647,80 @@ mac80211_get_channel_list() {
 	match_found=0
 
 	while [ $i -lt $n_hw_idx ]; do
-		hw_nchans=$(iw phy ${dev} info | awk -v p1="$i channel list" -v p2="$((i+1)) channel list"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f')
-		first_chan=$(echo $hw_nchans | awk '{print $1}')
-		higest_chan=$first_chan
-		for chidx in $hw_nchans; do
-			if [ $chidx -gt $higest_chan ]; then
-				higest_chan=$chidx;
-			fi
-			if [ "$chidx" == "$chan" ]; then
-				match_found=1
-			fi
-		done
-		if [ $match_found -eq 1 ]; then
+		start_freq=$(iw phy ${dev} info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 3)
+		end_freq=$(iw phy ${dev} info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 6)
+		start_freq=$((start_freq+10))
+		end_freq=$((end_freq-10))
+		first_chan=$(mac80211_freq_to_channel $start_freq)
+		end_chan=$(mac80211_freq_to_channel $end_freq)
+		if [ "$end_chan" = "14" ] && [ "$_mode_band" = "2g" ]; then
+			match_found=1
 			break;
 		fi
+		if [ "$first_chan" -le "$chan" ] && [ "$end_chan" = "64" ] && [ "$end_chan" -ge "$chan" ] && [ "$_mode_band" = "5g" ]; then
+			match_found=1
+			break;
+		fi
+		if [ "$first_chan" -le "$chan" ] && [ "$end_chan" = "177" ] && [ "$end_chan" -ge "$chan" ] && [ "$_mode_band" = "5g" ]; then
+			match_found=1
+			break;
+		fi
+		if [ "$first_chan" -le "$chan" ] && [ "$end_chan" = "93" ] && [ "$end_chan" -ge "$chan" ] && [ "$_mode_band" = "6g" ]; then
+			match_found=1
+			break;
+		fi
+		if [ "$first_chan" -le "$chan" ] && [ "$end_chan" = "233" ] && [ "$end_chan" -ge "$chan" ] && [ "$_mode_band" = "6g" ]; then
+			match_found=1
+			break;
+		fi
+
 		i=$((i+1))
 	done
 
-	if [ $match_found -eq 1 ]; then
-		echo "$first_chan-$higest_chan";
+	if [ "$match_found" -eq "1" ]; then
+		echo "$first_chan-$end_chan";
 	else
 		echo ""
 	fi
 }
+
+mac80211_freq_to_channel() {
+	local freq=$1
+
+	if [ "$freq" -lt 1000 ]; then
+		echo 0
+		return
+	fi
+	if [ "$freq" -eq 2484 ]; then
+		echo 14
+		return
+	fi
+	if [ "$freq" -eq 5935 ]; then
+		echo 2
+		return
+	fi
+	if [ "$freq" -lt 2484 ]; then
+		echo $(((freq-2407)/5))
+		return
+	fi
+	if [ "$freq" -ge 4910 ] && [ "$freq" -le 4980 ]; then
+		echo $(((freq-4000)/5))
+		return
+	fi
+	if [ "$freq" -lt 5950 ]; then
+		echo $(((freq-5000)/5))
+		return
+	fi
+	if [ "$freq" -le 45000 ]; then
+		echo $(((freq-5950)/5))
+		return
+	fi
+	if [ "$freq" -ge 58320 ] && [ "$freq" -le 70200 ]; then
+		echo $(((freq-56160)/5))
+		return
+	fi
+}
+
 generate_5g_6g_split_phy_config() {
 	splitphy=1
 	for chan in ${need_extraconfig}
@@ -584,15 +751,18 @@ generate_5g_6g_split_phy_config() {
 		set wireless.default_${name}.device=${name}
 		set wireless.default_${name}.network=lan
 		set wireless.default_${name}.mode=ap
-		set wireless.default_${name}.ssid=OpenWrt
+		set wireless.default_${name}.ssid=PrplOs
+	EOF
 		if [ ${_mode_band} == '5g'  ]; then
-			set wireless.default_${name}.encryption=none
+			uci set wireless.default_${name}.encryption=none
 		else
+			uci -q batch <<-EOF
 			set wireless.default_${name}.encryption=sae
 			set wireless.default_${name}.sae_pwe=1
 			set wireless.default_${name}.key=0123456789
+		EOF
 		fi
-	EOF
+
 		if [ $is_swiphy ] && [ $splitphy -gt 0 ]; then
 			bandidx=$(($bandidx + 1))
 			name=""radio$devidx\_band$(($bandidx - 1))""
@@ -640,7 +810,7 @@ detect_mac80211() {
 		if [ $total_bands -gt 1 ]; then
 			is_swiphy=1
 		fi
-		no_hw_idx=$(iw phy ${dev} info | grep -e "channel list" | wc -l)
+		no_hw_idx=$(iw phy ${dev} info | grep -e "Idx" | wc -l)
 
 		get_band_defaults "$dev"
 
@@ -692,7 +862,7 @@ detect_mac80211() {
 
 			expr_freq="$expr | awk '/Frequencies/,/valid /f'"
 			if [ $no_hw_idx -gt $total_bands ]; then
-				need_extraconfig=$(mac80211_validate_num_channels $dev $no_hw_idx "$expr_freq")
+				need_extraconfig=$(mac80211_validate_num_channels $dev $no_hw_idx)
 				need_extraconfig=$(eval echo "${need_extraconfig}" | tr ' ' '\n' | sort -n)
 			fi
 
@@ -727,7 +897,7 @@ detect_mac80211() {
 					set wireless.default_${name}.device=${name}
 					set wireless.default_${name}.network=lan
 					set wireless.default_${name}.mode=ap
-					set wireless.default_${name}.ssid=OpenWrt
+					set wireless.default_${name}.ssid=PrplOs
 			EOF
 				if [ ${_mode_band} == '6g'  ]; then
 					uci -q batch <<-EOF
@@ -745,14 +915,3 @@ detect_mac80211() {
 		devidx=$(($devidx + 1))
 	done
 }
-
-smp_affinity_settings() {
-	enable_smp_affinity=$(uci -q get wireless.mac80211.enable_smp_affinity)
-
-	if [ "$enable_smp_affinity" -eq 1 ] && [ -f "/lib/smp_affinity_settings.sh" ]; then
-		. /lib/smp_affinity_settings.sh
-		enable_smp_affinity_wifi
-	fi
-}
-
-smp_affinity_settings

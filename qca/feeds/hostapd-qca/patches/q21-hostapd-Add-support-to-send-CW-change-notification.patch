@@ -26,16 +26,7 @@ Signed-off-by: Vignesh C <quic_vignc@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -2882,7 +2882,7 @@ static int hostapd_ctrl_iface_chan_switc
- }
- 
- 
--static u8 hostapd_maxnss(struct hostapd_data *hapd, struct sta_info *sta)
-+u8 hostapd_maxnss(struct hostapd_data *hapd, struct sta_info *sta)
- {
- 	u8 *mcs_set = NULL;
- 	u16 mcs_map;
-@@ -4777,6 +4777,9 @@ static int hostapd_ctrl_iface_receive_pr
+@@ -4819,6 +4819,9 @@ static int hostapd_ctrl_iface_receive_pr
  		if (hostapd_ctrl_register_frame(hapd, buf + 16) < 0)
  			reply_len = -1;
  #endif /* CONFIG_TESTING_OPTIONS */
@@ -47,7 +38,7 @@ Signed-off-by: Vignesh C <quic_vignc@quicinc.com>
  			reply_len = -1;
 --- a/hostapd/hostapd_cli.c
 +++ b/hostapd/hostapd_cli.c
-@@ -1202,13 +1202,23 @@ static int hostapd_cli_cmd_chan_switch(s
+@@ -1219,13 +1219,23 @@ static int hostapd_cli_cmd_chan_switch(s
  	return wpa_ctrl_command(ctrl, cmd);
  }
  
@@ -74,7 +65,7 @@ Signed-off-by: Vignesh C <quic_vignc@quicinc.com>
  
  static int hostapd_cli_cmd_enable(struct wpa_ctrl *ctrl, int argc,
  				  char *argv[])
-@@ -1739,6 +1749,8 @@ static const struct hostapd_cli_cmd host
+@@ -1756,6 +1766,8 @@ static const struct hostapd_cli_cmd host
  	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf,
  	  hostapd_complete_stations,
  	  "<addr> = send QoS Map Configure frame" },
@@ -83,17 +74,9 @@ Signed-off-by: Vignesh C <quic_vignc@quicinc.com>
  	{ "chan_switch", hostapd_cli_cmd_chan_switch, NULL,
  	  "<cs_count> <freq> [sec_channel_offset=] [center_freq1=]\n"
  	  "  [center_freq2=] [bandwidth=] [blocktx] [ht|vht]\n"
---- a/src/ap/ctrl_iface_ap.h
-+++ b/src/ap/ctrl_iface_ap.h
-@@ -54,4 +54,5 @@ int hostapd_ctrl_iface_acl_show_mac(stru
- int hostapd_disassoc_accept_mac(struct hostapd_data *hapd);
- int hostapd_disassoc_deny_mac(struct hostapd_data *hapd);
- 
-+u8 hostapd_maxnss(struct hostapd_data *hapd, struct sta_info *sta);
- #endif /* CTRL_IFACE_AP_H */
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -1411,6 +1411,10 @@ struct ieee80211_ampe_ie {
+@@ -1415,6 +1415,10 @@ struct ieee80211_ampe_ie {
  #define VHT_OPMODE_CHANNEL_80MHZ		    ((u8) BIT(1))
  #define VHT_OPMODE_CHANNEL_160MHZ		    ((u8) BIT(1) | BIT(2))
  

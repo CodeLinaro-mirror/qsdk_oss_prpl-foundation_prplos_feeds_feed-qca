@@ -15,7 +15,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -8276,15 +8276,20 @@ static u8 * hostapd_eid_rnr_iface(struct
+@@ -8295,15 +8295,20 @@ static u8 * hostapd_eid_rnr_iface(struct
  	if (!(iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA) || !iface->freq)
  		return eid;
  

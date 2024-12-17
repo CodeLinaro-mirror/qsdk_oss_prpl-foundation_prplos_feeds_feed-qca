@@ -51,7 +51,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -499,6 +499,10 @@ ieee802_11_build_ap_params_mbssid(struct
+@@ -603,6 +603,10 @@ ieee802_11_build_ap_params_mbssid(struct
  	}
  
  	tx_bss = hostapd_mbssid_get_tx_bss(hapd);
@@ -62,7 +62,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	len = hostapd_eid_mbssid_len(tx_bss, WLAN_FC_STYPE_BEACON, &elem_count,
  				     NULL, 0, &rnr_len);
  	if (!len || (iface->conf->mbssid == ENHANCED_MBSSID_ENABLED &&
-@@ -685,6 +689,8 @@ static size_t hostapd_probe_resp_elems_l
+@@ -792,6 +796,8 @@ static size_t hostapd_probe_resp_elems_l
  			buflen += (6 + 2 + 4 +
  				   sizeof(struct ieee80211_240mhz_vendor_oper));
  	}
@@ -71,7 +71,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  #endif /* CONFIG_IEEE80211BE */
  
  	buflen += hostapd_eid_mbssid_len(hapd, WLAN_FC_STYPE_PROBE_RESP, NULL,
-@@ -855,6 +861,8 @@ static u8 * hostapd_probe_resp_fill_elem
+@@ -953,6 +959,8 @@ static u8 * hostapd_probe_resp_fill_elem
  		pos = hostapd_eid_eht_operation(hapd, pos, IEEE80211_MODE_AP);
  		pos = hostapd_eid_vendor_240mhz(hapd, pos, IEEE80211_MODE_AP);
  	}
@@ -82,7 +82,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  #ifdef CONFIG_IEEE80211AC
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1334,6 +1334,8 @@ static int hostapd_start_beacon(struct h
+@@ -1346,6 +1346,8 @@ static int hostapd_start_beacon(struct h
  				       WLAN_REASON_PREV_AUTH_NOT_VALID);
  	}
  
@@ -91,7 +91,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	if (hapd->driver && hapd->driver->set_operstate)
  		hapd->driver->set_operstate(hapd->drv_priv, 1);
  
-@@ -1398,6 +1400,7 @@ int hostapd_setup_bss(struct hostapd_dat
+@@ -1464,6 +1466,7 @@ int hostapd_setup_bss(struct hostapd_dat
  			/* Allocate the configured BSSID. */
  			os_memcpy(hapd->own_addr, conf->bssid, ETH_ALEN);
  
@@ -99,7 +99,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			if (hostapd_mac_comp(hapd->own_addr,
  					     hapd->iface->bss[0]->own_addr) ==
  			    0) {
-@@ -1725,9 +1728,6 @@ setup_mld:
+@@ -1773,9 +1776,6 @@ setup_mld:
  	if (start_beacon && hostapd_start_beacon(hapd, flush_old_stations) < 0)
  		return -1;
  
@@ -109,7 +109,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	return 0;
  }
  
-@@ -5014,10 +5014,7 @@ u8 hostapd_get_mld_id(struct hostapd_dat
+@@ -5194,10 +5194,7 @@ u8 hostapd_get_mld_id(struct hostapd_dat
  	if (!hapd->conf->mld_ap)
  		return 255;
  
@@ -123,7 +123,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7454,6 +7454,37 @@ static size_t hostapd_eid_nr_db_len(stru
+@@ -7649,6 +7649,37 @@ static size_t hostapd_eid_nr_db_len(stru
  	return total_len;
  }
  
@@ -161,7 +161,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  struct mbssid_ie_profiles {
  	u8 start;
-@@ -7463,9 +7494,9 @@ struct mbssid_ie_profiles {
+@@ -7658,9 +7689,9 @@ struct mbssid_ie_profiles {
  static bool hostapd_skip_rnr(size_t i, struct mbssid_ie_profiles *skip_profiles,
  			     bool ap_mld, u8 tbtt_info_len, bool mld_update,
  			     struct hostapd_data *reporting_hapd,
@@ -173,7 +173,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	    i >= skip_profiles->start && i < skip_profiles->end)
  		return true;
  
-@@ -7487,7 +7518,16 @@ static bool hostapd_skip_rnr(size_t i, s
+@@ -7682,7 +7713,16 @@ static bool hostapd_skip_rnr(size_t i, s
  
  	/* If building for ML RNR and they are not ML partners, don't include.
  	 */
@@ -191,7 +191,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		return true;
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -7527,6 +7567,7 @@ repeat_rnr_len:
+@@ -7722,6 +7762,7 @@ repeat_rnr_len:
  		for (i = start; i < hapd->iface->num_bss; i++) {
  			struct hostapd_data *bss = hapd->iface->bss[i];
  			bool ap_mld = false;
@@ -199,7 +199,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  			if (!bss || !bss->conf || !bss->started)
  				continue;
-@@ -7541,7 +7582,7 @@ repeat_rnr_len:
+@@ -7736,7 +7777,7 @@ repeat_rnr_len:
  
  			if (hostapd_skip_rnr(i, skip_profiles, ap_mld,
  					     tbtt_info_len, mld_update,
@@ -208,7 +208,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  				continue;
  
  			if (len + tbtt_info_len > 255 ||
-@@ -7656,6 +7697,7 @@ static size_t hostapd_eid_rnr_colocation
+@@ -7847,6 +7888,7 @@ static size_t hostapd_eid_rnr_colocation
  
  
  static size_t hostapd_eid_rnr_mlo_len(struct hostapd_data *hapd, u32 type,
@@ -216,7 +216,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  				      size_t *current_len)
  {
  	size_t len = 0;
-@@ -7663,7 +7705,7 @@ static size_t hostapd_eid_rnr_mlo_len(st
+@@ -7854,7 +7896,7 @@ static size_t hostapd_eid_rnr_mlo_len(st
  	struct hostapd_iface *iface;
  	size_t i;
  
@@ -225,7 +225,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		return 0;
  
  	/* TODO: Allow for FILS/Action as well */
-@@ -7678,7 +7720,7 @@ static size_t hostapd_eid_rnr_mlo_len(st
+@@ -7869,7 +7911,7 @@ static size_t hostapd_eid_rnr_mlo_len(st
  			continue;
  
  		len += hostapd_eid_rnr_iface_len(iface->bss[0], hapd,
@@ -234,7 +234,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -7722,7 +7764,7 @@ size_t hostapd_eid_rnr_len(struct hostap
+@@ -7913,7 +7955,7 @@ size_t hostapd_eid_rnr_len(struct hostap
  	if (include_mld_params &&
  	    (type != WLAN_FC_STYPE_BEACON ||
  	     hapd->iconf->mbssid != ENHANCED_MBSSID_ENABLED))
@@ -243,7 +243,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	return total_len;
  }
-@@ -7793,6 +7835,7 @@ static bool hostapd_eid_rnr_bss(struct h
+@@ -7984,6 +8026,7 @@ static bool hostapd_eid_rnr_bss(struct h
  	struct hostapd_iface *iface = hapd->iface;
  	struct hostapd_data *bss = iface->bss[i];
  	u8 bss_param = 0;
@@ -251,7 +251,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	bool ap_mld = false;
  	u8 *eid = *pos;
  
-@@ -7805,7 +7848,7 @@ static bool hostapd_eid_rnr_bss(struct h
+@@ -7996,7 +8039,7 @@ static bool hostapd_eid_rnr_bss(struct h
  		return false;
  
  	if (hostapd_skip_rnr(i, skip_profiles, ap_mld, tbtt_info_len,
@@ -260,7 +260,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	    return false;
  
  	if (*len + RNR_TBTT_INFO_LEN > 255 ||
-@@ -7854,16 +7897,15 @@ static bool hostapd_eid_rnr_bss(struct h
+@@ -8045,16 +8088,15 @@ static bool hostapd_eid_rnr_bss(struct h
  		 *  a) MLD ID advertised shall be 255.
  		 *  b) Link ID advertised shall be 15.
  		 *  c) BPCC advertised shall be 255 */
@@ -280,7 +280,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  #ifdef CONFIG_TESTING_OPTIONS
  		if (bss->conf->mld_indicate_disabled)
  			*eid |= RNR_TBTT_INFO_MLD_PARAM2_LINK_DISABLED;
-@@ -7984,13 +8026,14 @@ u8 * hostapd_eid_rnr_colocation(struct h
+@@ -8175,13 +8217,14 @@ u8 * hostapd_eid_rnr_colocation(struct h
  
  
  u8 * hostapd_eid_rnr_mlo(struct hostapd_data *hapd, u32 type,
@@ -297,7 +297,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		return eid;
  
  	/* TODO: Allow for FILS/Action as well */
-@@ -8005,7 +8048,7 @@ u8 * hostapd_eid_rnr_mlo(struct hostapd_
+@@ -8196,7 +8239,7 @@ u8 * hostapd_eid_rnr_mlo(struct hostapd_
  			continue;
  
  		eid = hostapd_eid_rnr_iface(iface->bss[0], hapd, eid,
@@ -306,7 +306,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -8049,7 +8092,7 @@ u8 * hostapd_eid_rnr(struct hostapd_data
+@@ -8240,7 +8283,7 @@ u8 * hostapd_eid_rnr(struct hostapd_data
  	if (include_mld_params &&
  	    (type != WLAN_FC_STYPE_BEACON ||
  	     hapd->iconf->mbssid != ENHANCED_MBSSID_ENABLED))
@@ -315,7 +315,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (eid == eid_start + 2)
  		return eid_start;
-@@ -8161,6 +8204,11 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -8352,6 +8395,11 @@ static size_t hostapd_eid_mbssid_elem_le
  			nontx_profile_len += xrate_len;
  		else if (tx_xrate_len)
  			ie_count++;
@@ -327,7 +327,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		if (ie_count)
  			nontx_profile_len += 4 + ie_count;
  
-@@ -8182,11 +8230,6 @@ size_t hostapd_eid_mbssid_len(struct hos
+@@ -8373,11 +8421,6 @@ size_t hostapd_eid_mbssid_len(struct hos
  			      size_t known_bss_len, size_t *rnr_len)
  {
  	size_t len = 0, bss_index = 1;
@@ -339,7 +339,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (!hapd->iconf->mbssid || hapd->iface->num_bss <= 1 ||
  	    (frame_type != WLAN_FC_STYPE_BEACON &&
-@@ -8219,7 +8262,10 @@ size_t hostapd_eid_mbssid_len(struct hos
+@@ -8410,7 +8453,10 @@ size_t hostapd_eid_mbssid_len(struct hos
  
  			*rnr_len += hostapd_eid_rnr_iface_len(
  				hapd, hostapd_mbssid_get_tx_bss(hapd),
@@ -351,7 +351,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		}
  	}
  
-@@ -8328,6 +8374,11 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -8519,6 +8565,11 @@ static u8 * hostapd_eid_mbssid_elem(stru
  			non_inherit_ie[ie_count++] = WLAN_EID_EXT_SUPP_RATES;
  		if (!rsnx && hostapd_wpa_ie(tx_bss, WLAN_EID_RSNX))
  			non_inherit_ie[ie_count++] = WLAN_EID_RSNX;
@@ -363,7 +363,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		if (ie_count) {
  			*eid++ = WLAN_EID_EXTENSION;
  			*eid++ = 2 + ie_count + 1;
-@@ -8363,11 +8414,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
+@@ -8554,11 +8605,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
  {
  	size_t bss_index = 1, cur_len = 0;
  	u8 elem_index = 0, *rnr_start_eid = rnr_eid;
@@ -376,7 +376,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (!hapd->iconf->mbssid || hapd->iface->num_bss <= 1 ||
  	    (frame_stype != WLAN_FC_STYPE_BEACON &&
-@@ -8412,7 +8459,11 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
+@@ -8603,7 +8650,11 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
  			cur_len = 0;
  			rnr_eid = hostapd_eid_rnr_iface(
  				hapd, hostapd_mbssid_get_tx_bss(hapd),
@@ -391,7 +391,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1838,6 +1838,13 @@ struct wpa_driver_ap_params {
+@@ -1850,6 +1850,13 @@ struct wpa_driver_ap_params {
  	const char *mbssid_tx_iface;
  
  	/**
@@ -407,7 +407,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	unsigned int mbssid_index;
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -734,7 +734,11 @@ static struct nl_msg *
+@@ -736,7 +736,11 @@ static struct nl_msg *
  nl80211_ifindex_msg(struct wpa_driver_nl80211_data *drv, int ifindex,
  		    int flags, uint8_t cmd)
  {
@@ -420,7 +420,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  					 cmd);
  }
  
-@@ -4869,6 +4873,9 @@ static int nl80211_mbssid(struct nl_msg
+@@ -4905,6 +4909,9 @@ static int nl80211_mbssid(struct nl_msg
  		    nla_put_u32(msg, NL80211_MBSSID_CONFIG_ATTR_TX_IFINDEX,
  				ifidx))
  			return -1;
@@ -432,7 +432,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	if (params->ema && nla_put_flag(msg, NL80211_MBSSID_CONFIG_ATTR_EMA))
 --- a/src/ap/ieee802_11.h
 +++ b/src/ap/ieee802_11.h
-@@ -101,6 +101,9 @@ u8 * hostapd_eid_eht_ml_assoc(struct hos
+@@ -110,6 +110,9 @@ u8 * hostapd_eid_eht_ml_assoc(struct hos
  size_t hostapd_eid_eht_ml_beacon_len(struct hostapd_data *hapd,
  				     struct mld_info *info,
  				     bool include_mld_id);

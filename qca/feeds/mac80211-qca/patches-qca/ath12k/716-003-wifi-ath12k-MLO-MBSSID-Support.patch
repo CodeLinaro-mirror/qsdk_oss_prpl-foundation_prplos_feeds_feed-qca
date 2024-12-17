@@ -94,8 +94,10 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +	if (!link) {
 +		rcu_read_unlock();
 +		return -ENOLINK;
-+	}
-+
+ 	}
+ 
+-	bcn = ieee80211_beacon_get_template(tx_arvif->ar->ah->hw, ahvif->vif,
+-					    &offs, arvif->link_id);
 +	if (link->mbssid_tx_vif) {
 +		tx_ahvif = (void *)link->mbssid_tx_vif->drv_priv;
 +		if (!tx_ahvif) {
@@ -104,10 +106,8 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +		}
 +		lockdep_assert_held(&tx_ahvif->ah->conf_mutex);
 +		tx_arvif = tx_ahvif->link[link->mbssid_tx_vif_linkid];
- 	}
- 
--	bcn = ieee80211_beacon_get_template(tx_arvif->ar->ah->hw, ahvif->vif,
--					    &offs, arvif->link_id);
++	}
++
 +	if (!tx_arvif) {
 +		rcu_read_unlock();
 +		return -ENOLINK;
@@ -128,7 +128,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			    "failed to submit beacon template command: %d\n",
  			    ret);
  
-@@ -1773,21 +1805,30 @@ static int ath12k_mac_setup_bcn_tmpl_non
+@@ -1773,21 +1805,40 @@ static int ath12k_mac_setup_bcn_tmpl_non
  
  static int ath12k_mac_setup_bcn_tmpl(struct ath12k_link_vif *arvif)
  {
@@ -143,17 +143,25 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
 -	/* FIXME there could be multiple tx link vifs, so this basically
 -	 * requires change for MLO. For simpler case mbssid_tx_vif is NULL
--	 */
--	if (vif->mbssid_tx_vif &&
--	    ahvif != (void *)vif->mbssid_tx_vif->drv_priv &&
--	    arvif->is_up)
--		return 0;
 +	rcu_read_lock();
 +	link = ath12k_get_link_bss_conf(arvif);
 +	if (!link) {
 +		rcu_read_unlock();
 +		return -ENOLINK;
 +	}
++
++	/* Avoid setting beacon for non-tx vdevs if corresponding
++	 * tx vdev is unmapped.
+ 	 */
+-	if (vif->mbssid_tx_vif &&
+-	    ahvif != (void *)vif->mbssid_tx_vif->drv_priv &&
+-	    arvif->is_up)
++
++	if (!link->mbssid_tx_vif && link->nontransmitted) {
++		rcu_read_unlock();
+ 		return 0;
++	}
++
 +	if (link->mbssid_tx_vif) {
 +		tx_ahvif = (void *)link->mbssid_tx_vif->drv_priv;
 +		if (ahvif != tx_ahvif && arvif->is_up) {
@@ -169,7 +177,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		return ath12k_mac_setup_bcn_tmpl_ema(arvif);
  	else
  		return ath12k_mac_setup_bcn_tmpl_non_ema(arvif);
-@@ -1819,7 +1860,7 @@ void ath12k_mac_bcn_tx_event(struct ath1
+@@ -1819,7 +1870,7 @@ void ath12k_mac_bcn_tx_event(struct ath1
  
  	arvif->bcca_zero_sent = false;
  
@@ -178,7 +186,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		ieee80211_beacon_update_cntdwn(vif, arvif->link_id);
  	ieee80211_queue_work(ar->ah->hw, &arvif->update_bcn_template_work);
  }
-@@ -1831,17 +1872,28 @@ static void ath12k_control_beaconing(str
+@@ -1831,17 +1882,28 @@ static void ath12k_control_beaconing(str
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	struct ath12k_vif *tx_ahvif = NULL;
  	struct ath12k_link_vif *tx_arvif = NULL;
@@ -197,8 +205,8 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +	if (!link) {
 +		rcu_read_unlock();
 +		return;
-+	}
-+
+ 	}
+ 
 +	if (link->mbssid_tx_vif) {
 +		tx_ahvif = (void *)link->mbssid_tx_vif->drv_priv;
 +		if (tx_ahvif) {
@@ -207,13 +215,13 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 +			if (tx_arvif)
 +				lockdep_assert_held(&tx_arvif->ar->conf_mutex);
 +		}
- 	}
- 
++	}
++
 +	rcu_read_unlock();
  	lockdep_assert_held(&arvif->ar->conf_mutex);
  
  	if (!info->enable_beacon) {
-@@ -3928,9 +3980,9 @@ static void ath12k_bss_assoc(struct ath1
+@@ -3933,9 +3995,9 @@ static void ath12k_bss_assoc(struct ath1
  static void ath12k_bss_disassoc(struct ath12k *ar,
  				struct ath12k_link_vif *arvif)
  {
@@ -224,7 +232,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	int ret;
  
  	lockdep_assert_held(&ar->conf_mutex);
-@@ -3945,15 +3997,26 @@ static void ath12k_bss_disassoc(struct a
+@@ -3950,15 +4012,26 @@ static void ath12k_bss_disassoc(struct a
  
  	arvif->is_up = false;
  
@@ -257,7 +265,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  }
  
  static u32 ath12k_mac_get_rate_hw_value(int bitrate)
-@@ -9020,6 +9083,7 @@ static int ath12k_mac_setup_vdev_args_mb
+@@ -9028,6 +9101,7 @@ static int ath12k_mac_setup_vdev_args_mb
  {
  	struct ath12k *ar = arvif->ar;
  	struct ath12k_link_vif *tx_arvif;
@@ -265,7 +273,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	struct ieee80211_vif *tx_vif;
  	struct ieee80211_bss_conf *link_conf;
  
-@@ -9034,15 +9098,25 @@ static int ath12k_mac_setup_vdev_args_mb
+@@ -9042,15 +9116,25 @@ static int ath12k_mac_setup_vdev_args_mb
  	}
  
  	*tx_vdev_id = 0;
@@ -294,7 +302,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (link_conf->nontransmitted) {
  		if (ar->ah->hw->wiphy != ieee80211_vif_to_wdev(tx_vif)->wiphy) {
-@@ -9058,6 +9132,7 @@ static int ath12k_mac_setup_vdev_args_mb
+@@ -9067,6 +9151,7 @@ static int ath12k_mac_setup_vdev_args_mb
  		rcu_read_unlock();
  		return -EINVAL;
  	}
@@ -302,7 +310,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  
  	if (link_conf->ema_ap)
  		*flags |= WMI_HOST_VDEV_FLAGS_EMA_MODE;
-@@ -9297,6 +9372,9 @@ static int ath12k_mac_vdev_create(struct
+@@ -9306,6 +9391,9 @@ static int ath12k_mac_vdev_create(struct
  	vdev_id = __ffs64(ab->free_vdev_map);
  
  	arvif->vdev_id = vdev_id;
@@ -312,7 +320,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	ahvif->vdev_subtype = WMI_VDEV_SUBTYPE_NONE;
  	arvif->ar = ar;
  
-@@ -10398,6 +10476,7 @@ static int ath12k_vdev_restart_sequence(
+@@ -10407,6 +10495,7 @@ static int ath12k_vdev_restart_sequence(
  	struct ath12k *ar = arvif->ar;
  	struct ath12k_link_vif *tx_arvif;
  	struct ath12k_vif *tx_ahvif;
@@ -320,7 +328,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	struct ieee80211_chanctx_conf old_chanctx;
  	struct vdev_up_params params = { 0 };
  	int ret = -EINVAL;
-@@ -10444,15 +10523,16 @@ beacon_tmpl_setup:
+@@ -10453,15 +10542,16 @@ beacon_tmpl_setup:
  	params.vdev_id = arvif->vdev_id;
  	params.aid = ahvif->aid;
  	params.bssid = arvif->bssid;
@@ -342,7 +350,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	ret = ath12k_wmi_vdev_up(arvif->ar, &params);
  	if (ret) {
  		ath12k_warn(ar->ab, "failed to bring vdev up %d: %d\n",
-@@ -10857,7 +10937,7 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -10866,7 +10956,7 @@ ath12k_mac_update_vif_chan(struct ath12k
  {
  	struct ath12k_base *ab = ar->ab;
  	struct ath12k_link_vif *arvif, *tx_arvif;
@@ -351,7 +359,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	int ret;
  	int i, trans_vdev_index;
  	u64 vif_down_failed_map = 0;
-@@ -10897,11 +10977,11 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -10906,11 +10996,11 @@ ath12k_mac_update_vif_chan(struct ath12k
  		if (!arvif->is_up)
  			continue;
  
@@ -368,7 +376,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			trans_vdev_index = i;
  		}
  
-@@ -10934,7 +11014,7 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -10943,7 +11033,7 @@ ath12k_mac_update_vif_chan(struct ath12k
  		if (WARN_ON(!arvif))
  			continue;
  
@@ -377,7 +385,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		    arvif == tx_arvif)
  			continue;
  
-@@ -10955,8 +11035,8 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -10964,8 +11054,8 @@ ath12k_mac_update_vif_chan_mvr(struct at
  			       int n_vifs)
  {
  	struct ath12k_base *ab = ar->ab;
@@ -388,7 +396,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  	struct cfg80211_chan_def *chandef;
  	struct ieee80211_vif *tx_vif;
  	int ret, i, time_left, trans_vdev_index, vdev_idx, n_vdevs = 0;
-@@ -10991,11 +11071,11 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -11000,11 +11090,11 @@ ath12k_mac_update_vif_chan_mvr(struct at
  			continue;
  		}
  
@@ -405,7 +413,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  			trans_vdev_index = i;
  		}
  
-@@ -11057,7 +11137,7 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -11066,7 +11156,7 @@ ath12k_mac_update_vif_chan_mvr(struct at
  
  		vdev_idx = -1;
  

@@ -18,7 +18,7 @@ Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
 
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -2434,6 +2434,9 @@ const struct oper_class_map global_op_cl
+@@ -2466,6 +2466,9 @@ const struct oper_class_map global_op_cl
  	{ HOSTAPD_MODE_IEEE80211A, 126, 149, 173, 8, BW40PLUS, P2P_SUPP },
  	{ HOSTAPD_MODE_IEEE80211A, 127, 153, 177, 8, BW40MINUS, P2P_SUPP },
  

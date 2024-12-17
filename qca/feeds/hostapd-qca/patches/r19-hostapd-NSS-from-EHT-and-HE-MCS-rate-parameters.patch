@@ -42,7 +42,7 @@ Signed-off-by: Ajith C <quic_ajithc@quicinc.com>
  int hostapd_ctrl_iface_sta(struct hostapd_data *hapd, const char *txtaddr,
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -3014,47 +3014,104 @@ static int hostapd_ctrl_iface_chan_switc
+@@ -3003,47 +3003,104 @@ static int hostapd_ctrl_iface_color_chan
  
  u8 hostapd_maxnss(struct hostapd_data *hapd, struct sta_info *sta)
  {
@@ -184,4 +184,4 @@ Signed-off-by: Ajith C <quic_ajithc@quicinc.com>
 +	return rx_nss;
  }
  
- static int hostapd_ctrl_iface_wmm_param(struct hostapd_data *hapd,
+ 

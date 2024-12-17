@@ -141,9 +141,9 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  fail_remove_tx_buf:
  	ath12k_dp_tx_release_txbuf(dp, tx_desc, ti.ring_id);
  
-@@ -802,12 +771,7 @@ static void ath12k_dp_tx_free_txbuf(stru
- 	skb_cb = ATH12K_SKB_CB(msdu);
+@@ -804,12 +773,7 @@ static void ath12k_dp_tx_free_txbuf(stru
  	ar = ab->pdevs[mac_id].ar;
+ 	flags = skb_cb->flags;
  
 -	dma_unmap_single_attrs(ab->dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE,
 -			     DMA_ATTR_SKIP_CPU_SYNC);
@@ -153,8 +153,8 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
 -				       DMA_TO_DEVICE, DMA_ATTR_SKIP_CPU_SYNC);
  		dev_kfree_skb_any(skb_ext_desc);
  	}
- 
-@@ -883,11 +847,7 @@ ath12k_dp_tx_htt_tx_complete_buf(struct
+ 	if (ab->stats_disable && !(flags & ATH12K_SKB_TX_STATUS))
+@@ -887,11 +851,7 @@ ath12k_dp_tx_htt_tx_complete_buf(struct
  	if (drop_disable)
  		attrs |= DMA_ATTR_SKIP_CPU_SYNC;
  
@@ -166,7 +166,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  		dev_kfree_skb_any(skb_ext_desc);
  	}
  
-@@ -1728,12 +1688,7 @@ int ath12k_dp_tx_completion_handler(stru
+@@ -1736,12 +1696,7 @@ int ath12k_dp_tx_completion_handler(stru
  
  		skb_cb =  (struct ath12k_skb_cb *)&IEEE80211_SKB_CB(msdu)->driver_data;
  		flags = skb_cb->flags;
@@ -179,3 +179,30 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  			dev_kfree_skb_any(skb_ext_desc);
  		}
  		/* Free skb here if stats is disabled */
+--- a/drivers/net/wireless/ath/ath12k/dp.c
++++ b/drivers/net/wireless/ath/ath12k/dp.c
+@@ -1658,11 +1658,7 @@ void ath12k_dp_umac_txrx_desc_cleanup(st
+ 				tx_desc_info[k].skb_ext_desc = NULL;
+ 				tx_desc_info[k].in_use = false;
+ 				list_add_tail(&tx_desc_info[k].list, &dp->tx_desc_free_list[i]);
+-				dma_unmap_single(ab->dev, ATH12K_SKB_CB(skb)->paddr,
+-						 skb->len, DMA_TO_DEVICE);
+ 				if (tx_desc_info[k].skb_ext_desc) {
+-					dma_unmap_single(ab->dev, ATH12K_SKB_CB(skb)->paddr_ext_desc,
+-							 tx_desc_info[k].skb_ext_desc->len, DMA_TO_DEVICE);
+ 					dev_kfree_skb_any(tx_desc_info[k].skb_ext_desc);
+ 				}
+ 				dev_kfree_skb_any(skb);
+@@ -1734,12 +1730,8 @@ static void ath12k_dp_cc_cleanup(struct
+ 					continue;
+ 
+ 				tx_desc_info[k].skb = NULL;
+-				dma_unmap_single(ab->dev, ATH12K_SKB_CB(skb)->paddr,
+-						 skb->len, DMA_TO_DEVICE);
+ 
+ 				if (tx_desc_info[k].skb_ext_desc) {
+-					dma_unmap_single(ab->dev, ATH12K_SKB_CB(skb)->paddr_ext_desc,
+-							 tx_desc_info[k].skb_ext_desc->len, DMA_TO_DEVICE);
+ 					dev_kfree_skb_any(tx_desc_info[k].skb_ext_desc);
+ 				}
+ 				dev_kfree_skb_any(skb);

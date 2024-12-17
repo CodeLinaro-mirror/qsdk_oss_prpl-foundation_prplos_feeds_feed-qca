@@ -46,7 +46,7 @@ Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
  			nla_get_u8(tb[NL80211_ATTR_MAX_MATCH_SETS]);
 --- a/src/drivers/driver_nl80211_scan.c
 +++ b/src/drivers/driver_nl80211_scan.c
-@@ -1233,7 +1233,7 @@ int wpa_driver_nl80211_vendor_scan(struc
+@@ -1234,7 +1234,7 @@ int wpa_driver_nl80211_vendor_scan(struc
  		nla_nest_end(msg, ssids);
  	}
  

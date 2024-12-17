@@ -17,7 +17,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -5047,7 +5047,7 @@ static int hostapd_config_fill(struct ho
+@@ -5130,7 +5130,7 @@ static int hostapd_config_fill(struct ho
  		conf->eht_phy_capab.mu_beamformer = atoi(pos);
  	} else if (os_strcmp(buf, "eht_default_pe_duration") == 0) {
  		conf->eht_default_pe_duration = atoi(pos);

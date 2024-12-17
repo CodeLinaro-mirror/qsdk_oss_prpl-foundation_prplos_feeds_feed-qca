@@ -40,7 +40,7 @@ Signed-off-by: Nishant Pandey <nishpand@codeaurora.org>
  #endif /* CONFIG_MESH */
  	{ INT(wpa_ptk_rekey) },
  	{ INT_RANGE(wpa_deny_ptk0_rekey, 0, 2) },
-@@ -3032,6 +3038,8 @@ void wpa_config_free_ssid(struct wpa_ssi
+@@ -3033,6 +3039,8 @@ void wpa_config_free_ssid(struct wpa_ssi
  	os_free(ssid->p2p_client_list);
  	os_free(ssid->bssid_ignore);
  	os_free(ssid->bssid_accept);
@@ -49,7 +49,7 @@ Signed-off-by: Nishant Pandey <nishpand@codeaurora.org>
  #ifdef CONFIG_HT_OVERRIDES
  	os_free(ssid->ht_mcs);
  #endif /* CONFIG_HT_OVERRIDES */
-@@ -3433,6 +3441,18 @@ int wpa_config_set(struct wpa_ssid *ssid
+@@ -3435,6 +3443,18 @@ int wpa_config_set(struct wpa_ssid *ssid
  			}
  			ret = -1;
  		}

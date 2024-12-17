@@ -37,18 +37,18 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -2673,6 +2673,7 @@ static int hostapd_ctrl_iface_color_chan
+@@ -2829,6 +2829,7 @@ static int hostapd_ctrl_iface_color_chan
  	int ret, color;
  	unsigned int i;
  	char *end;
 +	struct hostapd_data *link_bss;
  
  	os_memset(&settings, 0, sizeof(settings));
- 	color = strtol(pos, &end, 10);
-@@ -2738,6 +2739,14 @@ static int hostapd_ctrl_iface_color_chan
  
+@@ -2900,6 +2901,15 @@ static int hostapd_ctrl_iface_color_chan
  		if (ret)
- 			 hostapd_cleanup_cca_params(bss);
+ 			hostapd_cleanup_cca_params(bss);
+ 
 +		if (!ret && bss->conf->mld_ap) {
 +			/* Generate per sta profiles for affiliated APs */
 +			for_each_mld_link(link_bss, bss) {
@@ -57,12 +57,13 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +				hostapd_gen_per_sta_profiles(link_bss);
 +			}
 +		}
++
+ 		free_beacon_data(&settings.beacon_cca);
+ 		free_beacon_data(&settings.beacon_after);
  	}
- 
-         return 0;
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -1003,6 +1003,9 @@ static void hostapd_gen_probe_resp(struc
+@@ -1073,6 +1073,9 @@ static void hostapd_gen_probe_resp(struc
  	params->resp->u.probe_resp.capab_info =
  		host_to_le16(hostapd_own_capab_info(hapd));
  
@@ -72,10 +73,19 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	pos = hostapd_probe_resp_fill_elems(hapd, params,
  					    params->resp->u.probe_resp.variable,
  					    buflen);
+@@ -3244,7 +3247,7 @@ static u8 * hostapd_gen_sta_profile(stru
+ }
+ 
+ 
+-static void hostapd_gen_per_sta_profiles(struct hostapd_data *hapd)
++void hostapd_gen_per_sta_profiles(struct hostapd_data *hapd)
+ {
+ 	bool tx_vap = hapd == hostapd_mbssid_get_tx_bss(hapd);
+ 	size_t link_data_len, sta_profile_len;
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2534,6 +2534,14 @@ static void hostapd_mld_if_enable(struct
- 	}
+@@ -2523,6 +2523,14 @@ static void hostapd_iface_disable(struct
+ 	hapd->disabled = 1;
  }
  
 +static void hostapd_event_update_cu_param(struct hostapd_data *hapd,
@@ -87,9 +97,9 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +	hapd->rx_cu_param.switch_count = cu_event->switch_count;
 +}
  
- void hostapd_wpa_event(void *ctx, enum wpa_event_type event,
- 		       union wpa_event_data *data)
-@@ -2541,6 +2549,7 @@ void hostapd_wpa_event(void *ctx, enum w
+ #ifdef CONFIG_IEEE80211BE
+ 
+@@ -2580,6 +2588,7 @@ void hostapd_wpa_event(void *ctx, enum w
  	struct hostapd_data *hapd = ctx;
  	struct sta_info *sta;
  	int b, err;
@@ -97,16 +107,10 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  #ifndef CONFIG_NO_STDOUT_DEBUG
  	int level = MSG_DEBUG;
-@@ -2893,9 +2902,14 @@ void hostapd_wpa_event(void *ctx, enum w
- 		}
- 		break;
- #endif /* CONFIG_IEEE80211AX */
--	 case EVENT_UPDATE_MUEDCA_PARAMS:
--		 hostapd_event_update_muedca_params(hapd, &data->update_muedca);
--		 break;
-+	case EVENT_UPDATE_MUEDCA_PARAMS:
-+		hostapd_event_update_muedca_params(hapd, &data->update_muedca);
-+		break;
+@@ -2943,6 +2952,11 @@ void hostapd_wpa_event(void *ctx, enum w
+ 	 case EVENT_UPDATE_MUEDCA_PARAMS:
+ 		 hostapd_event_update_muedca_params(hapd, &data->update_muedca);
+ 		 break;
 +	case EVENT_RX_CRITICAL_UPDATE:
 +		link_hapd = switch_link_hapd(hapd, data->cu_event.link_id);
 +		if (link_hapd)
@@ -117,7 +121,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		break;
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4661,6 +4661,7 @@ int hostapd_switch_channel(struct hostap
+@@ -4694,6 +4694,7 @@ int hostapd_switch_channel(struct hostap
  	int ret;
  	int oper_centr_freq0_idx;
  	int cur_bandwidth;
@@ -125,7 +129,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_CSA)) {
  		wpa_printf(MSG_INFO, "CSA is not supported");
-@@ -4695,6 +4696,14 @@ int hostapd_switch_channel(struct hostap
+@@ -4728,6 +4729,14 @@ int hostapd_switch_channel(struct hostap
  	}
  
  	hapd->csa_in_progress = 1;
@@ -140,7 +144,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	return 0;
  }
  
-@@ -4838,6 +4847,7 @@ static void hostapd_switch_color_timeout
+@@ -4918,6 +4927,7 @@ static void hostapd_switch_color_timeout
  	unsigned int b;
  	int i, r;
  	u64 neighbor_color;
@@ -148,7 +152,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	 /* CCA can be triggered once the handler constantly receives
  	  * color collision events to for at least
-@@ -4905,6 +4915,16 @@ static void hostapd_switch_color_timeout
+@@ -4985,6 +4995,16 @@ static void hostapd_switch_color_timeout
  		free_beacon_data(&settings.beacon_cca);
  		free_beacon_data(&settings.beacon_after);
  		os_free(settings.ubpr.unsol_bcast_probe_resp_tmpl);
@@ -167,7 +171,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -188,6 +188,12 @@ struct hostapd_openwrt_stats {
+@@ -205,6 +205,12 @@ struct hostapd_openwrt_stats {
  	} wnm;
  };
  
@@ -180,7 +184,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  /**
   * struct hostapd_data - hostapd per-BSS data structure
   */
-@@ -500,6 +506,7 @@ struct hostapd_data {
+@@ -517,6 +523,7 @@ struct hostapd_data {
         unsigned char ctrl_iface_cookie[CTRL_IFACE_COOKIE_LEN];
  #endif /* CONFIG_CTRL_IFACE_UDP */
  
@@ -188,6 +192,13 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifdef CONFIG_IEEE80211BE
  	u8 eht_mld_bss_param_change;
  	struct hostapd_mld *mld;
+@@ -927,5 +934,6 @@ static inline bool hostapd_mld_is_first_
+ 
+ u16 hostapd_get_punct_bitmap(struct hostapd_data *hapd);
+ bool hostapd_is_usable_punct_bitmap(struct hostapd_iface *iface);
++void hostapd_gen_per_sta_profiles(struct hostapd_data *hapd);
+ 
+ #endif /* HOSTAPD_H */
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
 @@ -353,6 +353,29 @@ u16 hostapd_own_capab_info(struct hostap
@@ -220,7 +231,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifdef CONFIG_WEP
  #ifndef CONFIG_NO_RC4
  static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
-@@ -6266,6 +6289,43 @@ static void notify_mgmt_frame(struct hos
+@@ -6425,6 +6448,43 @@ static void notify_mgmt_frame(struct hos
  
  
  /**
@@ -264,7 +275,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
   * ieee802_11_mgmt - process incoming IEEE 802.11 management frames
   * @hapd: hostapd BSS data structure (the BSS to which the management frame was
   * sent to)
-@@ -6347,6 +6407,7 @@ int ieee802_11_mgmt(struct hostapd_data
+@@ -6506,6 +6566,7 @@ int ieee802_11_mgmt(struct hostapd_data
  
  	if (stype == WLAN_FC_STYPE_PROBE_REQ) {
  		handle_probe_req(hapd, mgmt, len, ssi_signal);
@@ -272,7 +283,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		return 1;
  	}
  
-@@ -6382,11 +6443,13 @@ int ieee802_11_mgmt(struct hostapd_data
+@@ -6541,11 +6602,13 @@ int ieee802_11_mgmt(struct hostapd_data
  	case WLAN_FC_STYPE_ASSOC_REQ:
  		wpa_printf(MSG_DEBUG, "mgmt::assoc_req");
  		handle_assoc(hapd, mgmt, len, 0, ssi_signal);
@@ -286,7 +297,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		ret = 1;
  		break;
  	case WLAN_FC_STYPE_DISASSOC:
-@@ -8153,22 +8216,33 @@ static bool hostapd_eid_rnr_bss(struct h
+@@ -8229,22 +8292,33 @@ static bool hostapd_eid_rnr_bss(struct h
  
  #ifdef CONFIG_IEEE80211BE
  	if (ap_mld) {
@@ -330,7 +341,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #ifdef CONFIG_TESTING_OPTIONS
  		if (bss->conf->mld_indicate_disabled)
  			*eid |= RNR_TBTT_INFO_MLD_PARAM2_LINK_DISABLED;
-@@ -8574,6 +8648,9 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -8649,6 +8723,9 @@ static u8 * hostapd_eid_mbssid_elem(stru
  		capab_info = hostapd_own_capab_info(bss);
  		*eid++ = WLAN_EID_NONTRANSMITTED_BSSID_CAPA;
  		*eid++ = sizeof(capab_info);
@@ -342,7 +353,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -599,8 +599,8 @@ static u8 * hostapd_eid_eht_basic_ml_com
+@@ -600,8 +600,8 @@ static u8 * hostapd_eid_eht_basic_ml_com
  	/* Own Link ID */
  	wpabuf_put_u8(buf, hapd->mld_link_id);
  
@@ -353,7 +364,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	if (!hapd->conf->disable_eml_cap) {
  		wpa_printf(MSG_DEBUG, "MLD: EML Capabilities=0x%x",
-@@ -700,7 +700,7 @@ static u8 * hostapd_eid_eht_basic_ml_com
+@@ -701,7 +701,7 @@ static u8 * hostapd_eid_eht_basic_ml_com
  		wpabuf_put_u8(buf, link_bss->conf->dtim_period);
  
  		/* BSS Parameters Change Count */
@@ -364,10 +375,11 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  			continue;
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -6056,6 +6056,15 @@ enum wpa_event_type {
- 	 * EVENT_LINK_RECONFIG - Notification that AP links removed
+@@ -6142,6 +6142,15 @@ enum wpa_event_type {
+ 	 * EVENT_MLD_INTERFACE_FREED - Notification of AP MLD interface removal
  	 */
- 	EVENT_LINK_RECONFIG,
+ 	EVENT_MLD_INTERFACE_FREED,
++
 +	/**
 +	 * EVENT_RX_CRITICAL_UPDATE - Updated critical parameters received
 +	 *
@@ -375,12 +387,11 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +	 * are received. updated critical parameters need to be updated in
 +	 * probe/assoc response.
 +	 */
-+
 +	EVENT_RX_CRITICAL_UPDATE,
  };
  
  
-@@ -7068,6 +7077,18 @@ union wpa_event_data {
+@@ -7155,6 +7164,17 @@ union wpa_event_data {
  		u8 valid_links;
  		struct t2lm_mapping t2lmap[MAX_NUM_MLD_LINKS];
  	} t2l_map_info;
@@ -389,7 +400,6 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +	 * Data for critical_update
 +	 */
 +	struct cu_event {
-+		void *link_ctx;
 +		bool critical_flag;
 +		u8 bpcc;
 +		u8 switch_count;
@@ -401,51 +411,35 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  /**
 --- a/src/drivers/driver_common.c
 +++ b/src/drivers/driver_common.c
-@@ -102,6 +102,7 @@ const char * event_to_string(enum wpa_ev
- 	E2S(AWGN_DETECTED);
+@@ -103,6 +103,7 @@ const char * event_to_string(enum wpa_ev
  	E2S(TID_LINK_MAP);
  	E2S(LINK_RECONFIG);
+ 	E2S(MLD_INTERFACE_FREED);
 +	E2S(RX_CRITICAL_UPDATE);
  	}
  
  	return "UNKNOWN";
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1359,10 +1359,9 @@ mlme_event_mgmt_critical_update(struct i
+@@ -1358,7 +1358,7 @@ mlme_event_mgmt_critical_update(struct i
  	struct nlattr *link_list;
  	struct nlattr *link[NL80211_CU_MLD_LINK_ATTR_MAX + 1];
  	struct wpa_driver_nl80211_data *drv = bss->drv;
 -	struct i802_bss *link_bss, *tmp_bss;
++	struct i802_bss *tmp_bss;
  	union wpa_event_data event;
  	int rem, limit;
--	int ifidx = -1, mlo_link_id;
-+	int mlo_link_id;
- 
- 	static struct nla_policy
- 		link_policy[NL80211_CU_MLD_LINK_ATTR_MAX + 1] = {
-@@ -1390,20 +1389,7 @@ mlme_event_mgmt_critical_update(struct i
- 					mld_list, mld_policy)) {
- 			return;
- 		}
--		tmp_bss = NULL;
--		ifidx = -1;
--		if (mld[NL80211_CU_MLD_ATTR_IFINDEX]) {
--			ifidx = nla_get_u32(
--					mld[NL80211_CU_MLD_ATTR_IFINDEX]);
--			tmp_bss = get_bss_ifindex(drv, ifidx);
--			if (tmp_bss == NULL) {
--				wpa_printf(MSG_WARNING,
--						"nl80211: Unknown ifindex (%d) for critical update",
--						ifidx);
+ 	int ifidx = -1, mlo_link_id;
+@@ -1399,7 +1399,7 @@ mlme_event_mgmt_critical_update(struct i
+ 				wpa_printf(MSG_WARNING,
+ 						"nl80211: Unknown ifindex (%d) for critical update",
+ 						ifidx);
 -				return;
--			}
--		}
--		if (tmp_bss && mld[NL80211_CU_MLD_ATTR_LINK_LIST]) {
-+		if (mld[NL80211_CU_MLD_ATTR_LINK_LIST]) {
- 			nla_for_each_nested(link_list,
- 					mld[NL80211_CU_MLD_ATTR_LINK_LIST],
- 					limit) {
-@@ -1417,15 +1403,7 @@ mlme_event_mgmt_critical_update(struct i
++				continue;
+ 			}
+ 		}
+ 		if (tmp_bss && mld[NL80211_CU_MLD_ATTR_LINK_LIST]) {
+@@ -1416,15 +1416,7 @@ mlme_event_mgmt_critical_update(struct i
  				if (link[NL80211_CU_MLD_LINK_ATTR_ID]) {
  					mlo_link_id =
  						nla_get_u8(link[NL80211_CU_MLD_LINK_ATTR_ID]);
@@ -462,9 +456,18 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  					if (link[NL80211_CU_MLD_LINK_ATTR_CRITICAL_FLAG]) {
  						event.cu_event.critical_flag =
+@@ -1438,7 +1430,7 @@ mlme_event_mgmt_critical_update(struct i
+ 						event.cu_event.switch_count =
+ 							nla_get_u8(link[NL80211_CU_MLD_LINK_ATTR_SWITCH_COUNT]);
+ 					}
+-					wpa_supplicant_event(drv->ctx,
++					wpa_supplicant_event(tmp_bss->ctx,
+ 							     EVENT_RX_CRITICAL_UPDATE, &event);
+ 				}
+ 			}
 --- a/src/ap/ieee802_11.h
 +++ b/src/ap/ieee802_11.h
-@@ -275,6 +275,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
+@@ -280,6 +280,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
  			u8 **elem_offset,
  			const u8 *known_bss, size_t known_bss_len, u8 *rnr_eid,
  			u8 *rnr_count, u8 **rnr_offset, size_t rnr_len);

@@ -23,7 +23,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -1500,7 +1500,8 @@ ieee80211_freq_to_channel_ext(unsigned i
+@@ -1532,7 +1532,8 @@ ieee80211_freq_to_channel_ext(unsigned i
  		if ((freq - 5000) % 5)
  			return NUM_HOSTAPD_MODES;
  

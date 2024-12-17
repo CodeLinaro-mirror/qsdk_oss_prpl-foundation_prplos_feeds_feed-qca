@@ -12,11 +12,9 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  src/ap/ieee802_11_eht.c | 2 ++
  1 file changed, 2 insertions(+)
 
-diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index bdb9b99..33b4284 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -485,6 +485,8 @@ static bool ieee80211_invalid_eht_cap_size(enum hostapd_hw_mode mode,
+@@ -484,6 +484,8 @@ static bool ieee80211_invalid_eht_cap_si
  	size_t cap_len;
  	u16 ppe_thres_hdr;
  
@@ -25,6 +23,3 @@ index bdb9b99..33b4284 100644
  	he_capab = (const struct ieee80211_he_capabilities *) he_cap;
  	he_phy_cap = he_capab->he_phy_capab_info;
  	cap = (struct ieee80211_eht_capabilities *) eht_cap;
--- 
-2.34.1
-

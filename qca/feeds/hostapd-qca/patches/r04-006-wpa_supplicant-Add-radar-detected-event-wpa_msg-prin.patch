@@ -23,7 +23,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
 
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2693,6 +2693,9 @@ static void nl80211_radar_event(struct i
+@@ -2685,6 +2685,9 @@ static void nl80211_radar_event(struct i
  	if (tb[NL80211_ATTR_RADAR_BITMAP])
  		data.dfs_event.radar_bitmap = nla_get_u16(tb[NL80211_ATTR_RADAR_BITMAP]);
  
@@ -35,7 +35,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  	 * not found or the bss could be operating as non-MLO.
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -6370,9 +6370,12 @@ void supplicant_event(void *ctx, enum wp
+@@ -6543,9 +6543,12 @@ void supplicant_event(void *ctx, enum wp
  #ifdef CONFIG_AP
  #ifdef NEED_AP_MLME
  	case EVENT_DFS_RADAR_DETECTED:

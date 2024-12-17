@@ -1,6 +1,6 @@
 #!/bin/sh /etc/rc.common
 #
-# Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -28,95 +28,25 @@ configure_irq_affinity() {
 		return
 	fi
 
-	rxfill_interrupts=$(grep edma_ppeds_rxfill /proc/interrupts | cut -d ':' -f 1 | tr -d ' ')
-	txcmpl_interrupts=$(grep edma_ppeds_txcmpl /proc/interrupts | cut -d ':' -f 1 | tr -d ' ')
-	rxdesc_interrupts=$(grep edma_ppeds_rxdesc /proc/interrupts | cut -d ':' -f 1 | tr -d ' ')
-	wbmrel_interrupts=$(grep ppe_wbm_rel /proc/interrupts | cut -d ':' -f 1 | tr -d ' ')
-	reo2ppe_interrupts=$(grep reo2ppe /proc/interrupts | cut -d ':' -f 1 | tr -d ' ')
-	ppe2tcl_interrupts=$(grep ppe2tcl /proc/interrupts | cut -d ':' -f 1 | tr -d ' ')
+	radio_0=$(cat /proc/interrupts | grep "ppe.*_0" | cut -d ':' -f 1 | tr -d ' ')
+	radio_1=$(cat /proc/interrupts | grep "ppe.*_1" | cut -d ':' -f 1 | tr -d ' ')
+	radio_2=$(cat /proc/interrupts | grep "ppe.*_2" | cut -d ':' -f 1 | tr -d ' ')
+	radio_3=$(cat /proc/interrupts | grep "ppe.*_3" | cut -d ':' -f 1 | tr -d ' ')
 
-	counter=0
-	for i in $rxdesc_interrupts; do
-		counter=$((counter+1))
-		if [ $counter == 1 ]; then
-			echo $1 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 2 ]; then
-			echo $2 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 3 ]; then
-			echo $3 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 4 ]; then
-			echo $4 > /proc/irq/$i/smp_affinity
-		fi
+	for i in $radio_0; do
+		echo $1 > /proc/irq/$i/smp_affinity
 	done
 
-	counter=0
-	for i in $rxfill_interrupts; do
-		counter=$((counter+1))
-		if [ $counter == 1 ]; then
-			echo $1 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 2 ]; then
-			echo $2 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 3 ]; then
-			echo $3 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 4 ]; then
-			echo $4 > /proc/irq/$i/smp_affinity
-		fi
+	for i in $radio_1; do
+		echo $2 > /proc/irq/$i/smp_affinity
 	done
 
-	counter=0
-	for i in $txcmpl_interrupts; do
-		counter=$((counter+1))
-		if [ $counter == 1 ]; then
-			echo $1 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 2 ]; then
-			echo $2 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 3 ]; then
-			echo $3 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 4 ]; then
-			echo $4 > /proc/irq/$i/smp_affinity
-		fi
+	for i in $radio_2; do
+		echo $3 > /proc/irq/$i/smp_affinity
 	done
 
-	counter=0
-	for i in $wbmrel_interrupts; do
-		counter=$((counter+1))
-		if [ $counter == 1 ]; then
-			echo $1 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 2 ]; then
-			echo $2 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 3 ]; then
-			echo $3 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 4 ]; then
-			echo $4 > /proc/irq/$i/smp_affinity
-		fi
-	done
-
-	counter=0
-	for i in $reo2ppe_interrupts; do
-		counter=$((counter+1))
-		if [ $counter == 1 ]; then
-			echo $1 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 2 ]; then
-			echo $2 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 3 ]; then
-			echo $3 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 4 ]; then
-			echo $4 > /proc/irq/$i/smp_affinity
-		fi
-	done
-
-	counter=0
-	for i in $ppe2tcl_interrupts; do
-		counter=$((counter+1))
-		if [ $counter == 1 ]; then
-			echo $1 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 2 ]; then
-			echo $2 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 3 ]; then
-			echo $3 > /proc/irq/$i/smp_affinity
-		elif [ $counter == 4 ]; then
-			echo $4 > /proc/irq/$i/smp_affinity
-		fi
+	for i in $radio_3; do
+		echo $4 > /proc/irq/$i/smp_affinity
 	done
 
 	echo "Configured the IRQ affinity for DS mode in $board"
@@ -125,11 +55,11 @@ configure_irq_affinity() {
 start() {
 	board=$(cat /tmp/sysinfo/board_name)
 	case $board in
-		*'mi'*)
-		configure_irq_affinity 2 4 2 4
+		*'ap-al02-c20'*)
+		configure_irq_affinity 2 2 1 4
 		;;
 		*)
-		configure_irq_affinity 4 2 4 2
+		configure_irq_affinity 2 4 2 4
 		;;
 	esac
 }

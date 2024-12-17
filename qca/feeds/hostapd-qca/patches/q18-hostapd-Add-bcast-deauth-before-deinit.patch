@@ -20,7 +20,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
 
 --- a/hostapd/main.c
 +++ b/hostapd/main.c
-@@ -1043,6 +1043,8 @@ int main(int argc, char *argv[])
+@@ -1052,6 +1052,8 @@ int main(int argc, char *argv[])
   out:
  	hostapd_ucode_free();
  	hostapd_global_ctrl_iface_deinit(&interfaces);
@@ -31,7 +31,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  		if (!interfaces.iface[i])
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3430,6 +3430,32 @@ void hostapd_interface_deinit_free(struc
+@@ -3535,6 +3535,32 @@ void hostapd_interface_deinit_free(struc
  	hostapd_interface_free(iface);
  }
  
@@ -66,7 +66,7 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  				  void *drv_priv,
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -773,6 +773,7 @@ void hostapd_bss_deinit(struct hostapd_d
+@@ -807,6 +807,7 @@ void hostapd_bss_deinit(struct hostapd_d
  void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
  			   int reassoc);
  void hostapd_interface_deinit_free(struct hostapd_iface *iface);

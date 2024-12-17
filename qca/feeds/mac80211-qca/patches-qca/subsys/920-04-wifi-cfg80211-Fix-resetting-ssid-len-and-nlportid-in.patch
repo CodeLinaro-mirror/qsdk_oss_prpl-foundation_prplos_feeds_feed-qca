@@ -20,7 +20,21 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/net/wireless/ap.c
 +++ b/net/wireless/ap.c
-@@ -37,11 +37,18 @@ static int ___cfg80211_stop_ap(struct cf
+@@ -29,19 +29,31 @@ static int ___cfg80211_stop_ap(struct cf
+ 	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_GO)
+ 		return -EOPNOTSUPP;
+ 
+-	if (!wdev->links[link_id].ap.beacon_interval)
++	if (!wdev->links[link_id].ap.beacon_interval){
++		if (hweight16(wdev->valid_links) <= 1) {
++			wdev->conn_owner_nlportid = 0;
++			wdev->u.ap.ssid_len = 0;
++		}
+ 		return -ENOENT;
++	}
+ 
+ 	cfg80211_update_last_available(wdev->wiphy,
+ 				       &wdev->links[link_id].ap.chandef);
  
  	err = rdev_stop_ap(rdev, dev, link_id);
  	if (!err) {

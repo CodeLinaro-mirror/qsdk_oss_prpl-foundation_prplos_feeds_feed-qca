@@ -22,7 +22,7 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -6998,6 +6998,60 @@ void ieee802_11_rx_from_unknown(struct h
+@@ -7100,6 +7100,60 @@ void ieee802_11_rx_from_unknown(struct h
  			WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
  }
  
@@ -83,7 +83,7 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
  
  static u8 * hostapd_add_tpe_info(u8 *eid, u8 tx_pwr_count,
  				 enum max_tx_pwr_interpretation tx_pwr_intrpn,
-@@ -7023,14 +7077,6 @@ static u8 * hostapd_add_tpe_info(u8 *eid
+@@ -7125,14 +7179,6 @@ static u8 * hostapd_add_tpe_info(u8 *eid
  	return eid;
  }
  
@@ -98,7 +98,7 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
  u8 * hostapd_eid_txpower_envelope(struct hostapd_data *hapd, u8 *eid)
  {
  	struct hostapd_iface *iface = hapd->iface;
-@@ -7076,7 +7122,9 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7178,7 +7224,9 @@ u8 * hostapd_eid_txpower_envelope(struct
  		if (hapd->iconf->reg_def_cli_eirp_psd != -1)
  			tx_pwr = hapd->iconf->reg_def_cli_eirp_psd;
  		else
@@ -109,7 +109,7 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
  
  		eid = hostapd_add_tpe_info(eid, tx_pwr_count, tx_pwr_intrpn,
  					   REG_DEFAULT_CLIENT, tx_pwr);
-@@ -7088,7 +7136,9 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7190,7 +7238,9 @@ u8 * hostapd_eid_txpower_envelope(struct
  			if (hapd->iconf->reg_sub_cli_eirp_psd != -1)
  				tx_pwr = hapd->iconf->reg_sub_cli_eirp_psd;
  			else

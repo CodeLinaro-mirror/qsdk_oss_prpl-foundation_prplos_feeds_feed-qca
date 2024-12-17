@@ -14,7 +14,7 @@ Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4572,6 +4572,8 @@ static int hostapd_config_fill(struct ho
+@@ -4649,6 +4649,8 @@ static int hostapd_config_fill(struct ho
  	} else if (os_strcmp(buf, "wowlan_triggers") == 0) {
  		os_free(bss->wowlan_triggers);
  		bss->wowlan_triggers = os_strdup(pos);
@@ -25,7 +25,7 @@ Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
  	} else if (os_strcmp(buf, "disable_40mhz_scan") == 0) {
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1247,6 +1247,7 @@ struct hostapd_config {
+@@ -1264,6 +1264,7 @@ struct hostapd_config {
  #define CH_SWITCH_EHT_ENABLED BIT(0)
  #define CH_SWITCH_EHT_DISABLED BIT(1)
  	unsigned int ch_switch_eht_config;
@@ -35,7 +35,7 @@ Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
  		MBSSID_DISABLED = 0,
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1388,6 +1388,11 @@ struct wpa_driver_associate_params {
+@@ -1413,6 +1413,11 @@ struct wpa_driver_associate_params {
  	int beacon_tx_mode;
  
  	/**

@@ -17,7 +17,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2629,10 +2629,11 @@ static void nl80211_radar_event(struct i
+@@ -2669,10 +2669,11 @@ static void nl80211_radar_event(struct i
  		   bss->ifname);
  }
  
@@ -31,7 +31,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  	os_memset(&data, 0, sizeof(data));
  
-@@ -2653,7 +2654,53 @@ static void nl80211_awgn_event(struct wp
+@@ -2693,7 +2694,53 @@ static void nl80211_awgn_event(struct wp
  		data.awgn_event.chan_bw_interference_bitmap =
  			nla_get_u32(tb[NL80211_ATTR_AWGN_INTERFERENCE_BITMAP]);
  
@@ -86,7 +86,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  }
  
  static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
-@@ -4355,7 +4402,7 @@ static void do_process_drv_event(struct
+@@ -4311,7 +4358,7 @@ static void do_process_drv_event(struct
  		wpa_supplicant_event(drv->ctx, EVENT_LINK_RECONFIG, NULL);
  		break;
  	case NL80211_CMD_AWGN_DETECT:
@@ -97,7 +97,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -7027,6 +7027,7 @@ union wpa_event_data {
+@@ -7109,6 +7109,7 @@ union wpa_event_data {
  		int cf1;
  		int cf2;
  		u32 chan_bw_interference_bitmap;
@@ -107,7 +107,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	/**
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2692,6 +2692,7 @@ void hostapd_wpa_event(void *ctx, enum w
+@@ -2814,6 +2814,7 @@ void hostapd_wpa_event(void *ctx, enum w
  	case EVENT_AWGN_DETECTED:
  		if (!data)
  			break;

@@ -29,7 +29,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #include "common/ieee802_11_defs.h"
  #include "common/ieee802_11_common.h"
  #include "common/hw_features_common.h"
-@@ -2246,6 +2247,31 @@ static u8 * hostapd_fils_discovery(struc
+@@ -2289,6 +2290,31 @@ static u8 * hostapd_fils_discovery(struc
  #endif /* CONFIG_FILS */
  
  
@@ -61,7 +61,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  int ieee802_11_build_ap_params(struct hostapd_data *hapd,
  			       struct wpa_driver_ap_params *params)
  {
-@@ -2258,6 +2284,8 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2301,6 +2327,8 @@ int ieee802_11_build_ap_params(struct ho
  	u16 capab_info;
  	u8 *pos, *tailpos, *tailend, *csa_pos;
  	bool complete = false;
@@ -70,7 +70,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  #endif /* NEED_AP_MLME */
  
  	os_memset(params, 0, sizeof(*params));
-@@ -2411,8 +2439,14 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2453,8 +2481,14 @@ int ieee802_11_build_ap_params(struct ho
  
  	tailpos = hostapd_eid_supported_op_classes(hapd, tailpos);
  	tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);
@@ -85,7 +85,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	if (hapd->iconf->mbssid && hapd->iconf->num_bss > 1) {
  		if (ieee802_11_build_ap_params_mbssid(hapd, params)) {
  			os_free(head);
-@@ -2450,7 +2484,12 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2492,7 +2526,12 @@ int ieee802_11_build_ap_params(struct ho
  	if (hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac &&
  	    !is_6ghz_op_class(hapd->iconf->op_class)) {
  		tailpos = hostapd_eid_vht_capabilities(hapd, tailpos, 0);
@@ -98,7 +98,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		tailpos = hostapd_eid_txpower_envelope(hapd, tailpos);
  	}
  #endif /* CONFIG_IEEE80211AC */
-@@ -2478,16 +2517,31 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2524,16 +2563,31 @@ int ieee802_11_build_ap_params(struct ho
  
  		tailpos = hostapd_eid_he_capab(hapd, tailpos,
  					       IEEE80211_MODE_AP);
@@ -130,7 +130,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		tailpos = hostapd_eid_he_6ghz_band_cap(hapd, tailpos);
  	}
  #endif /* CONFIG_IEEE80211AX */
-@@ -2499,7 +2553,10 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2545,7 +2599,10 @@ int ieee802_11_build_ap_params(struct ho
  							    tailpos, false);
  		tailpos = hostapd_eid_eht_capab(hapd, tailpos,
  						IEEE80211_MODE_AP);
@@ -141,7 +141,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		tailpos = hostapd_eid_vendor_240mhz(hapd, tailpos, IEEE80211_MODE_AP);
  	}
  #endif /* CONFIG_IEEE80211BE */
-@@ -2514,8 +2571,11 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2560,8 +2617,11 @@ int ieee802_11_build_ap_params(struct ho
  	tailpos = hostapd_get_osen_ie(hapd, tailpos, tailend - tailpos);
  
  	/* Wi-Fi Alliance WMM */
@@ -153,7 +153,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	tailpos = hostapd_add_scs_cap(tailpos, false, true);
  #endif
  #ifdef CONFIG_WPS
-@@ -2695,6 +2755,9 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2752,6 +2812,9 @@ int ieee802_11_build_ap_params(struct ho
  
  	params->beacon_tx_mode = hapd->conf->beacon_tx_mode;
  
@@ -165,7 +165,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	    !hapd->conf->disable_11be) {
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -195,6 +195,27 @@ struct rx_critical_param {
+@@ -212,6 +212,27 @@ struct rx_critical_param {
  };
  
  /**
@@ -193,7 +193,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
   * struct hostapd_data - hostapd per-BSS data structure
   */
  struct hostapd_data {
-@@ -507,6 +528,8 @@ struct hostapd_data {
+@@ -524,6 +545,8 @@ struct hostapd_data {
  #endif /* CONFIG_CTRL_IFACE_UDP */
  
         struct rx_critical_param rx_cu_param;
@@ -204,7 +204,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	struct hostapd_mld *mld;
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1949,6 +1949,10 @@ struct wpa_driver_ap_params {
+@@ -1939,6 +1939,10 @@ struct wpa_driver_ap_params {
  	/* Unsolicited broadcast Probe Response data */
  	struct unsol_bcast_probe_resp ubpr;
  
@@ -217,7 +217,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	 * MHz for AP operation. Drivers which support this parameter will
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5135,6 +5135,7 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5145,6 +5145,7 @@ static int wpa_driver_nl80211_set_ap(voi
  #ifdef CONFIG_MESH
  	struct wpa_driver_mesh_bss_params mesh_params;
  #endif /* CONFIG_MESH */
@@ -225,7 +225,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	if (params->mld_ap) {
  		if (!nl80211_link_valid(bss->valid_links,
-@@ -5487,6 +5488,14 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5497,6 +5498,15 @@ static int wpa_driver_nl80211_set_ap(voi
  		goto fail;
  #endif /* CONFIG_FILS */
  
@@ -237,30 +237,31 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +		if (nla_put_u8(msg, NL80211_ATTR_SET_CRITICAL_UPDATE, critical_update))
 +			goto fail;
 +	}
++
  	if (params->punct_bitmap) {
  		wpa_printf(MSG_DEBUG, "nl80211: Puncturing bitmap=0x%04x",
  			   params->punct_bitmap);
-@@ -11512,6 +11521,7 @@ static int nl80211_switch_channel(void *
+@@ -11615,6 +11625,7 @@ static int nl80211_switch_channel(void *
  	int ret = -ENOBUFS;
  	int csa_off_len = 0;
  	int i;
 +	u8 critical_update = 0;
  
  	wpa_printf(MSG_DEBUG,
- 		   "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d channel=%d sec_channel_offset=%d width=%d cf1=%d cf2=%d puncturing_bitmap=0x%04x link_id=%d%s%s%s puncturing bitmap=0x%04x, ru_punct_ofdma=%u)",
-@@ -11642,6 +11652,11 @@ static int nl80211_switch_channel(void *
+ 		   "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d channel=%d sec_channel_offset=%d width=%d cf1=%d cf2=%d puncturing_bitmap=0x%04x link_id=%d%s%s%s)",
+@@ -11743,6 +11754,11 @@ static int nl80211_switch_channel(void *
  	if (settings->handle_dfs && nla_put_flag(msg, NL80211_ATTR_HANDLE_DFS))
  		goto fail;
  
 +	if (bss->valid_links) {
-+		if (nla_put_u8(msg, NL80211_ATTR_SET_CRITICAL_UPDATE, NL80211_CU_ELEMID_ADDED)
++		if (nla_put_u8(msg, NL80211_ATTR_SET_CRITICAL_UPDATE, NL80211_CU_ELEMID_ADDED))
 +			goto fail;
 +	}
 +
  	ret = send_and_recv_cmd(drv, msg);
  	if (ret) {
  		wpa_printf(MSG_DEBUG, "nl80211: switch_channel failed err=%d (%s)",
-@@ -11666,6 +11681,7 @@ static int nl80211_switch_color(void *pr
+@@ -11767,6 +11783,7 @@ static int nl80211_switch_color(void *pr
  	struct nlattr *beacon_cca;
  	struct nl_msg *msg;
  	int ret = -ENOBUFS;
@@ -268,9 +269,9 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  
  	wpa_printf(MSG_DEBUG,
  		   "nl80211: Color change request (cca_count=%u color=%d)",
-@@ -11740,6 +11756,12 @@ static int nl80211_switch_color(void *pr
- 		}
+@@ -11845,6 +11862,12 @@ static int nl80211_switch_color(void *pr
  	}
+ #endif /* CONFIG_IEEE80211BE */
  
 +	if (bss->valid_links) {
 +		critical_update |= NL80211_CU_ELEMID_ADDED;

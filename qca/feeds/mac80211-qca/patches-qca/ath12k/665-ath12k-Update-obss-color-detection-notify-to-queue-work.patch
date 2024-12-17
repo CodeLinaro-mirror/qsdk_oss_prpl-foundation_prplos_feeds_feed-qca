@@ -23,11 +23,9 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  drivers/net/wireless/ath/ath12k/wmi.c  | 17 +++++++++++------
  3 files changed, 36 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
-index e92eb7d..8ad10da 100644
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -292,6 +292,8 @@ struct ath12k_vif {
+@@ -315,6 +315,8 @@ struct ath12k_vif {
  	struct dentry *debugfs_twt;
  #endif /* CPTCFG_ATH12K_DEBUGFS */
  	struct work_struct update_bcn_template_work;
@@ -36,11 +34,9 @@ index e92eb7d..8ad10da 100644
  };
  
  struct ath12k_vif_iter {
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 043f34f..559a4de 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7435,6 +7435,26 @@ static void ath12k_update_bcn_template_work(struct work_struct *work)
+@@ -7414,6 +7414,26 @@ static void ath12k_update_bcn_template_w
  				arvif->vdev_id, ret);
  }
  
@@ -67,7 +63,7 @@ index 043f34f..559a4de 100644
  static int ath12k_mac_vdev_create(struct ath12k *ar, struct ieee80211_vif *vif)
  {
  	struct ath12k_base *ab = ar->ab;
-@@ -7782,7 +7802,9 @@ static int ath12k_mac_op_add_interface(struct ieee80211_hw *hw,
+@@ -7761,7 +7781,9 @@ static int ath12k_mac_op_add_interface(s
  	INIT_LIST_HEAD(&arvif->list);
  	arvif->key_cipher = INVALID_CIPHER;
  
@@ -77,7 +73,7 @@ index 043f34f..559a4de 100644
  	for (i = 0; i < ARRAY_SIZE(arvif->bitrate_mask.control); i++) {
  		arvif->bitrate_mask.control[i].legacy = 0xffffffff;
  		arvif->bitrate_mask.control[i].gi = NL80211_TXRATE_FORCE_SGI;
-@@ -7840,6 +7862,7 @@ static void ath12k_mac_op_remove_interface(struct ieee80211_hw *hw,
+@@ -7819,6 +7841,7 @@ static void ath12k_mac_op_remove_interfa
  	struct ath12k_base *ab;
  	int ret;
  
@@ -85,11 +81,9 @@ index 043f34f..559a4de 100644
  	cancel_work_sync(&arvif->update_bcn_template_work);
  
  	mutex_lock(&ah->conf_mutex);
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index 189ccad..59ebc88 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -8177,6 +8177,7 @@ ath12k_wmi_obss_color_collision_event(struct ath12k_base *ab, struct sk_buff *sk
+@@ -9086,6 +9086,7 @@ ath12k_wmi_obss_color_collision_event(st
  	const void **tb;
  	const struct wmi_obss_color_collision_event *ev;
  	struct ath12k_vif *arvif;
@@ -97,7 +91,7 @@ index 189ccad..59ebc88 100644
  	int ret;
  
  	tb = ath12k_wmi_tlv_parse_alloc(ab, skb->data, skb->len, GFP_ATOMIC);
-@@ -8190,7 +8191,7 @@ ath12k_wmi_obss_color_collision_event(struct ath12k_base *ab, struct sk_buff *sk
+@@ -9099,7 +9100,7 @@ ath12k_wmi_obss_color_collision_event(st
  	ev = tb[WMI_TAG_OBSS_COLOR_COLLISION_EVT];
  	if (!ev) {
  		ath12k_warn(ab, "failed to fetch obss color collision ev");
@@ -106,7 +100,7 @@ index 189ccad..59ebc88 100644
  	}
  
  	arvif = ath12k_mac_get_arvif_by_vdev_id(ab, ev->vdev_id);
-@@ -8198,17 +8199,20 @@ ath12k_wmi_obss_color_collision_event(struct ath12k_base *ab, struct sk_buff *sk
+@@ -9107,29 +9108,32 @@ ath12k_wmi_obss_color_collision_event(st
  	{
  		ath12k_warn(ab, "failed to find arvif with vedv id %d in obss_color_collision_event\n",
  				ev->vdev_id);
@@ -131,8 +125,11 @@ index 189ccad..59ebc88 100644
  	case WMI_BSS_COLOR_COLLISION_DISABLE:
  	case WMI_BSS_COLOR_FREE_SLOT_TIMER_EXPIRY:
  	case WMI_BSS_COLOR_FREE_SLOT_AVAILABLE:
-@@ -8218,9 +8222,10 @@ ath12k_wmi_obss_color_collision_event(struct ath12k_base *ab, struct sk_buff *sk
- 		goto exit;
+-		goto exit;
++		goto unlock;
+ 	default:
+ 		ath12k_warn(ab, "received unknown obss color collision detetction event\n");
+-		goto exit;
  	}
  
 +unlock:
@@ -143,6 +140,3 @@ index 189ccad..59ebc88 100644
  }
  
  static void ath12k_wmi_op_rx(struct ath12k_base *ab, struct sk_buff *skb)
--- 
-2.17.1
-

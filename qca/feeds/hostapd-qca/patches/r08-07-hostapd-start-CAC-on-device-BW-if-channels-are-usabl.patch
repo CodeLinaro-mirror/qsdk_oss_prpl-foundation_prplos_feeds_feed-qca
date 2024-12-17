@@ -27,7 +27,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  #define IEEE80211_DFS_MIN_CAC_TIME_MS  60000
  
-@@ -1895,31 +1896,132 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1896,31 +1897,132 @@ int hostapd_dfs_radar_detected(struct ho
  			oper_centr_freq_seg0_idx, oper_centr_freq_seg1_idx);
  	}
  
@@ -172,7 +172,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
  			     int ht_enabled, int chan_offset, int chan_width,
-@@ -1952,9 +2054,11 @@ int hostapd_dfs_nop_finished(struct host
+@@ -1953,9 +2055,11 @@ int hostapd_dfs_nop_finished(struct host
  		/* Handle cases where all channels were initially unavailable */
  		hostapd_handle_dfs(iface);
  	} else if (dfs_use_radar_background(iface) &&
@@ -195,7 +195,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #endif /* DFS_H */
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -1334,6 +1334,7 @@ void hostapd_event_ch_switch(struct host
+@@ -1405,6 +1405,7 @@ void hostapd_event_ch_switch(struct host
  	    freq == hapd->cs_freq_params.freq) {
  		hostapd_cleanup_cs_params(hapd);
  		ieee802_11_set_beacon(hapd);

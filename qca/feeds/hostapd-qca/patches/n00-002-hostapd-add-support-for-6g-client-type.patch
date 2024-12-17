@@ -25,7 +25,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -5201,6 +5201,14 @@ struct wpa_driver_ops {
+@@ -5239,6 +5239,14 @@ struct wpa_driver_ops {
  	int (*dpp_listen)(void *priv, bool enable);
  
  	/**
@@ -42,9 +42,9 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	 * @priv: Private driver interface data
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -14100,6 +14100,31 @@ static int testing_nl80211_radio_disable
- 
- #endif /* CONFIG_TESTING_OPTIONS */
+@@ -14416,6 +14416,31 @@ fail:
+ 	return ret;
+ }
  
 +static int nl80211_set_6gclient_type(void *priv, u8 client_type_6g)
 +{
@@ -72,18 +72,18 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +	return ret;
 +}
  
- const struct wpa_driver_ops wpa_driver_nl80211_ops = {
- 	.name = "nl80211",
-@@ -14261,4 +14286,5 @@ const struct wpa_driver_ops wpa_driver_n
- 	.register_frame = testing_nl80211_register_frame,
+ #ifdef CONFIG_DPP
+ static int nl80211_dpp_listen(void *priv, bool enable)
+@@ -14764,4 +14789,5 @@ const struct wpa_driver_ops wpa_driver_n
  	.radio_disable = testing_nl80211_radio_disable,
  #endif /* CONFIG_TESTING_OPTIONS */
+ 	.get_multi_hw_info = wpa_driver_get_multi_hw_info,
 +	.set_6gclient_type = nl80211_set_6gclient_type,
  };
 --- a/wpa_supplicant/driver_i.h
 +++ b/wpa_supplicant/driver_i.h
-@@ -1175,4 +1175,12 @@ wpas_drv_get_sta_mlo_info(struct wpa_sup
- 	return wpa_s->driver->get_sta_mlo_info(wpa_s->drv_priv, mlo_info);
+@@ -1247,4 +1247,12 @@ wpas_drv_nan_cancel_subscribe(struct wpa
+ 						   subscribe_id);
  }
  
 +static inline int wpa_drv_set_6gclient_type(struct wpa_supplicant *wpa_s,
@@ -97,7 +97,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  #endif /* DRIVER_I_H */
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -5922,6 +5922,15 @@ int wpa_supplicant_driver_init(struct wp
+@@ -6098,6 +6098,15 @@ int wpa_supplicant_driver_init(struct wp
  	wpa_dbg(wpa_s, MSG_DEBUG, "RSN: flushing PMKID list in the driver");
  	wpa_drv_flush_pmkid(wpa_s);
  
@@ -133,7 +133,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  # Each credential used for automatic network selection is configured as a set
 --- a/wpa_supplicant/config.c
 +++ b/wpa_supplicant/config.c
-@@ -5702,6 +5702,8 @@ static const struct global_parse_data gl
+@@ -5707,6 +5707,8 @@ static const struct global_parse_data gl
  	{ INT_RANGE(pasn_corrupt_mic, 0, 1), 0 },
  #endif /* CONFIG_TESTING_OPTIONS */
  #endif /* CONFIG_PASN */
@@ -152,7 +152,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  
  /**
   * struct wpa_config - wpa_supplicant configuration data
-@@ -1788,6 +1789,16 @@ struct wpa_config {
+@@ -1801,6 +1802,16 @@ struct wpa_config {
  #endif /* CONFIG_TESTING_OPTIONS */
  #endif /* CONFIG_PASN*/
  

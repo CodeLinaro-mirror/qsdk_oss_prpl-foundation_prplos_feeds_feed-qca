@@ -19,10 +19,10 @@ Signed-off-by: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
 
 --- a/backport-include/linux/netdevice.h
 +++ b/backport-include/linux/netdevice.h
-@@ -177,4 +177,12 @@ static inline void backport_dev_hold(str
+@@ -285,4 +285,12 @@ static inline int LINUX_BACKPORT(netif_r
  #define netif_rx LINUX_BACKPORT(netif_rx)
  #endif /* < 5.18.0 */
-
+ 
 -#endif /* __BACKPORT_NETDEVICE_H */
 +#if LINUX_VERSION_IS_LESS(6,1,0)
 +static inline void netif_napi_add_weight(struct net_device *dev, struct napi_struct *napi,
@@ -77,7 +77,7 @@ Signed-off-by: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
  
  		if (ab->hw_params->ring_mask->tx[i] ||
  		    ab->hw_params->ring_mask->rx[i] ||
-@@ -795,8 +790,12 @@ int ath12k_pcic_config_hybrid_irq(struct
+@@ -795,8 +790,13 @@ int ath12k_pcic_config_hybrid_irq(struct
  		return ret;
  	}
  
@@ -87,27 +87,45 @@ Signed-off-by: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
 +#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
 +		for_each_msi_entry(msi_desc, &pdev->dev) {
 +#else
++		msi_lock_descs(&pdev->dev);
 +        msi_for_each_desc(msi_desc, &pdev->dev, MSI_DESC_ALL) {
 +#endif
  		ret = ath12k_pcic_get_user_msi_assignment(ab, "CE", &num_vectors,
                                                           &user_base_data, &base_vector);
                  if (ret < 0)
-@@ -842,7 +841,11 @@ int ath12k_pcic_config_hybrid_irq(struct
- 
+@@ -839,10 +839,16 @@ int ath12k_pcic_config_hybrid_irq(struct
+ 		}
+ 		i++;
+ 	}
+-
++#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 1, 0))
++	msi_unlock_descs(&pdev->dev);
++#endif
  	i = 0;
- 
+-
 -	for_each_msi_entry(msi_desc, &pdev->dev) {
 +#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
 +		for_each_msi_entry(msi_desc, &pdev->dev) {
 +#else
++		msi_lock_descs(&pdev->dev);
 +        msi_for_each_desc(msi_desc, &pdev->dev, MSI_DESC_ALL) {
 +#endif
  		ret = ath12k_pcic_get_user_msi_assignment(ab, "CE", &num_vectors,
  							  &user_base_data, &base_vector);
  		if (ret < 0)
+@@ -883,6 +889,9 @@ int ath12k_pcic_config_hybrid_irq(struct
+ 		}
+ 		i++;
+ 	}
++#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 1, 0))
++	msi_unlock_descs(&pdev->dev);
++#endif
+ 	ab->ipci.gic_enabled = 1;
+ 	wake_up(&ab->ipci.gic_msi_waitq);
+ 
 --- a/drivers/net/wireless/ath/ath12k/qmi.c
 +++ b/drivers/net/wireless/ath/ath12k/qmi.c
-@@ -5616,8 +5616,11 @@ static int ath12k_qmi_request_device_inf
+@@ -5620,8 +5620,11 @@ static int ath12k_qmi_request_device_inf
  		goto out;
  	}
  

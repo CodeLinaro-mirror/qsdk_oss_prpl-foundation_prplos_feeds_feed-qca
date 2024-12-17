@@ -176,7 +176,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 +	mutex_lock(&ar->conf_mutex);
 +
 +	/* Can't get temperature when the card is off */
-+	if (ar->state != ATH12K_STATE_ON) {
++	if (ar->ab->fw_mode != ATH12K_FIRMWARE_MODE_FTM && ar->state != ATH12K_STATE_ON) {
 +		ret = -ENETDOWN;
 +		goto out;
 +	}

@@ -18,7 +18,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
 
 --- a/src/ap/wpa_auth.c
 +++ b/src/ap/wpa_auth.c
-@@ -371,7 +371,7 @@ int wpa_auth_for_each_sta(struct wpa_aut
+@@ -368,7 +368,7 @@ int wpa_auth_for_each_sta(struct wpa_aut
  			  int (*cb)(struct wpa_state_machine *sm, void *ctx),
  			  void *cb_ctx)
  {
@@ -29,7 +29,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  }
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -1005,6 +1005,7 @@ static void nl80211_put_wiphy_data_ap(st
+@@ -1007,6 +1007,7 @@ static void nl80211_put_wiphy_data_ap(st
  	struct nl80211_wiphy_data *w = bss->wiphy_data;
  	struct i802_bss *tmp_bss;
  	int found = 0;
@@ -37,7 +37,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  
  	if (w == NULL)
  		return;
-@@ -1019,9 +1020,11 @@ static void nl80211_put_wiphy_data_ap(st
+@@ -1021,9 +1022,11 @@ static void nl80211_put_wiphy_data_ap(st
  		}
  	}
  	/* if not remove it */

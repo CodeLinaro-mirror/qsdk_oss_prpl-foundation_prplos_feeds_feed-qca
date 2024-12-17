@@ -28,7 +28,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/accel_cfg.c
 +++ b/drivers/net/wireless/ath/ath12k/accel_cfg.c
-@@ -12,46 +12,23 @@
+@@ -12,17 +12,16 @@
  
  /**
   * ath12k_ds_get_node_id() - Retrieve ds node id
@@ -50,8 +50,9 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	struct ath12k_vif *ahvif;
  	struct ieee80211_sta *sta;
  	struct ath12k_sta *ahsta;
- 	struct ath12k_link_vif *arvif;
+@@ -30,29 +29,7 @@ static bool ath12k_ds_get_node_id(struct
  	struct ath12k_base *ab;
+ 	int link_id;
  
 -	wdev = ndev->ieee80211_ptr;
 -	if (!wdev) {
@@ -117,7 +118,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -19115,6 +19115,8 @@ static int ath12k_mac_hw_register(struct
+@@ -19338,6 +19338,8 @@ static int ath12k_mac_hw_register(struct
  
  	hw->netdev_features |= NETIF_F_LLTX;
  
@@ -159,7 +160,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	if (!vif)
  		return NULL;
  
-@@ -550,6 +540,26 @@ struct ath12k_base *ath12k_sawf_get_ab_f
+@@ -555,6 +545,26 @@ struct ath12k_base *ath12k_sawf_get_ab_f
  	return ab;
  }
  
@@ -186,7 +187,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  u8 ath12k_sawf_get_msduq_of_tid(struct ath12k_base *ab,
  				u8 tid,
  				u8 svc_id,
-@@ -694,8 +704,8 @@ u16 ath12k_sawf_alloc_msduq(struct ath12
+@@ -699,8 +709,8 @@ u16 ath12k_sawf_alloc_msduq(struct ath12
  	return ret_peer_msduq;
  }
  
@@ -197,7 +198,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  {
  	struct ath12k_base *ab;
  	struct ath12k_sawf_ctx *sawf_ctx;
-@@ -706,7 +716,7 @@ u16 ath12k_sawf_get_msduq(struct net_dev
+@@ -711,7 +721,7 @@ u16 ath12k_sawf_get_msduq(struct net_dev
  	if (!sawf_ctx)
  		return SAWF_PEER_MSDUQ_INVALID;
  
@@ -206,7 +207,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  	if (!ab)
  		return SAWF_PEER_MSDUQ_INVALID;
  
-@@ -974,7 +984,7 @@ unlock_ab_base:
+@@ -979,7 +989,7 @@ unlock_ab_base:
  	rcu_read_unlock();
  }
  
@@ -215,7 +216,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  {
  	struct ath12k_sawf_svc_params *svc_param;
  	struct ath12k_sawf_wmi_peer_latency_param latency_info;
-@@ -1016,7 +1026,7 @@ static void ath12k_sawf_core_send_ul_con
+@@ -1021,7 +1031,7 @@ static void ath12k_sawf_core_send_ul_con
  	spin_unlock_bh(&sawf->sawf_svc_lock);
  	ether_addr_copy(latency_info.peer_mac, mac_addr);
  
@@ -224,21 +225,31 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  }
  
  void ath12k_send_ul_configs(struct work_struct *work)
-@@ -1034,11 +1044,11 @@ void ath12k_send_ul_configs(struct work_
+@@ -1039,21 +1049,24 @@ void ath12k_send_ul_configs(struct work_
  	list_for_each_entry_safe(ul_params, tmp, &sawf->list, list) {
  		list_del(&ul_params->list);
  		spin_unlock_bh(&sawf->sawf_svc_lock);
 -		ath12k_sawf_core_send_ul_config(ul_params->src_dev,
-+		ath12k_sawf_core_send_ul_config(ul_params->src_vif,
- 						ul_params->fw_service_id,
- 						ul_params->src_mac,
- 						ul_params->add_or_sub);
+-						ul_params->fw_service_id,
+-						ul_params->src_mac,
+-						ul_params->add_or_sub);
 -		ath12k_sawf_core_send_ul_config(ul_params->dest_dev,
-+		ath12k_sawf_core_send_ul_config(ul_params->dest_vif,
- 						ul_params->rv_service_id,
- 						ul_params->dst_mac,
- 						ul_params->add_or_sub);
-@@ -1048,7 +1058,8 @@ void ath12k_send_ul_configs(struct work_
+-						ul_params->rv_service_id,
+-						ul_params->dst_mac,
+-						ul_params->add_or_sub);
++		if (ul_params->src_vif)
++			ath12k_sawf_core_send_ul_config(ul_params->src_vif,
++							ul_params->fw_service_id,
++							ul_params->src_mac,
++							ul_params->add_or_sub);
++		if (ul_params->dest_vif)
++			ath12k_sawf_core_send_ul_config(ul_params->dest_vif,
++							ul_params->rv_service_id,
++							ul_params->dst_mac,
++							ul_params->add_or_sub);
+ 		kfree(ul_params);
+ 		spin_lock_bh(&sawf->sawf_svc_lock);
+ 	}
  	spin_unlock_bh(&sawf->sawf_svc_lock);
  }
  
@@ -248,7 +259,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  			   u8 fw_service_id, u8 rv_service_id,
  			   u8 add_or_sub)
  {
-@@ -1060,13 +1071,14 @@ void ath12k_sawf_config_ul(struct net_de
+@@ -1065,13 +1078,14 @@ void ath12k_sawf_config_ul(struct net_de
  		ath12k_err(NULL, "SAWF ctx is invalid\n");
  		return;
  	}
@@ -619,7 +630,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 +
 +	if (src_wdev) {
 +		hw = wiphy_to_ieee80211_hw(src_wdev->wiphy);
-+		if (ieee80211_hw_check(hw, SUPPORT_ECM_REGISTRATION))
++		if (!ieee80211_hw_check(hw, SUPPORT_ECM_REGISTRATION))
 +			return;
 +
 +		src_vif = wdev_to_ieee80211_vif(src_wdev);
@@ -627,7 +638,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
 +
 +	if (dest_wdev) {
 +		hw = wiphy_to_ieee80211_hw(dest_wdev->wiphy);
-+		if (ieee80211_hw_check(hw, SUPPORT_ECM_REGISTRATION))
++		if (!ieee80211_hw_check(hw, SUPPORT_ECM_REGISTRATION))
 +			return;
 +
 +		dest_vif = wdev_to_ieee80211_vif(dest_wdev);
@@ -655,7 +666,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -4248,32 +4248,20 @@ int ath12k_sawf_send_disable_soc(u8 svc_
+@@ -4276,32 +4276,20 @@ int ath12k_sawf_send_disable_soc(u8 svc_
  	return ret;
  }
  
@@ -694,7 +705,7 @@ Signed-off-by: Pradeep Kumar Chitrapu <quic_pradeepc@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1838,7 +1838,8 @@ void ath12k_fw_stats_free(struct ath12k_
+@@ -1870,7 +1870,8 @@ void ath12k_fw_stats_free(struct ath12k_
  #ifdef CPTCFG_ATH12K_SAWF
  int ath12k_send_sawf_configs_soc(struct ath12k_sawf_svc_params *new_param);
  int ath12k_sawf_send_disable_soc(u8 svc_id);

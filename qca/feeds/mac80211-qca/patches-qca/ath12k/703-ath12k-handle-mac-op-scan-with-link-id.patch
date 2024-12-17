@@ -17,8 +17,8 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -667,6 +667,11 @@ enum ath12k_fw_recovery_option {
- 	 ATH12K_FW_RECOVERY_ENABLE_SSR_ONLY,
+@@ -665,6 +665,11 @@ enum ath12k_fw_recovery_option {
+ 	 /* command to unlink UserPD assert from RootPD */
  };
  
 +struct ath12k_chan_info {
@@ -29,7 +29,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  #define ATH12K_FLUSH_TIMEOUT (5 * HZ)
  #define ATH12K_VDEV_DELETE_TIMEOUT_HZ (5 * HZ)
  
-@@ -677,6 +682,7 @@ struct ath12k {
+@@ -675,6 +680,7 @@ struct ath12k {
  	struct ath12k_wmi_pdev *wmi;
  	struct ath12k_pdev_dp dp;
  	u8 mac_addr[ETH_ALEN];
@@ -39,7 +39,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	struct ath12k_he ar_he;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -4575,6 +4575,33 @@ clean_up:
+@@ -4535,6 +4535,33 @@ clean_up:
  	return ret;
  }
  
@@ -73,7 +73,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  static struct ath12k_link_vif *
  ath12k_mac_assign_link_vif( struct ath12k_hw *ah, struct ieee80211_vif *vif, u8 link_id)
  {
-@@ -4841,7 +4868,7 @@ static int ath12k_mac_op_hw_scan(struct
+@@ -4805,7 +4832,7 @@ static int ath12k_mac_op_hw_scan(struct
  	struct cfg80211_scan_request *req = &hw_req->req;
  	struct ath12k_wmi_scan_req_arg arg = {};
  	int ret;
@@ -82,7 +82,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
      bool create = true;
  
  	mutex_lock(&ah->conf_mutex);
-@@ -4856,8 +4883,10 @@ static int ath12k_mac_op_hw_scan(struct
+@@ -4820,8 +4847,10 @@ static int ath12k_mac_op_hw_scan(struct
  		return -EINVAL;
  	}
  
@@ -95,7 +95,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	/* If the vif is already assigned to a specific vdev of an ar,
  	 * check whether its already started, vdev which is started
  	 * are not allowed to switch to a new radio.
-@@ -13439,7 +13468,7 @@ static int ath12k_mac_setup_channels_rat
+@@ -13402,7 +13431,7 @@ static int ath12k_mac_setup_channels_rat
  	struct ieee80211_supported_band *band;
  	struct ath12k_wmi_hal_reg_capabilities_ext_arg *reg_cap, *temp_reg_cap;
  	void *channels;
@@ -104,7 +104,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	struct ieee80211_6ghz_channel *chan_6g;
  	int i = 0;
  
-@@ -13474,7 +13503,14 @@ static int ath12k_mac_setup_channels_rat
+@@ -13437,7 +13466,14 @@ static int ath12k_mac_setup_channels_rat
  					  temp_reg_cap->low_2ghz_chan,
  					  temp_reg_cap->high_2ghz_chan);
  
@@ -119,7 +119,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  	}
  
  	if (supported_bands & WMI_HOST_WLAN_5G_CAP) {
-@@ -13513,7 +13549,14 @@ static int ath12k_mac_setup_channels_rat
+@@ -13476,7 +13512,14 @@ static int ath12k_mac_setup_channels_rat
  
  			ath12k_mac_update_5_9_ch_list(ar, band);
  
@@ -134,7 +134,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		} else if (reg_cap->low_5ghz_chan >= ATH12K_MIN_6G_FREQ &&
                             reg_cap->high_5ghz_chan <= ATH12K_MAX_6G_FREQ) {
                          band = &ar->mac.sbands[NL80211_BAND_6GHZ];
-@@ -13562,7 +13605,15 @@ static int ath12k_mac_setup_channels_rat
+@@ -13525,7 +13568,15 @@ static int ath12k_mac_setup_channels_rat
                         band->n_channels = band->chan_6g[0]->n_channels;
                         band->channels = band->chan_6g[0]->channels;
  
@@ -150,7 +150,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  		}
  	}
  
-@@ -13571,6 +13622,10 @@ static int ath12k_mac_setup_channels_rat
+@@ -13766,6 +13817,10 @@ static int __ath12k_mac_register(struct
  		wiphy_ext_feature_set(hw->wiphy,
  				      NL80211_EXT_FEATURE_RADAR_BACKGROUND);
  
@@ -160,7 +160,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 +
  	return 0;
  }
- 
+ static int ath12k_setup_per_hw_if_comb(struct ath12k_hw *ah) {
 --- a/drivers/net/wireless/ath/ath12k/reg.c
 +++ b/drivers/net/wireless/ath/ath12k/reg.c
 @@ -272,13 +272,51 @@ int ath12k_regd_update(struct ath12k *ar

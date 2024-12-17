@@ -19,7 +19,7 @@ Signed-off-by: Sriram R <srirrama@codeaurora.org>
 
 --- a/src/ap/wpa_auth_ie.c
 +++ b/src/ap/wpa_auth_ie.c
-@@ -1237,11 +1237,9 @@ bool wpa_auth_write_fd_rsn_info(struct w
+@@ -1497,11 +1497,9 @@ bool wpa_auth_write_fd_rsn_info(struct w
  
  	/* Group Management Cipher Suite Selector (B22..B27) */
  	cipher = 63; /* Default to no cipher suite selected */

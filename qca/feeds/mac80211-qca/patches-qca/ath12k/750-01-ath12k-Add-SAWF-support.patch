@@ -53,9 +53,9 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +
 +#define SVC_INDEX(svc_id) svc_id - 1
 +
-+bool ath12k_sawf_enable;
++bool ath12k_sawf_enable = true;
 +module_param_named(sawf, ath12k_sawf_enable, bool, 0444);
-+MODULE_PARM_DESC(sawf, "Enable SAWF feature (Default: false)");
++MODULE_PARM_DESC(sawf, "Enable SAWF feature (Default: true)");
 +
 +static struct ath12k_sawf_ctx *sawf_ctx;
 +
@@ -454,7 +454,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)
  
-@@ -1289,6 +1290,8 @@ struct ath12k_base {
+@@ -1288,6 +1289,8 @@ struct ath12k_base {
  	u32 rx_hash_ix3;
  
  	struct vendor_info id;
@@ -494,7 +494,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  }
  
  
-@@ -5169,6 +5173,8 @@ ath12k_wmi_copy_resource_config(struct a
+@@ -5138,6 +5142,8 @@ ath12k_wmi_copy_resource_config(struct a
  			  WMI_RSRC_CFG_FLAGS2_INTRABSS_MEC_WDS_LEARNING_DISABLE |
  			  u32_encode_bits(tg_cfg->dp_peer_meta_data_ver,
  					  WMI_RSRC_CFG_FLAGS2_RX_PEER_METADATA_VERSION);
@@ -503,7 +503,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	wmi_cfg->host_service_flags &= ~(1 << WMI_RSRC_CFG_HOST_SVC_FLAG_REG_CC_EXT_SUPPORT_BIT);
  	wmi_cfg->host_service_flags |= 1 << WMI_RSRC_CFG_HOST_SVC_FLAG_REG_CC_EXT_SUPPORT_BIT;
  	wmi_cfg->host_service_flags |= 1 << WMI_RSRC_CFG_HOST_SVC_FLAG_REO_QREF_SUPPORT_BIT;
-@@ -6177,6 +6183,8 @@ static int ath12k_pull_svc_ready_ext2(st
+@@ -6146,6 +6152,8 @@ static int ath12k_pull_svc_ready_ext2(st
  	arg->max_user_per_ppdu_ofdma = le32_to_cpu(ev->max_user_per_ppdu_ofdma);
  	arg->max_user_per_ppdu_mumimo = le32_to_cpu(ev->max_user_per_ppdu_mumimo);
  	arg->target_cap_flags = le32_to_cpu(ev->target_cap_flags);
@@ -512,7 +512,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	return 0;
  }
  
-@@ -6326,6 +6334,8 @@ static int ath12k_wmi_svc_rdy_ext2_parse
+@@ -6295,6 +6303,8 @@ static int ath12k_wmi_svc_rdy_ext2_parse
  				    ret);
  			return ret;
  		}
@@ -523,7 +523,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	case WMI_TAG_ARRAY_STRUCT:
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -2407,6 +2407,7 @@ enum wmi_tlv_service {
+@@ -2401,6 +2401,7 @@ enum wmi_tlv_service {
  	WMI_TLV_SERVICE_REG_CC_EXT_EVENT_SUPPORT = 281,
  	WMI_TLV_SERVICE_DCS_AWGN_INT_SUPPORT = 286,
  	WMI_TLV_SERVICE_BE = 289,
@@ -531,7 +531,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	WMI_TLV_SERVICE_PKTLOG_DECODE_INFO_SUPPORT = 320,
  	WMI_TLV_SERVICE_PEER_METADATA_V1A_V1B_SUPPORT = 365,
  	WMI_MAX_EXT2_SERVICE,
-@@ -2669,6 +2670,7 @@ struct ath12k_wmi_resource_config_arg {
+@@ -2663,6 +2664,7 @@ struct ath12k_wmi_resource_config_arg {
  	u32 ema_max_vap_cnt;
  	u32 ema_max_profile_period;
  	u8  dp_peer_meta_data_ver;
@@ -539,7 +539,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  };
  
  struct ath12k_wmi_init_cmd_arg {
-@@ -2755,6 +2757,7 @@ struct wmi_init_cmd {
+@@ -2749,6 +2751,7 @@ struct wmi_init_cmd {
  #define WMI_RSRC_CFG_FLAGS2_INTRABSS_MEC_WDS_LEARNING_DISABLE	BIT(15)
  #define WMI_RSRC_CFG_FLAG1_THREE_WAY_COEX_CONFIG_OVERRIDE_SUPPORT BIT(25)
  #define WMI_RSRC_CFG_FLAG1_BSS_CHANNEL_INFO_64	BIT(5)

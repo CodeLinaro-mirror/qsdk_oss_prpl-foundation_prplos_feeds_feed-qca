@@ -3,13 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ecm
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=win.nss.1.0.r24
 PKG_RELEASE:=1
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-ecm
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=6eec321bac1217ca8c2872156594f29f65e5f2b4
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 LOCAL_VARIANT=$(patsubst qca-nss-ecm-%,%,$(patsubst qca-nss-ecm-%,%,$(BUILD_VARIANT)))
 include $(INCLUDE_DIR)/package.mk
@@ -46,10 +48,10 @@ define KernelPackage/qca-nss-ecm/Default
 	+TARGET_ipq_ipq50xx:kmod-qca-nss-drv \
 	+TARGET_ipq_ipq50xx_64:kmod-qca-nss-drv \
 	+TARGET_ipq50xx:kmod-qca-nss-drv \
-	+!TARGET_ipq53xx_ipq53xx_32_QSDK_256:iptables-mod-extra \
-	+!TARGET_ipq53xx_ipq53xx_32_QSDK_256:kmod-ipt-conntrack \
-	+TARGET_ipq53xx_ipq53xx_32_QSDK_256:kmod-nf-conntrack \
-	+!TARGET_ipq53xx_ipq53xx_32_QSDK_256:kmod-vxlan \
+	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):iptables-mod-extra \
+	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-ipt-conntrack \
+	+(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-nf-conntrack \
+	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-vxlan \
 	+kmod-pppoe @!LINUX_3_18 \
 	+PACKAGE_kmod-qca-ovsmgr:kmod-qca-ovsmgr
   TITLE:=QCA NSS Enhanced Connection Manager (ECM)
@@ -113,8 +115,8 @@ define KernelPackage/qca-nss-ecm-standard
 	+TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe \
 	+TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
 	+PACKAGE_kmod-qca-hyfi-bridge:kmod-qca-hyfi-bridge \
-	+!TARGET_ipq53xx_ipq53xx_32_QSDK_256&&TARGET_ipq53xx:kmod-bonding \
-	+TARGET_ipq95xx:kmod-bonding +TARGET_ipq54xx:kmod-bonding +PACKAGE_kmod-emesh-sp:kmod-emesh-sp
+	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256)&&(TARGET_ipq53xx||TARGET_ipq54xx):kmod-bonding \
+	+TARGET_ipq95xx:kmod-bonding +PACKAGE_kmod-emesh-sp:kmod-emesh-sp
 endef
 
 define KernelPackage/qca-nss-ecm-standard/Description
@@ -132,8 +134,10 @@ $(call KernelPackage/qca-nss-ecm/Default)
   VARIANT:=premium
   DEPENDS+=+PACKAGE_kmod-qca-hyfi-bridge:kmod-qca-hyfi-bridge +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +kmod-nat46-qca \
 	+kmod-l2tp +kmod-pppol2tp +kmod-pptp +TARGET_ipq95xx:kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe \
-	+TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe +TARGET_ipq95xx:kmod-qca-nss-ppe-vxlanmgr +TARGET_ipq53xx:kmod-qca-nss-ppe-vxlanmgr\
-	+TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe +TARGET_ipq54xx:kmod-qca-nss-ppe-vxlanmgr +kmod-bonding PACKAGE_kmod-emesh-sp:kmod-emesh-sp
+	+TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe +TARGET_ipq95xx:kmod-qca-nss-ppe-vxlanmgr +TARGET_ipq53xx:kmod-qca-nss-ppe-vxlanmgr \
+	+TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe +TARGET_ipq54xx:kmod-qca-nss-ppe-vxlanmgr \
+	+TARGET_ipq95xx:kmod-qca-nss-ppe-tunipip6 +TARGET_ipq53xx:kmod-qca-nss-ppe-tunipip6 +TARGET_ipq54xx:kmod-qca-nss-ppe-tunipip6 \
+	+kmod-bonding PACKAGE_kmod-emesh-sp:kmod-emesh-sp
 endef
 
 define KernelPackage/qca-nss-ecm-nonss
@@ -199,7 +203,7 @@ define KernelPackage/qca-nss-ecm-noload
 	   +TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe \
 	   +TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
 	   +kmod-bonding +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +PACKAGE_kmod-qca-nss-ppe-mapt:kmod-nat46-qca \
-	   +TARGET_ipq95xx:kmod-emesh-sp
+	   +TARGET_ipq95xx:kmod-emesh-sp +TARGET_ipq95xx:kmod-qca-nss-ppe-tunipip6
 endef
 
 define KernelPackage/qca-nss-ecm-noload/Description
@@ -304,7 +308,7 @@ endif
 
 ifeq ($(LOCAL_VARIANT),standard)
 ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),y)
-ifeq ($(CONFIG_TARGET_ipq53xx_ipq53xx_32_QSDK_256),)
+ifeq ($(CONFIG_TARGET_ipq53xx_ipq53xx_32_QSDK_256)$(CONFIG_TARGET_ipq54xx_ipq54xx_32_QSDK_256),)
 ECM_MAKE_OPTS+=ECM_INTERFACE_BOND_ENABLE=y
 endif
 endif

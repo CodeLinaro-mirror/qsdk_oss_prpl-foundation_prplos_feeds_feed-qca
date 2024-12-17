@@ -58,7 +58,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	ath12k_dbg_dump(ar->ab, ATH12K_DBG_DP_RX, NULL, "dp rx msdu: ",
  			msdu->data, msdu->len);
  	rx_status = IEEE80211_SKB_RXCB(msdu);
-@@ -3869,7 +3870,6 @@ move_next:
+@@ -3863,7 +3864,6 @@ move_next:
  			goto free_skb;
  
  		rcu_read_lock();
@@ -66,7 +66,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		peer = ath12k_peer_find_by_peer_list_index(ar, ppdu_info->peer_id);
  		if (!peer || !peer->sta) {
  			ath12k_dbg(ab, ATH12K_DBG_DATA,
-@@ -3886,24 +3886,27 @@ move_next:
+@@ -3880,24 +3880,27 @@ move_next:
  				goto next_skb;
  			}
  
@@ -95,7 +95,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		rcu_read_unlock();
  free_skb:
  		dev_kfree_skb_any(skb);
-@@ -4046,7 +4049,6 @@ move_next:
+@@ -4040,7 +4043,6 @@ move_next:
  			goto free_skb;
  
  		rcu_read_lock();
@@ -103,7 +103,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		peer = ath12k_peer_find_by_peer_list_index(ar, ppdu_info->peer_id);
  		if (!list_empty(&ab->neighbor_peers)) {
  			if (peer && !peer->sta) {
-@@ -4076,20 +4078,24 @@ move_next:
+@@ -4070,20 +4072,24 @@ move_next:
  				goto next_skb;
  			}
  
@@ -128,7 +128,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
   		}
  
  		if (ath12k_debugfs_is_pktlog_peer_valid(ar, peer->addr)) {
-@@ -4099,7 +4105,6 @@ move_next:
+@@ -4093,7 +4099,6 @@ move_next:
  		}
  
  next_skb:
@@ -300,7 +300,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  }
  
  static bool ath12k_dp_rx_check_max_nwifi_hdr_len(struct ath12k_base *ab,
-@@ -3664,11 +3668,9 @@ try_again:
+@@ -3638,11 +3642,9 @@ try_again:
  
  		if (ath12k_debugfs_is_extd_rx_stats_enabled(ar) && rxcb->peer_id) {
  			rcu_read_lock();
@@ -312,7 +312,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  			if (arsta)
  				atomic_inc(&arsta->drv_rx_pkts.pkts_frm_hw);
  			rcu_read_unlock();
-@@ -4231,7 +4233,7 @@ static int ath12k_dp_rx_frag_h_mpdu(stru
+@@ -4205,7 +4207,7 @@ static int ath12k_dp_rx_frag_h_mpdu(stru
  	if (WARN_ON_ONCE(!frag_no && !more_frags))
  		return -EINVAL;
  
@@ -321,7 +321,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	peer = ath12k_peer_find_by_peer_list_index(ar, peer_id);
  	if (!peer) {
  		ath12k_warn(ab, "failed to find the peer to de-fragment received fragment peer_id %d\n",
-@@ -4291,9 +4293,9 @@ static int ath12k_dp_rx_frag_h_mpdu(stru
+@@ -4265,9 +4267,9 @@ static int ath12k_dp_rx_frag_h_mpdu(stru
  		goto out_unlock;
  	}
  
@@ -333,7 +333,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
  	peer = ath12k_peer_find_by_peer_list_index(ar, peer_id);
  	if (!peer)
-@@ -4318,7 +4320,7 @@ err_frags_cleanup:
+@@ -4292,7 +4294,7 @@ err_frags_cleanup:
  	dev_kfree_skb_any(defrag_skb);
  	ath12k_dp_rx_frags_cleanup(rx_tid, true);
  out_unlock:
@@ -342,7 +342,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	return ret;
  }
  
-@@ -4710,7 +4712,7 @@ static int ath12k_dp_rx_h_null_q_desc(st
+@@ -4684,7 +4686,7 @@ static int ath12k_dp_rx_h_null_q_desc(st
  
  exit:
  	if (!ab->stats_disable) {
@@ -351,13 +351,13 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		peer = ath12k_peer_find_by_peer_list_index(ar, rxcb->peer_id);
  		if (peer && peer->sta)
  			arsta = ath12k_peer_get_link_sta(ab, peer);
-@@ -4720,9 +4722,13 @@ exit:
+@@ -4694,9 +4696,13 @@ exit:
  				atomic_inc(&arsta->drv_rx_pkts.pkts_frm_hw);
  		}
  
 -		if (arsta && ret)
 +		if (arsta && ret) {
-+			spin_unlock_bh(&ab->base_lock);
++			spin_lock_bh(&ab->base_lock);
  			arsta->arvif->link_stats.rx_dropped++;
 -		spin_unlock_bh(&ab->base_lock);
 +			spin_unlock_bh(&ab->base_lock);
@@ -367,7 +367,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	}
  	return ret;
  }
-@@ -4817,13 +4823,16 @@ static bool ath12k_dp_rx_h_tkip_mic_err(
+@@ -4791,13 +4797,16 @@ static bool ath12k_dp_rx_h_tkip_mic_err(
  exit:
  	if (!ab->stats_disable) {
  		peer_id = ath12k_dp_rx_h_peer_id(ab, desc);
@@ -387,7 +387,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	}
  
  	return drop;
-@@ -4850,14 +4859,14 @@ static bool ath12k_dp_rx_h_4addr_null_fr
+@@ -4824,14 +4833,14 @@ static bool ath12k_dp_rx_h_4addr_null_fr
  	msdu_len = ath12k_dp_rx_h_msdu_len(ab, rx_desc);
  	peer_id = ath12k_dp_rx_h_peer_id(ab, rx_desc);
  
@@ -405,7 +405,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	l3pad_bytes = ath12k_dp_rx_h_l3pad(ab, rx_desc);
  
  	if ((hal_rx_desc_sz + l3pad_bytes + msdu_len) > DP_RX_BUFFER_SIZE) {
-@@ -4892,14 +4901,17 @@ static bool ath12k_dp_rx_h_4addr_null_fr
+@@ -4866,14 +4875,17 @@ static bool ath12k_dp_rx_h_4addr_null_fr
  
  exit:
  	if (!ab->stats_disable && drop) {
@@ -453,7 +453,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		 * during tx completion
 @@ -494,19 +498,18 @@ int ath12k_dp_tx(struct ath12k *ar, stru
  		}
- 		ti.meta_data_flags = ahsta->link[ahsta->primary_link_id]->tcl_metadata;
+ 		ti.meta_data_flags = ahsta->link[skb_cb->link_id]->tcl_metadata;
  		ti.flags0 |= FIELD_PREP(HAL_TCL_DATA_CMD_INFO2_TO_FW, 1);
 -		spin_lock_bh(&ab->base_lock);
  		peer_id = FIELD_GET(HTT_TCL_META_DATA_PEER_ID_MISSION,
@@ -703,30 +703,44 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		kfree(peer);
  	}
  	spin_unlock_bh(&ab->base_lock);
-@@ -7247,13 +7253,12 @@ static void ath12k_mac_station_post_remo
- 					   struct ath12k_link_vif *arvif,
- 					   struct ath12k_link_sta *arsta)
- {
--	struct ath12k_base *ab = ar->ab;
- 	struct ath12k_peer *peer;
- 	struct ath12k_sta *ahsta = arsta->ahsta;
+@@ -7253,8 +7259,8 @@ static void ath12k_mac_station_post_remo
  	struct ieee80211_sta *sta;
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	struct ieee80211_vif *vif = ahvif->vif;
 -	u16 peer_id, ml_peer_id;
-+	u16 peer_id;
- 	bool skip_peer_delete;
+-	bool skip_peer_delete;
++	u16 ml_peer_id;
++	bool skip_peer_delete, skip_sync_rcu = true;
  
  	sta = container_of((void *)ahsta, struct ieee80211_sta, drv_priv);
-@@ -7272,7 +7277,6 @@ static void ath12k_mac_station_post_remo
+ 
+@@ -7269,10 +7275,23 @@ static void ath12k_mac_station_post_remo
+ 	if (skip_peer_delete && peer) {
+ 		peer->sta = NULL;
+ 	} else if (peer && peer->sta == sta) {
++		ml_peer_id = peer->ml_peer_id & ~ATH12K_ML_PEER_ID_VALID;
++		rcu_assign_pointer(ab->peer_list[peer->peer_id], NULL);
++		if (peer->mlo)
++			rcu_assign_pointer(ab->ml_peer_list[ml_peer_id][peer->pdev_idx],
++					   NULL);
++		skip_sync_rcu = false;
++	}
++	spin_unlock_bh(&ar->ab->base_lock);
++
++	if (!skip_sync_rcu)
++		synchronize_rcu();
++
++	spin_lock_bh(&ar->ab->base_lock);
++	peer = ath12k_peer_find(ar->ab, arvif->vdev_id, arsta->addr);
++	if (!skip_peer_delete && peer && peer->sta == sta) {
  		ath12k_warn(ar->ab, "Found peer entry %pM n vdev %i after it was supposedly removed\n",
  			    arsta->addr, arvif->vdev_id);
- 		peer_id = peer->peer_id;
+-		peer_id = peer->peer_id;
 -		ml_peer_id = peer->ml_peer_id & ~ATH12K_ML_PEER_ID_VALID;
  		ath12k_peer_rhash_delete(ar->ab, peer);
  		peer->sta = NULL;
  		list_del(&peer->list);
-@@ -7280,11 +7284,6 @@ static void ath12k_mac_station_post_remo
+@@ -7280,11 +7299,6 @@ static void ath12k_mac_station_post_remo
  		if (peer->sawf_ctx_peer.telemetry_peer_ctx)
  			ath12k_telemetry_peer_ctx_free(peer->sawf_ctx_peer.telemetry_peer_ctx);
  #endif
@@ -922,7 +936,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
  	lockdep_assert_held(&ar->conf_mutex);
  
-@@ -797,6 +790,18 @@ int ath12k_peer_create(struct ath12k *ar
+@@ -797,6 +790,16 @@ int ath12k_peer_create(struct ath12k *ar
  		goto cleanup;
          }
  
@@ -936,12 +950,10 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 +		goto cleanup;
 +	}
 +
-+	rcu_assign_pointer(ab->peer_list[peer_id], peer);
-+
  	peer->pdev_idx = ar->pdev_idx;
  	peer->sta = sta;
  
-@@ -852,7 +857,8 @@ int ath12k_peer_create(struct ath12k *ar
+@@ -852,13 +855,16 @@ int ath12k_peer_create(struct ath12k *ar
  				goto cleanup;
  			}
  
@@ -951,6 +963,14 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		} else {
  			peer->ml_peer_id = ATH12K_MLO_PEER_ID_INVALID;
  			peer->mlo = false;
+ 		}
+ 	}
+ 
++	rcu_assign_pointer(ab->peer_list[peer_id], peer);
++
+ 	ar->num_peers++;
+ 
+ 	ath12k_dbg(ab, ATH12K_DBG_PEER, "peer created %pM\n", arg->peer_addr);
 --- a/drivers/net/wireless/ath/ath12k/peer.h
 +++ b/drivers/net/wireless/ath/ath12k/peer.h
 @@ -79,6 +79,7 @@ struct ath12k_peer {
@@ -1037,7 +1057,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	rcu_read_unlock();
  }
  
-@@ -1258,7 +1261,7 @@ static int ath12k_fw_mpdu_stats_update(s
+@@ -1261,7 +1264,7 @@ static int ath12k_fw_mpdu_stats_update(s
  
  	q_id = q_type - ab->default_msduq_per_tid;
  
@@ -1046,7 +1066,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	peer = ath12k_peer_find_by_id(ab, peer_id);
  	if (unlikely(!peer)) {
  		ath12k_dbg(ab, ATH12K_DBG_SAWF,
-@@ -1279,21 +1282,25 @@ static int ath12k_fw_mpdu_stats_update(s
+@@ -1282,21 +1285,25 @@ static int ath12k_fw_mpdu_stats_update(s
  		goto end;
  	}
  
@@ -1072,7 +1092,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		goto end;
  	}
  
-@@ -1302,8 +1309,9 @@ static int ath12k_fw_mpdu_stats_update(s
+@@ -1305,8 +1312,9 @@ static int ath12k_fw_mpdu_stats_update(s
  	burst_size_stats->success_cnt += burst_sz_success;
  	burst_size_stats->failure_cnt += burst_sz_fail;
  
@@ -1083,7 +1103,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	return ret;
  }
  
-@@ -1754,22 +1762,25 @@ static int ath12k_telemetry_get_txstats(
+@@ -1757,22 +1765,25 @@ static int ath12k_telemetry_get_txstats(
  	u8 sawf_max_user_queues;
  
  	sawf_max_user_queues = sawf_ctx->max_msduq_per_tid - sawf_ctx->default_msduq_per_tid;
@@ -1110,7 +1130,30 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		goto end_stats;
  	}
  
-@@ -1816,6 +1827,7 @@ static int ath12k_telemetry_get_txstats(
+@@ -1798,20 +1809,20 @@ static int ath12k_telemetry_get_txstats(
+ 				if (peer->mlo) {
+ 					tmp_peer_id = peer->ml_peer_id;
+ 					spin_unlock_bh(&ab->base_lock);
++					rcu_read_unlock();
+ 					ath12k_get_svc_int_nd_burst_sz_stats(tmp_peer_id, tid, q_idx,
+ 									     &svc_int_suc, &svc_int_fail,
+ 									     &burst_sz_suc, &burst_sz_fail);
+-					spin_lock_bh(&ab->base_lock);
+ 					tx->svc_intval_stats.success_cnt = svc_int_suc;
+ 					tx->svc_intval_stats.failure_cnt = svc_int_fail;
+ 					tx->burst_size_stats.success_cnt = burst_sz_suc;
+ 					tx->burst_size_stats.failure_cnt = burst_sz_fail;
++					return ret;
+ 				} else {
+ 					tx->svc_intval_stats.success_cnt = stats->svc_intval_stats.success_cnt;
+ 					tx->svc_intval_stats.failure_cnt = stats->svc_intval_stats.failure_cnt;
+ 					tx->burst_size_stats.success_cnt = stats->burst_size_stats.success_cnt;
+ 					tx->burst_size_stats.failure_cnt = stats->burst_size_stats.failure_cnt;
+-
+ 				}
+ 			}
+ 		}
+@@ -1819,6 +1830,7 @@ static int ath12k_telemetry_get_txstats(
  		u8 q_id = 0, tid = 0;
  		if (ath12k_get_msduq_id(svc_id, peer, &q_id, &tid)) {
  			ret = -EINVAL;
@@ -1118,8 +1161,33 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  			goto end_stats;
  		}
  		stats = &sawf_stats->tx_stats[tid][q_id];
-@@ -1851,8 +1863,9 @@ static int ath12k_telemetry_get_txstats(
- 		tx_stats->msduq = q_id;
+@@ -1835,27 +1847,30 @@ static int ath12k_telemetry_get_txstats(
+ 		if (peer->mlo) {
+ 			tmp_peer_id = peer->ml_peer_id;
+ 			spin_unlock_bh(&ab->base_lock);
++			rcu_read_unlock();
+ 			ath12k_get_svc_int_nd_burst_sz_stats(tmp_peer_id, tid, q_id,
+ 							     &svc_int_suc, &svc_int_fail,
+ 							     &burst_sz_suc, &burst_sz_fail);
+-			spin_lock_bh(&ab->base_lock);
+ 			tx->svc_intval_stats.success_cnt = svc_int_suc;
+ 			tx->svc_intval_stats.failure_cnt = svc_int_fail;
+ 			tx->burst_size_stats.success_cnt = burst_sz_suc;
+ 			tx->burst_size_stats.failure_cnt = burst_sz_fail;
++			tx_stats->tid = tid;
++			tx_stats->msduq = q_id;
++			return ret;
+ 		} else {
+ 			tx->svc_intval_stats.success_cnt = stats->svc_intval_stats.success_cnt;
+ 			tx->svc_intval_stats.failure_cnt = stats->svc_intval_stats.failure_cnt;
+ 			tx->burst_size_stats.success_cnt = stats->burst_size_stats.success_cnt;
+ 			tx->burst_size_stats.failure_cnt = stats->burst_size_stats.failure_cnt;
++			tx_stats->tid = tid;
++			tx_stats->msduq = q_id;
+ 		}
+-
+-		tx_stats->tid = tid;
+-		tx_stats->msduq = q_id;
  	}
  
 -end_stats:
@@ -1129,7 +1197,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	return ret;
  }
  
-@@ -1890,22 +1903,25 @@ static int ath12k_telemetry_get_delaysta
+@@ -1893,22 +1908,25 @@ static int ath12k_telemetry_get_delaysta
  	u8 sawf_max_user_queues;
  
  	sawf_max_user_queues = sawf_ctx->max_msduq_per_tid - sawf_ctx->default_msduq_per_tid;
@@ -1156,7 +1224,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  		goto end_stats;
  	}
  
-@@ -1933,6 +1949,7 @@ static int ath12k_telemetry_get_delaysta
+@@ -1936,6 +1954,7 @@ static int ath12k_telemetry_get_delaysta
  		u8 q_id, tid;
  
  		if (ath12k_get_msduq_id(svc_id, peer, &q_id, &tid)) {
@@ -1164,7 +1232,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  			ret = -EINVAL;
  			goto end_stats;
  		}
-@@ -1954,8 +1971,9 @@ static int ath12k_telemetry_get_delaysta
+@@ -1957,8 +1976,9 @@ static int ath12k_telemetry_get_delaysta
  		delay_stats->msduq = q_id;
          }
  
@@ -1177,7 +1245,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1481,9 +1481,9 @@ struct ath12k_base {
+@@ -1479,9 +1479,9 @@ struct ath12k_base {
  	/* Protects data like peers and peer list*/
  	spinlock_t base_lock;
  	u32 peer_list_size;

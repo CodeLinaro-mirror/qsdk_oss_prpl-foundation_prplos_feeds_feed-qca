@@ -19,9 +19,11 @@ PKG_SOURCE_URL:=http://mirror2.openwrt.org/sources/
 PKG_HASH:=3bbc461121134fda9089c084a5eed577d05e7837a157edf9a3797937172a3ece
 
 PKG_SOURCE:=backports-$(PKG_VERSION).tar.xz
-PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/backports-$(PKG_VERSION)
+PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(if $(BUILD_VARIANT),$(PKG_NAME)-$(BUILD_VARIANT)/)backports-$(PKG_VERSION)
 PKG_BUILD_PARALLEL:=1
 
+MKHASH ?= $(STAGING_DIR_HOST)/bin/mkhash
+PKG_BUILD_ID:=$(shell date | $(MKHASH) md5)
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
 PKG_DRIVERS = \
@@ -81,7 +83,7 @@ PKG_CONFIG_DEPENDS += \
 define KernelPackage/cfg80211-qca
   $(call KernelPackage/mac80211-qca/Default)
   TITLE:=cfg80211 - wireless configuration API
-  DEPENDS+= +iw-qca +iwinfo +wireless-regdb +USE_RFKILL:kmod-rfkill
+  DEPENDS+= +iw-qca-full +iwinfo +wifi-scripts +wireless-regdb +USE_RFKILL:kmod-rfkill
   ABI_VERSION:=$(PKG_VERSION)-$(PKG_RELEASE)
   FILES:= \
 	$(PKG_BUILD_DIR)/compat/compat.ko \
@@ -115,7 +117,9 @@ define KernelPackage/mac80211-qca
 	+kmod-qca-nss-ppe-vp \
 	+kmod-qca-nss-ppe-ds
   KCONFIG:=\
-	CONFIG_AVERAGE=y
+	CONFIG_AVERAGE=y \
+	CONFIG_QCOM_RPROC_DISABLE_MPD_SUPPORT=y
+
   FILES:= $(PKG_BUILD_DIR)/net/mac80211/mac80211.ko
   ABI_VERSION:=$(PKG_VERSION)-$(PKG_RELEASE)
   MENU:=1
@@ -147,6 +151,12 @@ define KernelPackage/mac80211-qca/config
 		   help
 		     This option enables support for qca sfe in QCA boards
         endif
+
+	config PACKAGE_MAC80211_ATHMEMDEBUG
+		bool "Enable memory debug support"
+		default n
+		help
+		  This option enables ATH memory debug support.
 
 	config PACKAGE_MAC80211_DEBUGFS
 		bool "Export mac80211 internals in DebugFS"
@@ -211,6 +221,7 @@ config-$(CONFIG_PACKAGE_MAC80211_MESSAGE_TRACING) += MAC80211_MESSAGE_TRACING AT
 config-$(CONFIG_PACKAGE_MAC80211_DEBUG_MENU) += MAC80211_DEBUG_MENU
 config-$(CONFIG_PACKAGE_MAC80211_VERBOSE_DEBUG) += MAC80211_VERBOSE_DEBUG
 config-$(CONFIG_PACKAGE_MAC80211_PS_DEBUG) += MAC80211_PS_DEBUG
+config-$(CONFIG_PACKAGE_MAC80211_ATHMEMDEBUG) += MAC80211_ATHMEMDEBUG
 
 config-$(call config_package,mac80211-qca-hwsim) += MAC80211_HWSIM
 
@@ -243,6 +254,7 @@ define Build/Prepare
 	rm -rf $(PKG_BUILD_DIR)
 	mkdir -p $(PKG_BUILD_DIR)
 	$(PKG_UNPACK)
+	$(CP) ./src/* $(PKG_BUILD_DIR)
 	$(Build/Patch)
 	rm -rf \
 		$(PKG_BUILD_DIR)/include/linux/ssb \

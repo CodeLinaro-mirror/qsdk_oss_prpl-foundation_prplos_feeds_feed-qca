@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2023-2024, Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,7 @@
 board=$(cat /tmp/sysinfo/board_name)
 
 # Check the platform based on SoC type
-if [[ "$board" != *"ipq9574"* && "$board" != *"ipq5332"* ]]; then
+if [[ "$board" != *"ipq9574"* && "$board" != *"ipq5332"* && "$board" != *"ipq5424"* ]]; then
     echo "Error: Unsupported SoC type $board. Aborting."
     exit 1
 fi

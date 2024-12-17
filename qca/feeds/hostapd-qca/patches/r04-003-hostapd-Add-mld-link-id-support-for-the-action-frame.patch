@@ -17,7 +17,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
 
 --- a/src/ap/ap_drv_ops.c
 +++ b/src/ap/ap_drv_ops.c
-@@ -923,13 +923,14 @@ int hostapd_drv_send_mlme(struct hostapd
+@@ -916,13 +916,14 @@ int hostapd_drv_send_mlme(struct hostapd
  {
  	int link_id = -1;
  
@@ -36,7 +36,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  	return hapd->driver->send_mlme(hapd->drv_priv, msg, len, noack, 0,
  				       csa_offs, csa_offs_len, no_encrypt, 0,
  				       link_id);
-@@ -1000,9 +1001,15 @@ static int hapd_drv_send_action(struct h
+@@ -993,9 +994,15 @@ static int hapd_drv_send_action(struct h
  		0xff, 0xff, 0xff, 0xff, 0xff, 0xff
  	};
  	struct sta_info *sta;
@@ -52,7 +52,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  	bssid = hapd->own_addr;
  	if (!addr3_ap && !is_multicast_ether_addr(dst) &&
  	    len > 0 && data[0] == WLAN_ACTION_PUBLIC) {
-@@ -1034,7 +1041,7 @@ static int hapd_drv_send_action(struct h
+@@ -1027,7 +1034,7 @@ static int hapd_drv_send_action(struct h
  	}
  
  	return hapd->driver->send_action(hapd->drv_priv, freq, wait, dst,
@@ -63,7 +63,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -4190,7 +4190,7 @@ struct wpa_driver_ops {
+@@ -4185,7 +4185,7 @@ struct wpa_driver_ops {
  	 */
  	int (*send_action)(void *priv, unsigned int freq, unsigned int wait,
  			   const u8 *dst, const u8 *src, const u8 *bssid,
@@ -74,7 +74,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  	 * send_action_cancel_wait - Cancel action frame TX wait
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -9303,6 +9303,13 @@ static int nl80211_send_frame_cmd(struct
+@@ -9370,6 +9370,13 @@ static int nl80211_send_frame_cmd(struct
  	    nla_put(msg, NL80211_ATTR_FRAME, buf_len, buf))
  		goto fail;
  
@@ -88,7 +88,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  	cookie = 0;
  	ret = send_and_recv_resp(drv, msg, cookie_handler, &cookie);
  	msg = NULL;
-@@ -9350,7 +9357,7 @@ static int wpa_driver_nl80211_send_actio
+@@ -9417,7 +9424,7 @@ static int wpa_driver_nl80211_send_actio
  					  const u8 *dst, const u8 *src,
  					  const u8 *bssid,
  					  const u8 *data, size_t data_len,
@@ -97,7 +97,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	int ret = -1;
-@@ -9418,7 +9425,7 @@ static int wpa_driver_nl80211_send_actio
+@@ -9485,7 +9492,7 @@ static int wpa_driver_nl80211_send_actio
  	     !drv->use_monitor))
  		ret = wpa_driver_nl80211_send_mlme(bss, buf, 24 + data_len,
  						   0, freq, no_cck, offchanok,
@@ -106,7 +106,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  	else
  		ret = nl80211_send_frame_cmd(bss, freq, wait_time, buf,
  					     24 + data_len, 1, no_cck, 0,
-@@ -11149,11 +11156,11 @@ static int driver_nl80211_send_action(vo
+@@ -11247,11 +11254,11 @@ static int driver_nl80211_send_action(vo
  				      const u8 *dst, const u8 *src,
  				      const u8 *bssid,
  				      const u8 *data, size_t data_len,
@@ -122,7 +122,7 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -9537,7 +9537,7 @@ int wpa_drv_send_action(struct wpa_suppl
+@@ -9725,7 +9725,7 @@ int wpa_drv_send_action(struct wpa_suppl
  	}
  
  	return wpa_s->driver->send_action(wpa_s->drv_priv, freq, wait, dst, src,

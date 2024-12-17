@@ -3,15 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-dp-qca
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=win.nss.1.0.r24
 PKG_RELEASE:=1
-MAKE_OPTS:=
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-dp
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=75722b7e4d57c040e713b7e9db920b701feb034b
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
-
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/qca-nss-dp-qca

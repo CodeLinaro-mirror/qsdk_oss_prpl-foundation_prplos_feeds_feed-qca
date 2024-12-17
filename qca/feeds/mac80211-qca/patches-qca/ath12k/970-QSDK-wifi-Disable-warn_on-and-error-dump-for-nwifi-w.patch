@@ -18,11 +18,9 @@ Signed-off-by: Vinith Kumar R <quic_vinithku@quicinc.com>
  drivers/net/wireless/ath/ath12k/dp_rx.c | 14 +++++++++-----
  3 files changed, 15 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/core.c b/drivers/net/wireless/ath/ath12k/core.c
-index 03841b3..ef3cd92 100644
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -87,6 +87,11 @@ module_param_array_named(rfs_core_mask, ath12k_rfs_core_mask, int, NULL, 0644);
+@@ -87,6 +87,11 @@ module_param_array_named(rfs_core_mask,
  MODULE_PARM_DESC(rfs_core_mask, "Default RFS core mask, mask for 2G, mask for 5G,\n"
  		 "mask for 6G. One bit for one CPU core\n");
  
@@ -34,8 +32,6 @@ index 03841b3..ef3cd92 100644
  static DEFINE_MUTEX(ath12k_hw_lock);
  static struct list_head ath12k_hw_groups = LIST_HEAD_INIT(ath12k_hw_groups);
  
-diff --git a/drivers/net/wireless/ath/ath12k/core.h b/drivers/net/wireless/ath/ath12k/core.h
-index b1ea5ba..63dc2fd 100644
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
 @@ -55,6 +55,7 @@
@@ -46,11 +42,9 @@ index b1ea5ba..63dc2fd 100644
  
  #define ATH12K_MAX_CORE_MASK	(0xFFFF & ((1 << NR_CPUS) - 1))
  extern unsigned int ath12k_rfs_core_mask[4];
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index 0d1b9ba..d620470 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3303,10 +3303,12 @@ static bool ath12k_dp_rx_check_max_nwifi_hdr_len(struct ath12k_base *ab,
+@@ -3303,10 +3303,12 @@ static bool ath12k_dp_rx_check_max_nwifi
  	hdr_len = ieee80211_hdrlen(hdr->frame_control);
  	if (unlikely(hdr_len > DP_MAX_NWIFI_HDR_LEN)) {
  		ab->soc_stats.invalid_rbm++;
@@ -67,17 +61,54 @@ index 0d1b9ba..d620470 100644
  		return true;
  	}
  
-@@ -3379,7 +3381,9 @@ static int ath12k_dp_rx_process_msdu(struct ath12k *ar,
+@@ -3379,7 +3381,9 @@ static int ath12k_dp_rx_process_msdu(str
  	if (rx_info->decap_type == DP_RX_DECAP_TYPE_NATIVE_WIFI &&
  	    ath12k_dp_rx_check_max_nwifi_hdr_len(ab, rx_desc, msdu,
  						 "Invalid len in Rx\n")) {
 -		WARN_ON_ONCE(1);
-+		if( ath12k_rx_nwifi_err_dump )
++		if (ath12k_rx_nwifi_err_dump)
 +			WARN_ON_ONCE(1);
 +
  		ret = -EINVAL;
  		goto free_out;
  	}
--- 
-2.34.1
-
+@@ -3858,7 +3862,8 @@ mic_fail:
+ 	if (rx_info.decap_type == DP_RX_DECAP_TYPE_NATIVE_WIFI &&
+ 	    ath12k_dp_rx_check_max_nwifi_hdr_len(ab, rx_desc, msdu,
+ 						 "Invalid len in verify tkip\n")) {
+-		WARN_ON_ONCE(1);
++		if (ath12k_rx_nwifi_err_dump)
++			WARN_ON_ONCE(1);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -4692,7 +4697,8 @@ static int ath12k_dp_rx_h_null_q_desc(st
+ 	if (rx_info->decap_type == DP_RX_DECAP_TYPE_NATIVE_WIFI &&
+ 	    ath12k_dp_rx_check_max_nwifi_hdr_len(ab, desc, msdu,
+ 						 "Invalid len in Null queue\n")) {
+-		WARN_ON_ONCE(1);
++		if (ath12k_rx_nwifi_err_dump)
++			WARN_ON_ONCE(1);
+ 		ret = -EINVAL;
+ 		goto exit;
+ 	}
+@@ -4804,7 +4810,8 @@ static bool ath12k_dp_rx_h_tkip_mic_err(
+ 	if (rx_info->decap_type == DP_RX_DECAP_TYPE_NATIVE_WIFI &&
+ 	    ath12k_dp_rx_check_max_nwifi_hdr_len(ab, desc, msdu,
+ 						 "Invalid len in tkip mic err\n")) {
+-		WARN_ON_ONCE(1);
++		if (ath12k_rx_nwifi_err_dump)
++			WARN_ON_ONCE(1);
+ 		drop = true;
+ 		goto exit;
+ 	}
+@@ -4925,7 +4932,8 @@ static bool ath12k_dp_rx_h_4addr_null_fr
+ 	if (rx_info->decap_type == DP_RX_DECAP_TYPE_NATIVE_WIFI &&
+ 	    ath12k_dp_rx_check_max_nwifi_hdr_len(ab, rx_desc, msdu,
+ 						 "Invalid len in 4addr Null frame\n")) {
+-		WARN_ON_ONCE(1);
++		if (ath12k_rx_nwifi_err_dump)
++			WARN_ON_ONCE(1);
+ 		drop = true;
+ 		goto exit;
+ 	}

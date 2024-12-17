@@ -30,17 +30,18 @@ Signed-off-by: Harish Rachakonda <quic_rachakon@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -453,6 +453,7 @@ struct ath12k_link_vif {
+@@ -454,6 +454,8 @@ struct ath12k_link_vif {
  	struct dentry *debugfs_twt;
  	struct dentry *debugfs_rtsthreshold;
  #endif /* CPTCFG_ATH12K_DEBUGFS */
++	struct dentry *debugfs_power_save_gtx;
 +	bool power_save_gtx;
  	struct work_struct update_bcn_template_work;
  	u64 obss_color_bitmap;
  	struct work_struct update_obss_color_notify_work;
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -6162,6 +6162,43 @@ static const struct file_operations ath1
+@@ -6166,6 +6166,43 @@ static const struct file_operations ath1
  	.llseek = default_llseek,
  };
  
@@ -84,21 +85,39 @@ Signed-off-by: Harish Rachakonda <quic_rachakon@quicinc.com>
  static ssize_t ath12k_write_ppe_rfs_core_mask(struct file *file,
  					      const char __user *user_buf,
  					      size_t count, loff_t *ppos)
-@@ -6271,6 +6308,11 @@ void ath12k_debugfs_add_interface(struct
+@@ -6275,6 +6312,11 @@ void ath12k_debugfs_add_interface(struct
  	debugfs_create_file("resume_dialog", 0200, arvif->debugfs_twt,
  			    arvif, &ath12k_fops_twt_resume_dialog);
  
-+	debugfs_create_file("power_save_gtx", 0644,
-+			    vif->link_debugfs[link_id],
-+			    arvif,
-+			    &ath12k_power_save_gtx);
++	arvif->debugfs_power_save_gtx = debugfs_create_file("power_save_gtx", 0644,
++							    vif->link_debugfs[link_id],
++							    arvif,
++							    &ath12k_power_save_gtx);
 +
  	if (hw->wiphy->num_hw) {
  		if (!arvif->debugfs_rtsthreshold || IS_ERR(arvif->debugfs_rtsthreshold)) {
  			ath12k_warn(arvif->ar->ab,
+@@ -6354,6 +6396,7 @@ void ath12k_debugfs_remove_interface(str
+ 		arvif->debugfs_twt = NULL;
+ 		arvif->debugfs_rtsthreshold = NULL;
+ 		ahvif->debugfs_linkstats = NULL;
++		arvif->debugfs_power_save_gtx = NULL;
+ 		return;
+ 	}
+ 
+@@ -6376,6 +6419,9 @@ void ath12k_debugfs_remove_interface(str
+ 	if (!arvif->debugfs_twt)
+ 		return;
+ 
++	debugfs_remove(arvif->debugfs_power_save_gtx);
++	arvif->debugfs_power_save_gtx = NULL;
++	
+ 	debugfs_remove_recursive(arvif->debugfs_twt);
+ 	arvif->debugfs_twt = NULL;
+ 
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -1367,6 +1367,7 @@ enum wmi_tlv_vdev_param {
+@@ -1379,6 +1379,7 @@ enum wmi_tlv_vdev_param {
  	WMI_VDEV_PARAM_HE_LTF = 0x74,
  	WMI_VDEV_PARAM_BA_MODE = 0x7e,
  	WMI_VDEV_PARAM_AUTORATE_MISC_CFG = 0x80,

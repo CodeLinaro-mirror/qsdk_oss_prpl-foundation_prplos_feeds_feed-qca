@@ -17,7 +17,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -1882,6 +1882,44 @@ static u16 hostapd_gen_fils_discovery_ns
+@@ -1940,6 +1940,44 @@ static u16 hostapd_gen_fils_discovery_ns
  }
  
  
@@ -62,7 +62,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  static u16 hostapd_fils_discovery_cap(struct hostapd_data *hapd)
  {
  	u16 cap_info, phy_index;
-@@ -1893,6 +1931,15 @@ static u16 hostapd_fils_discovery_cap(st
+@@ -1951,6 +1989,15 @@ static u16 hostapd_fils_discovery_cap(st
  		cap_info |= FD_CAP_PRIVACY;
  
  	if (is_6ghz_op_class(hapd->iconf->op_class)) {
@@ -78,7 +78,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  		switch (hapd->iconf->op_class) {
  		case 137:
  			chwidth = FD_CAP_BSS_CHWIDTH_320;
-@@ -1934,11 +1981,36 @@ static u16 hostapd_fils_discovery_cap(st
+@@ -1992,11 +2039,36 @@ static u16 hostapd_fils_discovery_cap(st
  		}
  	}
  
@@ -120,7 +120,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -2994,6 +2994,7 @@ enum mscs_description_subelem {
+@@ -3068,6 +3068,7 @@ enum mscs_description_subelem {
  #define FD_CAP_BSS_CHWIDTH_80				2
  #define FD_CAP_BSS_CHWIDTH_160_80_80			3
  #define FD_CAP_BSS_CHWIDTH_320				4

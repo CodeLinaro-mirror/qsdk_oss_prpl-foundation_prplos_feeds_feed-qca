@@ -16,8 +16,8 @@ Change-Id: Ia4a5525694e6b8acdc707b431c54b98f90bdd2aa
 
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2426,7 +2426,12 @@ void hostapd_wpa_event(void *ctx, enum w
- 	struct sta_info *sta;
+@@ -2576,7 +2576,12 @@ void hostapd_wpa_event(void *ctx, enum w
+ 
  #ifndef CONFIG_NO_STDOUT_DEBUG
  	int level = MSG_DEBUG;
 +#endif /* CONFIG_NO_STDOUT_DEBUG */

@@ -4,7 +4,12 @@
 . /lib/functions/system.sh
 [ -e /lib/functions.sh ] && . /lib/functions.sh
 
-init_wireless_driver "$@"
+mlo_add_flag=0
+[ -f /tmp/mlo_support.txt ] && mlo_add_flag=$(cat /tmp/mlo_support.txt)
+if [ $mlo_add_flag -eq 0 ]; then
+	init_wireless_driver "$@"
+fi
+
 MLD_VAP_DETAILS="/lib/netifd/wireless/wifi_mld_cfg.config"
 
 MP_CONFIG_INT="mesh_retry_timeout mesh_confirm_timeout mesh_holding_timeout mesh_max_peer_links
@@ -714,7 +719,7 @@ mac80211_hostapd_setup_base() {
 
 		if [ "$is_6ghz" == "1" ]; then
 			if [ -z "$multiple_bssid" ] && [ "$has_ap" -gt 1 ]; then
-				multiple_bssid=2
+				multiple_bssid=3
 			fi
 		fi
 
@@ -901,21 +906,19 @@ mac80211_get_addr() {
 mac80211_hwidx_from_channel_list() {
 	local phy="$1"
 	local i=0
-	local first_chan highest_chan chidx hw_nchans n_hw_idx
+	local first_chan end_chan n_hw_idx start_freq end_freq
 
-	n_hw_idx=$(iw phy "${phy}" info | grep -e "channel list" | wc -l)
+	n_hw_idx=$(iw phy "${phy}" info | grep -e "Idx" | wc -l)
 
 	while [ "$i" -lt "$n_hw_idx" ]; do
-		hw_nchans=$(iw phy "${phy}" info | awk -v p1="$i channel list" \
-			-v p2="$((i+1)) channel list"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f')
-		first_chan=$(echo $hw_nchans | awk '{print $1}')
-		highest_chan=$first_chan
-		for chidx in $hw_nchans; do
-			if [ "$chidx" -gt "$highest_chan" ]; then
-				highest_chan=$chidx;
-			fi
-		done
-		if [ "$2" == "$first_chan-$highest_chan" ]; then
+		start_freq=$(iw phy "${phy}" info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 3)
+		end_freq=$(iw phy "${phy}" info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 6)
+		start_freq=$((start_freq+10))
+		end_freq=$((end_freq-10))
+		first_chan=$(mac80211_freq_to_channel $start_freq)
+		end_chan=$(mac80211_freq_to_channel $end_freq)
+
+		if [ "$2" == "$first_chan-$end_chan" ]; then
 			break;
 		fi
 		i=$((i+1))
@@ -954,7 +957,7 @@ mac80211_generate_mac() {
 	}
 
 	if [ "$is_sphy_mband" -eq 1 ]; then
-		n_hwidx=$(iw phy "${phy}" info | grep -e "channel list" | wc -l)
+		n_hwidx=$(iw phy "${phy}" info | grep -e "Idx" | wc -l)
 		if [ -n "$channel_list" ] && \
 		[ "$(wc -l < /sys/class/ieee80211/"${phy}"/addresses)" == "$n_hwidx" ]; then
 			hw_idx="$(mac80211_hwidx_from_channel_list "$phy" "$channel_list")"
@@ -1262,7 +1265,7 @@ mac80211_prepare_vif() {
 	if_idx=$((${if_idx:-0} + 1))
 	[ -z $ppe_vp ] && ppe_vp="ds"
 
-	if [ $mode == "mesh" ]; then
+	if [ $mode == "mesh" ] && [ $ppe_vp == "ds" ]; then
 		ppe_vp="passive"
 	fi
 
@@ -1282,10 +1285,13 @@ mac80211_prepare_vif() {
 	json_add_string ifname "$ifname"
 	json_close_object
 
-	[ "$mode" == "ap" ] && {
-		[ -z "$wpa_psk_file" ] && hostapd_set_psk "$ifname"
-		[ -z "$vlan_file" ] && hostapd_set_vlan "$ifname"
-	}
+	[ -f /tmp/mlo_support.txt ] && mlo_add_flag=$(cat /tmp/mlo_support.txt)
+	if [ $mlo_add_flag -eq 0 ]; then
+		[ "$mode" == "ap" ] && {
+			[ -z "$wpa_psk_file" ] && hostapd_set_psk "$ifname"
+			[ -z "$vlan_file" ] && hostapd_set_vlan "$ifname"
+		}
+	fi
 
 	json_select config
 
@@ -2074,28 +2080,31 @@ drv_mac80211_setup() {
 		return 1
 	}
 
-	if [ "$(cat /sys/module/ath12k/parameters/ppe_rfs_support)" == 'Y' ]; then
-		# Note: ppe_vp_accel and ppe_vp_rfs are mutually exclusive.
-		#       ppe_vp_accel enables PPE acceleration path and ppe_vp_rfs
-		#       is expected to enable only flow steering for VLAN type
-		#       interface (eg: WDS root).
-		echo 1 >> /sys/module/mac80211/parameters/ppe_vp_rfs
-		# Note: Format is default MLO mask followed by band specific core masks
-		#	in order of 2 GHz, 5 GHz and 6GHz bands
-		#	echo <DEFAULT/ MLO MASK>,<2GHZ MASK>,<5GHZ MASK>,<6GHZ_MASK>
-		echo 0x7,0x7,0x7,0x7 > /sys/module/ath12k/parameters/rfs_core_mask
+	[ -f /tmp/mlo_support.txt ] && mlo_add_flag=$(cat /tmp/mlo_support.txt)
+	if [ $mlo_add_flag -eq 0 ]; then
+		if [ "$(cat /sys/module/ath12k/parameters/ppe_rfs_support)" == 'Y' ]; then
+			# Note: ppe_vp_accel and ppe_vp_rfs are mutually exclusive.
+			#       ppe_vp_accel enables PPE acceleration path and ppe_vp_rfs
+			#       is expected to enable only flow steering for VLAN type
+			#       interface (eg: WDS root).
+			echo 1 >> /sys/module/mac80211/parameters/ppe_vp_rfs
+			# Note: Format is default MLO mask followed by band specific core masks
+			#	in order of 2 GHz, 5 GHz and 6GHz bands
+			#	echo <DEFAULT/ MLO MASK>,<2GHZ MASK>,<5GHZ MASK>,<6GHZ_MASK>
+			echo 0x7,0x7,0x7,0x7 > /sys/module/ath12k/parameters/rfs_core_mask
 
-		if [ "$(cat /sys/module/mac80211/parameters/ppe_vp_accel)" == 'Y' ]; then
-			echo "ppe_vp_accel is enabled. Please disable to support RFS on WDS" > /dev/ttyMSM0
+			if [ "$(cat /sys/module/mac80211/parameters/ppe_vp_accel)" == 'Y' ]; then
+				echo "ppe_vp_accel is enabled. Please disable to support RFS on WDS" > /dev/ttyMSM0
+			fi
+
+			if echo "$(cat /sys/sfe/ppe_rfs_feature)" | grep -q "disabled"; then
+				echo 1 >> /sys/sfe/ppe_rfs_feature
+				echo "enabled ppe_rfs_feature" > /dev/ttyMSM0
+			fi
 		fi
 
-		if echo "$(cat /sys/sfe/ppe_rfs_feature)" | grep -q "disabled"; then
-			echo 1 >> /sys/sfe/ppe_rfs_feature
-			echo "enabled ppe_rfs_feature" > /dev/ttyMSM0
-		fi
+		wireless_set_data phy="$phy"
 	fi
-
-	wireless_set_data phy="$phy"
 	[ -z "$(uci -q -P /var/state show wireless._"${phy}")" ] && uci -q -P /var/state set wireless._"${phy}"=phy
 
 	OLDAPLIST=$(uci -q -P /var/state get wireless."${device}".aplist)
@@ -2106,7 +2115,7 @@ drv_mac80211_setup() {
 	local cwdev
 	local found
 
-	for wdev in $(list_phy_interfaces "$phy"); do
+	[ "$mlo_add_flag" = 1 ] || for wdev in $(list_phy_interfaces "$phy"); do
 		found=0
 		for cwdev in $OLDAPLIST $OLDSPLIST $OLDUMLIST; do
 			if [ "$wdev" = "$cwdev" ]; then
@@ -2120,15 +2129,21 @@ drv_mac80211_setup() {
 		fi
 	done
 
-	# convert channel to frequency
-	[ "$auto_channel" -gt 0 ] || freq="$(get_freq "$phy" "$channel" "$band")"
+	if [ $mlo_add_flag -eq 0 ]; then
+		# convert channel to frequency
+		[ "$auto_channel" -gt 0 ] || freq="$(get_freq "$phy" "$channel" "$band")"
 
-	[ -n "$country" ] && {
-		iw reg get | grep -q "^country $country:" || {
-			iw reg set "$country"
-			sleep 1
+		[ -n "$country" ] && {
+			iw reg get | grep -q "^country $country:" || {
+				iw reg set "$country"
+				sleep 1
+			}
+			if [ "$country" = "00" ]; then
+				iw reg set "$country"
+				sleep 1
+			fi
 		}
-	}
+	fi
 	if [ "$is_sphy_mband" -eq 1 ]; then
 		hostapd_conf_file="/var/run/hostapd-${phy}_band${device:11:1}.conf"
 	else
@@ -2139,32 +2154,34 @@ drv_mac80211_setup() {
 	macidx=0
 	staidx=0
 
-	[ -n "$chanbw" ] && {
-		for file in /sys/kernel/debug/ieee80211/"$phy"/ath9k*/chanbw /sys/kernel/debug/ieee80211/"$phy"/ath5k/bwmode; do
-			[ -f "$file" ] && echo "$chanbw" > "$file"
-		done
-	}
+	if [ $mlo_add_flag -eq 0 ]; then
+		[ -n "$chanbw" ] && {
+			for file in /sys/kernel/debug/ieee80211/"$phy"/ath9k*/chanbw /sys/kernel/debug/ieee80211/"$phy"/ath5k/bwmode; do
+				[ -f "$file" ] && echo "$chanbw" > "$file"
+			done
+		}
 
-	set_default rxantenna 0xffffffff
-	set_default txantenna 0xffffffff
-	set_default distance 0
-	set_default antenna_gain 0
+		set_default rxantenna 0xffffffff
+		set_default txantenna 0xffffffff
+		set_default distance 0
+		set_default antenna_gain 0
 
-	[ "$txantenna" = "all" ] && txantenna=0xffffffff
-	[ "$rxantenna" = "all" ] && rxantenna=0xffffffff
+		[ "$txantenna" = "all" ] && txantenna=0xffffffff
+		[ "$rxantenna" = "all" ] && rxantenna=0xffffffff
 
-	iw phy "$phy" set antenna "$txantenna" "$rxantenna" >/dev/null 2>&1
-	iw phy "$phy" set antenna_gain "$antenna_gain" >/dev/null 2>&1
-	iw phy "$phy" set distance "$distance" >/dev/null 2>&1
+		iw phy "$phy" set antenna "$txantenna" "$rxantenna" >/dev/null 2>&1
+		iw phy "$phy" set antenna_gain "$antenna_gain" >/dev/null 2>&1
+		iw phy "$phy" set distance "$distance" >/dev/null 2>&1
 
-	if [ -n "$txpower" ]; then
-		iw phy "$phy" set txpower fixed "${txpower%%.*}00"
-	else
-		iw phy "$phy" set txpower auto
+		if [ -n "$txpower" ]; then
+			iw phy "$phy" set txpower fixed "${txpower%%.*}00"
+		else
+			iw phy "$phy" set txpower auto
+		fi
+
+		[ -n "$frag" ] && iw phy "$phy" set frag "${frag%%.*}"
+		[ -n "$rts" ] && iw phy "$phy" set rts "${rts%%.*}"
 	fi
-
-	[ -n "$frag" ] && iw phy "$phy" set frag "${frag%%.*}"
-	[ -n "$rts" ] && iw phy "$phy" set rts "${rts%%.*}"
 
 	has_ap=0
 	hostapd_ctrl=
@@ -2194,6 +2211,9 @@ drv_mac80211_setup() {
 
 	NEWAPLIST=
 	for_each_interface "ap" mac80211_prepare_vif "${device}" "${multiple_bssid}" "${mbssid_group_size}"
+	if [ "$mlo_add_flag" = 1 ]; then
+		return;
+	fi
 	uci -q -P /var/state set wireless."${device}".aplist="${NEWAPLIST}"
 
 	NEW_MD5=$(test -e "${hostapd_conf_file}" && md5sum "${hostapd_conf_file}")
@@ -2263,73 +2283,79 @@ drv_mac80211_setup() {
 			if [ -f "/var/run/wifi-$phy.pid" ]; then
 				return
 			fi
-			touch /var/run/hostapd-"$device"-updated-cfg
-			hostapd_cfg_updated=$(ls /var/run/hostapd-*-updated-cfg | wc -l)
+			[ -f "/var/run/hostapd-updated-cfg" ] || touch -f "/var/run/hostapd-updated-cfg"
+			if [ -f "/var/run/hostapd-updated-cfg" ]; then
+				exec 200>"/var/run/hostapd-updated-cfg"
+				flock 200
+				touch /var/run/hostapd-$device-updated-cfg
+				hostapd_cfg_updated=$(ls /var/run/hostapd-*-updated-cfg | wc -l)
 
-			if [ "$hostapd_cfg_updated" = "$radio_up_count" ]; then
-				bands_info=$(ls /var/run/hostapd*updated-cfg | grep -o band.)
-				for __band in $bands_info
-				do
-					append  config_files /var/run/hostapd-phy"${phy#phy}"_"${__band}".conf
-				done
-				#MLO vaps, single instance of hostapd is started
-				/usr/sbin/hostapd -B -P /var/run/wifi-"$phy".pid $config_files
-				ret="$?"
-
-				if [ "$band" = "5g" ]; then
-					interf_dfs="$(cat /var/run/hostapd-"${phy}"_band"${device:11:1}".conf | grep interface | grep wlan | cut -d'=' -f 2 )"
-					iw dev "$interf_dfs" info 2> /dev/null
-					ifret="$?"
-				fi
-				if ([ "$band" = "5g" ] && [ "$ifret" -eq 0 ]); then
-					config_get ht_mode "$device" htmode
-
-					if ([ -n "$ht_mode" ] && [[ "$ht_mode" == "EHT"* ]]); then
-						#Wait until link ids are filled, hostapd_cli command can give empty output in starting.
-						while [ -z "$link_ids" ]; do
-							link_ids="$(hostapd_cli -i "$interf_dfs" status | grep link_id= | cut -d'=' -f 2)"
-						done
-					fi
-					if [ -n "$link_ids" ]; then
-						for i in $link_ids
-						do
-							interf_state="$(hostapd_cli -i $interf_dfs -l $i status | grep state | cut -d'=' -f 2)"
-							if [ "$interf_state" = "DFS" ]; then
-								link=$i
-							fi
-						done
-					fi
-					while true;
+				if [ "$hostapd_cfg_updated" = "$radio_up_count" ]; then
+					bands_info=$(ls /var/run/hostapd*updated-cfg | grep -o band.)
+					for __band in $bands_info
 					do
-						if [ -n "$link" ]; then
-							hostapd_state="$(hostapd_cli -i "$interf_dfs" -l "$link" status 2> /dev/null | grep state | cut -d'=' -f 2)"
-						else
-							hostapd_state="$(hostapd_cli -i "$interf_dfs" status 2> /dev/null | grep state | cut -d'=' -f 2)"
+						append  config_files /var/run/hostapd-phy"${phy#phy}"_"${__band}".conf
+					done
+					#MLO vaps, single instance of hostapd is started
+					/usr/sbin/hostapd -B -P /var/run/wifi-"$phy".pid $config_files
+					ret="$?"
+
+					if [ "$band" = "5g" ]; then
+						interf_dfs="$(cat /var/run/hostapd-"${phy}"_band"${device:11:1}".conf | grep interface | grep wlan | cut -d'=' -f 2 )"
+						iw dev "$interf_dfs" info 2> /dev/null
+						ifret="$?"
+					fi
+					if ([ "$band" = "5g" ] && [ "$ifret" -eq 0 ]); then
+						config_get ht_mode "$device" htmode
+
+						if ([ -n "$ht_mode" ] && [[ "$ht_mode" == "EHT"* ]]); then
+							#Wait until link ids are filled, hostapd_cli command can give empty output in starting.
+							while [ -z "$link_ids" ]; do
+								link_ids="$(hostapd_cli -i "$interf_dfs" status | grep link_id= | cut -d'=' -f 2)"
+							done
 						fi
-						if [ "$hostapd_state" = "ENABLED" ]; then
-							wireless_add_process "$(cat /var/run/wifi-"$phy".pid)" "/usr/sbin/hostapd" 1
-							[ "$ret" != 0 ] && {
+						if [ -n "$link_ids" ]; then
+							for i in $link_ids
+							do
+								interf_state="$(hostapd_cli -i $interf_dfs -l $i status | grep state | cut -d'=' -f 2)"
+								if [ "$interf_state" = "DFS" ]; then
+									link=$i
+								fi
+							done
+						fi
+						while true;
+						do
+							if [ -n "$link" ]; then
+								hostapd_state="$(hostapd_cli -i "$interf_dfs" -l "$link" status 2> /dev/null | grep state | cut -d'=' -f 2)"
+							else
+								hostapd_state="$(hostapd_cli -i "$interf_dfs" status 2> /dev/null | grep state | cut -d'=' -f 2)"
+							fi
+							if [ "$hostapd_state" = "ENABLED" ]; then
+								wireless_add_process "$(cat /var/run/wifi-"$phy".pid)" "/usr/sbin/hostapd" 1
+								[ "$ret" != 0 ] && {
+								wireless_setup_failed HOSTAPD_START_FAILED
+								return
+								}
+								update_primary_link
+								break;
+							fi
+
+						done
+					else
+						wireless_add_process "$(cat /var/run/wifi-"$phy".pid)" "/usr/sbin/hostapd" 1
+						[ "$ret" != 0 ] && {
 							wireless_setup_failed HOSTAPD_START_FAILED
 							return
-							}
-							update_primary_link
-							break;
-						fi
-
-					done
+						}
+						update_primay_link
+					fi
 				else
-					wireless_add_process "$(cat /var/run/wifi-"$phy".pid)" "/usr/sbin/hostapd" 1
-					[ "$ret" != 0 ] && {
-						wireless_setup_failed HOSTAPD_START_FAILED
-						return
-					}
-					update_primay_link
+					hostapd_started=0
 				fi
-			else
-				hostapd_started=0
+				flock -u 200
 			fi
+			hostapd_dpp_action "$ifname"
 		fi
-		hostapd_dpp_action "$ifname"
 
 	}
 	uci -q -P /var/state set wireless."${device}".aplist="${NEWAPLIST}"
@@ -2625,8 +2651,9 @@ get_sta_freq_list() {
 
 	phy=$1
 	sta_freq=$2
+	local start_freq end_freq
 
-	hw_indices=$(iw phy "${phy}" info | grep -e "channel list" | cut -d' ' -f 2)
+	hw_indices=$(iw phy "${phy}" info | grep -e "Idx" | cut -d' ' -f 3)
 
 	if [ -z "$hw_indices" ]; then
 		#non-single wiphy arch doesn't need freq list
@@ -2635,40 +2662,30 @@ get_sta_freq_list() {
 
 	for i in $hw_indices
 	do
-		#fetch hw idx channels from phy info
-		hw_nchans=$(iw phy ${phy} info | awk -v p1="$i channel list" -v p2="$((i+1)) channel list"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f')
-
+		start_freq=$(iw phy "${phy}" info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 3)
+		end_freq=$(iw phy "$phy" info | awk -v p1="Idx $i" -v p2="Radio's valid interface combinations"  ' $0 ~ p1{f=1;next} $0 ~ p2 {f=0} f'| cut -d " " -f 6)
+		start_freq=$((start_freq+10))
+		end_freq=$((end_freq-10))
 		for _b in `iw phy "$phy" info | grep 'Band ' | cut -d' ' -f 2`; do
 			expr="iw phy ${phy} info | awk  '/Band ${_b}/{ f = 1; next } /Band /{ f = 0 } f'"
 			expr_freq="$expr | awk '/Frequencies/,/valid /f'"
-			band_freq=$(eval ${expr_freq} | awk '{ print $2 }' | sed -e "s/\[//g" | sed -e "s/\]//g")
+			band_freq=$(eval ${expr_freq} | awk '{ print $2 }' | sed -e "s/\[//g" | sed -e "s/\]//g" | cut -f1 -d".")
 
 			# band_freq list has the sta freq in it
 			if [[ "$band_freq" =~ "${sta_freq}" ]]; then
 				sta_chan=$(eval $expr_freq | grep -E -m1 "(\* ${sta_freq:-....}.0 MHz${sta_freq:+|\\[$sta_freq\\]})" | grep MHz | awk '{print $4}' | sed -e "s/\[//g" | sed -e "s/\]//g")
 
-				#fetch band channels from phy info
-				band_nchans=$(echo $(eval ${expr_freq} | awk '{ print $4 }' | sed -e "s/\[//g" | sed -e "s/\]//g") | tr -d ' ')
-				hw_chans=$(echo $hw_nchans | tr -d ' ')
-
-				#check if the list is present in band info
-				if echo "$band_nchans" | grep -q "${hw_chans}";
+				if [ "$sta_freq" -ge "$start_freq" ] && [ "$sta_freq" -le "$end_freq" ];
 				then
-					found=false
-					for chan in $hw_nchans
-					do
-						if [[ "$chan" == "$sta_chan" ]]; then
-							found=true
-						fi
+					sta_freq_list=""
+					iter_freq=$((start_freq))
+					while [ "$iter_freq" -lt "$end_freq" ]; do
+						frqs=$(iw phy "$phy" info | grep -E -m1 "(\* ${iter_freq}.0 MHz)" | grep MHz | awk '{print $2}' | cut -f1 -d".")
+						sta_freq_list="${sta_freq_list}${frqs} "
+						iter_freq=$((iter_freq+5))
 					done
-					if [[ "$found" == "true" ]]; then
-						sta_freq_list=""
-						for chidx in ${hw_nchans}; do
-							frqs=$(eval $expr_freq | grep -E -m1 "(\* ${chidx:-....} MHz${chidx:+|\\[$chidx\\]})" | grep MHz | awk '{print $2}' | cut -f1 -d".")
-							sta_freq_list="${sta_freq_list}${frqs} "
-							done
-							echo $sta_freq_list
-					fi
+					sta_freq_list="${sta_freq_list}${end_freq} "
+					echo $sta_freq_list
 				fi
 			else
 				continue;

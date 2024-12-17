@@ -23,7 +23,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -13416,6 +13416,8 @@ void ath12k_mac_fill_reg_tpc_info(struct
+@@ -13400,6 +13400,8 @@ void ath12k_mac_fill_reg_tpc_info(struct
                  psd_power, tx_power = 0, eirp_power = 0;
          u16 oper_freq = 0, start_freq = 0, center_freq = 0;
  	u8 reg_6g_power_mode;
@@ -32,17 +32,17 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
  	rcu_read_lock();
  
-@@ -13550,7 +13552,21 @@ void ath12k_mac_fill_reg_tpc_info(struct
+@@ -13540,7 +13542,21 @@ void ath12k_mac_fill_reg_tpc_info(struct
+                                                            &temp_chan,
                                                             &tx_power,
  							   reg_6g_power_mode);
-                                 psd_power = temp_chan->psd;
 -                                eirp_power = tx_power;
 +				if (reg_6g_power_mode == IEEE80211_REG_SP_AP &&
 +				    ar->afc.is_6ghz_afc_power_event_received) {
 +					cfi = ieee80211_frequency_to_channel(center_freq);
 +					bw = NL80211_CHAN_WIDTH_20;
 +					eirp_power =
-+					ath12k_reg_get_afc_eirp_power(ar, bw, cfi);
++						ath12k_reg_get_afc_eirp_power(ar, bw, cfi);
 +					/* In some case channel obj for that
 +					 * particular freq  might not be received
 +					 */
@@ -52,10 +52,10 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +					eirp_power = tx_power;
 +				}
 +
-                                 max_tx_power[pwr_lvl_idx] = psd_power;
-                         } else {
-                                 ath12k_mac_get_eirp_power(ar,
-@@ -13562,6 +13578,18 @@ void ath12k_mac_fill_reg_tpc_info(struct
+ 				if (temp_chan) {
+ 					psd_power = temp_chan->psd;
+ 					max_tx_power[pwr_lvl_idx] = psd_power;
+@@ -13557,6 +13573,18 @@ void ath12k_mac_fill_reg_tpc_info(struct
                                                            &tx_power,
  							  reg_6g_power_mode);
                                  max_tx_power[pwr_lvl_idx] = tx_power;
@@ -76,8 +76,8 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/reg.c
 +++ b/drivers/net/wireless/ath/ath12k/reg.c
-@@ -971,6 +971,116 @@ ath12k_reg_build_regd(struct ath12k_base
- 	return new_regd;
+@@ -1014,6 +1014,116 @@ ath12k_reg_coalesce_afc_freq_info(struct
+ 	}
  }
  
 +int ath12k_reg_get_6ghz_opclass_from_bw(int bw, int cfi)

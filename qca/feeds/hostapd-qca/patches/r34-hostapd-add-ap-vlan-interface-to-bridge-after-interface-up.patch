@@ -22,37 +22,12 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -8600,7 +8600,8 @@ static int i802_set_wds_sta(void *priv,
- 	struct wpa_driver_nl80211_data *drv = bss->drv;
- 	char name[IFNAMSIZ + 1];
- 	union wpa_event_data event;
--	int ret;
-+	bool add_br = false;
-+	int ret = 0;
+@@ -8785,8 +8785,17 @@ static int i802_set_wds_sta(void *priv,
+ 				    bridge_ifname, name) < 0)
+ 			return -1;
  
- 	ret = os_snprintf(name, sizeof(name), "%s.sta%d", bss->ifname, aid);
- 	if (ret >= (int) sizeof(name))
-@@ -8622,10 +8623,9 @@ static int i802_set_wds_sta(void *priv,
- 						 NL80211_IFTYPE_AP_VLAN,
- 						 bss->addr, 1, NULL, NULL, 0, 0) <  0)
- 				return -1;
--			if (bridge_ifname &&
--			    linux_br_add_if(drv->global->ioctl_sock,
--					    bridge_ifname, name) < 0)
--				return -1;
-+
-+			if (bridge_ifname)
-+				add_br =  true;
- 
- 			os_memset(&event, 0, sizeof(event));
- 			event.wds_sta_interface.sta_addr = addr;
-@@ -8639,8 +8639,18 @@ static int i802_set_wds_sta(void *priv,
- 			wpa_printf(MSG_ERROR, "nl80211: Failed to set WDS STA "
- 				   "interface %s up", name);
- 		}
 -		return i802_set_sta_vlan(priv, addr, name, 0,
 -					 NL80211_DRV_LINK_ID_NA);
-+
 +		ret = i802_set_sta_vlan(priv, addr, name, 0,
 +					NL80211_DRV_LINK_ID_NA);
 +		if (!ret && add_br &&

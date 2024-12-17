@@ -32,7 +32,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  static size_t hostapd_write_ht_mcs_bitmask(char *buf, size_t buflen,
  					   size_t curr_len, const u8 *mcs_set)
  {
-@@ -231,6 +244,45 @@ static const char * timeout_next_str(int
+@@ -273,6 +286,45 @@ static const char * timeout_next_str(int
  	}
  }
  
@@ -78,7 +78,7 @@ Signed-off-by: saleemuddin shaik <quic_saleemud@quicinc.com>
  
  static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
  				      struct sta_info *sta,
-@@ -369,8 +421,81 @@ static int hostapd_ctrl_iface_sta_mib(st
+@@ -411,8 +463,81 @@ static int hostapd_ctrl_iface_sta_mib(st
  					sta->supp_op_classes + 1,
  					sta->supp_op_classes[0]);
  		res = os_snprintf(buf + len, buflen - len, "\n");

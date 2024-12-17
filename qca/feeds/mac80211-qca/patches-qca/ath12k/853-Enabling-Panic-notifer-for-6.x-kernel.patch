@@ -31,7 +31,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  #include <linux/of.h>
  #include <linux/of_platform.h>
  
-@@ -1754,19 +1755,27 @@ void ath12k_core_issue_bug_on(struct ath
+@@ -1754,31 +1755,36 @@ void ath12k_core_issue_bug_on(struct ath
  {
  	struct ath12k_hw_group *ag = ab->ag;
  
@@ -71,8 +71,12 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  }
  
  static void ath12k_coredump_download_ahb(struct ath12k_base *ab)
-@@ -1778,7 +1787,7 @@ static void ath12k_coredump_download_ahb
- 	int i;
+ {
+ 	struct ath12k_hw_group *ag = ab->ag;
+ 	int dump_count;
+-	struct ath12k_ahb *ab_ahb = ath12k_ahb_priv(ab);
+-	struct ath12k_base *partner_ab;
+-	int i;
  
  	/* Crash the system once all the stats are dumped */
 -	if (ab->fw_recovery_support)
@@ -80,7 +84,25 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  		return;
  
  	if (ag->mlo_capable ) {
-@@ -4027,7 +4036,6 @@ void *ath12k_get_ab_nd_peer_from_peer_ma
+@@ -1789,16 +1795,8 @@ static void ath12k_coredump_download_ahb
+ 			return;
+ 		}
+ 	}
+-	if (ab_ahb->tgt_rrproc->state == RPROC_CRASHED && ab->multi_pd_arch) {
+-		for (i = 0; i < ag->num_chip; i++) {
+-			partner_ab = ag->ab[i];
+-			if (partner_ab->multi_pd_arch)
+-				atomic_inc(&ath12k_coredump_ram_info.num_chip);
+-		}
+-	} else {
+-		atomic_inc(&ath12k_coredump_ram_info.num_chip);
+-	}
+ 
++	atomic_inc(&ath12k_coredump_ram_info.num_chip);
+ 	ath12k_core_issue_bug_on(ab);
+ }
+ 
+@@ -4085,7 +4083,6 @@ void *ath12k_get_ab_nd_peer_from_peer_ma
  
  #endif /* CPTCFG_ATH12K_SAWF */
  
@@ -88,7 +110,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  
  static void ath12k_rddm_notifier(struct notifier_block *this,
  				 unsigned long event, void *ptr)
-@@ -4044,9 +4052,7 @@ static void ath12k_rddm_notifier(struct
+@@ -4102,9 +4099,7 @@ static void ath12k_rddm_notifier(struct
  			ab->in_panic = true;
  			if (ab->hif.bus == ATH12K_BUS_AHB ||
  			    ab->hif.bus == ATH12K_BUS_HYBRID)
@@ -99,7 +121,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  			else
  				ath12k_coredump_download_rddm(ab);
  		}
-@@ -4057,7 +4063,6 @@ static struct notifier_block rddm_notifi
+@@ -4115,7 +4110,6 @@ static struct notifier_block rddm_notifi
  	.notifier_call  = ath12k_rddm_notifier,
  };
  
@@ -107,7 +129,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  
  static int ath12k_init(void)
  {
-@@ -4068,12 +4073,10 @@ static int ath12k_init(void)
+@@ -4126,12 +4120,10 @@ static int ath12k_init(void)
  		pr_err("Failed to register debugfs ath12k driver: %d\n", ret);
  		return ret;
  	}
@@ -120,7 +142,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  
  	ret = ath12k_ahb_init();
  	if (ret) {
-@@ -4101,9 +4104,7 @@ error:
+@@ -4159,9 +4151,7 @@ error:
  
  static void ath12k_exit(void)
  {
@@ -132,7 +154,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  	ath12k_debugfs_destroy();
 --- a/drivers/net/wireless/ath/ath12k/coredump.c
 +++ b/drivers/net/wireless/ath/ath12k/coredump.c
-@@ -343,7 +343,8 @@ void ath12k_coredump_download_rddm(struc
+@@ -354,7 +354,8 @@ void ath12k_coredump_download_rddm(struc
  	}
  
  	num_seg = num_seg - skip_count;
@@ -142,7 +164,7 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  		if (ag->mlo_capable) {
  			dump_count = atomic_read(&ath12k_coredump_ram_info.num_chip);
  			if (dump_count >= ATH12K_MAX_SOCS) {
-@@ -380,8 +381,7 @@ void ath12k_coredump_download_rddm(struc
+@@ -391,8 +392,7 @@ void ath12k_coredump_download_rddm(struc
  
  		ath12k_core_issue_bug_on(ab);
  

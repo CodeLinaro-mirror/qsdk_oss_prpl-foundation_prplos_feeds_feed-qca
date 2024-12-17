@@ -15,7 +15,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5004,6 +5004,60 @@ err:
+@@ -5024,6 +5024,60 @@ err:
  }
  #endif /* CONFIG_DRIVER_NL80211_QCA */
  
@@ -76,7 +76,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  static int nl80211_put_freq_params(struct wpa_driver_nl80211_data *drv,
  				   struct nl_msg *msg,
   				   const struct hostapd_freq_params *freq)
-@@ -5113,6 +5167,12 @@ static int nl80211_put_freq_params(struc
+@@ -5123,6 +5177,12 @@ static int nl80211_put_freq_params(struc
  				NL80211_CHAN_NO_HT))
  			return -ENOBUFS;
  	}

@@ -26,16 +26,16 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3689,6 +3689,8 @@ static int hostapd_config_fill(struct ho
+@@ -3759,6 +3759,8 @@ static int hostapd_config_fill(struct ho
  		conf->he_phy_capab.he_su_beamformee = atoi(pos);
  	} else if (os_strcmp(buf, "he_mu_beamformer") == 0) {
  		conf->he_phy_capab.he_mu_beamformer = atoi(pos);
 +	} else if (os_strcmp(buf, "he_ul_mumimo") == 0) {
 +		 conf->he_phy_capab.he_ul_mumimo = atoi(pos);
  	} else if (os_strcmp(buf, "he_bss_color") == 0) {
- 		conf->he_op.he_bss_color = atoi(pos);
- 		if (conf->he_op.he_bss_color > 63)
-@@ -5047,6 +5049,14 @@ static int hostapd_config_fill(struct ho
+ 		conf->he_op.he_bss_color = atoi(pos) & 0x3f;
+ 		conf->he_op.he_bss_color_disabled = 0;
+@@ -5130,6 +5132,14 @@ static int hostapd_config_fill(struct ho
  		conf->eht_phy_capab.mu_beamformer = atoi(pos);
  	} else if (os_strcmp(buf, "eht_default_pe_duration") == 0) {
  		conf->eht_default_pe_duration = atoi(pos);
@@ -52,7 +52,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  			return 1;
 --- a/hostapd/hostapd.conf
 +++ b/hostapd/hostapd.conf
-@@ -872,6 +872,11 @@ wmm_ac_vo_acm=0
+@@ -869,6 +869,11 @@ wmm_ac_vo_acm=0
  # he_bss_color_partial: BSS color AID equation
  #he_bss_color_partial=0
  
@@ -66,7 +66,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  #he_default_pe_duration=0
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -279,6 +279,8 @@ struct hostapd_config * hostapd_config_d
+@@ -280,6 +280,8 @@ struct hostapd_config * hostapd_config_d
  		HE_OPERATION_RTS_THRESHOLD_OFFSET;
  	/* Set default basic MCS/NSS set to single stream MCS 0-7 */
  	conf->he_op.he_basic_mcs_nss_set = 0xfffc;
@@ -77,7 +77,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	conf->he_op.he_bss_color = os_random() % 63 + 1;
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -996,6 +996,7 @@ struct he_phy_capabilities_info {
+@@ -1013,6 +1013,7 @@ struct he_phy_capabilities_info {
  	bool he_su_beamformer;
  	bool he_su_beamformee;
  	bool he_mu_beamformer;
@@ -85,7 +85,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  };
  
  /**
-@@ -1032,6 +1033,10 @@ struct eht_phy_capabilities_info {
+@@ -1049,6 +1050,10 @@ struct eht_phy_capabilities_info {
  	bool su_beamformer;
  	bool su_beamformee;
  	bool mu_beamformer;
@@ -98,7 +98,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  /**
 --- a/src/ap/hw_features.c
 +++ b/src/ap/hw_features.c
-@@ -718,8 +718,36 @@ static int ieee80211ac_supported_vht_cap
+@@ -740,8 +740,36 @@ static int ieee80211ac_supported_vht_cap
  
  
  #ifdef CONFIG_IEEE80211AX
@@ -178,7 +178,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -2469,6 +2469,9 @@ struct ieee80211_spatial_reuse {
+@@ -2516,6 +2516,9 @@ struct ieee80211_spatial_reuse {
  #define HE_PHYCAP_MU_BEAMFORMER_CAPAB_IDX	4
  #define HE_PHYCAP_MU_BEAMFORMER_CAPAB		((u8) BIT(1))
  
@@ -188,7 +188,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  #define HE_PHYCAP_PPE_THRESHOLD_PRESENT_IDX	6
  #define HE_PHYCAP_PPE_THRESHOLD_PRESENT		((u8) BIT(7))
  
-@@ -2668,7 +2671,10 @@ struct ieee80211_eht_operation {
+@@ -2715,7 +2718,10 @@ struct ieee80211_eht_operation {
  #define EHT_PHYCAP_PPE_THRESHOLD_PRESENT_IDX	5
  #define EHT_PHYCAP_PPE_THRESHOLD_PRESENT	((u8) BIT(3))
  

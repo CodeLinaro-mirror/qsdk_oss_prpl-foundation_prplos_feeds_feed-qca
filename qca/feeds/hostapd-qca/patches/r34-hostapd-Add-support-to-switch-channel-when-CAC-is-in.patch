@@ -28,7 +28,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
 
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -3100,6 +3100,11 @@ static int hostapd_ctrl_iface_chan_switc
+@@ -2934,6 +2934,11 @@ static int hostapd_ctrl_iface_chan_switc
  		eloop_cancel_timeout(hostapd_dfs_radar_handling_timeout, iface, NULL);
  	}
  
@@ -42,7 +42,7 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  		/* Save CHAN_SWITCH VHT, HE, and EHT config */
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4934,6 +4934,42 @@ int hostapd_switch_channel(struct hostap
+@@ -5055,6 +5055,42 @@ int hostapd_force_channel_switch(struct
  }
  
  
@@ -87,12 +87,11 @@ Signed-off-by: Amith A <quic_amitajit@quicinc.com>
  				const struct hostapd_freq_params *freq_params)
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -856,6 +856,8 @@ void hostapd_chan_switch_config(struct h
- 				struct hostapd_freq_params *freq_params);
- int hostapd_switch_channel(struct hostapd_data *hapd,
- 			   struct csa_settings *settings);
+@@ -996,5 +996,7 @@ u8 * hostapd_eid_eht_reconf_ml(struct ho
+ int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx,
+ 		       bool is_link_remove);
+ void hostapd_refresh_all_iface_beacons(struct hostapd_iface *hapd_iface);
 +int hostapd_hard_switch_channel(struct hostapd_iface *iface,
 +				struct csa_settings settings);
- void
- hostapd_switch_channel_fallback(struct hostapd_iface *iface,
- 				const struct hostapd_freq_params *freq_params);
+ 
+ #endif /* HOSTAPD_H */

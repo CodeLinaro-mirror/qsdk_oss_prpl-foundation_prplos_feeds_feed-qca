@@ -18,7 +18,7 @@ Signed-off-by: Seevalamuthu Mariappan <seevalam@codeaurora.org>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3642,6 +3642,8 @@ static int hostapd_config_fill(struct ho
+@@ -3712,6 +3712,8 @@ static int hostapd_config_fill(struct ho
  		conf->ht_vht_twt_responder = atoi(pos);
  	} else if (os_strcmp(buf, "obss_interval") == 0) {
  		conf->obss_interval = atoi(pos);
@@ -29,7 +29,7 @@ Signed-off-by: Seevalamuthu Mariappan <seevalam@codeaurora.org>
  		conf->ieee80211ac = atoi(pos);
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1135,6 +1135,7 @@ struct hostapd_config {
+@@ -1152,6 +1152,7 @@ struct hostapd_config {
  
  	/* Use driver-generated interface addresses when adding multiple BSSs */
  	u8 use_driver_iface_addr;
@@ -104,7 +104,7 @@ Signed-off-by: Seevalamuthu Mariappan <seevalam@codeaurora.org>
  
  /*
   * The function assumes HT40+ operation.
-@@ -281,6 +339,13 @@ static int dfs_find_channel(struct hosta
+@@ -288,6 +346,13 @@ static int dfs_find_channel(struct hosta
  			continue;
  		}
  
@@ -118,7 +118,7 @@ Signed-off-by: Seevalamuthu Mariappan <seevalam@codeaurora.org>
  		if (chan->max_tx_power < iface->conf->min_tx_power)
  			continue;
  
-@@ -1348,8 +1413,14 @@ dfs_downgrade_bandwidth(struct hostapd_i
+@@ -1355,8 +1420,14 @@ dfs_downgrade_bandwidth(struct hostapd_i
  			int oper_chwidth;
  
  			oper_chwidth = hostapd_get_oper_chwidth(iface->conf);

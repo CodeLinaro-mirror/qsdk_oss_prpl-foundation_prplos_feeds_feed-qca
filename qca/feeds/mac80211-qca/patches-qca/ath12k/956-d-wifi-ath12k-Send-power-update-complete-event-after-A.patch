@@ -328,10 +328,10 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC = 206,
  	QCA_NL80211_VENDOR_SUBCMD_SCS_RULE_CONFIG = 218,
 +	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT = 222,
- 	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 233,
- 	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 234,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_PHY_OPS = 235,
-@@ -24,6 +26,7 @@ enum qca_nl80211_vendor_subcmds {
+ 	QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS = 236,
+ 	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 253,
+@@ -25,6 +27,7 @@ enum qca_nl80211_vendor_subcmds {
  enum qca_nl80211_vendor_events {
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS_INDEX = 0,
  	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX,
@@ -339,7 +339,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX,
  };
  
-@@ -772,4 +775,378 @@ enum qca_wlan_vendor_set_6ghz_power_mode
+@@ -773,4 +776,378 @@ enum qca_wlan_vendor_set_6ghz_power_mode
   */
  int ath12k_vendor_send_6ghz_power_mode_update_complete(struct ath12k *ar,
  						       struct wireless_dev *wdev);
@@ -720,7 +720,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #endif /* QCA_VENDOR_H */
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7392,6 +7392,9 @@ static void ath12k_wmi_afc_event(struct
+@@ -7473,6 +7473,9 @@ static void ath12k_wmi_afc_event(struct
  		if (ret)
  			ath12k_warn(ab, "AFC reg rule update failed ret : %d\n",
  				    ret);

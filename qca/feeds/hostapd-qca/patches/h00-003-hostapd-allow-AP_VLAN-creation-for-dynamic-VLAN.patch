@@ -18,7 +18,7 @@ Date:   Wed Jan 13 16:51:07 2021 +0530
 
 --- a/src/ap/sta_info.c
 +++ b/src/ap/sta_info.c
-@@ -1298,8 +1298,7 @@ int ap_sta_bind_vlan(struct hostapd_data
+@@ -1299,8 +1299,7 @@ int ap_sta_bind_vlan(struct hostapd_data
  	if (sta->vlan_id == old_vlanid)
  		goto skip_counting;
  
@@ -30,7 +30,7 @@ Date:   Wed Jan 13 16:51:07 2021 +0530
  			       "binding station to (vlan_id=%d)",
 --- a/src/ap/wpa_auth_glue.c
 +++ b/src/ap/wpa_auth_glue.c
-@@ -463,12 +463,8 @@ static int hostapd_wpa_auth_set_key(void
+@@ -513,12 +513,8 @@ static int hostapd_wpa_auth_set_key(void
  
  	if (vlan_id > 0) {
  		ifname = hostapd_get_vlan_id_ifname(hapd->conf->vlan, vlan_id);
@@ -45,7 +45,7 @@ Date:   Wed Jan 13 16:51:07 2021 +0530
  	}
  
  #ifdef CONFIG_TESTING_OPTIONS
-@@ -991,32 +987,27 @@ static int hostapd_wpa_auth_update_vlan(
+@@ -1041,32 +1037,27 @@ static int hostapd_wpa_auth_update_vlan(
  #ifndef CONFIG_NO_VLAN
  	struct hostapd_data *hapd = ctx;
  	struct sta_info *sta;

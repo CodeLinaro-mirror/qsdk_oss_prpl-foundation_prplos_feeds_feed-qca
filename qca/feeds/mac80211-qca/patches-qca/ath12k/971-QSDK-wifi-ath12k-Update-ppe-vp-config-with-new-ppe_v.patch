@@ -33,7 +33,6 @@ index 45fa3c0..4397208 100644
  	u32 invalid_rbm;
  	u32 rxdma_error[HAL_REO_ENTR_RING_RXDMA_ECODE_MAX];
 diff --git a/drivers/net/wireless/ath/ath12k/debugfs.c b/drivers/net/wireless/ath/ath12k/debugfs.c
-index 3124e27..61578d0 100644
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
 @@ -1882,6 +1882,8 @@ static ssize_t ath12k_debugfs_dump_soc_dp_stats(struct file *file,
@@ -46,7 +45,6 @@ index 3124e27..61578d0 100644
  			 soc_stats->err_ring_pkts);
  	len += scnprintf(buf + len, size - len, "Invalid RBM: %u\n\n",
 diff --git a/drivers/net/wireless/ath/ath12k/ppe.c b/drivers/net/wireless/ath/ath12k/ppe.c
-index 12496fb..cf1ed2b 100644
 --- a/drivers/net/wireless/ath/ath12k/ppe.c
 +++ b/drivers/net/wireless/ath/ath12k/ppe.c
 @@ -1611,28 +1611,17 @@ void ath12k_vif_free_vp(struct ath12k_vif *ahvif)
@@ -84,7 +82,6 @@ index 12496fb..cf1ed2b 100644
  	if (ret) {
  		ath12k_err(NULL, "failed to update ppe vp config type %d err %d\n",
 diff --git a/drivers/net/wireless/ath/ath12k/vendor.c b/drivers/net/wireless/ath/ath12k/vendor.c
-index 2deb53f..806d2e3 100644
 --- a/drivers/net/wireless/ath/ath12k/vendor.c
 +++ b/drivers/net/wireless/ath/ath12k/vendor.c
 @@ -1132,6 +1132,8 @@ static int ath12k_vendor_wifi_config_handler(struct wiphy *wihpy,
@@ -96,13 +93,15 @@ index 2deb53f..806d2e3 100644
  
  	ret = nla_parse(tb, QCA_WLAN_VENDOR_ATTR_CONFIG_MAX, data, data_len,
  			ath12k_wifi_config_policy, NULL);
-@@ -1172,8 +1174,53 @@ static int ath12k_vendor_wifi_config_handler(struct wiphy *wihpy,
+@@ -1172,8 +1174,55 @@ static int ath12k_vendor_wifi_config_handler(struct wiphy *wihpy,
  		ath12k_err(NULL, "Overriding offload type to passive as DS isn't enabled\n");
  	}
  
 -	wdev->ppe_vp_type = ppe_vp_type;
 -	/* TODO: Ignore if the same is reassigned and flush the existing ecm rules */
-+	if (wdev->ppe_vp_type == ppe_vp_type)
++	if (wdev->ppe_vp_type != ppe_vp_type)
++		wdev->ppe_vp_type = ppe_vp_type;
++	else
 +		return ret;
 +
 +	vif = wdev_to_ieee80211_vif(wdev);

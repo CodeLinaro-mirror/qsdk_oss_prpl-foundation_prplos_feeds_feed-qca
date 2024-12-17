@@ -16,27 +16,27 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -799,7 +799,10 @@ static u8 * hostapd_probe_resp_fill_elem
+@@ -895,7 +895,10 @@ static u8 * hostapd_probe_resp_fill_elem
  		pos = hostapd_eid_txpower_envelope(hapd, pos);
  #endif /* CONFIG_IEEE80211AX */
  
--	pos = hostapd_eid_wb_chsw_wrapper(hapd, pos);
+-	pos = hostapd_eid_chsw_wrapper(hapd, pos);
 +	if ((hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) ||
 +	    (hapd->iconf->ieee80211ax && !hapd->conf->disable_11ax) ||
 +	    (hapd->iconf->ieee80211be && !hapd->conf->disable_11be))
-+		pos = hostapd_eid_wb_chsw_wrapper(hapd, pos);
++		pos = hostapd_eid_chsw_wrapper(hapd, pos);
  
- 	if (!params->is_ml_sta_info)
- 		pos = hostapd_eid_rnr(hapd, pos, WLAN_FC_STYPE_PROBE_RESP,
-@@ -2374,7 +2377,10 @@ int ieee802_11_build_ap_params(struct ho
+ 	pos = hostapd_eid_rnr(hapd, pos, WLAN_FC_STYPE_PROBE_RESP, true);
+ 	pos = hostapd_eid_fils_indic(hapd, pos, 0);
+@@ -2440,7 +2443,10 @@ int ieee802_11_build_ap_params(struct ho
  		tailpos = hostapd_eid_txpower_envelope(hapd, tailpos);
  #endif /* CONFIG_IEEE80211AX */
  
--	tailpos = hostapd_eid_wb_chsw_wrapper(hapd, tailpos);
+-	tailpos = hostapd_eid_chsw_wrapper(hapd, tailpos);
 +	if ((hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) ||
 +	    (hapd->iconf->ieee80211ax && !hapd->conf->disable_11ax) ||
 +	    (hapd->iconf->ieee80211be && !hapd->conf->disable_11be))
-+		tailpos = hostapd_eid_wb_chsw_wrapper(hapd, tailpos);
++		tailpos = hostapd_eid_chsw_wrapper(hapd, tailpos);
  
  	tailpos = hostapd_eid_rnr(hapd, tailpos, WLAN_FC_STYPE_BEACON, true);
  	tailpos = hostapd_eid_fils_indic(hapd, tailpos, 0);

@@ -21,11 +21,9 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  src/ap/ap_config.h    |  4 ++++
  4 files changed, 35 insertions(+), 1 deletion(-)
 
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 873abde..fe14652 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3876,13 +3876,35 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -3946,13 +3946,35 @@ static int hostapd_config_fill(struct ho
  		conf->discard_6g_awgn_event = atoi(pos);
  	} else if (os_strcmp(buf, "mbssid") == 0) {
  		int mbssid = atoi(pos);
@@ -62,11 +60,9 @@ index 873abde..fe14652 100644
  #endif /* CONFIG_IEEE80211AX */
  	} else if (os_strcmp(buf, "max_listen_interval") == 0) {
  		bss->max_listen_interval = atoi(pos);
-diff --git a/hostapd/hostapd.conf b/hostapd/hostapd.conf
-index 54ff4a6..96637ba 100644
 --- a/hostapd/hostapd.conf
 +++ b/hostapd/hostapd.conf
-@@ -3366,6 +3366,7 @@ own_ip_addr=127.0.0.1
+@@ -3449,6 +3449,7 @@ own_ip_addr=127.0.0.1
  # 0 = Disabled (default)
  # 1 = Multiple BSSID advertisement enabled.
  # 2 = Enhanced multiple BSSID advertisement enabled.
@@ -74,7 +70,7 @@ index 54ff4a6..96637ba 100644
  #mbssid=0
  #
  # The transmitting interface should be added with the 'interface' option while
-@@ -3399,3 +3400,9 @@ own_ip_addr=127.0.0.1
+@@ -3482,3 +3483,9 @@ own_ip_addr=127.0.0.1
  #bridge=br-lan
  #wpa_key_mgmt=SAE
  #bssid=00:03:7f:12:84:85
@@ -84,11 +80,9 @@ index 54ff4a6..96637ba 100644
 +# when Multi MBSSID group support is enabled for the radio.
 +# This value should be in power of 2.
 +#mbssid_group_size=4
-diff --git a/src/ap/ap_config.c b/src/ap/ap_config.c
-index e469d73..f222d32 100644
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -334,6 +334,7 @@ struct hostapd_config * hostapd_config_defaults(void)
+@@ -336,6 +336,7 @@ struct hostapd_config * hostapd_config_d
  #ifdef CONFIG_AIRTIME_POLICY
  	conf->airtime_update_interval = AIRTIME_DEFAULT_UPDATE_INTERVAL;
  #endif /* CONFIG_AIRTIME_POLICY */
@@ -96,11 +90,9 @@ index e469d73..f222d32 100644
  
  	hostapd_set_and_check_bw320_offset(conf, 0);
  
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index 78f6265..ccc3e0d 100644
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1273,6 +1273,10 @@ struct hostapd_config {
+@@ -1298,6 +1298,10 @@ struct hostapd_config {
  	int ccfs;
  	int bandwidth_device;
  	int center_freq_device;
@@ -111,6 +103,3 @@ index 78f6265..ccc3e0d 100644
  	u8 group_size;
  };
  
--- 
-2.34.1
-

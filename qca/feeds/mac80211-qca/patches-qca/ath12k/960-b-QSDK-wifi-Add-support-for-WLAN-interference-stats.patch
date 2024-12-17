@@ -100,7 +100,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  #endif /* _CORE_H_ */
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -10676,6 +10676,15 @@ int ath12k_mac_radio_start(struct ath12k
+@@ -10670,6 +10670,15 @@ int ath12k_mac_radio_start(struct ath12k
  		}
  	}
  
@@ -116,7 +116,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  	mutex_unlock(&ar->conf_mutex);
  
  	rcu_assign_pointer(ab->pdevs_active[ar->pdev_idx],
-@@ -10771,11 +10780,13 @@ static void ath12k_mac_radio_stop(struct
+@@ -10765,11 +10774,13 @@ static void ath12k_mac_radio_stop(struct
  
  	clear_bit(ATH12K_CAC_RUNNING, &ar->dev_flags);
  	ar->state = ATH12K_STATE_OFF;
@@ -130,7 +130,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  
  	spin_lock_bh(&ar->data_lock);
  	list_for_each_entry_safe(ppdu_stats, tmp, &ar->ppdu_stats_info, list) {
-@@ -15815,6 +15826,20 @@ void ath12k_mac_set_cw_intf_detect(struc
+@@ -15792,6 +15803,20 @@ void ath12k_mac_set_cw_intf_detect(struc
   	}
  }
  
@@ -151,7 +151,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  void ath12k_mac_ap_ps_recalc(struct ath12k *ar) {
  	struct ath12k_link_vif *arvif;
  	enum ath12k_ap_ps_state state = ATH12K_AP_PS_STATE_OFF;
-@@ -17825,6 +17850,7 @@ static int ath12k_mac_setup(struct ath12
+@@ -17800,6 +17825,7 @@ static int ath12k_mac_setup(struct ath12
  	spin_lock_init(&ar->data_lock);
  	INIT_LIST_HEAD(&ar->arvifs);
  	INIT_LIST_HEAD(&ar->ppdu_stats_info);
@@ -159,7 +159,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  	mutex_init(&ar->conf_mutex);
  	init_completion(&ar->vdev_setup_done);
  	init_completion(&ar->vdev_delete_done);
-@@ -17847,6 +17873,7 @@ static int ath12k_mac_setup(struct ath12
+@@ -17822,6 +17848,7 @@ static int ath12k_mac_setup(struct ath12
  	INIT_WORK(&ar->agile_cac_abort_wq, ath12k_agile_cac_abort_work);
  
  	INIT_WORK(&ar->wmi_mgmt_tx_work, ath12k_mgmt_over_wmi_tx_work);
@@ -334,7 +334,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  #ifdef CPTCFG_ATH12K_SAWF
  
  static void ath12k_set_default_values(struct ath12k_sawf_svc_params *param)
-@@ -2778,6 +2909,50 @@ fail:
+@@ -2794,6 +2925,50 @@ fail:
  	return -EINVAL;
  }
  
@@ -385,7 +385,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  static struct wiphy_vendor_command ath12k_vendor_commands[] = {
  	{
  		.info.vendor_id = QCA_NL80211_VENDOR_ID,
-@@ -2843,6 +3018,14 @@ static struct wiphy_vendor_command ath12
+@@ -2859,6 +3034,14 @@ static struct wiphy_vendor_command ath12
  		.policy = ath12k_cfg80211_afc_response_policy,
  		.maxattr = QCA_WLAN_VENDOR_ATTR_AFC_RESPONSE_MAX
  	},
@@ -400,7 +400,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  };
  
  static const struct nl80211_vendor_cmd_info ath12k_vendor_events[] = {
-@@ -2864,6 +3047,10 @@ static const struct nl80211_vendor_cmd_i
+@@ -2880,6 +3063,10 @@ static const struct nl80211_vendor_cmd_i
  		.vendor_id = QCA_NL80211_VENDOR_ID,
  		.subcmd = QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT
  	},
@@ -413,11 +413,14 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  int ath12k_vendor_register(struct ath12k_hw *ah)
 --- a/drivers/net/wireless/ath/ath12k/vendor.h
 +++ b/drivers/net/wireless/ath/ath12k/vendor.h
-@@ -23,14 +23,27 @@ enum qca_nl80211_vendor_subcmds {
- 	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 234,
+@@ -21,17 +21,30 @@ enum qca_nl80211_vendor_subcmds {
+ 	QCA_NL80211_VENDOR_SUBCMD_AFC_RESPONSE = 223,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_PHY_OPS = 235,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS = 236,
 +	QCA_NL80211_VENDOR_SUBCMD_DCS_WLAN_INTERFERENCE_COMPUTE = 243,
+ 	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 253,
+ 	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 254,
+ 
  	QCA_NL80211_VENDOR_SUBCMD_TELEMETRIC_DATA = 334,
  };
  
@@ -441,7 +444,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  };
  
  #ifdef CPTCFG_ATH12K_SAWF
-@@ -1225,4 +1238,91 @@ enum qca_wlan_vendor_attr_afc_response {
+@@ -1226,4 +1239,91 @@ enum qca_wlan_vendor_attr_afc_response {
  	QCA_WLAN_VENDOR_ATTR_AFC_RESP_MAX =
  	QCA_WLAN_VENDOR_ATTR_AFC_RESP_AFTER_LAST - 1,
  };
@@ -543,7 +546,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  #include <linux/skbuff.h>
  #include <linux/ctype.h>
  #include <net/mac80211.h>
-@@ -13287,6 +13288,32 @@ static void ath12k_pdev_ctl_failsafe_che
+@@ -13283,6 +13284,32 @@ static void ath12k_pdev_ctl_failsafe_che
  	kfree(tb);
  }
  
@@ -576,7 +579,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  static int ath12k_wmi_dcs_intf_subtlv_parser(struct ath12k_base *ab,
                                                u16 tag, u16 len,
                                                const void *ptr, void *data)
-@@ -13294,6 +13321,7 @@ static int ath12k_wmi_dcs_intf_subtlv_pa
+@@ -13290,6 +13317,7 @@ static int ath12k_wmi_dcs_intf_subtlv_pa
          int ret = 0;
          struct wmi_dcs_awgn_info *awgn_info;
  	struct wmi_dcs_cw_info *cw_info;
@@ -584,7 +587,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  
          switch (tag) {
          case WMI_TAG_DCS_AWGN_INT_TYPE:
-@@ -13310,6 +13338,25 @@ static int ath12k_wmi_dcs_intf_subtlv_pa
+@@ -13306,6 +13334,25 @@ static int ath12k_wmi_dcs_intf_subtlv_pa
  		ath12k_dbg(ab, ATH12K_DBG_WMI, "CW Info: channel=%d", cw_info->channel);
  		memcpy(data, cw_info, sizeof(*cw_info));
  		break;
@@ -610,7 +613,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
          default:
                  ath12k_warn(ab,
                              "Received invalid tag for wmi dcs interference in subtlvs\n");
-@@ -13422,12 +13469,12 @@ bool ath12k_wmi_validate_dcs_awgn_info(s
+@@ -13418,12 +13465,12 @@ bool ath12k_wmi_validate_dcs_awgn_info(s
  
  static void
  ath12k_wmi_dcs_cw_interference_event(struct ath12k_base *ab,
@@ -625,7 +628,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  	struct ath12k_mac_any_chandef_arg arg;
  	struct ath12k_hw *ah;
  	int ret;
-@@ -13441,10 +13488,10 @@ ath12k_wmi_dcs_cw_interference_event(str
+@@ -13437,10 +13484,10 @@ ath12k_wmi_dcs_cw_interference_event(str
  	}
  
  	rcu_read_lock();
@@ -638,7 +641,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  		goto exit;
  	}
  
-@@ -13454,7 +13501,7 @@ ath12k_wmi_dcs_cw_interference_event(str
+@@ -13450,7 +13497,7 @@ ath12k_wmi_dcs_cw_interference_event(str
  	}
  
  	ath12k_dbg(ab, ATH12K_DBG_WMI, "CW Interference detected for pdev=%d\n",
@@ -647,7 +650,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  
  	ah = ar->ah;
  
-@@ -13473,10 +13520,47 @@ exit:
+@@ -13469,10 +13516,47 @@ exit:
  }
  
  static void
@@ -697,7 +700,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
          struct wmi_dcs_awgn_info awgn_info = {};
          struct cfg80211_chan_def *chandef;
          struct ath12k_mac_any_chandef_arg arg;
-@@ -13498,10 +13582,9 @@ ath12k_wmi_dcs_awgn_interference_event(s
+@@ -13494,10 +13578,9 @@ ath12k_wmi_dcs_awgn_interference_event(s
          }
  
          rcu_read_lock();
@@ -710,7 +713,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
                  goto exit;
          }
  	if (!ar->supports_6ghz) {
-@@ -13524,8 +13607,7 @@ ath12k_wmi_dcs_awgn_interference_event(s
+@@ -13520,8 +13603,7 @@ ath12k_wmi_dcs_awgn_interference_event(s
  
  	ah = ar->ah;
  
@@ -720,7 +723,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  
  	arg.ar = ar;
  	arg.def = NULL;
-@@ -13817,6 +13899,8 @@ ath12k_wmi_dcs_interference_event(struct
+@@ -13813,6 +13895,8 @@ ath12k_wmi_dcs_interference_event(struct
  	u8 *ptr;
  	u16 tlv_tag;
  
@@ -729,7 +732,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  	ptr = skb->data;
  
  	if (skb->len < (sizeof(*dcs_intf_ev) + TLV_HDR_SIZE)) {
-@@ -13830,27 +13914,33 @@ ath12k_wmi_dcs_interference_event(struct
+@@ -13826,27 +13910,33 @@ ath12k_wmi_dcs_interference_event(struct
  
  	if (tlv_tag == WMI_TAG_DCS_INTERFERENCE_EVENT) {
  		dcs_intf_ev = (struct wmi_dcs_interference_ev*)ptr;
@@ -772,7 +775,7 @@ Signed-off-by: Amit Pandit <quic_pamit@quicinc.com>
  }
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -5568,6 +5568,24 @@ struct wmi_dcs_cw_info {
+@@ -5577,6 +5577,24 @@ struct wmi_dcs_cw_info {
  	__le32 channel;
  };
  

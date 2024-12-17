@@ -16,7 +16,7 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
 
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -606,6 +606,8 @@ static u8 * hostapd_eid_eht_basic_ml_com
+@@ -560,6 +560,8 @@ static u8 * hostapd_eid_eht_basic_ml_com
  	u16 mld_cap;
  	u8 max_simul_links, active_links;
  

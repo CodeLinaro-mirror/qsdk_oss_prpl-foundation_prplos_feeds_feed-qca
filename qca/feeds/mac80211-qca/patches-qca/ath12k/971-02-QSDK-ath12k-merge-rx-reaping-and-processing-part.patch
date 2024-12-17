@@ -15,7 +15,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3425,82 +3425,6 @@ static void ath12k_soc_dp_rx_stats(struc
+@@ -3429,82 +3429,6 @@ static void ath12k_soc_dp_rx_stats(struc
  	}
  }
  
@@ -95,10 +95,10 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 -	rcu_read_unlock();
 -}
 -
- /* Sends WMI config to filter packets to route packets to WBM release ring */
- int ath12k_dp_rx_pkt_type_filter(struct ath12k *ar,
- 				 enum ath12k_routing_pkt_type pkt_type,
-@@ -3538,20 +3462,22 @@ int ath12k_dp_rx_process(struct ath12k_b
+ int ath12k_dp_rx_process(struct ath12k_base *ab, int ring_id,
+ 			 struct napi_struct *napi, int budget)
+ {
+@@ -3512,20 +3436,22 @@ int ath12k_dp_rx_process(struct ath12k_b
  	struct ath12k_rx_desc_info *desc_info;
  	struct ath12k_dp *dp = &ab->dp;
  	struct dp_rxdma_ring *rx_ring = &dp->rx_refill_buf_ring;
@@ -125,7 +125,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	struct list_head rx_desc_used_list[ATH12K_MAX_SOCS];
  
  	__skb_queue_head_init(&msdu_list);
-@@ -3726,9 +3652,53 @@ try_again:
+@@ -3700,9 +3626,53 @@ try_again:
  					    num_buffs_reaped[i]);
  	}
  

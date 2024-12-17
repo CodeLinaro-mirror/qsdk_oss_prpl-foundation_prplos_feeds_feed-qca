@@ -25,7 +25,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -5100,6 +5100,8 @@ static int hostapd_config_fill(struct ho
+@@ -5188,6 +5188,8 @@ static int hostapd_config_fill(struct ho
  		}
  	} else if (os_strcmp(buf, "eht_bw320_offset") == 0) {
  		conf->eht_bw320_offset = atoi(pos);
@@ -49,7 +49,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  # Require IEEE 802.1X authorization
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -1592,6 +1592,22 @@ int hostapd_config_check(struct hostapd_
+@@ -1637,6 +1637,22 @@ int hostapd_config_check(struct hostapd_
  	if (full_config)
  		hostapd_set_and_check_bw320_offset(conf,
  						   conf->eht_bw320_offset);
@@ -74,7 +74,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  	if (full_config && conf->mbssid && !conf->ieee80211ax) {
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1242,6 +1242,7 @@ struct hostapd_config {
+@@ -1272,6 +1272,7 @@ struct hostapd_config {
  	struct eht_phy_capabilities_info eht_phy_capab;
  	u16 punct_bitmap; /* a bitmap of disabled 20 MHz channels */
  	u8 punct_acs_threshold;
@@ -84,7 +84,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  #endif /* CONFIG_IEEE80211BE */
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3578,6 +3578,16 @@ hostapd_interface_init_bss(struct hapd_i
+@@ -3604,6 +3604,16 @@ hostapd_interface_init_bss(struct hapd_i
  			return NULL;
  		}
  
@@ -103,7 +103,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  			wpa_printf(MSG_ERROR,
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3350,7 +3350,13 @@ static u8 hostapd_max_bssid_indicator(st
+@@ -3470,7 +3470,13 @@ static u8 hostapd_max_bssid_indicator(st
  	if (!hapd->iconf->mbssid || hapd->iface->num_bss <= 1)
  		return 0;
  

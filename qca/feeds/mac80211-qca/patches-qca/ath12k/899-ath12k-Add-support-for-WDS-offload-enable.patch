@@ -76,20 +76,20 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	ti.ring_id =
  		ab->hw_params->hw_ops->get_ring_selector(skb);
  
-@@ -462,7 +469,22 @@ int ath12k_dp_tx(struct ath12k *ar, stru
+@@ -462,15 +469,30 @@ int ath12k_dp_tx(struct ath12k *ar, stru
  
  	ti.bank_id = arvif->bank_id;
  
 -	if (ieee80211_has_a4(hdr->frame_control) &&
 +	if (eth && is_multicast_ether_addr(eth->h_dest) && ahsta && ahsta->use_4addr_set) {
-+		arsta = ahsta->link[ahsta->primary_link_id];
++		arsta = ahsta->link[skb_cb->link_id];
 +		if (unlikely(!arsta)) {
 +			ath12k_err(ab, "failed to find arsta with primary link id %d",
 +				   ahsta->primary_link_id);
 +			ret = -EINVAL;
 +			goto fail_remove_tx_buf;
 +		}
-+		ti.meta_data_flags = ahsta->link[ahsta->primary_link_id]->tcl_metadata;
++		ti.meta_data_flags = arsta->tcl_metadata;
 +		peer_id = u16_get_bits(ti.meta_data_flags, HTT_TCL_META_DATA_PEER_ID_MISSION);
 +		info4 = FIELD_PREP(HAL_TCL_DATA_CMD_INFO4_IDX_LOOKUP_OVERRIDE, 1);
 +		info4 |= FIELD_PREP(HAL_TCL_DATA_CMD_INFO4_SEARCH_INDEX, peer_id);
@@ -99,7 +99,17 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
 +	} else if (ieee80211_has_a4(hdr->frame_control) &&
  	    is_multicast_ether_addr(hdr->addr3) && ahsta &&
  	    ahsta->use_4addr_set) {
- 		if (unlikely(!ahsta->link[ahsta->primary_link_id])) {
+-		if (unlikely(!ahsta->link[ahsta->primary_link_id])) {
++		if (unlikely(!ahsta->link[skb_cb->link_id])) {
+ 			ath12k_err(ab, "arsta not found on primary link");
+ 			ret = -EINVAL;
+ 			goto fail_remove_tx_buf;
+ 		}
+-		ti.meta_data_flags = ahsta->link[ahsta->primary_link_id]->tcl_metadata;
++		ti.meta_data_flags = ahsta->link[skb_cb->link_id]->tcl_metadata;
+ 		ti.flags0 |= FIELD_PREP(HAL_TCL_DATA_CMD_INFO2_TO_FW, 1);
+ 		spin_lock_bh(&ab->base_lock);
+ 		peer_id = FIELD_GET(HTT_TCL_META_DATA_PEER_ID_MISSION,
 @@ -500,9 +522,9 @@ int ath12k_dp_tx(struct ath12k *ar, stru
  			ti.meta_data_flags =
  				ath12k_sawf_get_tcl_metadata_update(skb->mark);
@@ -141,7 +151,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  #ifdef CPTCFG_ATH12K_SAWF
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7193,6 +7193,7 @@ static void ath12k_sta_set_4addr_wk(stru
+@@ -7198,6 +7198,7 @@ static void ath12k_sta_set_4addr_wk(stru
  	struct ath12k *ar;
  	struct ath12k_link_vif *arvif;
  	struct ath12k_sta *ahsta;
@@ -149,7 +159,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	struct ath12k_link_sta *arsta;
  	struct ieee80211_sta *sta;
  	int ret = 0;
-@@ -7204,6 +7205,7 @@ static void ath12k_sta_set_4addr_wk(stru
+@@ -7209,6 +7210,7 @@ static void ath12k_sta_set_4addr_wk(stru
  	for_each_set_bit(link_id, &ahsta->links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
  		arsta = ahsta->link[link_id];
  		arvif = arsta->arvif;
@@ -157,7 +167,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  		ar = arvif->ar;
  
  		ath12k_dbg(ar->ab, ATH12K_DBG_PEER,
-@@ -7211,10 +7213,21 @@ static void ath12k_sta_set_4addr_wk(stru
+@@ -7216,10 +7218,21 @@ static void ath12k_sta_set_4addr_wk(stru
  
  		ret = ath12k_wmi_set_peer_param(ar, arsta->addr,
  						arvif->vdev_id,
@@ -180,7 +190,36 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  	}
  }
  
-@@ -10013,7 +10026,7 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -9809,7 +9822,7 @@ static void ath12k_mac_op_tx(struct ieee
+ 	struct ath12k_peer *peer;
+ 	u32 info_flags;
+ 	bool is_prb_rsp;
+-	bool is_mcast = false;
++	bool is_mcast = false, is_eth = false;
+ 	u16 frm_type = 0;
+ 	u8 link_id;
+ 	u16 mcbc_gsn;
+@@ -9896,6 +9909,7 @@ static void ath12k_mac_op_tx(struct ieee
+ 	if (info_flags & IEEE80211_TX_CTL_HW_80211_ENCAP) {
+ 		skb_cb->flags |= ATH12K_SKB_HW_80211_ENCAP;
+ 		is_mcast = is_multicast_ether_addr(eth->h_dest);
++		is_eth = true;
+ 	} else if (ieee80211_is_mgmt(hdr->frame_control)) {
+ 		frm_type = FIELD_GET(IEEE80211_FCTL_STYPE, hdr->frame_control);
+ 		is_prb_rsp = ieee80211_is_probe_resp(hdr->frame_control);
+@@ -9931,7 +9945,10 @@ static void ath12k_mac_op_tx(struct ieee
+ 	    test_bit(MONITOR_VDEV_CREATED, &ar->monitor_flags))
+ 		skb_cb->flags |= ATH12K_SKB_TX_STATUS;
+ 
+-	if (!vif->valid_links || !is_mcast ||
++	/* TODO: With this flag "is_eth". the eth mcast will be sent directly
++	 * to hw. When supporting eth mc, Need to handle mlo mc with mcbc_gsn
++	 */
++	if (!vif->valid_links || !is_mcast || is_eth ||
+ 	    test_bit(ATH12K_FLAG_RAW_MODE, &ar->ab->ag->dev_flags)) {
+ 		ret = ath12k_mac_tx_check_max_limit(ar, skb);
+ 		if (ret) {
+@@ -10018,7 +10035,7 @@ static void ath12k_mac_op_tx(struct ieee
  			}
  
  			key = peer->keys[peer->mcast_keyidx];
@@ -189,7 +228,7 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  				skb_cb->cipher = key->cipher;
  				skb_cb->flags |= ATH12K_SKB_CIPHER_SET;
  
-@@ -11467,6 +11480,9 @@ static int ath12k_mac_op_add_interface(s
+@@ -11472,6 +11489,9 @@ static int ath12k_mac_op_add_interface(s
  	for (i = 0; i < IEEE80211_MLD_MAX_NUM_LINKS; i++)
  		INIT_LIST_HEAD(&ahvif->cache[i].key_conf.list);
  
@@ -260,9 +299,9 @@ Signed-off-by: Tamizh Chelvam Raja <quic_tamizhr@quicinc.com>
  #define WMI_RSRC_CFG_FLAGS2_SAWF_CONFIG_ENABLE_SET	  BIT(13)
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -735,6 +735,8 @@ struct ath12k_link_sta {
- 	struct ieee80211_key_conf *keys[WMI_MAX_KEY_INDEX + 1];
- 	enum ieee80211_sta_state state;
+@@ -738,6 +738,8 @@ struct ath12k_link_sta {
+ 	struct ath12k_per_peer_cfr_capture cfr_capture;
+ #endif
  	u32 rx_retries;
 +	u16 ast_hash;
 +	u16 ast_idx;

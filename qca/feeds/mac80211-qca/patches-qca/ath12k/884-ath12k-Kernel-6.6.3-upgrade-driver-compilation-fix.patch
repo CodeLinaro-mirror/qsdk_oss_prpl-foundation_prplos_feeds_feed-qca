@@ -21,15 +21,15 @@ Signed-off-by: Kaviarasu Sanjeevi <quic_kaviaras@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -2158,7 +2158,8 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -2153,7 +2153,8 @@ static ssize_t ath12k_debug_write_fw_rec
  			}
  		}
- 	} else
+ 	} else {
 -		ab->fw_recovery_support = value ? true : false;
 +		ab->fw_recovery_support = value ? ATH12K_FW_RECOVERY_ENABLE_AUTO :
-+							ATH12K_FW_RECOVERY_DISABLE;
- 
- 	ret = count;
++						  ATH12K_FW_RECOVERY_DISABLE;
+ 		ath12k_debug_multipd_wmi_pdev_set_param(ab, ab->fw_recovery_support);
+ 	}
  
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
@@ -44,7 +44,7 @@ Signed-off-by: Kaviarasu Sanjeevi <quic_kaviaras@quicinc.com>
  	u16 rate, ru_tones;
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -11266,7 +11266,7 @@ static int ath12k_mac_op_add_interface(s
+@@ -11268,7 +11268,7 @@ static int ath12k_mac_op_add_interface(s
  	}
  	memset(ahvif, 0, sizeof(*ahvif));
  

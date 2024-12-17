@@ -31,7 +31,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -2863,6 +2863,8 @@ static int __ieee802_11_set_beacon(struc
+@@ -2929,6 +2929,8 @@ static int __ieee802_11_set_beacon(struc
  #ifdef CONFIG_IEEE80211BE
  	params.punct_bitmap = iconf->punct_bitmap;
  #endif /* CONFIG_IEEE80211BE */
@@ -42,7 +42,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  	    hostapd_set_freq_params(&freq, iconf->hw_mode, iface->freq,
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -1356,6 +1356,7 @@ void hostapd_event_ch_switch(struct host
+@@ -1404,6 +1404,7 @@ void hostapd_event_ch_switch(struct host
  	if (hapd->csa_in_progress &&
  	    freq == hapd->cs_freq_params.freq) {
  		hostapd_cleanup_cs_params(hapd);
@@ -52,7 +52,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4355,6 +4355,9 @@ static int hostapd_build_beacon_data(str
+@@ -4380,6 +4380,9 @@ static int hostapd_build_beacon_data(str
  		beacon->assocresp_ies_len = wpabuf_len(assocresp_extra);
  	}
  
@@ -62,7 +62,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  	ret = 0;
  free_beacon:
  	/* if the function fails, the caller should not free beacon data */
-@@ -4568,6 +4571,8 @@ static int hostapd_fill_csa_settings(str
+@@ -4591,6 +4594,8 @@ static int hostapd_fill_csa_settings(str
  	iface->conf->punct_bitmap = settings->punct_bitmap;
  #endif /* CONFIG_IEEE80211BE */
  	ret = hostapd_build_beacon_data(hapd, &settings->beacon_after);
@@ -73,7 +73,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  #ifdef CONFIG_IEEE80211BE
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -549,6 +549,7 @@ struct hostapd_data {
+@@ -573,6 +573,7 @@ struct hostapd_data {
  
  	u64 scan_cookie; /* Scan instance identifier for the ongoing HT40 scan
  			  */
@@ -83,7 +83,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1964,6 +1964,7 @@ struct wpa_driver_ap_params {
+@@ -1954,6 +1954,7 @@ struct wpa_driver_ap_params {
  	/* critical_update_flag - critical update flag*/
  	bool elemid_added;
  	bool elemid_modified;
@@ -91,7 +91,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  
  	/**
  	 * allowed_freqs - List of allowed 20 MHz channel center frequencies in
-@@ -2884,6 +2885,10 @@ struct beacon_data {
+@@ -2879,6 +2880,10 @@ struct beacon_data {
  	size_t proberesp_ies_len;
  	size_t assocresp_ies_len;
  	size_t probe_resp_len;
@@ -102,7 +102,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  };
  
  /**
-@@ -2915,6 +2920,9 @@ struct csa_settings {
+@@ -2910,6 +2915,9 @@ struct csa_settings {
  	int link_id;
  
  	struct unsol_bcast_probe_resp ubpr;
@@ -114,7 +114,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  /**
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5550,7 +5550,8 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5560,7 +5560,8 @@ static int wpa_driver_nl80211_set_ap(voi
  		goto fail;
  #endif /* CONFIG_FILS */
  
@@ -124,15 +124,15 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  		if (params->elemid_added)
  			critical_update |= NL80211_CU_ELEMID_ADDED;
  		if (params->elemid_modified)
-@@ -11584,7 +11585,6 @@ static int nl80211_switch_channel(void *
+@@ -11687,7 +11688,6 @@ static int nl80211_switch_channel(void *
  	int ret = -ENOBUFS;
  	int csa_off_len = 0;
  	int i;
 -	u8 critical_update = 0;
  
  	wpa_printf(MSG_DEBUG,
- 		   "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d channel=%d sec_channel_offset=%d width=%d cf1=%d cf2=%d puncturing_bitmap=0x%04x link_id=%d%s%s%s puncturing bitmap=0x%04x, ru_punct_ofdma=%u)",
-@@ -11704,6 +11704,10 @@ static int nl80211_switch_channel(void *
+ 		   "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d channel=%d sec_channel_offset=%d width=%d cf1=%d cf2=%d puncturing_bitmap=0x%04x link_id=%d%s%s%s)",
+@@ -11805,6 +11805,10 @@ static int nl80211_switch_channel(void *
  		     settings->counter_offset_presp)))
  		goto fail;
  
@@ -143,12 +143,3 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  	nla_nest_end(msg, beacon_csa);
  
  #ifdef CONFIG_IEEE80211AX
-@@ -11716,7 +11720,7 @@ static int nl80211_switch_channel(void *
- 		goto fail;
- 
- 	if (bss->valid_links) {
--		if (nla_put_u8(msg, NL80211_ATTR_SET_CRITICAL_UPDATE, NL80211_CU_ELEMID_ADDED)
-+		if (nla_put_u8(msg, NL80211_ATTR_SET_CRITICAL_UPDATE, NL80211_CU_ELEMID_MODIFIED))
- 			goto fail;
- 	}
- 

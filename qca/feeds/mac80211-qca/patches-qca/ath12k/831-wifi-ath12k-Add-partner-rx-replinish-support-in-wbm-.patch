@@ -11,7 +11,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -4856,26 +4856,27 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -4807,26 +4807,27 @@ int ath12k_dp_rx_process_wbm_err(struct
  				 struct napi_struct *napi, int budget)
  {
  	struct ath12k *ar;
@@ -44,7 +44,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  	spin_lock_bh(&srng->lock);
  
-@@ -4910,17 +4911,20 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -4861,17 +4862,20 @@ int ath12k_dp_rx_process_wbm_err(struct
  
  		msdu = desc_info->skb;
  		desc_info->skb = NULL;
@@ -67,7 +67,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
  		if (!err_info.continuation)
  			budget--;
-@@ -4933,36 +4937,83 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -4884,36 +4888,86 @@ int ath12k_dp_rx_process_wbm_err(struct
  
  		rxcb->err_rel_src = err_info.err_rel_src;
  		rxcb->err_code = err_info.err_code;
@@ -126,6 +126,9 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  
 -	ath12k_dp_rx_bufs_replenish(ab, rx_ring, num_buffs_reaped,
 -				    ab->hw_params->hal_params->rx_buf_rbm, true);
++	if (!skb_queue_empty(&scatter_msdu_list))
++		__skb_queue_purge(&scatter_msdu_list);
++
 +	for (i = 0; i < ab->ag->num_chip; i++) {
 +		if (!num_buffs_reaped[i])
 +			continue;
@@ -165,7 +168,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  			dev_kfree_skb_any(msdu);
  			continue;
  		}
-@@ -4972,8 +5023,6 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -4923,8 +4977,6 @@ int ath12k_dp_rx_process_wbm_err(struct
  			continue;
  		}
  
@@ -174,7 +177,7 @@ Signed-off-by: Karthikeyan Periyasamy <quic_periyasa@quicinc.com>
  		if (rxcb->err_rel_src < HAL_WBM_REL_SRC_MODULE_MAX)
  			soc_stats->rx_wbm_rel_source[rxcb->err_rel_src][ar->ab->chip_id]++;
  
-@@ -4981,7 +5030,7 @@ int ath12k_dp_rx_process_wbm_err(struct
+@@ -4932,7 +4984,7 @@ int ath12k_dp_rx_process_wbm_err(struct
  	}
  	rcu_read_unlock();
  done:

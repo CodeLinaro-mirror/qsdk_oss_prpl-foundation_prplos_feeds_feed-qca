@@ -3,15 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-phy
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=win.nss.1.0.r24
 PKG_RELEASE:=1
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-phy
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=a2ab925707e71555858398ac47fc9c4e0303d7e0
 
-LOCAL_SRC:=$(TOPDIR)/feeds/feed_qca/qca/src/qca-nss-phy
-
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -60,6 +60,20 @@ define KernelPackage/qca8084/Description
 This package contains qca8084 Linux PHY driver
 endef
 
+define KernelPackage/qca8xxx-phc
+  SECTION:=kernel
+  CATEGORY:=Kernel modules
+  SUBMENU:=Network Devices
+  TITLE:=QCA8xxx PHC driver
+  DEPENDS:=+kmod-qca81xx
+  FILES:=$(PKG_BUILD_DIR)/linux_std/ptp/qca8xxx-phc.ko
+  AUTOLOAD:=$(call AutoLoad, 08, qca8xxx-phc)
+endef
+
+define KernelPackage/qca8xxx-phc/Description
+Linux PHC driver of QCA8XXX PHY
+endef
+
 ifdef CONFIG_TARGET_NAME
 QCA_NSS_PHY_CONFIG_OPTS+= \
 	TARGET_NAME=$(CONFIG_TARGET_NAME)
@@ -70,14 +84,16 @@ QCA_NSS_PHY_CONFIG_OPTS+= \
 	CROSS_COMPILE=$(TARGET_CROSS) \
 	ARCH=$(LINUX_KARCH)
 
-define Build/Prepare
-	$(CP) $(LOCAL_SRC)/* $(PKG_BUILD_DIR)/  -a
-endef
+ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
+ifneq ($(CONFIG_LOWMEM_FLASH),y)
+QCA_NSS_PHY_CONFIG_OPTS+= nss-phy-ptp=y
+endif
+endif
 
 define Build/Compile
-	$(KERNEL_MAKE) M=$(PKG_BUILD_DIR)/nss_ext $(strip $(QCA_NSS_PHY_CONFIG_OPTS))
-	$(KERNEL_MAKE) M=$(PKG_BUILD_DIR)/linux_std/qca81xx $(strip $(QCA_NSS_PHY_CONFIG_OPTS))
-	$(KERNEL_MAKE) M=$(PKG_BUILD_DIR)/linux_std/qca8084 $(strip $(QCA_NSS_PHY_CONFIG_OPTS))
+	$(KERNEL_MAKE) M="$(PKG_BUILD_DIR)" \
+		$(strip $(QCA_NSS_PHY_CONFIG_OPTS)) \
+		modules
 endef
 
 define Build/InstallDev
@@ -87,6 +103,8 @@ endef
 
 define KernelPackage/qca-nss-phy/install
 endef
-$(eval $(call KernelPackage,qca-nss-phy))
-$(eval $(call KernelPackage,qca81xx))
+
 $(eval $(call KernelPackage,qca8084))
+$(eval $(call KernelPackage,qca81xx))
+$(eval $(call KernelPackage,qca8xxx-phc))
+$(eval $(call KernelPackage,qca-nss-phy))

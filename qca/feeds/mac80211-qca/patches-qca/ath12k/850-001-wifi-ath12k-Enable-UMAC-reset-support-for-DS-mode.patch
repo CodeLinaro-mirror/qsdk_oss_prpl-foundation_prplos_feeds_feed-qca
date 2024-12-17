@@ -373,7 +373,7 @@ Signed-off-by: Balamurugan S <quic_bselvara@quicinc.com>
  	/* TODO: retain and use ring idx fetched from ppe for avoiding edma hang during SSR */
  	ret = ath12k_ppeds_dp_srng_alloc(ab, &dp->reo2ppe_ring, HAL_REO2PPE,
  			0, DP_REO2PPE_RING_SIZE);
-@@ -1083,6 +1148,8 @@ int ath12k_dp_srng_ppeds_setup(struct at
+@@ -1083,8 +1148,11 @@ int ath12k_dp_srng_ppeds_setup(struct at
  	dp->ppeds_comp_ring.tx_status_head = 0;
  	dp->ppeds_comp_ring.tx_status_tail = DP_TX_COMP_RING_SIZE - 1;
  	dp->ppeds_comp_ring.tx_status = kmalloc(size, GFP_KERNEL);
@@ -381,7 +381,10 @@ Signed-off-by: Balamurugan S <quic_bselvara@quicinc.com>
 +skip_ppeds_dp_srng_ring_alloc:
  	if (!dp->ppeds_comp_ring.tx_status) {
  		ath12k_err(ab, "PPE tx status completion buffer alloc failed\n");
++		ret = -ENOMEM;
  		goto err;
+ 	}
+ 
 --- a/drivers/net/wireless/ath/ath12k/ppe.h
 +++ b/drivers/net/wireless/ath/ath12k/ppe.h
 @@ -9,6 +9,10 @@
@@ -472,7 +475,7 @@ Signed-off-by: Balamurugan S <quic_bselvara@quicinc.com>
  	return;
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1744,6 +1744,7 @@ void ath12k_dp_umac_reset_handle(struct
+@@ -1746,6 +1746,7 @@ void ath12k_dp_umac_reset_handle(struct
  int ath12k_dp_umac_reset_init(struct ath12k_base *ab);
  void ath12k_dp_umac_reset_deinit(struct ath12k_base *ab);
  void ath12k_umac_reset_completion(struct ath12k_base *ab);

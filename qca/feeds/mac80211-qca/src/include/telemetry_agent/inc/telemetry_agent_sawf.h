@@ -610,6 +610,14 @@ int telemetry_sawf_clear_msdu_queue_info(void *telemetry_ctx,
 void telemetry_sawf_free_peer(void *telemetry_peer_ctx);
 
 /**
+ * telemetry_sawf_peer_stats_reset - Reset peer telemetry stats
+ * @telemetry_peer_ctx: telemetry-peer context
+ *
+ * Return: none
+ */
+void telemetry_sawf_peer_stats_reset(void *telemetry_peer_ctx);
+
+/**
  * telemetry_sawf_update_peer_delay - Update delay-stats
  * @telemetry_ctx: pointer to sawf-peer-telemetry ctx
  * @tid: tid no
@@ -709,13 +717,15 @@ int telemetry_sawf_get_rate(void *telemetry_ctx, uint8_t tid, uint8_t queue,
  * @: pointer to max throughput
  * @: pointer to average throughput
  * @: pointer to Tx PER
+ * @: pointer to TX retries percentage
  *
  * Return: 0 on success
  */
 
 int telemetry_sawf_get_tx_rate(void *telemetry_ctx, uint8_t tid, uint8_t queue,
 			    uint32_t *min_tput, uint32_t *max_tput,
-			    uint32_t *avg_tput, uint32_t *per);
+			    uint32_t *avg_tput, uint32_t *per,
+			    uint32_t *retries_pct);
 
 /**
  * telemetry_sawf_pull_mov_avg - Get moving window average stats

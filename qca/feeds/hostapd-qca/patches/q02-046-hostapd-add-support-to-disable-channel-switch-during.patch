@@ -43,7 +43,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -5098,6 +5098,8 @@ static int hostapd_config_fill(struct ho
+@@ -5173,6 +5173,8 @@ static int hostapd_config_fill(struct ho
  		bss->mld_indicate_disabled = atoi(pos);
  #endif /* CONFIG_TESTING_OPTIONS */
  #endif /* CONFIG_IEEE80211BE */
@@ -68,7 +68,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
  		if (ret)
  			return ret;
-@@ -2827,6 +2834,12 @@ static int hostapd_ctrl_iface_chan_switc
+@@ -2758,6 +2765,12 @@ static int hostapd_ctrl_iface_chan_switc
  			return -1;
  		}
  
@@ -81,8 +81,8 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		settings.freq_params.channel = chan;
  
  		wpa_printf(MSG_DEBUG,
-@@ -2843,6 +2856,12 @@ static int hostapd_ctrl_iface_chan_switc
- 		return 0;
+@@ -2780,6 +2793,12 @@ static int hostapd_ctrl_iface_chan_switc
+ 		return hostapd_force_channel_switch(iface, &settings);
  	}
  
 +	if (iface->conf->disable_csa_dfs == 1) {
@@ -109,9 +109,9 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1252,6 +1252,7 @@ struct hostapd_config {
- 	u8 ru_punct_ofdma;
- 	u8 ru_punct_acs_threshold;
+@@ -1265,6 +1265,7 @@ struct hostapd_config {
+ #define CH_SWITCH_EHT_DISABLED BIT(1)
+ 	unsigned int ch_switch_eht_config;
  	int enable_320mhz_bw;
 +	int disable_csa_dfs;
  
@@ -119,7 +119,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		MBSSID_DISABLED = 0,
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1238,6 +1238,17 @@ void hostapd_dfs_test_mode_csa_timeout(v
+@@ -1240,6 +1240,17 @@ void hostapd_dfs_test_mode_csa_timeout(v
  	ieee802_11_set_beacon(hapd);
  }
  
@@ -204,7 +204,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  #ifdef __NetBSD__
  #include <net/if_ether.h>
-@@ -3707,7 +3708,16 @@ static int wpa_supplicant_ctrl_iface_set
+@@ -3721,7 +3722,16 @@ static int wpa_supplicant_ctrl_iface_set
  		   id, name);
  	wpa_hexdump_ascii_key(MSG_DEBUG, "CTRL_IFACE: value",
  			      (u8 *) value, os_strlen(value));
@@ -224,7 +224,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
 --- a/wpa_supplicant/mesh.c
 +++ b/wpa_supplicant/mesh.c
-@@ -556,6 +556,8 @@ static int wpa_supplicant_mesh_init(stru
+@@ -554,6 +554,8 @@ static int wpa_supplicant_mesh_init(stru
  		conf->basic_rates[rate_len] = -1;
  	}
  
@@ -235,7 +235,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	 * to the other primary channel, problems exist with this in mesh
 --- a/wpa_supplicant/wpa_supplicant.conf
 +++ b/wpa_supplicant/wpa_supplicant.conf
-@@ -1781,6 +1781,10 @@ fast_reauth=1
+@@ -1790,6 +1790,10 @@ fast_reauth=1
  #Set 1 to enable 160MHz in Mesh mode
  #enable_160mhz_bw=1
  
@@ -248,7 +248,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  # Relevant only if enable_edmg is true
 --- a/wpa_supplicant/config.c
 +++ b/wpa_supplicant/config.c
-@@ -5706,6 +5706,7 @@ static const struct global_parse_data gl
+@@ -5711,6 +5711,7 @@ static const struct global_parse_data gl
  #endif /* CONFIG_PASN */
  	{ INT_RANGE(he_6ghz_reg_client_type, 1, 2),
  	  CFG_CHANGED_HE_6GHZ_CLIENT_TYPE},
@@ -258,7 +258,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	{ INT_RANGE(mld_connect_band_pref, 0, MLD_CONNECT_BAND_PREF_MAX), 0 },
 --- a/wpa_supplicant/config.h
 +++ b/wpa_supplicant/config.h
-@@ -1799,6 +1799,8 @@ struct wpa_config {
+@@ -1812,6 +1812,8 @@ struct wpa_config {
  	 */
  	u8 he_6ghz_reg_client_type;
  

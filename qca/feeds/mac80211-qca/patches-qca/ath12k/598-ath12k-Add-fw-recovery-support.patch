@@ -12,11 +12,9 @@ Signed-off-by: Balamurugan Selvarajan <quic_bselvara@quicinc.com>
  drivers/net/wireless/ath/ath12k/debugfs.c | 49 +++++++++++++++++++++++
  1 file changed, 49 insertions(+)
 
-diff --git a/drivers/net/wireless/ath/ath12k/debugfs.c b/drivers/net/wireless/ath/ath12k/debugfs.c
-index 465cd57..cd97cee 100644
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -912,11 +912,60 @@ static const struct file_operations fops_trace_qdss = {
+@@ -925,11 +925,59 @@ static const struct file_operations fops
  	.llseek = default_llseek,
  };
  
@@ -32,9 +30,8 @@ index 465cd57..cd97cee 100644
 +	         return -EINVAL;
 +
 +	if (value < ATH12K_FW_RECOVERY_DISABLE ||
-+	    value > ATH12K_FW_RECOVERY_ENABLE_SSR_ONLY) {
-+	         ath12k_warn(ab, "Please enter: 0 = Disable, 1 = Enable (auto recover),"
-+	                     "2 = Enable SSR only");
++	    value > ATH12K_FW_RECOVERY_ENABLE_AUTO) {
++	         ath12k_warn(ab, "Please enter: 0 = Disable, 1 = Enable (auto recover)");
 +	         ret = -EINVAL;
 +	         goto exit;
 +	}
@@ -77,6 +74,3 @@ index 465cd57..cd97cee 100644
  	debugfs_create_file("simulate_fw_crash", 0600, ab->debugfs_soc, ab,
  			    &fops_simulate_fw_crash);
  
--- 
-2.17.1
-

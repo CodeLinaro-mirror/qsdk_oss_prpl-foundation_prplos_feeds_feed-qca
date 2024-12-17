@@ -19,7 +19,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7776,6 +7776,75 @@ static int ath12k_mac_mgmt_tx(struct ath
+@@ -7768,6 +7768,78 @@ static int ath12k_mac_mgmt_tx(struct ath
  	return 0;
  }
  
@@ -31,13 +31,16 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
 +	struct ieee80211_link_sta *link_sta;
 +	struct ieee80211_bss_conf *bss_conf;
 +	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
++	u8 link_id;
 +
-+	/* Use the link id passed or the default vif link */
++	/* Use the link id passed or the first available vif link */
 +	if (!sta) {
 +		if (link != IEEE80211_LINK_UNSPECIFIED)
 +			return link;
 +
-+		return ahvif->deflink.link_id;
++		link_id = ffs(ahvif->links_map) - 1;
++
++		return link_id;
 +	}
 +
 +	ahsta = (struct ath12k_sta *)sta->drv_priv;
@@ -95,7 +98,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  static void ath12k_mac_op_tx(struct ieee80211_hw *hw,
  			     struct ieee80211_tx_control *control,
  			     struct sk_buff *skb)
-@@ -7784,10 +7853,9 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -7776,10 +7848,9 @@ static void ath12k_mac_op_tx(struct ieee
  	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
  	struct ieee80211_vif *vif = info->control.vif;
  	struct ath12k_vif *ahvif = ath12k_vif_to_ahvif(vif);
@@ -109,7 +112,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
  	struct ieee80211_key_conf *key = info->control.hw_key;
  	struct ath12k_mgmt_frame_stats *mgmt_stats = &ahvif->mgmt_stats;
-@@ -7798,20 +7866,39 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -7790,20 +7861,39 @@ static void ath12k_mac_op_tx(struct ieee
  	bool is_prb_rsp;
  	u16 frm_type = 0;
  	int ret;

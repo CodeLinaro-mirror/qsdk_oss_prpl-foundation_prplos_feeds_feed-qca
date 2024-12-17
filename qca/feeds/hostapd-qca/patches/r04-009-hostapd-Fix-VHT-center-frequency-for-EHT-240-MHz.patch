@@ -27,7 +27,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
 
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1329,6 +1329,14 @@ hostapd_set_oper_centr_freq_seg0_idx(str
+@@ -1351,6 +1351,14 @@ hostapd_set_oper_centr_freq_seg0_idx(str
  	    center_idx_to_bw_6ghz(oper_centr_freq_seg0_idx) == 4)
  		oper_centr_freq_seg0_idx +=
  			conf->channel > oper_centr_freq_seg0_idx ? 16 : -16;
@@ -44,7 +44,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  	if (conf->ieee80211ax)
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1777,8 +1777,8 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1778,8 +1778,8 @@ int hostapd_dfs_radar_detected(struct ho
  	if (iface->conf->use_ru_puncture_dfs && hostapd_is_usable_punct_bitmap(iface)) {
  		iface->radar_bit_pattern = radar_bitmap;
  		iface->conf->punct_bitmap = cur_punct_bits;

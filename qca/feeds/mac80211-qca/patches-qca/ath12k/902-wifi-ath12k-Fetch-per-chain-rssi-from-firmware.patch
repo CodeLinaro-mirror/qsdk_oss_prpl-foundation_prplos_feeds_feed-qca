@@ -21,7 +21,7 @@ Signed-off-by: Roopni Devanathan <quic_rdevanat@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -731,6 +731,7 @@ struct ath12k_link_sta {
+@@ -734,6 +734,7 @@ struct ath12k_link_sta {
  	u32 rx_retries;
  	u16 ast_hash;
  	u16 ast_idx;
@@ -61,7 +61,7 @@ Signed-off-by: Roopni Devanathan <quic_rdevanat@quicinc.com>
  		ppdu_info->bw = u32_get_bits(rssi_legacy_info,
  					     HAL_RX_PHYRX_RSSI_LEGACY_INFO_INFO0_RX_BW);
  		break;
-@@ -3430,6 +3437,7 @@ static void ath12k_dp_mon_rx_update_peer
+@@ -3427,6 +3434,7 @@ static void ath12k_dp_mon_rx_update_peer
  	struct ath12k_rx_peer_stats *rx_stats = arsta->rx_stats;
  	u32 num_msdu;
  	u32 bw_offset;
@@ -69,7 +69,7 @@ Signed-off-by: Roopni Devanathan <quic_rdevanat@quicinc.com>
  
  	arsta->last_tx_pkt_bw = ppdu_info->bw;
  	bw_offset = arsta->last_tx_pkt_bw * 3;
-@@ -3485,6 +3493,9 @@ static void ath12k_dp_mon_rx_update_peer
+@@ -3482,6 +3490,9 @@ static void ath12k_dp_mon_rx_update_peer
  	rx_stats->num_mpdu_fcs_err += ppdu_info->num_mpdu_fcs_err;
  	rx_stats->dcm_count += ppdu_info->dcm;
  
@@ -114,7 +114,7 @@ Signed-off-by: Roopni Devanathan <quic_rdevanat@quicinc.com>
  #define HAL_RX_MPDU_START_INFO0_PPDU_ID		GENMASK(31, 16)
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -15556,6 +15556,11 @@ static void ath12k_mac_op_sta_statistics
+@@ -15551,6 +15551,11 @@ static void ath12k_mac_op_sta_statistics
  	struct ath12k_sta *ahsta = ath12k_sta_to_ahsta(sta);
  	struct ath12k_link_sta *arsta = &ahsta->deflink;
  	struct ath12k *ar = arsta->arvif->ar;
@@ -126,7 +126,7 @@ Signed-off-by: Roopni Devanathan <quic_rdevanat@quicinc.com>
  
  	/* TODO accumulate link sta stats here? */
  
-@@ -15586,7 +15591,24 @@ static void ath12k_mac_op_sta_statistics
+@@ -15581,7 +15586,22 @@ static void ath12k_mac_op_sta_statistics
  	sinfo->txrate.flags = arsta->txrate.flags;
  	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_TX_BITRATE);
  
@@ -146,9 +146,7 @@ Signed-off-by: Roopni Devanathan <quic_rdevanat@quicinc.com>
 +		}
 +	}
 +
-+	sinfo->signal = arsta->rssi_comb;
-+	if (db2dbm)
-+		sinfo->signal += ar->rssi_offsets.rssi_offset;
++	sinfo->signal = db2dbm ? arsta->rssi_comb : arsta->rssi_comb + ar->rssi_offsets.rssi_offset;
  	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL);
  
  	sinfo->signal_avg = ewma_avg_rssi_read(&arsta->avg_rssi) +

@@ -3,13 +3,13 @@ include $(TOPDIR)/rules.mk
 PKG_DISTNAME:=sysupgrade-helper
 PKG_NAME:=u-boot
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot.git
-PKG_SOURCE_VERSION:=e9b095d613a3ca6568d651fd51e4b110c63a5624
-PKG_BRANCH:=master
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
+PKG_SOURCE_VERSION:=0be23e2430cd9fc7bddaedb7d32976094fba54ff
+PKG_BRANCH:=win.coretech.3.0.r24
 PKG_RELEASE:=1
-PKG_VERSION:=e9b095d6
+PKG_VERSION:=0be23e24
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_DISTNAME)/$(PKG_NAME)-$(PKG_VERSION)
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_DISTNAME)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -40,12 +40,14 @@ define Build/Configure
 	echo "CONFIG_FIT_PRINT=y" >> $(PKG_BUILD_DIR)/include/config/auto.conf
 	echo "CONFIG_TOOLS_FIT=y" >> $(PKG_BUILD_DIR)/include/config/auto.conf
 	echo "CONFIG_TOOLS_FIT_PRINT=y" >> $(PKG_BUILD_DIR)/include/config/auto.conf
+	echo "CONFIG_SYSUPGRADE_HELPER=y" >> $(PKG_BUILD_DIR)/include/config/auto.conf
 	touch $(PKG_BUILD_DIR)/include/config/auto.conf
 	mkdir -p $(PKG_BUILD_DIR)/include/generated
 	echo "#define CONFIG_FIT_PRINT 1" >> $(PKG_BUILD_DIR)/include/generated/autoconf.h
 	echo "#define CONFIG_FIT 1" >> $(PKG_BUILD_DIR)/include/generated/autoconf.h
 	echo "#define CONFIG_TOOLS_FIT 1" >> $(PKG_BUILD_DIR)/include/generated/autoconf.h
 	echo "#define CONFIG_TOOLS_FIT_PRINT 1" >> $(PKG_BUILD_DIR)/include/generated/autoconf.h
+	echo "#define CONFIG_SYSUPGRADE_HELPER 1" >> $(PKG_BUILD_DIR)/include/generated/autoconf.h
 	touch $(PKG_BUILD_DIR)/include/generated/autoconf.h
 endef
 
@@ -54,7 +56,8 @@ MAKE_FLAGS += \
 	HOSTCFLAGS="$(SHA_FLAG) $(IMG_FLAG) -fPIC" \
 	HOSTLDFLAGS="$(HOSTLDFLAGS) -lpthread -lcrypto -lssl" \
 	HOSTEXTRACFLAGS="$(HOST_EXTRACFLAGS)" \
-	no-dot-config-targets=tools-only tools-only
+	no-dot-config-targets=tools-only \
+	tools-only
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) $(MAKE_FLAGS)

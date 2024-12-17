@@ -57,7 +57,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  OBJS += ../src/ap/ieee802_11_ht.o
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3843,6 +3843,8 @@ static int hostapd_config_fill(struct ho
+@@ -3912,6 +3912,8 @@ static int hostapd_config_fill(struct ho
  			return 1;
  		}
  		bss->unsol_bcast_probe_resp_interval = val;
@@ -86,7 +86,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  
  #ifdef CONFIG_FILS
-@@ -2195,6 +2196,13 @@ static void hostapd_event_dfs_radar_dete
+@@ -2237,6 +2238,13 @@ static void hostapd_event_dfs_radar_dete
  				   radar->cf1, radar->cf2);
  }
  
@@ -100,7 +100,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  static void hostapd_event_dfs_pre_cac_expired(struct hostapd_data *hapd,
  					      struct dfs_event *radar)
-@@ -2645,6 +2653,11 @@ void hostapd_wpa_event(void *ctx, enum w
+@@ -2798,6 +2806,11 @@ void hostapd_wpa_event(void *ctx, enum w
  		hapd = switch_link_hapd(hapd, data->dfs_event.link_id);
  		hostapd_event_dfs_radar_detected(hapd, &data->dfs_event);
  		break;
@@ -559,7 +559,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
 +
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -5882,6 +5882,7 @@ enum wpa_event_type {
+@@ -6007,6 +6007,7 @@ enum wpa_event_type {
  	 * beacon.
  	 */
  	EVENT_UPDATE_MUEDCA_PARAMS,
@@ -567,7 +567,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  
  	/**
-@@ -6872,6 +6873,17 @@ union wpa_event_data {
+@@ -7003,6 +7004,17 @@ union wpa_event_data {
  	} update_muedca;
  
  	/**
@@ -594,7 +594,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
 +	E2S(AWGN_DETECTED);
  	E2S(TID_LINK_MAP);
  	E2S(LINK_RECONFIG);
- 	}
+ 	E2S(MLD_INTERFACE_FREED);
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
 @@ -186,6 +186,7 @@ static const char * nl80211_command_to_s
@@ -603,9 +603,9 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	C2S(NL80211_CMD_SET_HW_TIMESTAMP)
 +	C2S(NL80211_CMD_AWGN_DETECT)
  	C2S(NL80211_CMD_LINKS_REMOVED)
+ 	C2S(NL80211_CMD_SET_TID_TO_LINK_MAPPING)
  	C2S(__NL80211_CMD_AFTER_LAST)
- 	}
-@@ -2546,6 +2547,32 @@ static void nl80211_radar_event(struct w
+@@ -2601,6 +2602,32 @@ static void nl80211_radar_event(struct w
  	}
  }
  
@@ -638,7 +638,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  
  static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
  				   int wds)
-@@ -4144,6 +4171,9 @@ static void do_process_drv_event(struct
+@@ -4210,6 +4237,9 @@ static void do_process_drv_event(struct
  	case NL80211_CMD_LINKS_REMOVED:
  		wpa_supplicant_event(drv->ctx, EVENT_LINK_RECONFIG, NULL);
  		break;
@@ -660,7 +660,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  ifdef CONFIG_WPS
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -287,6 +287,7 @@ struct hostapd_config * hostapd_config_d
+@@ -288,6 +288,7 @@ struct hostapd_config * hostapd_config_d
  	conf->he_6ghz_max_ampdu_len_exp = 7;
  	conf->he_6ghz_rx_ant_pat = 1;
  	conf->he_6ghz_tx_ant_pat = 1;
@@ -670,7 +670,7 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  	conf->reg_sub_cli_eirp_psd = -1;
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1183,6 +1183,7 @@ struct hostapd_config {
+@@ -1200,6 +1200,7 @@ struct hostapd_config {
  	u8 he_6ghz_rx_ant_pat;
  	u8 he_6ghz_tx_ant_pat;
  	u8 he_6ghz_reg_pwr_type;

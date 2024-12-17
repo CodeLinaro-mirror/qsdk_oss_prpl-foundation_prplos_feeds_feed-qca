@@ -66,7 +66,7 @@ Signed-off-by: Aishwarya R <quic_aisr@quicinc.com>
  	rate_control_add_debugfs(local);
  
 +	rtnl_lock();
-+
++	wiphy_lock(hw->wiphy);
 +	/* add one default STA interface if supported */
 +	if (local->hw.wiphy->interface_modes & BIT(NL80211_IFTYPE_STATION) &&
 +	    !ieee80211_hw_check(hw, NO_AUTO_VIF)) {
@@ -78,7 +78,7 @@ Signed-off-by: Aishwarya R <quic_aisr@quicinc.com>
 +                        wiphy_warn(local->hw.wiphy,
 +                                   "Failed to add default virtual iface\n");
 +        }
-+
++	wiphy_unlock(hw->wiphy);
 +	rtnl_unlock();
 +
  #ifdef __disabled__CONFIG_INET

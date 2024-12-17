@@ -34,7 +34,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -620,10 +620,13 @@ static size_t he_elem_len(struct hostapd
+@@ -695,10 +695,13 @@ static size_t he_elem_len(struct hostapd
  	if (is_6ghz_op_class(hapd->iconf->op_class)) {
  		len += sizeof(struct ieee80211_he_6ghz_oper_info) +
  			3 + sizeof(struct ieee80211_he_6ghz_band_cap);
@@ -49,7 +49,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  
  		/* An additional Transmit Power Envelope element for
  		 * default client with unit interpretation of regulatory
-@@ -2125,6 +2128,17 @@ static u8 * hostapd_gen_fils_discovery(s
+@@ -2164,6 +2167,17 @@ static u8 * hostapd_gen_fils_discovery(s
  	buf_len = pos - buf;
  	total_len += buf_len;
  
@@ -77,7 +77,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  #include "common/wpa_ctrl.h"
  #include "common/sae.h"
  #include "common/dpp.h"
-@@ -7434,14 +7435,30 @@ static u8 hostapd_get_6g_tx_power(struct
+@@ -7536,14 +7537,30 @@ static u8 hostapd_get_6g_tx_power(struct
  }
  #endif
  
@@ -112,7 +112,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  
  	/*
  	 * Transmit Power Information field
-@@ -7451,24 +7468,327 @@ static u8 * hostapd_add_tpe_info(u8 *eid
+@@ -7553,24 +7570,327 @@ static u8 * hostapd_add_tpe_info(u8 *eid
  	 */
  	*eid++ = tx_pwr_count | (tx_pwr_intrpn << 3) | (tx_pwr_cat << 6);
  
@@ -449,7 +449,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  
  	if (!mode)
  		return eid;
-@@ -7476,15 +7796,6 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7578,15 +7898,6 @@ u8 * hostapd_eid_txpower_envelope(struct
  	if (ieee80211_freq_to_chan(iface->freq, &channel) == NUM_HOSTAPD_MODES)
  		return eid;
  
@@ -465,7 +465,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  #ifdef CONFIG_IEEE80211AX
  	/* IEEE Std 802.11ax-2021, Annex E.2.7 (6 GHz band in the United
  	 * States): An AP that is an Indoor Access Point per regulatory rules
-@@ -7496,66 +7807,37 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7598,66 +7909,37 @@ u8 * hostapd_eid_txpower_envelope(struct
  	 *	Unit interpretation = Regulatory client EIRP PSD
  	 */
  	if (is_6ghz_op_class(iconf->op_class)) {
@@ -550,7 +550,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  	switch (hostapd_get_oper_chwidth(iconf)) {
  	case CONF_OPER_CHWIDTH_USE_HT:
  		if (iconf->secondary_channel == 0) {
-@@ -7627,9 +7909,12 @@ u8 * hostapd_eid_txpower_envelope(struct
+@@ -7729,9 +8011,12 @@ u8 * hostapd_eid_txpower_envelope(struct
  	else
  		tx_pwr = max_tx_power;
  
@@ -560,15 +560,15 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
 +	for (i = 0; i < tx_pwr_count; i++)
 +		eirp_tx_pwr_array[0] = tx_pwr;
 +
-+	hostapd_add_tpe_info(eid, LOCAL_EIRP, tx_pwr_count, eirp_tx_pwr_array,
-+			     0, NULL, REG_MAX_CLIENT_TYPE);
++	eid = hostapd_add_tpe_info(eid, LOCAL_EIRP, tx_pwr_count, eirp_tx_pwr_array,
++			           0, NULL, REG_MAX_CLIENT_TYPE);
 +	return eid;
  }
  
- u8 *hostapd_eid_wide_bw_chan_switch(struct hostapd_data *hapd,
+ 
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -2141,8 +2141,14 @@ enum max_tx_pwr_interpretation {
+@@ -2186,8 +2186,14 @@ enum max_tx_pwr_interpretation {
  enum reg_6g_client_type {
  	REG_DEFAULT_CLIENT = 0,
  	REG_SUBORDINATE_CLIENT = 1,
@@ -585,7 +585,7 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  /* IEEE Std 802.11-2020, 9.6.6.4 - Link Measurement Request frame format */
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -257,6 +257,10 @@ struct ieee80211_edmg_config {
+@@ -261,6 +261,10 @@ struct ieee80211_edmg_config {
  	enum edmg_bw_config bw_config;
  };
  

@@ -25,7 +25,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2433,6 +2433,91 @@ static void hostapd_event_6ghz_power_mod
+@@ -2446,6 +2446,91 @@ static void hostapd_event_6ghz_power_mod
  	iface->power_mode_6ghz_before_change = -1;
  }
  
@@ -117,9 +117,9 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #ifdef CONFIG_OWE
  static int hostapd_notif_update_dh_ie(struct hostapd_data *hapd,
  				      const u8 *peer, const u8 *ie,
-@@ -3002,6 +3087,10 @@ void hostapd_wpa_event(void *ctx, enum w
- 			   hapd->conf->iface);
- 		hostapd_bss_free(hapd);
+@@ -3049,6 +3134,10 @@ void hostapd_wpa_event(void *ctx, enum w
+ 		if (link_hapd)
+ 			hostapd_event_update_cu_param(link_hapd, &data->cu_event);
  		break;
 +	case EVENT_AFC_POWER_UPDATE_COMPLETE_NOTIFY:
 +		hostapd_event_afc_update_complete(hapd,
@@ -130,7 +130,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  		break;
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -2226,9 +2226,10 @@ static void hostapd_set_6ghz_sec_chan(st
+@@ -2238,9 +2238,10 @@ static void hostapd_set_6ghz_sec_chan(st
  	}
  }
  
@@ -142,7 +142,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	iface->wait_channel_update = 0;
  	iface->is_no_ir = false;
  	iface->power_mode_6ghz_before_change = -1;
-@@ -3016,7 +3017,44 @@ void hostapd_bss_deinit(struct hostapd_d
+@@ -3035,7 +3036,44 @@ void hostapd_bss_deinit(struct hostapd_d
  	hostapd_bss_link_deinit(hapd);
  	hostapd_cleanup(hapd);
  }
@@ -187,7 +187,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
  void hostapd_interface_deinit(struct hostapd_iface *iface)
  {
-@@ -3032,6 +3070,8 @@ void hostapd_interface_deinit(struct hos
+@@ -3051,6 +3089,8 @@ void hostapd_interface_deinit(struct hos
  	iface->wait_channel_update = 0;
  	iface->power_mode_6ghz_before_change = -1;
  	iface->is_no_ir = false;
@@ -196,7 +196,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
  #ifdef CONFIG_FST
  	if (iface->fst) {
-@@ -3116,6 +3156,8 @@ struct hostapd_iface * hostapd_alloc_ifa
+@@ -3137,6 +3177,8 @@ struct hostapd_iface * hostapd_alloc_ifa
  
  	dl_list_init(&hapd_iface->sta_seen);
  
@@ -207,7 +207,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -805,6 +805,9 @@ struct hostapd_iface {
+@@ -834,6 +834,9 @@ struct hostapd_iface {
  	bool is_no_ir;
  
  	bool is_ch_switch_dfs; /* Channel switch from ACS to DFS */
@@ -216,10 +216,10 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +	bool is_afc_power_event_received;
  
  	struct hostapd_multi_hw_info *multi_hw_info;
- 	u8 num_multi_hws;
-@@ -869,6 +872,7 @@ void hostapd_switch_color(struct hostapd
+ 	unsigned int num_multi_hws;
+@@ -898,6 +901,7 @@ int hostapd_check_max_sta(struct hostapd
+ void hostapd_switch_color(struct hostapd_data *hapd, u64 bitmap);
  void hostapd_cleanup_cca_params(struct hostapd_data *hapd);
- int hostapd_fill_cca_settings(struct hostapd_data *hapd, struct cca_settings *settings);
  
 +void hostapd_free_afc_data(struct hostapd_iface *iface);
  /* utils.c */
@@ -227,7 +227,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  				 int (*cb)(void *ctx, const u8 *sa,
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -2547,6 +2547,35 @@ static inline bool he_reg_is_sp(enum he_
+@@ -2592,6 +2592,35 @@ static inline bool he_reg_is_sp(enum he_
  		type == HE_REG_INFO_6GHZ_AP_TYPE_INDOOR_SP;
  }
  
@@ -265,7 +265,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -71,6 +71,29 @@ enum hostapd_chan_width_attr {
+@@ -75,6 +75,29 @@ enum hostapd_chan_width_attr {
  #define HOSTAPD_DFS_REGION_ETSI	2
  #define HOSTAPD_DFS_REGION_JP	3
  
@@ -295,7 +295,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  /**
   * enum reg_change_initiator - Regulatory change initiator
   */
-@@ -194,7 +217,18 @@ struct hostapd_channel_data {
+@@ -198,7 +221,18 @@ struct hostapd_channel_data {
  	 */
  	const struct ieee80211_240mhz_vendor_oper *eht_240mhz_capab;
  	size_t eht_240mhz_len;
@@ -314,7 +314,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  };
  
  #define HE_MAC_CAPAB_0		0
-@@ -6122,6 +6156,11 @@ enum wpa_event_type {
+@@ -6205,6 +6239,11 @@ enum wpa_event_type {
  	 * EVENT_6GHZ_POWER_MODE_NOTIFY - Notify the AP power mode change
  	 */
  	EVENT_6GHZ_POWER_MODE_NOTIFY,
@@ -326,7 +326,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  };
  
  
-@@ -7146,6 +7185,8 @@ union wpa_event_data {
+@@ -7230,6 +7269,8 @@ union wpa_event_data {
  		struct t2lm_mapping t2lmap[MAX_NUM_MLD_LINKS];
  	} t2l_map_info;
  
@@ -337,7 +337,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	 */
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -2360,6 +2360,7 @@ static void nl80211_reg_rule_max_eirp(u3
+@@ -2372,6 +2372,7 @@ static void nl80211_reg_rule_max_eirp(u3
  			    (u32) chan->freq + 10 <= end) {
  				chan->max_tx_power = max_eirp;
  				chan->psd_values[pwr_mode] = psd;
@@ -347,7 +347,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	}
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -3520,6 +3520,367 @@ qca_nl80211_6ghz_pwr_mode_change_complet
+@@ -3514,6 +3514,368 @@ qca_nl80211_6ghz_pwr_mode_change_complet
  }
  
  
@@ -443,11 +443,11 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +}
 +
 +static int copy_afc_freq_objs(struct nlattr *nl,
-+			      struct afc_freq_obj *afc_freq_info)
++			      struct afc_freq_obj *afc_freq_info,
++			      u8 *count)
 +{
 +	struct nlattr *freq_info[QCA_WLAN_VENDOR_ATTR_AFC_FREQ_PSD_INFO_MAX + 1];
-+	u16 start_freq, end_freq;
-+	u8 count;
++	u16 start_freq = 0, end_freq = 0;
 +
 +	if (nla_parse(freq_info, QCA_WLAN_VENDOR_ATTR_AFC_FREQ_PSD_INFO_MAX,
 +		      nla_data(nl), nla_len(nl), NULL)) {
@@ -466,13 +466,20 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +		nla_get_u16(freq_info[QCA_WLAN_VENDOR_ATTR_AFC_FREQ_PSD_INFO_RANGE_END]);
 +	}
 +
-+	afc_freq_info[count].low_freq = start_freq;
-+	afc_freq_info[count].high_freq = end_freq;
++	afc_freq_info[*count].low_freq = start_freq;
++	afc_freq_info[*count].high_freq = end_freq;
 +
 +	if (freq_info[QCA_WLAN_VENDOR_ATTR_AFC_FREQ_PSD_INFO_PSD]) {
-+		afc_freq_info[count].max_psd =
++		afc_freq_info[*count].max_psd =
 +			nla_get_u32(freq_info[QCA_WLAN_VENDOR_ATTR_AFC_FREQ_PSD_INFO_PSD]);
 +	}
++
++	wpa_printf(MSG_DEBUG,
++		   "i = %d start_freq = %d low_freq = %d max_psd = %d",
++		   *count, afc_freq_info[*count].low_freq,
++		   afc_freq_info[*count].high_freq,
++		   afc_freq_info[*count].max_psd);
++	(*count)++;
 +
 +	return 0;
 +}
@@ -661,17 +668,11 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 +		nla_for_each_nested(nl,
 +				    attr[QCA_WLAN_VENDOR_ATTR_AFC_EVENT_FREQ_RANGE_LIST],
 +				    rem) {
-+			if (copy_afc_freq_objs(nl, afc_freq_info)) {
++			if (i >= num_frange_obj || copy_afc_freq_objs(nl, afc_freq_info, &i)) {
 +				wpa_printf(MSG_DEBUG, "afc_freq_info copy failed");
 +				os_free(afc_freq_info);
 +				return -EINVAL;
 +			}
-+
-+			wpa_printf(MSG_DEBUG,
-+				   "i = %d start_freq = %d low_freq = %d max_psd = %d",
-+				   i, afc_freq_info[i].low_freq,
-+				   afc_freq_info[i].high_freq,
-+				   afc_freq_info[i].max_psd);
 +		}
 +
 +		afc_rsp->afc_freq_info = afc_freq_info;
@@ -715,7 +716,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
  				     u32 subcmd, u8 *data, size_t len)
  {
-@@ -3568,6 +3929,9 @@ static void nl80211_vendor_event_qca(str
+@@ -3562,6 +3924,9 @@ static void nl80211_vendor_event_qca(str
  	case QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED:
  		qca_nl80211_6ghz_pwr_mode_change_completed(drv, data, len);
  		break;

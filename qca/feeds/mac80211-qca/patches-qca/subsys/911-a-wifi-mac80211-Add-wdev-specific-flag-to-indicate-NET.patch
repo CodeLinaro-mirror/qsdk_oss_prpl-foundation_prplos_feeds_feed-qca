@@ -84,11 +84,9 @@ Signed-off-by: Ramanathan Choodamani <quic_rchoodam@quicinc.com>
  net/wireless/core.c    |  2 ++
  3 files changed, 27 insertions(+)
 
-diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index d23235c..90f6599 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -6484,6 +6484,7 @@ struct wireless_dev {
+@@ -6482,6 +6482,7 @@ struct wireless_dev {
  
  	u8 reg_6g_power_mode;
  	bool critical_update;
@@ -96,11 +94,9 @@ index d23235c..90f6599 100644
  };
  
  static inline const u8 *wdev_address(struct wireless_dev *wdev)
-diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
-index b526026..04a056e 100644
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -4286,6 +4286,14 @@ void ieee80211_csa_finalize_work(struct work_struct *work)
+@@ -4286,6 +4286,14 @@ void ieee80211_csa_finalize_work(struct
  	if (wdev->links[link->link_id].ap.is_going_down)
  		return;
  
@@ -115,7 +111,7 @@ index b526026..04a056e 100644
  	sdata_lock(sdata);
  	mutex_lock(&local->mtx);
  	mutex_lock(&local->chanctx_mtx);
-@@ -5457,6 +5465,14 @@ void ieee80211_color_change_finalize_work(struct work_struct *work)
+@@ -5457,6 +5465,14 @@ void ieee80211_color_change_finalize_wor
  	if (wdev->links[link->link_id].ap.is_going_down)
  		return;
  
@@ -130,9 +126,9 @@ index b526026..04a056e 100644
  	sdata_lock(sdata);
  	mutex_lock(&local->mtx);
  
-@@ -5489,6 +5505,14 @@ void ieee80211_color_collision_detection_work(struct work_struct *work)
- 	if (wdev->links[link->link_id].ap.is_going_down)
- 		return;
+@@ -5482,6 +5498,14 @@ void ieee80211_color_collision_detection
+ 			     color_collision_detect_work);
+ 	struct ieee80211_sub_if_data *sdata = link->sdata;
  
 +	/* When a link is brought down, at times the worker threads for other
 +	 * link might not see the is_going_down bit to true and
@@ -145,11 +141,9 @@ index b526026..04a056e 100644
  	sdata_lock(sdata);
  	cfg80211_obss_color_collision_notify(sdata->dev, link->color_bitmap, GFP_KERNEL, link->link_id);
  	sdata_unlock(sdata);
-diff --git a/net/wireless/core.c b/net/wireless/core.c
-index 9e1f7a7..aa9a707 100644
 --- a/net/wireless/core.c
 +++ b/net/wireless/core.c
-@@ -1582,6 +1582,7 @@ void cfg80211_leave(struct cfg80211_registered_device *rdev,
+@@ -1582,6 +1582,7 @@ void cfg80211_leave(struct cfg80211_regi
  		    struct wireless_dev *wdev)
  {
  	wdev_lock(wdev);
@@ -157,7 +151,7 @@ index 9e1f7a7..aa9a707 100644
  	__cfg80211_leave(rdev, wdev, -1);
  	wdev_unlock(wdev);
  }
-@@ -1635,6 +1636,7 @@ void cfg80211_init_wdev(struct wireless_dev *wdev)
+@@ -1635,6 +1636,7 @@ void cfg80211_init_wdev(struct wireless_
  		wdev->ps = false;
  	/* allow mac80211 to determine the timeout */
  	wdev->ps_timeout = -1;
@@ -165,6 +159,13 @@ index 9e1f7a7..aa9a707 100644
  
  	if ((wdev->iftype == NL80211_IFTYPE_STATION ||
  	     wdev->iftype == NL80211_IFTYPE_P2P_CLIENT ||
--- 
-2.25.1
-
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -6911,6 +6911,7 @@ static int nl80211_start_ap(struct sk_bu
+ 			wdev->conn_owner_nlportid = info->snd_portid;
+ 
+ 		wdev->links[link_id].ap.is_going_down = false;
++		wdev->is_netdev_going_down = false;
+ 		nl80211_send_ap_started(wdev, link_id);
+ 	}
+ out_unlock:

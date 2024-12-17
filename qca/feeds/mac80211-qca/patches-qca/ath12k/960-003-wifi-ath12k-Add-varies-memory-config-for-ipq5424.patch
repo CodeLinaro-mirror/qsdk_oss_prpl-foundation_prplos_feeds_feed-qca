@@ -1,4 +1,4 @@
-From 85e409e10b1f070c70bbfe9a927049e14446c97b Mon Sep 17 00:00:00 2001
+From ce31c8ea0b31000157bc20b3b3d4001a206aa695 Mon Sep 17 00:00:00 2001
 From: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
 Date: Thu, 2 May 2024 16:38:25 +0530
 Subject: [PATCH] wifi: ath12k: Add varies memory config for ipq5424
@@ -15,7 +15,7 @@ Signed-off-by: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
  3 files changed, 90 insertions(+), 24 deletions(-)
 
 diff --git a/drivers/net/wireless/ath/ath12k/ahb.c b/drivers/net/wireless/ath/ath12k/ahb.c
-index 6077885..4b0cc53 100644
+index 673696b..00317e2 100644
 --- a/drivers/net/wireless/ath/ath12k/ahb.c
 +++ b/drivers/net/wireless/ath/ath12k/ahb.c
 @@ -136,6 +136,17 @@ enum ext_irq_num {
@@ -70,7 +70,7 @@ index 6077885..4b0cc53 100644
  	ath12k_dbg(ab, ATH12K_DBG_OFFSET, "Mem_cmem:%p offset:%x value:%x\n",
  		   ab->mem_cmem, offset, value);
  	iowrite32(value, ab->mem_cmem + offset);
-@@ -693,7 +720,7 @@ static int ath12k_ahb_ssr_notifier_unreg(struct ath12k_base *ab)
+@@ -741,7 +768,7 @@ static int ath12k_ahb_ssr_notifier_unreg(struct ath12k_base *ab)
  	return ath12k_rproc_unregister_subsys_notifier(ab);
  }
  
@@ -79,7 +79,7 @@ index 6077885..4b0cc53 100644
  	.start = ath12k_ahb_start,
  	.stop = ath12k_ahb_stop,
  	.read32 = ath12k_ahb_read32,
-@@ -1087,7 +1114,8 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
+@@ -1139,7 +1166,8 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
  
  	switch (hw_rev) {
  	case ATH12K_HW_IPQ5332_HW10:
@@ -89,7 +89,7 @@ index 6077885..4b0cc53 100644
  		bus_params = &ath12k_ahb_bus_params;
  		bus_type = ATH12K_BUS_AHB;
  		break;
-@@ -1137,7 +1165,7 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
+@@ -1189,7 +1217,7 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
  			goto err_core_free;
  		}
  		ab->ce_remap = true;
@@ -98,7 +98,7 @@ index 6077885..4b0cc53 100644
  	}
  	if (ab->hw_params->cmem_remap) {
  		const struct cmem_remap *cmem = ab->hw_params->cmem_remap;
-@@ -1152,7 +1180,7 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
+@@ -1204,7 +1232,7 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
  			goto err_core_free;
  		}
  		ab->cmem_remap = true;
@@ -107,7 +107,7 @@ index 6077885..4b0cc53 100644
  	}
  
  	if (ab->hw_params->pmm_remap) {
-@@ -1165,7 +1193,7 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
+@@ -1217,7 +1245,7 @@ static int ath12k_ahb_probe(struct platform_device *pdev)
  			goto err_core_free;
  		}
  		ab->pmm_remap = true;
@@ -117,7 +117,7 @@ index 6077885..4b0cc53 100644
  
  	ret = ath12k_ahb_setup_resources(ab);
 diff --git a/drivers/net/wireless/ath/ath12k/hal.h b/drivers/net/wireless/ath/ath12k/hal.h
-index 50665be..f9098d7 100644
+index 0553b95..4ad26cb 100644
 --- a/drivers/net/wireless/ath/ath12k/hal.h
 +++ b/drivers/net/wireless/ath/ath12k/hal.h
 @@ -448,6 +448,9 @@ struct ath12k_dp_rx_info;
@@ -131,7 +131,7 @@ index 50665be..f9098d7 100644
  	HAL_SRNG_RING_ID_REO2SW0 = 0,
  	HAL_SRNG_RING_ID_REO2SW1,
 diff --git a/drivers/net/wireless/ath/ath12k/hw.c b/drivers/net/wireless/ath/ath12k/hw.c
-index 05ce2e2..dc44aae 100644
+index 88912bf..2f7fc67 100644
 --- a/drivers/net/wireless/ath/ath12k/hw.c
 +++ b/drivers/net/wireless/ath/ath12k/hw.c
 @@ -15,6 +15,13 @@
@@ -148,7 +148,7 @@ index 05ce2e2..dc44aae 100644
  static u8 ath12k_hw_qcn9274_mac_from_pdev_id(int pdev_idx)
  {
  	return pdev_idx;
-@@ -1754,25 +1761,49 @@ static const struct ath12k_hw_hal_params ath12k_hw_hal_params_wcn7850 = {
+@@ -1757,25 +1764,49 @@ static const struct ath12k_hw_hal_params ath12k_hw_hal_params_wcn7850 = {
  			    HAL_WBM_SW_COOKIE_CONV_CFG_WBM2SW4_EN,
  };
  
@@ -211,7 +211,7 @@ index 05ce2e2..dc44aae 100644
  };
  
  static const struct ath12k_hw_hal_params ath12k_hw_hal_params_ipq5332 = {
-@@ -2136,10 +2167,10 @@ static struct ath12k_hw_params ath12k_hw_params[] = {
+@@ -2148,10 +2179,10 @@ static struct ath12k_hw_params ath12k_hw_params[] = {
  		.num_local_link = 0,
  		.m3_fw_support = false,
  		.compact_rx_tlv = true,
@@ -225,8 +225,8 @@ index 05ce2e2..dc44aae 100644
 +		.pmm_remap = &ath12k_external_pmm[ATH12K_IPQ5332],
  		.send_platform_model = true,
  		.en_fwlog = true,
- 		.support_umac_reset = false,
-@@ -2315,6 +2346,10 @@ static struct ath12k_hw_params ath12k_hw_params[] = {
+ 		.support_umac_reset = true,
+@@ -2333,6 +2364,10 @@ static struct ath12k_hw_params ath12k_hw_params[] = {
  		.num_local_link = 0,
  		.m3_fw_support = false,
  		.compact_rx_tlv = true,
@@ -235,7 +235,7 @@ index 05ce2e2..dc44aae 100644
 +		.cmem_remap = &ath12k_external_cmem[ATH12K_IPQ5332],
 +		.pmm_remap = &ath12k_external_pmm[ATH12K_IPQ5332],
  		.send_platform_model = true,
- 		.en_fwlog = false,
+ 		.en_fwlog = true,
  		.support_umac_reset = false,
 -- 
 2.34.1

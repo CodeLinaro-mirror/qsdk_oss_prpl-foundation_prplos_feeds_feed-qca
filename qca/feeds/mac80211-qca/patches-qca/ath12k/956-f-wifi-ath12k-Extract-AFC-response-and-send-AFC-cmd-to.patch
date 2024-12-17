@@ -23,7 +23,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/reg.c
 +++ b/drivers/net/wireless/ath/ath12k/reg.c
-@@ -1119,6 +1119,47 @@ end:
+@@ -1164,6 +1164,47 @@ end:
  	return ret;
  }
  
@@ -230,7 +230,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #endif
 --- a/drivers/net/wireless/ath/ath12k/vendor.c
 +++ b/drivers/net/wireless/ath/ath12k/vendor.c
-@@ -2017,6 +2017,496 @@ out:
+@@ -2029,6 +2029,496 @@ out:
  	return ret;
  }
  
@@ -727,7 +727,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #define nla_nest_end_checked(skb, start) do {           \
  	if ((skb) && (start))                           \
  		nla_nest_end(skb, start);               \
-@@ -2334,6 +2824,13 @@ static struct wiphy_vendor_command ath12
+@@ -2362,6 +2852,13 @@ static struct wiphy_vendor_command ath12
  		.maxattr = QCA_WLAN_VENDOR_ATTR_6GHZ_REG_POWER_MODE_MAX,
  		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV,
  	},
@@ -743,24 +743,24 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  static const struct nl80211_vendor_cmd_info ath12k_vendor_events[] = {
 --- a/drivers/net/wireless/ath/ath12k/vendor.h
 +++ b/drivers/net/wireless/ath/ath12k/vendor.h
-@@ -9,6 +9,8 @@
- #define QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX 101
- #define QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT_INDEX	100
+@@ -7,6 +7,8 @@
+ 
+ #define QCA_NL80211_VENDOR_ID 0x001374
  #define QCA_NL80211_AFC_REQ_RESP_BUF_MAX_SIZE		5000
 +#define QCA_WLAN_AFC_RESP_DESC_FIELD_START_OCTET	14
 +#define QCA_WLAN_AFC_RESP_DESC_FIELD_END_OCTET		30
  
  extern unsigned int ath12k_ppe_ds_enabled;
  
-@@ -18,6 +20,7 @@ enum qca_nl80211_vendor_subcmds {
+@@ -16,6 +18,7 @@ enum qca_nl80211_vendor_subcmds {
  	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC = 206,
  	QCA_NL80211_VENDOR_SUBCMD_SCS_RULE_CONFIG = 218,
  	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT = 222,
 +	QCA_NL80211_VENDOR_SUBCMD_AFC_RESPONSE = 223,
- 	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 233,
- 	QCA_NL80211_VENDOR_SUBCMD_POWER_MODE_CHANGE_COMPLETED = 234,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_PHY_OPS = 235,
-@@ -1149,4 +1152,77 @@ enum qca_wlan_vendor_attr_afc_event {
+ 	QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS = 236,
+ 	QCA_NL80211_VENDOR_SUBCMD_SET_6GHZ_POWER_MODE = 253,
+@@ -1150,4 +1153,77 @@ enum qca_wlan_vendor_attr_afc_event {
  	QCA_WLAN_VENDOR_ATTR_AFC_EVENT_MAX =
  	QCA_WLAN_VENDOR_ATTR_AFC_EVENT_AFTER_LAST - 1,
  };
@@ -840,7 +840,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #endif /* QCA_VENDOR_H */
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7504,6 +7504,37 @@ static void ath12k_wmi_afc_event(struct
+@@ -7502,6 +7502,37 @@ static void ath12k_wmi_afc_event(struct
  	}
  }
  
@@ -888,7 +888,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	WMI_NDI_GET_CAP_REQ_CMDID = WMI_TLV_CMD(WMI_GRP_PROTOTYPE),
  	WMI_NDP_INITIATOR_REQ_CMDID,
  	WMI_NDP_RESPONDER_REQ_CMDID,
-@@ -2193,6 +2194,7 @@ enum wmi_tlv_tag {
+@@ -2196,6 +2197,7 @@ enum wmi_tlv_tag {
  	WMI_TAG_MLO_PEER_CREATE_PARAMS = 0x3D5,
  	WMI_TAG_MLO_VDEV_START_PARAMS = 0x3D6,
  	WMI_TAG_MLO_VDEV_CREATE_PARAMS = 0x3D7,
@@ -896,7 +896,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  	WMI_TAG_AFC_EVENT_FIXED_PARAM,
  	WMI_TAG_AFC_EXPIRY_EVENT_PARAM,
  	WMI_TAG_AFC_POWER_EVENT_PARAM,
-@@ -8612,6 +8614,7 @@ struct wmi_peer_tid_latency_cmd {
+@@ -8627,6 +8629,7 @@ struct wmi_peer_tid_latency_cmd {
  #define WMI_ANI_EVENT_PDEV_ID_VALID	BIT(31)
  #define WMI_ANI_EVENT_PDEV_ID		GENMASK(7, 0)
  
@@ -904,7 +904,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #define WMI_AFC_LOW_FREQUENCY			GENMASK(15, 0)
  #define WMI_AFC_HIGH_FREQUENCY			GENMASK(31, 16)
  
-@@ -8657,6 +8660,12 @@ struct wmi_afc_power_event_param {
+@@ -8672,6 +8675,12 @@ struct wmi_afc_power_event_param {
  	__le32 avail_exp_time_t;
  };
  
@@ -917,7 +917,7 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
  #define ATH12K_FW_STATS_BUF_SIZE (1024 * 1024)
  
  void ath12k_wmi_init_qcn9274(struct ath12k_base *ab,
-@@ -8828,6 +8837,7 @@ int ath12k_wmi_set_hw_mode(struct ath12k
+@@ -8843,6 +8852,7 @@ int ath12k_wmi_set_hw_mode(struct ath12k
  int ath12k_wmi_send_vdev_set_tpc_power(struct ath12k *ar,
                                          u32 vdev_id,
                                          struct ath12k_reg_tpc_power_info *param);

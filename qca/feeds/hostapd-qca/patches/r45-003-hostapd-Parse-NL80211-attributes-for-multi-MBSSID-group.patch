@@ -30,8 +30,6 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  src/drivers/nl80211_copy.h        | 12 ++++++++++++
  7 files changed, 92 insertions(+), 7 deletions(-)
 
-diff --git a/hostapd/main.c b/hostapd/main.c
-index d3f74f5..eb391e8 100644
 --- a/hostapd/main.c
 +++ b/hostapd/main.c
 @@ -325,6 +325,11 @@ setup_mld:
@@ -46,11 +44,9 @@ index d3f74f5..eb391e8 100644
  	}
  
  #ifdef CONFIG_IEEE80211BE
-diff --git a/src/ap/beacon.c b/src/ap/beacon.c
-index 25d9cfb..7b331f5 100644
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -2776,7 +2776,32 @@ static int __ieee802_11_set_beacon(struct hostapd_data *hapd)
+@@ -2914,7 +2914,32 @@ static int __ieee802_11_set_beacon(struc
  
  	if (hostapd_build_ap_extra_ies(hapd, &beacon, &proberesp, &assocresp) <
  	    0)
@@ -84,7 +80,7 @@ index 25d9cfb..7b331f5 100644
  
  	params.beacon_ies = beacon;
  	params.proberesp_ies = proberesp;
-@@ -2865,12 +2890,13 @@ static int __ieee802_11_set_beacon(struct hostapd_data *hapd)
+@@ -3003,12 +3028,13 @@ static int __ieee802_11_set_beacon(struc
  #endif /* CONFIG_DRIVER_NL80211_QCA */
  
  	res = hostapd_drv_set_ap(hapd, &params);
@@ -100,11 +96,9 @@ index 25d9cfb..7b331f5 100644
  	ieee802_11_free_ap_params(&params);
  	return ret;
  }
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 608603b..127127d 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4877,6 +4877,31 @@ static int hostapd_build_beacon_data(struct hostapd_data *hapd,
+@@ -4895,6 +4895,31 @@ static int hostapd_build_beacon_data(str
  		}
  	}
  
@@ -136,11 +130,9 @@ index 608603b..127127d 100644
  	ret = 0;
  free_beacon:
  	/* if the function fails, the caller should not free beacon data */
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index bc0f4fa..240562b 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2634,6 +2634,11 @@ struct wpa_driver_capa {
+@@ -2642,6 +2642,11 @@ struct wpa_driver_capa {
  
  	/* Minimum bandwidth the driver supports RU Puncturing */
  	u8 ru_punct_supp_bw;
@@ -152,11 +144,9 @@ index bc0f4fa..240562b 100644
  };
  
  
-diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
-index b9d6d1a..a59e7dc 100644
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -11578,7 +11578,9 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
+@@ -11681,7 +11681,9 @@ static int wpa_driver_nl80211_status(voi
  				  "capa.max_sched_scan_plan_interval=%u\n"
  				  "capa.max_sched_scan_plan_iterations=%u\n"
  				  "capa.mbssid_max_interfaces=%u\n"
@@ -167,7 +157,7 @@ index b9d6d1a..a59e7dc 100644
  				  drv->capa.key_mgmt,
  				  drv->capa.enc,
  				  drv->capa.auth,
-@@ -11603,7 +11605,9 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
+@@ -11706,7 +11708,9 @@ static int wpa_driver_nl80211_status(voi
  				  drv->capa.max_sched_scan_plan_interval,
  				  drv->capa.max_sched_scan_plan_iterations,
  				  drv->capa.mbssid_max_interfaces,
@@ -178,11 +168,9 @@ index b9d6d1a..a59e7dc 100644
  		if (os_snprintf_error(end - pos, res))
  			return pos - buf;
  		pos += res;
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index 90f7091..e27f9fb 100644
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -943,9 +943,17 @@ static void wiphy_info_mbssid(struct wpa_driver_capa *cap, struct nlattr *attr)
+@@ -943,9 +943,17 @@ static void wiphy_info_mbssid(struct wpa
  		cap->ema_max_periodicity =
  			nla_get_u8(config[NL80211_MBSSID_CONFIG_ATTR_MAX_EMA_PROFILE_PERIODICITY]);
  
@@ -202,11 +190,9 @@ index 90f7091..e27f9fb 100644
  }
  
  
-diff --git a/src/drivers/nl80211_copy.h b/src/drivers/nl80211_copy.h
-index 5fc0172..42d688d 100644
 --- a/src/drivers/nl80211_copy.h
 +++ b/src/drivers/nl80211_copy.h
-@@ -8080,6 +8080,16 @@ enum nl80211_sar_specs_attrs {
+@@ -8227,6 +8227,16 @@ enum nl80211_sar_specs_attrs {
   * 	is an MLD. The link id must be valid in the wdev of given Transmitting interface
   * 	index.
   *
@@ -223,7 +209,7 @@ index 5fc0172..42d688d 100644
   * @__NL80211_MBSSID_CONFIG_ATTR_LAST: Internal
   * @NL80211_MBSSID_CONFIG_ATTR_MAX: highest attribute
   */
-@@ -8092,6 +8102,8 @@ enum nl80211_mbssid_config_attributes {
+@@ -8239,6 +8249,8 @@ enum nl80211_mbssid_config_attributes {
  	NL80211_MBSSID_CONFIG_ATTR_TX_IFINDEX,
  	NL80211_MBSSID_CONFIG_ATTR_EMA,
  	NL80211_MBSSID_CONFIG_ATTR_TX_LINK_ID,
@@ -232,6 +218,3 @@ index 5fc0172..42d688d 100644
  
  	/* keep last */
  	__NL80211_MBSSID_CONFIG_ATTR_LAST,
--- 
-2.34.1
-

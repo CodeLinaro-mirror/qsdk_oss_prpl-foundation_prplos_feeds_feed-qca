@@ -12,7 +12,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2702,6 +2702,28 @@ static void hostapd_mld_if_enable(struct
+@@ -2691,6 +2691,28 @@ static void hostapd_iface_disable(struct
  
  
  #ifdef CONFIG_IEEE80211BE
@@ -41,7 +41,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void hostapd_update_link_removal_field(struct hostapd_data *hapd,
  					      struct link_removal_event *ev,
  					      enum wpa_event_type event)
-@@ -2779,6 +2801,8 @@ static void hostapd_update_link_removal_
+@@ -2769,6 +2791,8 @@ static void hostapd_update_link_removal_
  			/* reconfigure GTK rekey primary auth */
  			wpa_auth_reconfig_primary_auth(hapd->wpa_auth, phapd->wpa_auth);
  
@@ -52,7 +52,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			/* Refresh partner beacons */
 --- a/src/ap/wpa_auth.c
 +++ b/src/ap/wpa_auth.c
-@@ -7307,3 +7307,19 @@ void wpa_auth_reconfig_primary_auth(stru
+@@ -7544,3 +7544,19 @@ void wpa_auth_reconfig_primary_auth(stru
  			       wpa_rekey_gtk, wpa_pauth, NULL);
  #endif /* CONFIG_IEEE80211BE */
  }
@@ -74,7 +74,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +}
 --- a/src/ap/wpa_auth.h
 +++ b/src/ap/wpa_auth.h
-@@ -653,6 +653,9 @@ void wpa_release_link_auth_ref(struct wp
+@@ -686,6 +686,9 @@ void wpa_release_link_auth_ref(struct wp
  			       int release_link_id);
  void wpa_auth_reconfig_primary_auth(struct wpa_authenticator *wpa_auth,
  				    struct wpa_authenticator *wpa_pauth);
@@ -144,7 +144,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
-@@ -374,7 +374,30 @@ struct sta_info {
+@@ -361,7 +361,30 @@ struct sta_info {
  /* Number of seconds to keep STA entry after it has been deauthenticated. */
  #define AP_MAX_INACTIVITY_AFTER_DEAUTH (1 * 5)
  

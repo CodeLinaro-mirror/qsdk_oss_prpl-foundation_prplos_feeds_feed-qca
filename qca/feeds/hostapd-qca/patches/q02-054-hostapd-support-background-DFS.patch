@@ -94,7 +94,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  			   int center_freq);
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2242,7 +2242,7 @@ static void hostapd_event_dfs_cac_finish
+@@ -2262,7 +2262,7 @@ static void hostapd_event_dfs_cac_finish
  	wpa_printf(MSG_DEBUG, "DFS CAC finished on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(hapd->iface, 1, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -103,7 +103,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -2252,7 +2252,7 @@ static void hostapd_event_dfs_cac_aborte
+@@ -2272,7 +2272,7 @@ static void hostapd_event_dfs_cac_aborte
  	wpa_printf(MSG_DEBUG, "DFS CAC aborted on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(hapd->iface, 0, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -112,7 +112,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -2272,7 +2272,7 @@ static void hostapd_event_dfs_cac_starte
+@@ -2292,7 +2292,7 @@ static void hostapd_event_dfs_cac_starte
  	wpa_printf(MSG_DEBUG, "DFS offload CAC started on %d MHz", radar->freq);
  	hostapd_dfs_start_cac(hapd->iface, radar->freq, radar->ht_enabled,
  			      radar->chan_offset, radar->chan_width,
@@ -123,7 +123,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  #endif /* NEED_AP_MLME */
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2505,6 +2505,10 @@ static void nl80211_radar_event(struct w
+@@ -2558,6 +2558,10 @@ static void nl80211_radar_event(struct w
  		}
  	}
  
@@ -136,7 +136,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  		data.dfs_event.chan_width =
 --- a/wpa_supplicant/ap.c
 +++ b/wpa_supplicant/ap.c
-@@ -2163,7 +2163,8 @@ void wpas_ap_event_dfs_cac_started(struc
+@@ -2165,7 +2165,8 @@ void wpas_ap_event_dfs_cac_started(struc
  	wpa_printf(MSG_DEBUG, "DFS CAC started on %d MHz", radar->freq);
  	hostapd_dfs_start_cac(iface, radar->freq,
  			      radar->ht_enabled, radar->chan_offset,
@@ -146,7 +146,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -2179,7 +2180,8 @@ void wpas_ap_event_dfs_cac_finished(stru
+@@ -2181,7 +2182,8 @@ void wpas_ap_event_dfs_cac_finished(stru
  	wpa_printf(MSG_DEBUG, "DFS CAC finished on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(iface, 1, radar->freq,
  				 radar->ht_enabled, radar->chan_offset,
@@ -156,7 +156,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  }
  
  
-@@ -2195,7 +2197,8 @@ void wpas_ap_event_dfs_cac_aborted(struc
+@@ -2197,7 +2199,8 @@ void wpas_ap_event_dfs_cac_aborted(struc
  	wpa_printf(MSG_DEBUG, "DFS CAC aborted on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(iface, 0, radar->freq,
  				 radar->ht_enabled, radar->chan_offset,
@@ -168,7 +168,7 @@ Signed-off-by: Harshitha Prem <quic_hprem@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -6757,6 +6757,7 @@ union wpa_event_data {
+@@ -6872,6 +6872,7 @@ union wpa_event_data {
  		int cf2;
  		int link_id;
  		u16 radar_bitmap;

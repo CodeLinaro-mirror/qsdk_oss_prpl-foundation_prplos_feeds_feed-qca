@@ -36,7 +36,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  };
  
  static const struct ath12k_wmi_tlv_policy ath12k_wmi_tlv_policies[] = {
-@@ -8290,6 +8294,12 @@ static int ath12k_wmi_mgmt_rx_sub_tlv_pa
+@@ -8301,6 +8305,12 @@ static int ath12k_wmi_mgmt_rx_sub_tlv_pa
  			le32_get_bits(rx_cu_params_tlv->cu_vdev_map_4, CU_VDEV_MAP_HB);
  		parse->mgmt_ml_info_done = true;
  		break;
@@ -49,7 +49,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	}
  	return 0;
  }
-@@ -8432,6 +8442,82 @@ static void ath12k_update_cu_params(stru
+@@ -8445,6 +8455,82 @@ static void ath12k_update_cu_params(stru
  	}
  }
  
@@ -72,13 +72,13 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +	for (i = 0; i < num_link_removal_params; i++) {
 +		info = &params[i];
 +
-+		rcu_read_lock();
 +		if (info->hw_link_id > ATH12K_GROUP_MAX_RADIO) {
 +			ath12k_warn(ab, "Wrong hw_link_id received:%d\n",
 +				    info->hw_link_id);
 +			continue;
 +		}
 +
++		rcu_read_lock();
 +		ar = rcu_dereference(ab->ag->hw_links[info->hw_link_id]);
 +
 +		if (!ar) {
@@ -132,7 +132,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static int ath12k_pull_mgmt_rx_params_tlv(struct ath12k_base *ab,
  					  struct sk_buff *skb,
  					  struct ath12k_wmi_mgmt_rx_arg *hdr)
-@@ -8509,6 +8595,10 @@ static int ath12k_pull_mgmt_rx_params_tl
+@@ -8522,6 +8608,10 @@ static int ath12k_pull_mgmt_rx_params_tl
  		return -EPROTO;
  	}
  
@@ -143,7 +143,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	/* shift the sk_buff to point to `frame` */
  	skb_trim(skb, 0);
  	skb_put(skb, frame - skb->data);
-@@ -12415,7 +12505,7 @@ static void ath12k_mgmt_rx_event(struct
+@@ -12437,7 +12527,7 @@ static void ath12k_mgmt_rx_event(struct
  		return;
  	}
  
@@ -152,7 +152,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	if (ath12k_pull_mgmt_rx_params_tlv(ab, skb, rx_ev) != 0) {
  		ath12k_warn(ab, "failed to extract mgmt rx event");
  		dev_kfree_skb(skb);
-@@ -12559,6 +12649,14 @@ skip_mgmt_stats:
+@@ -12591,6 +12681,14 @@ skip_mgmt_stats:
  	if (ieee80211_is_beacon(hdr->frame_control))
  		ath12k_mac_handle_beacon(ar, skb);
  
@@ -169,10 +169,10 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
-@@ -6667,6 +6667,31 @@ struct ath12k_wmi_mlo_link_removal_event
-	struct ath12k_mlo_link_removal_tbtt_update tbtt_info;
+@@ -6710,6 +6710,31 @@ struct ath12k_wmi_mlo_link_removal_event
+ 	struct ath12k_mlo_link_removal_tbtt_update tbtt_info;
  }__packed;
-
+ 
 +/**
 + * struct ath12k_wmi_mgmt_rx_mlo_link_removal_info - MLO Link removal tbtt
 + * count
@@ -199,9 +199,9 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +}__packed;
 +
  struct ath12k_wmi_mgmt_rx_arg {
-	u32 chan_freq;
-	u32 channel;
-@@ -6681,6 +6706,14 @@ struct ath12k_wmi_mgmt_rx_arg {
+ 	u32 chan_freq;
+ 	u32 channel;
+@@ -6724,6 +6749,14 @@ struct ath12k_wmi_mgmt_rx_arg {
  	u32 tsf_delta;
  	u8 pdev_id;
  	struct ath12k_mgmt_rx_reo_params reo_params;

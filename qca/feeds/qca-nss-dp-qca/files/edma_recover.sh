@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2023-2024, Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,8 @@ if [[ "$board" == *"ipq9574"* ]]; then
 	soc_type="alder"
 elif [[ "$board" == *"ipq5332"* ]]; then
 	soc_type="miami"
+elif [[ "$board" == *"ipq5424"* ]]; then
+        soc_type="marina"
 else
 	echo "Error: Unsupported SoC type $board" > /var/log/edma_recovery.log
 	exit 1

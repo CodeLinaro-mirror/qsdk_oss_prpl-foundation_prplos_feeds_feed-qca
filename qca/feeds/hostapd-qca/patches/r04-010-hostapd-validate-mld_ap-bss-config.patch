@@ -18,7 +18,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -1494,6 +1494,12 @@ static int hostapd_config_check_bss(stru
+@@ -1513,6 +1513,12 @@ static int hostapd_config_check_bss(stru
  #endif /* CONFIG_FILS */
  
  #ifdef CONFIG_IEEE80211BE

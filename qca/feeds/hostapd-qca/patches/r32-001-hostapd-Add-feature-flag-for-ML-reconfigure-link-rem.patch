@@ -24,11 +24,9 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  src/drivers/nl80211_copy.h        | 1 +
  3 files changed, 8 insertions(+)
 
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 849392c..785b65f 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -2458,6 +2458,8 @@ struct wpa_driver_capa {
+@@ -2462,6 +2462,8 @@ struct wpa_driver_capa {
  #define WPA_DRIVER_FLAGS2_BEACON_RATE_EHT	0x0000000000004000ULL
  /** Driver supports MLO in station/AP mode */
  #define WPA_DRIVER_FLAGS2_MLO			0x0000000000004000ULL
@@ -37,11 +35,9 @@ index 849392c..785b65f 100644
  /** Driver supports minimal scan request probe content  */
  #define WPA_DRIVER_FLAGS2_SCAN_MIN_PREQ         0x0000000000008000ULL
  /** Driver supports SAE authentication offload in STA mode */
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index 161860c..e37bfdd 100644
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -727,6 +727,11 @@ static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
+@@ -727,6 +727,11 @@ static void wiphy_info_ext_feature_flags
  	if (ext_feature_isset(ext_features, len,
  			      NL80211_EXT_FEATURE_DEVICE_BW))
  		info->drv->device_bw = 1;
@@ -53,18 +49,3 @@ index 161860c..e37bfdd 100644
  }
  
  
-diff --git a/src/drivers/nl80211_copy.h b/src/drivers/nl80211_copy.h
-index fd43276..7f85aa2 100644
---- a/src/drivers/nl80211_copy.h
-+++ b/src/drivers/nl80211_copy.h
-@@ -6726,6 +6726,7 @@ enum nl80211_ext_feature_index {
- 	NL80211_EXT_FEATURE_STA_MGMT_RTS_CTS,
- 	NL80211_EXT_FEATURE_BEACON_RATE_EHT,
- 	NL80211_EXT_FEATURE_DEVICE_BW,
-+	NL80211_EXT_FEATURE_MLD_LINK_REMOVAL_OFFLOAD,
- 
- 	/* add new features before the definition below */
- 	NUM_NL80211_EXT_FEATURES,
--- 
-2.34.1
-

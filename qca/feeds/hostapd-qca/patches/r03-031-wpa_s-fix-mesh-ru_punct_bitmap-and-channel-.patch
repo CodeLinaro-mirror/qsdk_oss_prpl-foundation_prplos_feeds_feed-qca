@@ -23,7 +23,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/wpa_supplicant/wpa_supplicant.c
 +++ b/wpa_supplicant/wpa_supplicant.c
-@@ -2749,6 +2749,28 @@ HE20:
+@@ -2882,6 +2882,28 @@ HE20:
  	freq->center_freq1 = freq->freq + freq->sec_channel_offset * 10;
  }
  
@@ -52,7 +52,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static bool ibss_mesh_is_80mhz_avail(int channel, struct hostapd_hw_modes *mode, bool dfs_enabled)
  {
  	int i;
-@@ -2769,163 +2791,160 @@ static bool ibss_mesh_is_80mhz_avail(int
+@@ -2902,163 +2924,160 @@ static bool ibss_mesh_is_80mhz_avail(int
  }
  
  
@@ -323,7 +323,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			ht40 = 1;
  			break;
  		}
-@@ -2934,7 +2953,7 @@ static void ibss_mesh_select_40mhz(struc
+@@ -3067,7 +3086,7 @@ static void ibss_mesh_select_40mhz(struc
  	/* Find secondary channel */
  	for (i = 0; i < mode->num_channels; i++) {
  		sec_chan = &mode->channels[i];
@@ -332,7 +332,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  			break;
  		sec_chan = NULL;
  	}
-@@ -2942,11 +2961,8 @@ static void ibss_mesh_select_40mhz(struc
+@@ -3075,11 +3094,8 @@ static void ibss_mesh_select_40mhz(struc
  		return;
  
  	/* Check secondary channel flags */
@@ -345,7 +345,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	if (ht40 == -1) {
  		if (!(pri_chan->flag & HOSTAPD_CHAN_HT40MINUS))
-@@ -2991,95 +3007,157 @@ static void ibss_mesh_select_40mhz(struc
+@@ -3124,95 +3140,157 @@ static void ibss_mesh_select_40mhz(struc
  		wpa_scan_results_free(scan_res);
  	}
  
@@ -564,7 +564,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  			for (i = channel; i < channel + 16; i += 4) {
  				struct hostapd_channel_data *chan;
-@@ -3088,12 +3166,10 @@ static bool ibss_mesh_select_80_160mhz(s
+@@ -3221,12 +3299,10 @@ static bool ibss_mesh_select_80_160mhz(s
  				if (!chan)
  					continue;
  
@@ -580,7 +580,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  				/* Found a suitable second segment for 80+80 */
  				chwidth = CONF_OPER_CHWIDTH_80P80MHZ;
-@@ -3116,100 +3192,44 @@ static bool ibss_mesh_select_80_160mhz(s
+@@ -3249,100 +3325,44 @@ static bool ibss_mesh_select_80_160mhz(s
  			vht_caps |= VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
  			seg0 = 114;
  		}
@@ -638,7 +638,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 -	int ieee80211_mode = wpas_mode_to_ieee80211_mode(ssid->mode);
 -	enum hostapd_hw_mode hw_mode;
 -	struct hostapd_hw_modes *mode = NULL;
--	int i, obss_scan = !(ssid->noscan);
+-	int obss_scan = !(ssid->noscan);
 -	u8 channel;
 -	bool is_6ghz, is_24ghz;
 -	bool dfs_enabled = wpa_s->conf->country[0] && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_RADAR);
@@ -705,7 +705,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  }
  
  
-@@ -6551,13 +6571,13 @@ void fst_wpa_supplicant_fill_iface_obj(s
+@@ -6736,13 +6756,13 @@ void fst_wpa_supplicant_fill_iface_obj(s
  				       struct fst_wpa_obj *iface_obj)
  {
  	os_memset(iface_obj, 0, sizeof(*iface_obj));
@@ -724,7 +724,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	iface_obj->update_mb_ie     = wpas_fst_update_mb_ie_cb;
  	iface_obj->get_peer_first   = wpas_fst_get_peer_first;
  	iface_obj->get_peer_next    = wpas_fst_get_peer_next;
-@@ -7716,7 +7736,7 @@ extern void supplicant_event(void *ctx,
+@@ -7902,7 +7922,7 @@ extern void supplicant_event(void *ctx,
  			     union wpa_event_data *data);
  
  extern void supplicant_event_global(void *ctx, enum wpa_event_type event,
@@ -733,7 +733,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  /**
   * wpa_supplicant_add_iface - Add a new network interface
-@@ -7882,8 +7902,8 @@ const char * wpa_supplicant_get_eap_mode
+@@ -8068,8 +8088,8 @@ const char * wpa_supplicant_get_eap_mode
  {
  	const char *eapol_method;
  

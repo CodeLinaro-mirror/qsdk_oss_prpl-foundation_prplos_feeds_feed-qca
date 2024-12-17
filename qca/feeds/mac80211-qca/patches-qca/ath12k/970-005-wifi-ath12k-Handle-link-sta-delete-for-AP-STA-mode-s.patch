@@ -27,7 +27,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -7831,7 +7831,13 @@ static void ath12k_mac_station_post_remo
+@@ -7823,7 +7823,13 @@ static void ath12k_mac_station_post_remo
  	kfree(arsta->rx_stats);
  	arsta->rx_stats = NULL;
  	ath12k_mac_ap_ps_recalc(ar);
@@ -42,12 +42,18 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  }
  
  static int ath12k_mac_station_add(struct ath12k *ar,
-@@ -8903,82 +8909,124 @@ static int ath12k_mac_op_change_sta_link
+@@ -8891,86 +8897,147 @@ static int ath12k_mac_op_change_sta_link
+ 	struct ath12k_hw *ah = hw->priv;
+ 	struct ath12k *ar;
+ 	struct ath12k_link_vif *arvif;
+-	struct ath12k_link_sta *arsta;
++	struct ath12k_link_sta *arsta, *tmp_arsta;
  	struct ath12k_vif *ahvif = ath12k_vif_to_ahvif(vif);
  	struct ath12k_sta *ahsta = ath12k_sta_to_ahsta(sta);
  	unsigned long valid_links;
+-	u8 link_id, num_devices = ah->ag->num_chip;
 +	u16 removed_link_map;
- 	u8 link_id, num_devices = ah->ag->num_chip;
++	u8 link_id, num_devices = ah->ag->num_chip, tmp_link_id;
  	int ret = 0;
  
  	if (!sta->valid_links)
@@ -215,11 +221,30 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +				    ath12k_warn(NULL, "Failed to remove station: %pM\n",
 +						arsta->addr);
 +		}
++
++		/* If the link that is getting removed is the assoc link id of
++		 * the station, then move the contents of the next link to
++		 * deflink and free the moved link memory
++		 */
++		if (ahsta->assoc_link_id != ahsta->primary_link_id &&
++		    ahsta->assoc_link_id == link_id &&
++		    hweight32(ahsta->links_map) >= 1) {
++			tmp_link_id = ffs(ahsta->links_map) - 1;
++
++			tmp_arsta = ahsta->link[tmp_link_id];
++			if (tmp_arsta) {
++				memcpy(&ahsta->deflink, tmp_arsta,
++				       sizeof(*tmp_arsta));
++				ahsta->assoc_link_id = tmp_arsta->link_id;
++				ahsta->link[tmp_link_id] = &ahsta->deflink;
++				kfree(tmp_arsta);
++			}
++		}
 +	}
  	mutex_unlock(&ah->conf_mutex);
  
  	return ret;
-@@ -15162,7 +15210,11 @@ ath12k_mac_unassign_vif_chanctx_handle(s
+@@ -15167,7 +15234,11 @@ ath12k_mac_unassign_vif_chanctx_handle(s
  	}
  
  stop_primary:
@@ -232,7 +257,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	ret = ath12k_mac_vdev_stop(arvif);
  	if (ret)
-@@ -17943,6 +17995,19 @@ exit:
+@@ -17957,6 +18028,19 @@ exit:
  	return ret;
  }
  
@@ -252,7 +277,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static const struct ieee80211_ops ath12k_ops = {
  	.tx				= ath12k_mac_op_tx,
  	.wake_tx_queue			= ieee80211_handle_wake_tx_queue,
-@@ -17994,6 +18059,7 @@ static const struct ieee80211_ops ath12k
+@@ -18008,6 +18092,7 @@ static const struct ieee80211_ops ath12k
  	.get_txpower			= ath12k_mac_op_get_txpower,
  	.set_radar_background		= ath12k_mac_op_set_radar_background,
  	.link_reconfig_remove		= ath12k_mac_op_link_reconfig_remove,
@@ -262,7 +287,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  static void ath12k_mac_update_ch_list(struct ath12k *ar,
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -6166,15 +6166,20 @@ void ath12k_debugfs_remove_interface(str
+@@ -6177,15 +6177,20 @@ void ath12k_debugfs_remove_interface(str
  		return;
  	}
  

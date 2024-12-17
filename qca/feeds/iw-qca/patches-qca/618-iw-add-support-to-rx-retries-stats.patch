@@ -11,18 +11,6 @@ Signed-off-by: Hari Chandrakanthan <quic_haric@quicinc.com>
  station.c | 5 +++++
  2 files changed, 6 insertions(+)
 
-diff --git a/nl80211.h b/nl80211.h
-index 1179878..c4f46a4 100644
---- a/nl80211.h
-+++ b/nl80211.h
-@@ -3882,6 +3882,7 @@ enum nl80211_sta_info {
- 	NL80211_STA_INFO_AIRTIME_LINK_METRIC,
- 	NL80211_STA_INFO_ASSOC_AT_BOOTTIME,
- 	NL80211_STA_INFO_CONNECTED_TO_AS,
-+	NL80211_STA_INFO_RX_RETRIES,
- 
- 	/* keep last */
- 	__NL80211_STA_INFO_AFTER_LAST,
 diff --git a/station.c b/station.c
 index 312957d..6b9949a 100644
 --- a/station.c

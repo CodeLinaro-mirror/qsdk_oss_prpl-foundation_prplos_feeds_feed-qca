@@ -9,6 +9,9 @@ mac80211 has the peer/STA entry which leads to linkid warnon.
 Add only_monitor flag condition as WAR to avoid warn_on in case 
 of monitor.
 
+Note: Changes from this patch is not required and while upstreaming
+dependent patches, do not add WARN_ON.
+
 Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
 ---
  net/mac80211/rx.c | 28 ++++++++++++++++------------
@@ -25,7 +28,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  static inline void ieee80211_rx_stats(struct net_device *dev, u32 len)
  {
  	struct pcpu_sw_netstats *tstats = this_cpu_ptr(netdev_tstats(dev));
-@@ -4435,7 +4437,7 @@ static bool ieee80211_rx_data_set_link(s
+@@ -4441,7 +4443,7 @@ static bool ieee80211_rx_data_set_link(s
  }
  
  static bool ieee80211_rx_data_set_sta(struct ieee80211_rx_data *rx,
@@ -34,22 +37,29 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  {
  	rx->link_id = link_id;
  	rx->sta = sta;
-@@ -4455,8 +4457,12 @@ static bool ieee80211_rx_data_set_sta(st
- 				rx->link = rcu_dereference(rx->sdata->link[sta->deflink.link_id]);
- 			} else {
- 				rx->link = &rx->sdata->deflink;
+@@ -4456,17 +4458,11 @@ static bool ieee80211_rx_data_set_sta(st
+ 	}
+ 
+ 	if (link_id < 0) {
+-		if (rx->sdata->vif.valid_links) {
+-			if (sta && !sta->sta.valid_links) {
+-				rx->link = rcu_dereference(rx->sdata->link[sta->deflink.link_id]);
+-			} else {
+-				rx->link = &rx->sdata->deflink;
 -				if (!rx->local->in_reconfig)
 -					WARN_ON_ONCE(1);
-+				pr_warn_once("link id %d sta addr : %pM only_monitor %d",
-+					     link_id, sta ? sta->addr : NULL, only_monitor);
-+				if (!only_monitor || debug_param) {
-+					if ((!rx->local->in_reconfig))
-+						WARN_ON_ONCE(1);
-+				}
- 			}
- 		} else {
+-			}
+-		} else {
++		if (rx->sdata->vif.valid_links &&
++		    (sta && !sta->sta.valid_links))
++			rx->link = rcu_dereference(rx->sdata->link[sta->deflink.link_id]);
++		else
  			rx->link = &rx->sdata->deflink;
-@@ -4487,7 +4493,7 @@ void ieee80211_release_reorder_timeout(s
+-		}
+ 	}
+ 	else if (!ieee80211_rx_data_set_link(rx, link_id))
+ 		return false;
+@@ -4493,7 +4489,7 @@ void ieee80211_release_reorder_timeout(s
  	if (sta->sta.valid_links)
  		link_id = ffs(sta->sta.valid_links) - 1;
  
@@ -58,16 +68,16 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  		return;
  
  	tid_agg_rx = rcu_dereference(sta->ampdu_mlme.tid_rx[tid]);
-@@ -4533,7 +4539,7 @@ void ieee80211_mark_rx_ba_filtered_frame
- 
- 	sta = container_of(pubsta, struct sta_info, sta);
+@@ -4545,7 +4541,7 @@ void ieee80211_mark_rx_ba_filtered_frame
+ 		  "RX BA marker can't support max_rx_aggregation_subframes %u > 64\n",
+ 		  local->hw.max_rx_aggregation_subframes);
  
 -	if (!ieee80211_rx_data_set_sta(&rx, sta, -1))
 +	if (!ieee80211_rx_data_set_sta(&rx, sta, -1, false))
  		return;
  
  	rcu_read_lock();
-@@ -5375,7 +5381,7 @@ static void __ieee80211_rx_handle_8023(s
+@@ -5380,7 +5376,7 @@ static void __ieee80211_rx_handle_8023(s
  	 * the deflink is fine?
  	 */
  	sta = container_of(pubsta, struct sta_info, sta);
@@ -76,7 +86,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  		goto drop;
  
  	fast_rx = rcu_dereference(rx.sta->fast_rx);
-@@ -5396,7 +5402,10 @@ static bool ieee80211_rx_for_interface(s
+@@ -5401,7 +5397,10 @@ static bool ieee80211_rx_for_interface(s
  	struct ieee80211_hdr *hdr = (void *)skb->data;
  	struct sta_info *sta;
  	int link_id = -1;
@@ -87,7 +97,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  	/*
  	 * Look up link station first, in case there's a
  	 * chance that they might have a link address that
-@@ -5408,14 +5417,12 @@ static bool ieee80211_rx_for_interface(s
+@@ -5413,14 +5412,12 @@ static bool ieee80211_rx_for_interface(s
  		sta = link_sta->sta;
  		link_id = link_sta->link_id;
  	} else {
@@ -103,7 +113,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  		return false;
  
  	return ieee80211_prepare_and_rx_handle(rx, skb, consume);
-@@ -5479,13 +5486,14 @@ static void __ieee80211_rx_handle_packet
+@@ -5484,13 +5481,14 @@ static void __ieee80211_rx_handle_packet
  	if (ieee80211_is_data(fc)) {
  		struct sta_info *sta, *prev_sta;
  		int link_id = -1;
@@ -119,7 +129,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  				goto out;
  
  			/*
-@@ -5522,7 +5530,7 @@ static void __ieee80211_rx_handle_packet
+@@ -5527,7 +5525,7 @@ static void __ieee80211_rx_handle_packet
  			}
  
  			rx.sdata = prev_sta->sdata;
@@ -128,7 +138,7 @@ Signed-off-by: Yuvasree Sivasankaran <quic_ysivasan@quicinc.com>
  				goto out;
  
  			if (!status->link_valid && prev_sta->sta.mlo)
-@@ -5535,7 +5543,7 @@ static void __ieee80211_rx_handle_packet
+@@ -5540,7 +5538,7 @@ static void __ieee80211_rx_handle_packet
  
  		if (prev_sta) {
  			rx.sdata = prev_sta->sdata;

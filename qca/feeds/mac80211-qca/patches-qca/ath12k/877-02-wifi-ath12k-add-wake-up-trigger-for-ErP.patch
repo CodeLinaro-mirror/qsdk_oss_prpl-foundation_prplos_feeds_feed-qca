@@ -32,7 +32,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  static DEFINE_MUTEX(ath12k_hw_lock);
  static struct list_head ath12k_hw_groups = LIST_HEAD_INIT(ath12k_hw_groups);
  
-@@ -2168,6 +2172,11 @@ static void ath12k_core_pre_reconfigure_
+@@ -2169,6 +2173,11 @@ static void ath12k_core_pre_reconfigure_
  		ar->monitor_vdev_id = -1;
  		clear_bit(MONITOR_VDEV_STARTED, &ar->monitor_flags);
  		clear_bit(MONITOR_VDEV_CREATED, &ar->monitor_flags);
@@ -165,7 +165,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  
  #ifdef CPTCFG_ATH12K_SAWF
  static const struct nla_policy
-@@ -142,6 +144,52 @@ ath12k_ds_policy[QCA_WLAN_VENDOR_ATTR_DS
+@@ -142,6 +144,56 @@ ath12k_ds_policy[QCA_WLAN_VENDOR_ATTR_DS
  	[QCA_WLAN_VENDOR_ATTR_CONFIG_EHT_MLO_MODE] = {.type = NLA_U8},
  };
  
@@ -203,13 +203,17 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +	ATH12K_ERP_ENTER_COMPLETE,
 +};
 +
++struct ath12k_erp_active_ar {
++	struct ath12k *ar;
++	enum ath12k_routing_pkt_type trigger;
++};
++
 +struct ath12k_erp_state_machine {
 +	bool initialized;
 +	/* Protects the structure members */
 +	struct mutex lock;
 +	enum ath12k_erp_states state;
-+	struct ath12k *trigger_ar;
-+	enum ath12k_routing_pkt_type trigger;
++	struct ath12k_erp_active_ar active_ar;
 +	struct dentry *erp_dir;
 +};
 +
@@ -218,15 +222,14 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  #ifdef CPTCFG_ATH12K_SAWF
  
  static void ath12k_set_default_values(struct ath12k_sawf_svc_params *param)
-@@ -1265,7 +1313,414 @@ static int ath12k_vendor_set_scs_qos_par
+@@ -1265,7 +1317,407 @@ static int ath12k_vendor_set_scs_qos_par
  	return ret;
  }
  
 +static void ath12k_erp_reset_state(void)
 +{
 +	erp_sm.state = ATH12K_ERP_OFF;
-+	erp_sm.trigger = 0;
-+	erp_sm.trigger_ar = 0;
++	memset(&erp_sm.active_ar, 0, sizeof(erp_sm.active_ar));
 +}
 +
 +static u32 ath12k_erp_convert_trigger_bitmap(u32 bitmap)
@@ -309,12 +312,10 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +	return new_bitmap;
 +}
 +
-+static int ath12k_erp_set_pkt_filter(struct wireless_dev *wdev, struct ath12k *ar,
-+				     u32 bitmap, enum ath12k_wmi_pkt_route_opcode op_code)
++static int ath12k_erp_set_pkt_filter(struct ath12k *ar, u32 bitmap,
++				     enum ath12k_wmi_pkt_route_opcode op_code)
 +{
-+	struct ath12k_wmi_pkt_route_param param;
-+	struct ieee80211_vif *vif;
-+	struct ath12k_vif *ahvif;
++	struct ath12k_wmi_pkt_route_param param = {};
 +
 +	if (!bitmap)
 +		return 0;
@@ -327,29 +328,6 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +		}
 +	}
 +
-+	if (ar)
-+		goto set_trigger;
-+
-+	if (!wdev) {
-+		ath12k_err(NULL, "invalid wdev, failed to set packet bitmap");
-+		return -EINVAL;
-+	}
-+
-+	vif = wdev_to_ieee80211_vif(wdev);
-+	if (!vif) {
-+		ath12k_dbg(NULL, ATH12K_DBG_RM, "vif absent, ignoring packet bitmap");
-+		return 0;
-+	}
-+
-+	ahvif = ath12k_vif_to_ahvif(vif);
-+	if (!ahvif) {
-+		ath12k_dbg(NULL, ATH12K_DBG_RM, "ahvif absent, ignoring packet bitmap");
-+		return 0;
-+	}
-+
-+	ar = ahvif->deflink.ar; /* current support is only for SLO */
-+
-+set_trigger:
 +	param.opcode = op_code;
 +	param.meta_data = ATH12K_RX_PROTOCOL_TAG_START_OFFSET + bitmap;
 +	param.dst_ring = ATH12K_REO_RELEASE_RING;
@@ -363,12 +341,10 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +	spin_lock_bh(&ar->ab->base_lock);
 +	if (op_code == ATH12K_WMI_PKTROUTE_ADD) {
 +		ar->erp_trigger_set = true;
-+		erp_sm.trigger = bitmap;
-+		erp_sm.trigger_ar = ar;
++		erp_sm.active_ar.trigger = bitmap;
 +	} else if (op_code == ATH12K_WMI_PKTROUTE_DEL) {
 +		ar->erp_trigger_set = false;
-+		erp_sm.trigger = 0;
-+		erp_sm.trigger_ar = NULL;
++		erp_sm.active_ar.trigger = 0;
 +	}
 +	spin_unlock_bh(&ar->ab->base_lock);
 +
@@ -380,6 +356,9 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +	struct net_device *netdev;
 +	struct wireless_dev *wdev;
 +	u32 trigger, if_index;
++	struct ieee80211_vif *vif;
++	struct ath12k_vif *ahvif;
++	struct ath12k *ar;
 +
 +	ath12k_dbg(NULL, ATH12K_DBG_RM, "setting ErP wake up trigger\n");
 +
@@ -398,18 +377,31 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +	}
 +
 +	wdev = netdev->ieee80211_ptr;
++	dev_put(netdev);
 +	if (!wdev) {
 +		ath12k_err(NULL, "could not find wdev for wake up interface\n");
-+		dev_put(netdev);
 +		return -EINVAL;
 +	}
 +
-+	dev_put(netdev);
++	vif = wdev_to_ieee80211_vif(wdev);
++	if (!vif) {
++		ath12k_dbg(NULL, ATH12K_DBG_RM, "vif absent, ignoring packet bitmap");
++		return -EINVAL;
++	}
++
++	ahvif = ath12k_vif_to_ahvif(vif);
++	if (!ahvif) {
++		ath12k_dbg(NULL, ATH12K_DBG_RM, "ahvif absent, ignoring packet bitmap");
++		return -EINVAL;
++	}
++
++	ar = ahvif->deflink.ar; /* current support is only for SLO */
 +
 +	trigger = nla_get_u32(attrs[QCA_WLAN_VENDOR_ATTR_ERP_CONFIG_TRIGGER]);
-+	if (ath12k_erp_set_pkt_filter(wdev, NULL, trigger, ATH12K_WMI_PKTROUTE_ADD))
++	if (ath12k_erp_set_pkt_filter(ar, trigger, ATH12K_WMI_PKTROUTE_ADD))
 +		return -EINVAL;
 +
++	erp_sm.active_ar.ar = ar;
 +	return 0;
 +}
 +
@@ -505,6 +497,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +
 +int ath12k_erp_exit(struct wiphy *wiphy, struct ath12k *ar, bool send_reply)
 +{
++	struct ath12k_erp_active_ar *active_ar;
 +	int ret, i;
 +
 +	mutex_lock(&erp_sm.lock);
@@ -514,12 +507,16 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 +		return -EINVAL;
 +	}
 +
-+	ret = ath12k_erp_set_pkt_filter(NULL, ar, erp_sm.trigger,
-+					ATH12K_WMI_PKTROUTE_DEL);
-+	if (ar == erp_sm.trigger_ar && ret) {
-+		ath12k_err(NULL, "failed to reset pkt bitmap %d", ret);
-+		mutex_unlock(&erp_sm.lock);
-+		return -EINVAL;
++	active_ar = &erp_sm.active_ar;
++	if (active_ar->ar) {
++		ret = ath12k_erp_set_pkt_filter(active_ar->ar,
++						active_ar->trigger,
++						ATH12K_WMI_PKTROUTE_DEL);
++		if (ret) {
++			ath12k_err(NULL, "failed to reset pkt bitmap %d", ret);
++			mutex_unlock(&erp_sm.lock);
++			return ret;
++		}
 +	}
 +
 +	ath12k_erp_reset_state();
@@ -633,7 +630,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  #ifdef CPTCFG_ATH12K_SAWF
  	{
  		.info.vendor_id = QCA_NL80211_VENDOR_ID,
-@@ -1317,6 +1772,10 @@ static const struct nl80211_vendor_cmd_i
+@@ -1317,6 +1769,10 @@ static const struct nl80211_vendor_cmd_i
  		.subcmd = QCA_NL80211_VENDOR_SUBCMD_SDWF_DEV_OPS,
  	},
  #endif
@@ -784,7 +781,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  	ATH12K_DBG_ANY		= 0xffffffff,
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -5700,3 +5700,8 @@ void ath12k_debugfs_remove_interface(str
+@@ -5711,3 +5711,8 @@ void ath12k_debugfs_remove_interface(str
  	debugfs_remove(arvif->debugfs_rtsthreshold);
  	arvif->debugfs_rtsthreshold = NULL;
  }
@@ -818,16 +815,18 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  #ifdef CPTCFG_ATH12K_PKTLOG
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -17130,6 +17130,9 @@ static int ath12k_mac_setup(struct ath12
+@@ -17137,7 +17137,10 @@ static int ath12k_mac_setup(struct ath12
  	clear_bit(MONITOR_VDEV_CREATED, &ar->monitor_flags);
  	rcu_assign_pointer(ag->hw_links[hw_link_id], ar);
  
+- 	return 0;
 +	if (ath12k_erp_support)
 +		INIT_WORK(&ar->erp_handle_trigger_work, ath12k_erp_handle_trigger);
 +
-  	return 0;
++	return 0;
  }
  
+ int ath12k_mac_allocate(struct ath12k_hw_group *ag)
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
 @@ -3627,6 +3627,15 @@ struct ath12k_wmi_pdev_set_regdomain_arg

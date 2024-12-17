@@ -29,11 +29,9 @@ Signed-off-by: Pavithra Ganesan <quic_pavigane@quicinc.com>
  hostapd/main.c | 8 ++------
  1 file changed, 2 insertions(+), 6 deletions(-)
 
-diff --git a/hostapd/main.c b/hostapd/main.c
-index be156ee60..870c9d4b5 100644
 --- a/hostapd/main.c
 +++ b/hostapd/main.c
-@@ -229,12 +229,8 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
+@@ -230,12 +230,8 @@ static int hostapd_driver_init(struct ho
  	 * Use the configured MLD MAC address as the interface hardware address
  	 * if this AP is a part of an AP MLD.
  	 */
@@ -48,6 +46,3 @@ index be156ee60..870c9d4b5 100644
  #endif /* CONFIG_IEEE80211BE */
  
  	params.ifname = hapd->conf->iface;
--- 
-2.34.1
-

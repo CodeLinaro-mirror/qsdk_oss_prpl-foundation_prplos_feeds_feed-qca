@@ -227,7 +227,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  		ab->collect_dump = false;
  		wake_up(&ab->ssr_dump_wq);
  		return NOTIFY_OK;
-@@ -1779,67 +1807,130 @@ static int ath12k_core_ssr_notifier_cb(s
+@@ -1779,67 +1807,131 @@ static int ath12k_core_ssr_notifier_cb(s
  	return NOTIFY_DONE;
  }
  
@@ -326,6 +326,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 +
 +	if (!(test_bit(ATH12K_FLAG_UNREGISTERING, &ab->ag->dev_flags))) {
 +		set_bit(ATH12K_FLAG_RECOVERY, &ab->dev_flags);
++		set_bit(ATH12K_FLAG_RECOVERY, &ab->ag->dev_flags);
 +		set_bit(ATH12K_FLAG_CRASH_FLUSH, &ab->dev_flags);
 +		queue_work(ab->workqueue_aux, &ab->reset_work);
  	}
@@ -391,7 +392,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	/* TODO Add more driver stats */
  
  	return NOTIFY_OK;
-@@ -2812,98 +2903,213 @@ static void ath12k_core_mode1_recovery_w
+@@ -2813,98 +2905,213 @@ static void ath12k_core_mode1_recovery_w
  	ath12k_mode1_recovery_reconfig(ab, __func__);
  }
  
@@ -674,7 +675,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  }
  
  /*
-@@ -2975,7 +3181,6 @@ static void ath12k_core_disable_ppe_rtnl
+@@ -2976,7 +3183,6 @@ static void ath12k_core_disable_ppe_rtnl
  }
  #endif
  
@@ -682,7 +683,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  static void ath12k_core_reset(struct work_struct *work)
  {
  	struct ath12k_base *ab = container_of(work, struct ath12k_base, reset_work);
-@@ -3179,10 +3384,13 @@ static void ath12k_core_reset(struct wor
+@@ -3183,10 +3389,13 @@ static void ath12k_core_reset(struct wor
  			ath12k_hif_power_up(ab);
  		} else if (ab->hif.bus == ATH12K_BUS_AHB ||
  			   ab->hif.bus == ATH12K_BUS_HYBRID) {
@@ -700,7 +701,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  		}
  		ath12k_dbg(ab, ATH12K_DBG_BOOT, "reset started\n");
  	}
-@@ -3271,6 +3479,9 @@ int ath12k_core_init(struct ath12k_base
+@@ -3275,6 +3484,9 @@ int ath12k_core_init(struct ath12k_base
  	init_waitqueue_head(&ab->ipci.gic_msi_waitq);
  	ab->ssr_nb.notifier_call = ath12k_core_ssr_notifier_cb;
  	ab->atomic_ssr_nb.notifier_call = ath12k_core_atomic_ssr_notifier_cb;
@@ -712,7 +713,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  		ath12k_err(ab, "failed to register ssr notifier callback\n");
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1235,6 +1235,37 @@ struct vendor_info {
+@@ -1243,6 +1243,37 @@ struct vendor_info {
      u32 subsystem_device;
  };
  
@@ -750,7 +751,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  enum ath12k_mlo_recovery_mode {
  	ATH12K_MLO_RECOVERY_MODE0 = 1,
  	ATH12K_MLO_RECOVERY_MODE1 = 2,
-@@ -1276,6 +1307,7 @@ struct ath12k_hw_group {
+@@ -1284,6 +1315,7 @@ struct ath12k_hw_group {
  	bool mgmt_rx_reorder;
  	unsigned long dev_flags;
  	enum ath12k_mlo_recovery_mode recovery_mode;
@@ -758,7 +759,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	struct ath12k_hw *ah[ATH12K_GROUP_MAX_RADIO];
  	struct ath12k_base *ab[ATH12K_MAX_SOCS];
  	struct ath12k __rcu *hw_links[ATH12K_GROUP_MAX_RADIO];
-@@ -1285,6 +1317,8 @@ struct ath12k_hw_group {
+@@ -1293,6 +1325,8 @@ struct ath12k_hw_group {
  	struct ath12k_host_mlo_mem_arena mlomem_arena;
  	atomic_t num_dp_tx_pending;
  	u64 mlo_tstamp_offset;
@@ -767,7 +768,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  	struct ath12k_mlo_dp_umac_reset mlo_umac_reset;
  	struct completion umac_reset_complete;
  	bool trigger_umac_reset;
-@@ -1407,9 +1441,13 @@ struct ath12k_base {
+@@ -1434,9 +1468,13 @@ struct ath12k_base {
  	bool collect_dump;
  	struct notifier_block ssr_nb;
  	struct notifier_block atomic_ssr_nb;
@@ -792,7 +793,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  #include "debugfs.h"
  
  #include "core.h"
-@@ -1938,6 +1940,46 @@ static const struct file_operations fops
+@@ -2016,6 +2018,40 @@ static const struct file_operations fops
  	.llseek = default_llseek,
  };
  
@@ -801,18 +802,14 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 +{
 +	struct ath12k_pdev *pdev;
 +	struct ath12k *ar;
-+	struct device *dev = ab->dev;
-+	int radio_idx;
-+	bool multi_pd_arch;
 +	bool assert_userpd;
++	int i;
 +
-+	multi_pd_arch = of_property_read_bool(dev->of_node, "qcom,multipd_arch");
-+
-+	if (!multi_pd_arch)
++	if (ab->hif.bus == ATH12K_BUS_PCI)
 +		return;
 +
-+	for (radio_idx = 0; radio_idx < ab->num_radios; radio_idx++) {
-+		pdev = &ab->pdevs[radio_idx];
++	for (i = 0; i < ab->num_radios; i++) {
++		pdev = &ab->pdevs[i];
 +		ar = pdev->ar;
 +
 +		/* Set pdev param to let firmware know which pd to use for
@@ -823,9 +820,7 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
 +		if (!ab->ag->mlo_capable) {
 +			assert_userpd = true;
 +		} else {
-+			if (value == ATH12K_FW_RECOVERY_DISABLE ||
-+			    value == ATH12K_FW_RECOVERY_ENABLE_SSR_ONLY ||
-+			    value == ATH12K_FW_RECOVERY_ENABLE_AUTO)
++			if (value == ATH12K_FW_RECOVERY_DISABLE)
 +				assert_userpd = false;
 +			else
 +				assert_userpd = true;
@@ -839,15 +834,34 @@ Signed-off-by: Sidhanta Sahu <quic_sidhanta@quicinc.com>
  static ssize_t ath12k_debug_write_fw_recovery(struct file *file,
  					      char __user *user_buf,
  					      size_t count, loff_t *ppos)
-@@ -1971,6 +2013,8 @@ static ssize_t ath12k_debug_write_fw_rec
+@@ -2049,6 +2085,7 @@ static ssize_t ath12k_debug_write_fw_rec
  			ATH12K_WMI_FW_HANG_RECOVERY_MODE1 :
  			ATH12K_WMI_FW_HANG_RECOVERY_MODE0;
  
-+	ath12k_debug_multipd_wmi_pdev_set_param(ab, value);
 +
  	if (ag->mlo_capable) {
  		for (i = 0; i < ag->num_chip; i++) {
  			ab = ag->ab[i];
+@@ -2074,6 +2111,7 @@ static ssize_t ath12k_debug_write_fw_rec
+ 				}
+ 
+ 				if (radioup) {
++					ath12k_debug_multipd_wmi_pdev_set_param(ab, ab->fw_recovery_support);
+ 					ret = ath12k_wmi_force_fw_hang_cmd(ar,
+ 									   recovery_mode,
+ 									   ATH12K_WMI_FW_HANG_DELAY, false);
+@@ -2082,8 +2120,10 @@ static ssize_t ath12k_debug_write_fw_rec
+ 					continue;
+ 			}
+ 		}
+-	} else
++	} else {
+ 		ab->fw_recovery_support = value ? true : false;
++		ath12k_debug_multipd_wmi_pdev_set_param(ab, ab->fw_recovery_support);
++	}
+ 
+ 	ret = count;
+ 
 --- a/drivers/net/wireless/ath/ath12k/wmi.h
 +++ b/drivers/net/wireless/ath/ath12k/wmi.h
 @@ -1231,6 +1231,7 @@ enum wmi_tlv_pdev_param {

@@ -15,7 +15,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1352,9 +1352,107 @@ static void mlme_timeout_event(struct wp
+@@ -1349,9 +1349,107 @@ static void mlme_timeout_event(struct wp
  }
  
  
@@ -124,7 +124,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  			    int link_id)
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
-@@ -1393,6 +1491,10 @@ static void mlme_event_mgmt(struct i802_
+@@ -1390,6 +1488,10 @@ static void mlme_event_mgmt(struct i802_
  	event.rx_mgmt.frame_len = len;
  	event.rx_mgmt.ssi_signal = ssi_signal;
  	event.rx_mgmt.drv_priv = bss;
@@ -135,7 +135,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  	event.rx_mgmt.ctx = bss->ctx;
  	event.rx_mgmt.link_id = link_id;
  
-@@ -1667,7 +1769,7 @@ static void mlme_event(struct i802_bss *
+@@ -1664,7 +1766,7 @@ static void mlme_event(struct i802_bss *
  		       struct nlattr *freq, struct nlattr *ack,
  		       struct nlattr *cookie, struct nlattr *sig,
  		       struct nlattr *wmm, struct nlattr *req_ie,
@@ -144,7 +144,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  {
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	u16 stype = 0, auth_type = 0;
-@@ -1766,7 +1868,7 @@ static void mlme_event(struct i802_bss *
+@@ -1763,7 +1865,7 @@ static void mlme_event(struct i802_bss *
  		break;
  	case NL80211_CMD_FRAME:
  		mlme_event_mgmt(bss, freq, sig, nla_data(frame),
@@ -153,7 +153,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  		break;
  	case NL80211_CMD_FRAME_TX_STATUS:
  		mlme_event_mgmt_tx_status(bss, cookie, nla_data(frame),
-@@ -4324,7 +4426,7 @@ static void do_process_drv_event(struct
+@@ -4217,7 +4319,7 @@ static void do_process_drv_event(struct
  			   tb[NL80211_ATTR_COOKIE],
  			   tb[NL80211_ATTR_RX_SIGNAL_DBM],
  			   tb[NL80211_ATTR_STA_WME],
@@ -162,7 +162,7 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
  			   tb[NL80211_ATTR_MLO_LINK_ID]);
  		break;
  	case NL80211_CMD_CONNECT:
-@@ -4622,6 +4724,7 @@ int process_bss_event(struct nl_msg *msg
+@@ -4517,6 +4619,7 @@ int process_bss_event(struct nl_msg *msg
  			   tb[NL80211_ATTR_COOKIE],
  			   tb[NL80211_ATTR_RX_SIGNAL_DBM],
  			   tb[NL80211_ATTR_STA_WME], NULL,

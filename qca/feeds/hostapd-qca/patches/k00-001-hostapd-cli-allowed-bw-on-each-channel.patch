@@ -9,11 +9,9 @@ Signed-off-by: Hari Chandrakanthan <haric@codeaurora.org>
  hostapd/hostapd_cli.c |  10 +--
  2 files changed, 185 insertions(+), 60 deletions(-)
 
-diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
-index 0403584..859e4e6 100644
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -3307,6 +3307,221 @@ fail:
+@@ -3505,6 +3505,221 @@ fail:
  }
  
  
@@ -233,25 +231,23 @@ index 0403584..859e4e6 100644
 +}
 +
  static int hostapd_ctrl_iface_remove_neighbor(struct hostapd_data *hapd,
-					      char *buf)
+ 					      char *buf)
  {
-@@ -3980,6 +4195,10 @@ static int hostapd_ctrl_iface_receive_process(struct hostapd_data *hapd,
-		if (radius_server_dac_request(hapd->radius_srv, buf + 12) < 0)
-			reply_len = -1;
+@@ -4615,6 +4830,10 @@ static int hostapd_ctrl_iface_receive_pr
+ 		if (radius_server_dac_request(hapd->radius_srv, buf + 12) < 0)
+ 			reply_len = -1;
  #endif /* RADIUS_SERVER */
 +	} else if(os_strcmp(buf, "CHANNEL_BW") == 0) {
 +		reply_len = hostapd_ctrl_iface_channel_bw(hapd->iface, reply,
 +							  reply_size);
 +
-	} else if (os_strncmp(buf, "GET_CAPABILITY ", 15) == 0) {
-		reply_len = hostapd_ctrl_iface_get_capability(
-			hapd, buf + 15, reply, reply_size);
-diff --git a/hostapd/hostapd_cli.c b/hostapd/hostapd_cli.c
-index e5fad36..78364e7 100644
+ 	} else if (os_strncmp(buf, "GET_CAPABILITY ", 15) == 0) {
+ 		reply_len = hostapd_ctrl_iface_get_capability(
+ 			hapd, buf + 15, reply, reply_size);
 --- a/hostapd/hostapd_cli.c
 +++ b/hostapd/hostapd_cli.c
-@@ -1402,6 +1402,11 @@ static int hostapd_cli_cmd_driver_flags(struct wpa_ctrl *ctrl, int argc,
-	return wpa_ctrl_command(ctrl, "DRIVER_FLAGS");
+@@ -1440,6 +1440,11 @@ static int hostapd_cli_cmd_driver_flags2
+ 	return wpa_ctrl_command(ctrl, "DRIVER_FLAGS2");
  }
  
 +static int hostapd_cli_cmd_channel_bw(struct wpa_ctrl *ctrl,
@@ -259,15 +255,15 @@ index e5fad36..78364e7 100644
 +{
 +	return wpa_ctrl_command(ctrl, "CHANNEL_BW");
 +}
-
+ 
  #ifdef CONFIG_DPP
-
-@@ -1789,6 +1794,8 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
-	  "=Add/Delete/Show/Clear deny MAC ACL" },
-	{ "poll_sta", hostapd_cli_cmd_poll_sta, hostapd_complete_stations,
-	  "<addr> = poll a STA to check connectivity with a QoS null frame" },
+ 
+@@ -1866,6 +1871,8 @@ static const struct hostapd_cli_cmd host
+ 	  "=Add/Delete/Show/Clear deny MAC ACL" },
+ 	{ "poll_sta", hostapd_cli_cmd_poll_sta, hostapd_complete_stations,
+ 	  "<addr> = poll a STA to check connectivity with a QoS null frame" },
 +	{ "channel_bw", hostapd_cli_cmd_channel_bw, NULL,
 +	  "= show allowed bandwidth on each channel"},
-	{ "req_beacon", hostapd_cli_cmd_req_beacon, NULL,
-	  "<addr> [req_mode=] <measurement request hexdump>  = send a Beacon report request to a station" },
-	{ "reload_wpa_psk", hostapd_cli_cmd_reload_wpa_psk, NULL,
+ 	{ "req_beacon", hostapd_cli_cmd_req_beacon, NULL,
+ 	  "<addr> [req_mode=] <measurement request hexdump>  = send a Beacon report request to a station" },
+ 	{ "req_link_measurement", hostapd_cli_cmd_req_link_measurement, NULL,

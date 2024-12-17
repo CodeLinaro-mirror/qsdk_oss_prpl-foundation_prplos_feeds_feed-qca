@@ -19,7 +19,7 @@ Signed-off-by: Sathishkumar Muruganandam <quic_murugana@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -946,7 +946,7 @@ static void hostapd_gen_probe_resp(struc
+@@ -1046,7 +1046,7 @@ static void hostapd_gen_probe_resp(struc
  	 * the Probe Response frame template for the unsolicited (i.e., not as
  	 * a response to a specific request) case. */
  	if (params->req && (!is_6ghz_op_class(hapd->iconf->op_class) ||

@@ -26,7 +26,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
 
 --- a/wpa_supplicant/sme.c
 +++ b/wpa_supplicant/sme.c
-@@ -557,6 +557,7 @@ static void sme_send_authentication(stru
+@@ -571,6 +571,7 @@ static void sme_send_authentication(stru
  	const u8 *mbo_ie;
  #endif /* CONFIG_MBO */
  	int omit_rsnxe = 0;
@@ -36,7 +36,7 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -4228,6 +4228,7 @@ static void wpa_supplicant_event_assoc(s
+@@ -4371,6 +4371,7 @@ static void wpa_supplicant_event_assoc(s
  #endif /* CONFIG_SME */
  
  	wpa_msg(wpa_s, MSG_INFO, "Associated with " MACSTR, MAC2STR(bssid));
@@ -46,11 +46,10 @@ Signed-off-by: Rameshkumar Sundaram <quic_ramess@quicinc.com>
  		 * initialized before association, but for other modes,
 --- a/wpa_supplicant/wpa_supplicant_i.h
 +++ b/wpa_supplicant/wpa_supplicant_i.h
-@@ -1617,7 +1617,7 @@ struct wpa_supplicant {
- #endif /* CONFIG_NAN_USD */
+@@ -1632,6 +1632,7 @@ struct wpa_supplicant {
+ 
  	/* Minimum bandwidth the driver supports RU puncturing */
  	u8 ru_punct_supp_bw;
--
 +	unsigned int ml_neigh_retries;
  };
  

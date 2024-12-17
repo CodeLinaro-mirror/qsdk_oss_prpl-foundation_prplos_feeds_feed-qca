@@ -13,7 +13,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 ---
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -630,6 +630,12 @@ static u8 * hostapd_eid_eht_basic_ml_com
+@@ -602,6 +602,12 @@ static u8 * hostapd_eid_eht_basic_ml_com
  	wpabuf_put_u8(buf, hapd->rx_cu_param.bpcc);
  
  	if (!hapd->conf->disable_eml_cap) {

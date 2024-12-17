@@ -47,7 +47,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -3244,6 +3244,11 @@ int ath12k_mode1_recovery_reconfig(struc
+@@ -3253,6 +3253,11 @@ int ath12k_mode1_recovery_reconfig(struc
  			if (!ahvif)
  				continue;
  
@@ -70,7 +70,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  enum nl80211_he_ru_alloc ath12k_mac_phy_he_ru_to_nl80211_he_ru_alloc(u16 ru_phy)
  {
-@@ -2175,7 +2177,10 @@ static void ath12k_control_beaconing(str
+@@ -2188,7 +2190,10 @@ static void ath12k_control_beaconing(str
  				    arvif->vdev_id, ret);
  
  		arvif->is_up = false;
@@ -82,7 +82,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		return;
  	}
  
-@@ -2209,6 +2214,7 @@ static void ath12k_control_beaconing(str
+@@ -2222,6 +2227,7 @@ static void ath12k_control_beaconing(str
  	arvif->is_up = true;
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_MAC, "mac vdev %d up\n", arvif->vdev_id);
@@ -90,7 +90,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  }
  
  static void ath12k_mac_handle_beacon_iter(void *data, u8 *mac,
-@@ -4732,6 +4738,91 @@ static void ath12k_mac_send_pwr_mode_upd
+@@ -4765,6 +4771,94 @@ static void ath12k_mac_send_pwr_mode_upd
  							   wdev);
  }
  
@@ -164,6 +164,9 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +	struct vdev_up_params params = { 0 };
 +	int ret;
 +
++	if (arvif->is_up)
++		return;
++
 +	params.vdev_id = arvif->vdev_id;
 +	params.aid = arvif->ahvif->aid;
 +	params.bssid = arvif->bssid;
@@ -182,7 +185,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  void ath12k_mac_bss_info_changed(struct ath12k *ar,
  				 struct ath12k_link_vif *arvif,
  				 struct ieee80211_bss_conf *info,
-@@ -12780,10 +12871,16 @@ static int ath12k_vdev_restart_sequence(
+@@ -12809,10 +12903,16 @@ static int ath12k_vdev_restart_sequence(
  	struct ieee80211_chanctx_conf old_chanctx;
  	struct vdev_up_params params = { 0 };
  	int ret = -EINVAL;
@@ -200,7 +203,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	memcpy(&arvif->chanctx, new_ctx, sizeof(*new_ctx));
  	spin_unlock_bh(&ar->data_lock);
  
-@@ -12805,7 +12902,8 @@ static int ath12k_vdev_restart_sequence(
+@@ -12834,7 +12934,8 @@ static int ath12k_vdev_restart_sequence(
  		ath12k_warn(ar->ab, "failed to restart vdev %d: %d\n",
  			    arvif->vdev_id, ret);
  		spin_lock_bh(&ar->data_lock);
@@ -210,7 +213,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		spin_unlock_bh(&ar->data_lock);
  		return ret;
  	}
-@@ -12819,32 +12917,37 @@ beacon_tmpl_setup:
+@@ -12848,32 +12949,37 @@ beacon_tmpl_setup:
  	if (!arvif->is_up)
  		return -EOPNOTSUPP;
  
@@ -267,7 +270,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	ret = ath12k_wmi_vdev_up(arvif->ar, &params);
  	if (ret) {
  		ath12k_warn(ar->ab, "failed to bring vdev up %d: %d\n",
-@@ -12857,7 +12960,9 @@ beacon_tmpl_setup:
+@@ -12886,7 +12992,9 @@ beacon_tmpl_setup:
  
  struct ath12k_mac_change_chanctx_arg {
  	struct ieee80211_chanctx_conf *ctx;
@@ -277,7 +280,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	int n_vifs;
  	int next_vif;
  	bool set_csa_active;
-@@ -12878,23 +12983,37 @@ ath12k_mac_change_chanctx_cnt_iter(void
+@@ -12907,23 +13015,37 @@ ath12k_mac_change_chanctx_cnt_iter(void
  	lockdep_assert_held(&ah->conf_mutex);
  	lockdep_assert_held(&arg->ar->conf_mutex);
  
@@ -324,7 +327,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  		arg->n_vifs++;
  	}
-@@ -12908,35 +13027,59 @@ ath12k_mac_change_chanctx_fill_iter(void
+@@ -12937,35 +13059,59 @@ ath12k_mac_change_chanctx_fill_iter(void
  	struct ath12k_link_vif *arvif;
  	struct ath12k_mac_change_chanctx_arg *arg = data;
  	struct ieee80211_chanctx_conf *ctx;
@@ -396,7 +399,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		arg->next_vif++;
  	}
  }
-@@ -13117,6 +13260,7 @@ ath12k_mac_update_vif_chan_extras(struct
+@@ -13146,6 +13292,7 @@ ath12k_mac_update_vif_chan_extras(struct
  static void
  ath12k_mac_update_vif_chan(struct ath12k *ar,
  			   struct ieee80211_vif_chanctx_switch *vifs,
@@ -404,7 +407,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			   int n_vifs)
  {
  	struct ath12k_base *ab = ar->ab;
-@@ -13125,6 +13269,7 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -13154,6 +13301,7 @@ ath12k_mac_update_vif_chan(struct ath12k
  	int ret;
  	int i, trans_vdev_index;
  	u64 vif_down_failed_map = 0;
@@ -412,7 +415,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	struct ieee80211_vif *tx_vif;
  	struct ieee80211_bss_conf *link;
  
-@@ -13141,18 +13286,24 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -13170,18 +13318,24 @@ ath12k_mac_update_vif_chan(struct ath12k
  
  	for (i = 0; i < n_vifs; i++) {
  		ahvif = (void *)vifs[i].vif->drv_priv;
@@ -440,7 +443,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  		if (!arvif->is_started) {
  			memcpy(&arvif->chanctx, vifs[i].new_ctx, sizeof(*vifs[i].new_ctx));
-@@ -13162,7 +13313,8 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -13191,7 +13345,8 @@ ath12k_mac_update_vif_chan(struct ath12k
  		if (!arvif->is_up)
  			continue;
  
@@ -450,7 +453,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		    ahvif == (struct ath12k_vif *)vifs[i].link_conf->mbssid_tx_vif->drv_priv) {
  			tx_vif = vifs[i].link_conf->mbssid_tx_vif;
  			tx_ahvif = ath12k_vif_to_ahvif(tx_vif);
-@@ -13202,23 +13354,31 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -13231,23 +13386,31 @@ ath12k_mac_update_vif_chan(struct ath12k
  
  	for (i = 0; i < n_vifs; i++) {
  		ahvif = (void *)vifs[i].vif->drv_priv;
@@ -492,7 +495,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		ret = ath12k_vdev_restart_sequence(arvif,
  						   vifs[i].new_ctx,
  						   vif_down_failed_map, i);
-@@ -13233,6 +13393,7 @@ ath12k_mac_update_vif_chan(struct ath12k
+@@ -13262,6 +13425,7 @@ ath12k_mac_update_vif_chan(struct ath12k
  static void
  ath12k_mac_update_vif_chan_mvr(struct ath12k *ar,
  			       struct ieee80211_vif_chanctx_switch *vifs,
@@ -500,7 +503,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			       int n_vifs)
  {
  	struct ath12k_base *ab = ar->ab;
-@@ -13241,10 +13402,12 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13270,10 +13434,12 @@ ath12k_mac_update_vif_chan_mvr(struct at
  	struct cfg80211_chan_def *chandef;
  	struct ieee80211_vif *tx_vif;
  	int ret, i, time_left, trans_vdev_index, vdev_idx, n_vdevs = 0;
@@ -514,7 +517,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	lockdep_assert_held(&ar->conf_mutex);
  
-@@ -13255,27 +13418,41 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13284,27 +13450,41 @@ ath12k_mac_update_vif_chan_mvr(struct at
  
  	ath12k_mac_update_rx_channel(ar, NULL, vifs, n_vifs);
  
@@ -560,7 +563,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		    ahvif == (struct ath12k_vif *)vifs[i].link_conf->mbssid_tx_vif->drv_priv) {
  			tx_vif = vifs[i].link_conf->mbssid_tx_vif;
  			tx_ahvif = ath12k_vif_to_ahvif(tx_vif);
-@@ -13301,7 +13478,7 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13330,7 +13510,7 @@ ath12k_mac_update_vif_chan_mvr(struct at
  	if (!n_vdevs) {
  		ath12k_dbg(ab, ATH12K_DBG_MAC,
  			   "mac 0 vdevs available to switch chan ctx via mvr\n");
@@ -569,7 +572,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	}
  
  	reinit_completion(&ar->mvr_complete);
-@@ -13310,15 +13487,16 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13339,15 +13519,16 @@ ath12k_mac_update_vif_chan_mvr(struct at
  					    vifs[0].new_ctx->radar_enabled);
  	if (ret) {
  		ath12k_warn(ab, "mac failed to send mvr command (%d)\n", ret);
@@ -588,7 +591,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	}
  
  	if (tx_arvif) {
-@@ -13333,10 +13511,12 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13362,10 +13543,12 @@ ath12k_mac_update_vif_chan_mvr(struct at
  				   tx_arvif->vdev_id);
  		}
  
@@ -602,7 +605,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			tx_arvif->pending_csa_up = true;
  
  		rcu_read_unlock();
-@@ -13353,14 +13533,21 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13382,14 +13565,21 @@ ath12k_mac_update_vif_chan_mvr(struct at
  
  	for (i = 0; i < n_vifs; i++) {
  		ahvif = (void *)vifs[i].vif->drv_priv;
@@ -626,7 +629,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			continue;
  
  		if (arvif->mvr_processing) {
-@@ -13371,39 +13558,50 @@ ath12k_mac_update_vif_chan_mvr(struct at
+@@ -13400,39 +13590,50 @@ ath12k_mac_update_vif_chan_mvr(struct at
  				   arvif->vdev_id);
  		}
  
@@ -688,7 +691,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	ath12k_mac_update_vif_chan_extras(ar, vifs, n_vifs);
  }
-@@ -13413,6 +13611,7 @@ ath12k_mac_update_active_vif_chan(struct
+@@ -13442,6 +13643,7 @@ ath12k_mac_update_active_vif_chan(struct
  				  struct ieee80211_chanctx_conf *ctx)
  {
  	struct ath12k_mac_change_chanctx_arg arg = { .ctx = ctx,
@@ -696,7 +699,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  						     .set_csa_active = true,
  						     .ar = ar };
  	struct ath12k_hw *ah = ar->ah;
-@@ -13431,6 +13630,11 @@ ath12k_mac_update_active_vif_chan(struct
+@@ -13460,6 +13662,11 @@ ath12k_mac_update_active_vif_chan(struct
  	if (!arg.vifs)
  		return;
  
@@ -708,7 +711,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	if (ar->csa_active_cnt)
  		ar->csa_active_cnt = 0;
  
-@@ -13439,8 +13643,9 @@ ath12k_mac_update_active_vif_chan(struct
+@@ -13468,8 +13675,9 @@ ath12k_mac_update_active_vif_chan(struct
  						   ath12k_mac_change_chanctx_fill_iter,
  						   &arg);
  
@@ -719,7 +722,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	kfree(arg.vifs);
  }
  
-@@ -14938,6 +15143,17 @@ exit:
+@@ -15002,6 +15210,17 @@ exit:
  	return ret;
  }
  
@@ -737,7 +740,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  static int
  ath12k_mac_op_switch_vif_chanctx(struct ieee80211_hw *hw,
  				 struct ieee80211_vif_chanctx_switch *vifs,
-@@ -14948,6 +15164,7 @@ ath12k_mac_op_switch_vif_chanctx(struct
+@@ -15012,6 +15231,7 @@ ath12k_mac_op_switch_vif_chanctx(struct
  	struct ath12k *curr_ar, *new_ar, *ar;
  	struct ieee80211_chanctx_conf *curr_ctx;
  	int i, ret = 0, next_ctx_idx = 0, curr_ctx_n_vifs = 0;
@@ -745,7 +748,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	mutex_lock(&ah->conf_mutex);
  
-@@ -15008,12 +15225,14 @@ ath12k_mac_op_switch_vif_chanctx(struct
+@@ -15072,12 +15292,14 @@ ath12k_mac_op_switch_vif_chanctx(struct
  		if (ar->csa_active_cnt >= curr_ctx_n_vifs)
  			ar->csa_active_cnt -= curr_ctx_n_vifs;
  
@@ -761,7 +764,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			ieee80211_iterate_active_interfaces_atomic(ah->hw,
  								   IEEE80211_IFACE_ITER_NORMAL,
  								   ath12k_mac_change_chanctx_cnt_iter,
-@@ -15031,17 +15250,27 @@ ath12k_mac_op_switch_vif_chanctx(struct
+@@ -15095,17 +15317,27 @@ ath12k_mac_op_switch_vif_chanctx(struct
  				goto unlock;
  			}
  
@@ -792,7 +795,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			goto next_ctx;
  		}
  
-@@ -15049,7 +15278,7 @@ update_vif_chan:
+@@ -15113,7 +15345,7 @@ update_vif_chan:
  		ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
  			   "mac chanctx switch n_vifs %d mode %d\n",
  			   i - next_ctx_idx + 1, mode);
@@ -803,7 +806,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  next_ctx:
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -16220,6 +16220,7 @@ int ath12k_wmi_pdev_multiple_vdev_restar
+@@ -16228,6 +16228,7 @@ int ath12k_wmi_pdev_multiple_vdev_restar
  					  struct wmi_pdev_multiple_vdev_restart_req_arg *arg)
  {
  	struct ath12k_wmi_pdev *wmi = ar->wmi;
@@ -811,7 +814,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	struct wmi_pdev_multiple_vdev_restart_request_cmd *cmd;
  	struct ath12k_wmi_channel_params *chan;
  	struct wmi_tlv *tlv;
-@@ -16232,8 +16233,13 @@ int ath12k_wmi_pdev_multiple_vdev_restar
+@@ -16240,8 +16241,13 @@ int ath12k_wmi_pdev_multiple_vdev_restar
  	int ret, len, i;
  	bool device_params_present = false;
  
@@ -840,7 +843,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  struct wmi_pdev_multiple_vdev_restart_req_arg {
 --- a/drivers/net/wireless/ath/ath12k/mac.h
 +++ b/drivers/net/wireless/ath/ath12k/mac.h
-@@ -232,4 +232,5 @@ int ath12k_mac_op_set_scs(struct wireles
+@@ -234,4 +234,5 @@ int ath12k_mac_op_set_scs(struct wireles
  
  void ath12k_agile_cac_abort_work(struct work_struct *work);
  bool ath12k_mac_is_bridge_vdev(struct ath12k_link_vif *arvif);

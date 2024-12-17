@@ -16,7 +16,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3484,6 +3484,16 @@ static int hostapd_config_fill(struct ho
+@@ -3550,6 +3550,16 @@ static int hostapd_config_fill(struct ho
  			}
  			conf->rate_type = BEACON_RATE_HE;
  			conf->beacon_rate = val;
@@ -58,7 +58,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
  enum eap_proxy_sim_state {
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1486,8 +1486,9 @@ struct wpa_driver_ap_params {
+@@ -1517,8 +1517,9 @@ struct wpa_driver_ap_params {
  	 * This parameter can be used to set a specific Beacon frame data rate
  	 * for the BSS. The interpretation of this value depends on the
  	 * rate_type (legacy: in 100 kbps units, HT: HT-MCS, VHT: VHT-MCS,

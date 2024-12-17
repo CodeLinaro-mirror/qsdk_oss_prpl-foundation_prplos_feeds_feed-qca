@@ -22,7 +22,7 @@ Signed-off-by: Aloka Dixit <quic_alokad@quicinc.com>
 
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -1468,6 +1468,9 @@ setup_mld:
+@@ -1538,6 +1538,9 @@ setup_mld:
  	}
  #endif /* CONFIG_IEEE80211BE */
  

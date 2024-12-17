@@ -16,7 +16,7 @@ Signed-off-by: Muna Sinada <msinada@codeaurora.org>
 
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -240,6 +240,8 @@ struct hostapd_config * hostapd_config_d
+@@ -241,6 +241,8 @@ struct hostapd_config * hostapd_config_d
  	conf->fragm_threshold = -2; /* user driver default: 2346 */
  	/* Set to invalid value means do not add Power Constraint IE */
  	conf->local_pwr_constraint = -1;
@@ -25,7 +25,7 @@ Signed-off-by: Muna Sinada <msinada@codeaurora.org>
  
  	conf->wmm_ac_params[0] = ac_be;
  	conf->wmm_ac_params[1] = ac_bk;
-@@ -1558,7 +1560,7 @@ int hostapd_config_check(struct hostapd_
+@@ -1576,7 +1578,7 @@ int hostapd_config_check(struct hostapd_
  		return -1;
  	}
  

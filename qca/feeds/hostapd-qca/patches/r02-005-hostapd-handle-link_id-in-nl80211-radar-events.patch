@@ -24,7 +24,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 
 --- a/src/ap/ap_drv_ops.c
 +++ b/src/ap/ap_drv_ops.c
-@@ -1025,6 +1025,16 @@ int hostapd_start_dfs_cac(struct hostapd
+@@ -1023,6 +1023,16 @@ int hostapd_start_dfs_cac(struct hostapd
  	}
  	data.radar_background = radar_background;
  
@@ -43,7 +43,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		if (radar_background)
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1368,6 +1368,13 @@ hostapd_dfs_start_channel_switch_backgro
+@@ -1365,6 +1365,13 @@ hostapd_dfs_start_channel_switch_backgro
  		hostapd_get_oper_centr_freq_seg1_idx(iface->conf));
  }
  
@@ -57,7 +57,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
  			     int ht_enabled, int chan_offset, int chan_width,
-@@ -1378,6 +1385,12 @@ int hostapd_dfs_complete_cac(struct host
+@@ -1375,6 +1382,12 @@ int hostapd_dfs_complete_cac(struct host
  		success, freq, ht_enabled, chan_offset, chan_width, cf1, cf2,
  		iface->radar_detected);
  
@@ -70,7 +70,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	if (success) {
  		/* Complete iface/ap configuration */
  		if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) {
-@@ -1449,6 +1462,12 @@ int hostapd_dfs_pre_cac_expired(struct h
+@@ -1447,6 +1460,12 @@ int hostapd_dfs_pre_cac_expired(struct h
  		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
  		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
  
@@ -83,7 +83,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	hostapd_ubus_notify_radar_detected(iface, freq, chan_width, cf1, cf2);
  
  	/* Proceed only if DFS is not offloaded to the driver */
-@@ -1824,6 +1843,12 @@ int hostapd_dfs_nop_finished(struct host
+@@ -1819,6 +1838,12 @@ int hostapd_dfs_nop_finished(struct host
  		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
  		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
  
@@ -96,7 +96,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	/* Proceed only if DFS is not offloaded to the driver */
  	if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
  		return 0;
-@@ -1884,6 +1909,12 @@ int hostapd_dfs_start_cac(struct hostapd
+@@ -1879,6 +1904,12 @@ int hostapd_dfs_start_cac(struct hostapd
  	u8 channel_no, cf1_ch_no;
  	bool is_background_event = hostapd_dfs_is_background_event(iface, freq);
  
@@ -111,7 +111,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	} else {
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2461,30 +2461,61 @@ static void nl80211_connect_failed_event
+@@ -2514,30 +2514,61 @@ static void nl80211_connect_failed_event
  	wpa_supplicant_event(drv->ctx, EVENT_CONNECT_FAILED_REASON, &data);
  }
  
@@ -185,7 +185,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	/* Check HT params */
  	if (tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]) {
  		data.dfs_event.ht_enabled = 1;
-@@ -2521,38 +2552,68 @@ static void nl80211_radar_event(struct w
+@@ -2574,38 +2605,68 @@ static void nl80211_radar_event(struct w
  	if (tb[NL80211_ATTR_RADAR_BITMAP])
  		data.dfs_event.radar_bitmap = nla_get_u16(tb[NL80211_ATTR_RADAR_BITMAP]);
  
@@ -284,7 +284,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  static void nl80211_awgn_event(struct wpa_driver_nl80211_data *drv,
-@@ -4131,7 +4192,7 @@ static void do_process_drv_event(struct
+@@ -4194,7 +4255,7 @@ static void do_process_drv_event(struct
  		mlme_event_ft_event(drv, tb);
  		break;
  	case NL80211_CMD_RADAR_DETECT:
@@ -292,10 +292,10 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +		nl80211_radar_event(bss, tb);
  		break;
  	case NL80211_CMD_STOP_AP:
- 		nl80211_stop_ap(drv, tb);
+ 		nl80211_stop_ap(bss, tb);
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -10630,9 +10630,22 @@ static int nl80211_start_radar_detection
+@@ -10774,9 +10774,22 @@ static int nl80211_start_radar_detection
  		return -1;
  	}
  

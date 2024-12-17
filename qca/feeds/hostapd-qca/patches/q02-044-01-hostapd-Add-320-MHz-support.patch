@@ -33,7 +33,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1288,7 +1288,8 @@ hostapd_set_oper_chwidth(struct hostapd_
+@@ -1301,7 +1301,8 @@ hostapd_set_oper_chwidth(struct hostapd_
  		oper_chwidth = CONF_OPER_CHWIDTH_160MHZ;
  #endif /* CONFIG_IEEE80211BE */
  #ifdef CONFIG_IEEE80211AX
@@ -56,7 +56,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  		u16 punct_bitmap = hostapd_get_punct_bitmap(hapd);
 --- a/src/drivers/driver_nl80211_capa.c
 +++ b/src/drivers/driver_nl80211_capa.c
-@@ -1740,6 +1740,8 @@ static void phy_info_freq(struct hostapd
+@@ -1753,6 +1753,8 @@ static void phy_info_freq(struct hostapd
  		chan->allowed_bw &= ~HOSTAPD_CHAN_WIDTH_80;
  	if (tb_freq[NL80211_FREQUENCY_ATTR_NO_160MHZ])
  		chan->allowed_bw &= ~HOSTAPD_CHAN_WIDTH_160;

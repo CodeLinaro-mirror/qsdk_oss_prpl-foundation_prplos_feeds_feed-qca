@@ -3,16 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
+PKG_BRANCH:=win.nss.1.0.r24
 PKG_RELEASE:=2
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=3d4eecf57560b6c02ce1567ab5995d4a24b42ab5
 
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
-
-PKG_BUILD_DEPENDS :=
-MAKE_OPTS:=
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -29,7 +28,7 @@ define KernelPackage/qca-nss-ppe
   TITLE:=Kernel driver for PPE (core driver)
   DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
 		+kmod-qca-ssdk-qca-nohnat \
-		+!TARGET_ipq53xx_ipq53xx_32_QSDK_256:kmod-nat46-qca
+		+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-nat46-qca
   FILES:=$(PKG_BUILD_DIR)/drv/ppe_drv/qca-nss-ppe.ko
   AUTOLOAD:=$(call AutoLoad,31,qca-nss-ppe)
 endef

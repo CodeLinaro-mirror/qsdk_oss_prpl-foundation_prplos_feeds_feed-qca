@@ -30,11 +30,9 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
  wpa_supplicant/wpa_supplicant_i.h |  1 -
  9 files changed, 55 insertions(+), 19 deletions(-)
 
-diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
-index 4dc093e..923f22c 100644
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -1342,8 +1342,9 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
+@@ -1288,8 +1288,9 @@ static int hostapd_ctrl_iface_set(struct
  #endif /* CONFIG_MBO */
  #ifdef CONFIG_DPP
  	} else if (os_strcasecmp(cmd, "dpp_configurator_params") == 0) {
@@ -46,11 +44,9 @@ index 4dc093e..923f22c 100644
  #ifdef CONFIG_DPP2
  		dpp_controller_set_params(hapd->iface->interfaces->dpp, value);
  #endif /* CONFIG_DPP2 */
-diff --git a/src/ap/dpp_hostapd.c b/src/ap/dpp_hostapd.c
-index 40f9560..c664d81 100644
 --- a/src/ap/dpp_hostapd.c
 +++ b/src/ap/dpp_hostapd.c
-@@ -1127,7 +1127,8 @@ static void hostapd_dpp_rx_auth_req(struct hostapd_data *hapd, const u8 *src,
+@@ -1133,7 +1133,8 @@ static void hostapd_dpp_rx_auth_req(stru
  	}
  	hostapd_dpp_set_testing_options(hapd, hapd->dpp_auth);
  	if (dpp_set_configurator(hapd->dpp_auth,
@@ -60,7 +56,7 @@ index 40f9560..c664d81 100644
  		dpp_auth_deinit(hapd->dpp_auth);
  		hapd->dpp_auth = NULL;
  		return;
-@@ -1731,7 +1732,8 @@ hostapd_dpp_rx_presence_announcement(struct hostapd_data *hapd, const u8 *src,
+@@ -1737,7 +1738,8 @@ hostapd_dpp_rx_presence_announcement(str
  		return;
  	hostapd_dpp_set_testing_options(hapd, auth);
  	if (dpp_set_configurator(auth,
@@ -70,7 +66,7 @@ index 40f9560..c664d81 100644
  		dpp_auth_deinit(auth);
  		return;
  	}
-@@ -1829,7 +1831,9 @@ hostapd_dpp_rx_reconfig_announcement(struct hostapd_data *hapd, const u8 *src,
+@@ -1835,7 +1837,9 @@ hostapd_dpp_rx_reconfig_announcement(str
  	if (!auth)
  		return;
  	hostapd_dpp_set_testing_options(hapd, auth);
@@ -81,7 +77,7 @@ index 40f9560..c664d81 100644
  		dpp_auth_deinit(auth);
  		return;
  	}
-@@ -3539,8 +3543,6 @@ void hostapd_dpp_deinit(struct hostapd_data *hapd)
+@@ -3554,8 +3558,6 @@ void hostapd_dpp_deinit(struct hostapd_d
  	hapd->dpp_auth = NULL;
  	hostapd_dpp_pkex_remove(hapd, "*");
  	hapd->dpp_pkex = NULL;
@@ -90,7 +86,7 @@ index 40f9560..c664d81 100644
  	os_free(hapd->dpp_pkex_auth_cmd);
  	hapd->dpp_pkex_auth_cmd = NULL;
  }
-@@ -3582,7 +3584,7 @@ int hostapd_dpp_controller_start(struct hostapd_data *hapd, const char *cmd)
+@@ -3597,7 +3599,7 @@ int hostapd_dpp_controller_start(struct
  
  		config.qr_mutual = os_strstr(cmd, " qr=mutual") != NULL;
  	}
@@ -99,11 +95,9 @@ index 40f9560..c664d81 100644
  	return dpp_controller_start(hapd->iface->interfaces->dpp, &config);
  }
  
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index 12b47bf..c2e4797 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -486,7 +486,6 @@ struct hostapd_data {
+@@ -504,7 +504,6 @@ struct hostapd_data {
  	char *dpp_pkex_identifier;
  	enum dpp_pkex_ver dpp_pkex_ver;
  	char *dpp_pkex_auth_cmd;
@@ -111,11 +105,9 @@ index 12b47bf..c2e4797 100644
  	struct os_reltime dpp_last_init;
  	struct os_reltime dpp_init_iter_start;
  	unsigned int dpp_init_max_tries;
-diff --git a/src/common/dpp.c b/src/common/dpp.c
-index 837120d..a36d07d 100644
 --- a/src/common/dpp.c
 +++ b/src/common/dpp.c
-@@ -4519,6 +4519,38 @@ dpp_bootstrap_get_id(struct dpp_global *dpp, unsigned int id)
+@@ -4591,6 +4591,38 @@ dpp_bootstrap_get_id(struct dpp_global *
  }
  
  
@@ -154,7 +146,7 @@ index 837120d..a36d07d 100644
  int dpp_bootstrap_remove(struct dpp_global *dpp, const char *id)
  {
  	unsigned int id_val;
-@@ -5036,6 +5068,7 @@ void dpp_global_clear(struct dpp_global *dpp)
+@@ -5108,6 +5140,7 @@ void dpp_global_clear(struct dpp_global
  	dpp_tcp_init_flush(dpp);
  	dpp_relay_flush_controllers(dpp);
  	dpp_controller_stop(dpp);
@@ -162,11 +154,9 @@ index 837120d..a36d07d 100644
  #endif /* CONFIG_DPP2 */
  }
  
-diff --git a/src/common/dpp.h b/src/common/dpp.h
-index 0f843da..6787287 100644
 --- a/src/common/dpp.h
 +++ b/src/common/dpp.h
-@@ -821,7 +821,9 @@ struct dpp_global * dpp_global_init(struct dpp_global_config *config);
+@@ -829,7 +829,9 @@ struct dpp_global * dpp_global_init(stru
  void dpp_global_clear(struct dpp_global *dpp);
  void dpp_global_deinit(struct dpp_global *dpp);
  void dpp_notify_auth_success(struct dpp_authentication *auth, int initiator);
@@ -177,8 +167,6 @@ index 0f843da..6787287 100644
  /* dpp_reconfig.c */
  
  struct wpabuf * dpp_build_reconfig_announcement(const u8 *csign_key,
-diff --git a/src/common/dpp_i.h b/src/common/dpp_i.h
-index dfa4a3c..edb2fb2 100644
 --- a/src/common/dpp_i.h
 +++ b/src/common/dpp_i.h
 @@ -17,6 +17,7 @@ struct dpp_global {
@@ -189,11 +177,9 @@ index dfa4a3c..edb2fb2 100644
  #ifdef CONFIG_DPP2
  	struct dl_list controllers; /* struct dpp_relay_controller */
  	struct dpp_relay_controller *tmp_controller;
-diff --git a/wpa_supplicant/ctrl_iface.c b/wpa_supplicant/ctrl_iface.c
-index a8f9f98..6a6a1f0 100644
 --- a/wpa_supplicant/ctrl_iface.c
 +++ b/wpa_supplicant/ctrl_iface.c
-@@ -673,8 +673,9 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
+@@ -675,8 +675,9 @@ static int wpa_supplicant_ctrl_iface_set
  		wpa_s->no_keep_alive = !!atoi(value);
  #ifdef CONFIG_DPP
  	} else if (os_strcasecmp(cmd, "dpp_configurator_params") == 0) {
@@ -205,11 +191,9 @@ index a8f9f98..6a6a1f0 100644
  #ifdef CONFIG_DPP2
  		dpp_controller_set_params(wpa_s->dpp, value);
  #endif /* CONFIG_DPP2 */
-diff --git a/wpa_supplicant/dpp_supplicant.c b/wpa_supplicant/dpp_supplicant.c
-index 96f8c76..a9108ee 100644
 --- a/wpa_supplicant/dpp_supplicant.c
 +++ b/wpa_supplicant/dpp_supplicant.c
-@@ -1188,7 +1188,7 @@ static void wpas_dpp_rx_auth_req(struct wpa_supplicant *wpa_s, const u8 *src,
+@@ -1301,7 +1301,7 @@ static void wpas_dpp_rx_auth_req(struct
  	}
  	wpas_dpp_set_testing_options(wpa_s, wpa_s->dpp_auth);
  	if (dpp_set_configurator(wpa_s->dpp_auth,
@@ -218,7 +202,7 @@ index 96f8c76..a9108ee 100644
  		dpp_auth_deinit(wpa_s->dpp_auth);
  		wpa_s->dpp_auth = NULL;
  		return;
-@@ -2311,7 +2311,7 @@ wpas_dpp_rx_presence_announcement(struct wpa_supplicant *wpa_s, const u8 *src,
+@@ -2470,7 +2470,7 @@ wpas_dpp_rx_presence_announcement(struct
  	if (!auth)
  		return;
  	wpas_dpp_set_testing_options(wpa_s, auth);
@@ -227,7 +211,7 @@ index 96f8c76..a9108ee 100644
  		dpp_auth_deinit(auth);
  		return;
  	}
-@@ -2412,7 +2412,7 @@ wpas_dpp_rx_reconfig_announcement(struct wpa_supplicant *wpa_s, const u8 *src,
+@@ -2571,7 +2571,7 @@ wpas_dpp_rx_reconfig_announcement(struct
  	if (!auth)
  		return;
  	wpas_dpp_set_testing_options(wpa_s, auth);
@@ -236,7 +220,7 @@ index 96f8c76..a9108ee 100644
  		dpp_auth_deinit(auth);
  		return;
  	}
-@@ -4735,8 +4735,6 @@ void wpas_dpp_deinit(struct wpa_supplicant *wpa_s)
+@@ -4905,8 +4905,6 @@ void wpas_dpp_deinit(struct wpa_supplica
  	wpas_dpp_stop(wpa_s);
  	wpas_dpp_pkex_remove(wpa_s, "*");
  	os_memset(wpa_s->dpp_intro_bssid, 0, ETH_ALEN);
@@ -245,7 +229,7 @@ index 96f8c76..a9108ee 100644
  	dpp_global_clear(wpa_s->dpp);
  }
  
-@@ -4859,7 +4857,7 @@ int wpas_dpp_controller_start(struct wpa_supplicant *wpa_s, const char *cmd)
+@@ -5029,7 +5027,7 @@ int wpas_dpp_controller_start(struct wpa
  
  		config.qr_mutual = os_strstr(cmd, " qr=mutual") != NULL;
  	}
@@ -254,11 +238,9 @@ index 96f8c76..a9108ee 100644
  	return dpp_controller_start(wpa_s->dpp, &config);
  }
  
-diff --git a/wpa_supplicant/wpa_supplicant_i.h b/wpa_supplicant/wpa_supplicant_i.h
-index ec30f58..42495f4 100644
 --- a/wpa_supplicant/wpa_supplicant_i.h
 +++ b/wpa_supplicant/wpa_supplicant_i.h
-@@ -1446,7 +1446,6 @@ struct wpa_supplicant {
+@@ -1503,7 +1503,6 @@ struct wpa_supplicant {
  	char *dpp_pkex_identifier;
  	enum dpp_pkex_ver dpp_pkex_ver;
  	char *dpp_pkex_auth_cmd;
@@ -266,6 +248,3 @@ index ec30f58..42495f4 100644
  	struct os_reltime dpp_last_init;
  	struct os_reltime dpp_init_iter_start;
  	unsigned int dpp_init_max_tries;
--- 
-2.34.1
-

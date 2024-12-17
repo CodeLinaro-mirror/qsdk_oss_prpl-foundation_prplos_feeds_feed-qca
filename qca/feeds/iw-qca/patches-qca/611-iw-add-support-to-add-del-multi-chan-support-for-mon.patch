@@ -30,38 +30,6 @@ Signed-off-by: Karthikeyan Kathirvel <quic_kathirve@quicinc.com>
  DECLARE_SECTION(station);
  DECLARE_SECTION(survey);
  DECLARE_SECTION(switch);
---- a/nl80211.h
-+++ b/nl80211.h
-@@ -2860,6 +2860,16 @@ enum nl80211_commands {
-  * @NL80211_ATTR_WIPHY_ANTENNA_GAIN: Configured antenna gain. Used to reduce
-  *	transmit power to stay within regulatory limits. u32, dBi.
-  *
-+ * @NL80211_ATTR_RADAR_BITMAP: (u16) RADAR bitmap where the lowest bit
-+ *  corresponds to the lowest 20MHZ channel. Each bit set to 1
-+ *  indicates that radar is detected in that sub-channel.
-+ *
-+ * @NL80211_ATTR_ADD_MULTI_CHAN: Add channel to the radio, this is used
-+ *  for monitor interface (u32).
-+ *
-+ * @NL80211_ATTR_DEL_MULTI_CHAN: Delete channel from the radio, this is used
-+ *  for monitor interface (u32).
-+ *
-  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
-  * @NL80211_ATTR_MAX: highest attribute number currently defined
-  * @__NL80211_ATTR_AFTER_LAST: internal use
-@@ -3425,6 +3435,12 @@ enum nl80211_attrs {
- 
- 	NL80211_ATTR_MULTI_HW_MACS,
- 
-+	NL80211_ATTR_RADAR_BITMAP,
-+
-+	NL80211_ATTR_EHT_240MHZ_CAPABILITY,
-+
-+	NL80211_ATTR_ADD_MULTI_CHAN,
-+	NL80211_ATTR_DEL_MULTI_CHAN,
- 	/* add attributes here, update the policy in nl80211.c */
- 
- 	__NL80211_ATTR_AFTER_LAST,
 --- a/phy.c
 +++ b/phy.c
 @@ -15,6 +15,8 @@

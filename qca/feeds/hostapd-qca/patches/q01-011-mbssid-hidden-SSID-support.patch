@@ -20,7 +20,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -908,6 +908,7 @@ static void hostapd_gen_probe_resp(struc
+@@ -1010,6 +1010,7 @@ static void hostapd_gen_probe_resp(struc
  {
  	u8 *pos;
  	size_t buflen;
@@ -28,7 +28,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  
  	hapd = hostapd_mbssid_get_tx_bss(hapd);
  
-@@ -2196,13 +2197,15 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2262,13 +2263,15 @@ int ieee802_11_build_ap_params(struct ho
  
  	/* SSID */
  	*pos++ = WLAN_EID_SSID;
@@ -53,7 +53,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  		os_memcpy(pos, hapd->conf->ssid.ssid,
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -8088,11 +8088,16 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -8283,11 +8283,16 @@ static size_t hostapd_eid_mbssid_elem_le
  		 * Sublement ID: 1 octet
  		 * Length: 1 octet
  		 * Nontransmitted capabilities: 4 octets
@@ -72,7 +72,7 @@ Signed-off-by: Sowmiya Sree Elavalagan <quic_ssreeela@quicinc.com>
  
  		if (frame_type == WLAN_FC_STYPE_BEACON)
  			nontx_profile_len += 2;
-@@ -8225,9 +8230,18 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -8420,9 +8425,18 @@ static u8 * hostapd_eid_mbssid_elem(stru
  		eid += sizeof(capab_info);
  
  		*eid++ = WLAN_EID_SSID;

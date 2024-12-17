@@ -23,7 +23,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
 
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -229,6 +229,101 @@ static int ieee802_11_parse_vendor_speci
+@@ -251,6 +251,101 @@ static int ieee802_11_parse_vendor_speci
  	return 0;
  }
  
@@ -125,7 +125,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  
  static int ieee802_11_parse_mle(const u8 *pos, size_t elen, size_t **total_len,
  				struct ieee802_11_elems *elems,
-@@ -1685,28 +1780,7 @@ int ieee80211_chaninfo_to_channel(unsign
+@@ -1717,28 +1812,7 @@ int ieee80211_chaninfo_to_channel(unsign
  	return 0;
  }
  
@@ -155,7 +155,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  {
  	int i;
  
-@@ -2769,82 +2843,6 @@ size_t add_multi_ap_ie(u8 *buf, size_t l
+@@ -2800,82 +2874,6 @@ size_t add_multi_ap_ie(u8 *buf, size_t l
  	return pos - buf;
  }
  
@@ -238,7 +238,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  static u8
  global_op_class_from_country_array(u8 op_class, size_t array_size,
  				   const struct country_op_class *country_array)
-@@ -2868,16 +2866,16 @@ u8 country_to_global_op_class(const char
+@@ -2899,16 +2897,16 @@ u8 country_to_global_op_class(const char
  
  	if (country_match(us_op_class_cc, country)) {
  		country_array = us_op_class;
@@ -259,7 +259,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  	} else {
  		/*
  		 * Countries that do not match any of the above countries use
-@@ -3527,3 +3525,11 @@ const u8 * get_basic_mle_mld_addr(const
+@@ -3560,3 +3558,11 @@ const u8 * get_basic_mle_mld_addr(const
  
  	return &buf[mld_addr_pos];
  }
@@ -273,7 +273,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
 +}
 --- a/src/common/ieee802_11_common.h
 +++ b/src/common/ieee802_11_common.h
-@@ -193,6 +193,41 @@ struct ieee802_11_elems {
+@@ -206,6 +206,41 @@ struct ieee802_11_elems {
  
  typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
  
@@ -315,7 +315,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
  				struct ieee802_11_elems *elems,
  				int show_errors);
-@@ -234,6 +269,7 @@ int hostapd_config_tx_queue(struct hosta
+@@ -247,6 +282,7 @@ int hostapd_config_tx_queue(struct hosta
  			    const char *name, const char *val);
  enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel);
  int ieee80211_chan_to_freq(const char *country, u8 op_class, u8 chan);
@@ -323,7 +323,7 @@ Signed-off-by: Naveen S <quic_naves@quicinc.com>
  enum hostapd_hw_mode
  ieee80211_freq_to_channel_ext(unsigned int freq, int sec_channel,
  			      enum oper_chan_width chanwidth,
-@@ -281,11 +317,6 @@ u16 check_multi_ap_ie(const u8 *multi_ap
+@@ -294,11 +330,6 @@ u16 check_multi_ap_ie(const u8 *multi_ap
  size_t add_multi_ap_ie(u8 *buf, size_t len,
  		       const struct multi_ap_params *multi_ap);
  

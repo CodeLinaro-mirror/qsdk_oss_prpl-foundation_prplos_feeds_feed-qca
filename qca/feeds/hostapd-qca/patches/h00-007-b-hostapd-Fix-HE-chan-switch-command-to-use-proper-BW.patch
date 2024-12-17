@@ -20,27 +20,15 @@ Signed-off-by: Lavanya Suresh <lavaks@codeaurora.org>
 
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -4564,14 +4564,20 @@ hostapd_switch_channel_fallback(struct h
- 	iface->freq = freq_params->freq;
- 	iface->conf->channel = freq_params->channel;
- 	iface->conf->secondary_channel = freq_params->sec_channel_offset;
--	hostapd_set_oper_centr_freq_seg0_idx(iface->conf, seg0_idx);
--	hostapd_set_oper_centr_freq_seg1_idx(iface->conf, seg1_idx);
--	hostapd_set_oper_chwidth(iface->conf, bw);
- 	iface->conf->ieee80211n = freq_params->ht_enabled;
- 	iface->conf->ieee80211ac = freq_params->vht_enabled;
- 	iface->conf->ieee80211ax = freq_params->he_enabled;
+@@ -4714,6 +4714,11 @@ hostapd_switch_channel_fallback(struct h
  	iface->conf->ieee80211be = freq_params->eht_enabled;
  
-+	hostapd_set_oper_centr_freq_seg0_idx(iface->conf, seg0_idx);
-+	hostapd_set_oper_centr_freq_seg1_idx(iface->conf, seg1_idx);
-+	hostapd_set_oper_chwidth(iface->conf, bw);
-+
-+	/*
+ 	/*
 +	 * Resetting operating class to avoid referring previous values
 +	 */
 +	iface->conf->op_class = 0;
 +
- 	/*
++	/*
  	 * cs_params must not be cleared earlier because the freq_params
  	 * argument may actually point to one of these.
+ 	 * These params will be cleared during interface disable below.

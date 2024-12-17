@@ -27,7 +27,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4975,6 +4975,15 @@ static int hostapd_config_fill(struct ho
+@@ -5052,6 +5052,15 @@ static int hostapd_config_fill(struct ho
  		bss->disable_11ax = !!atoi(pos);
  	} else if (os_strcmp(buf, "disable_11be") == 0) {
  		bss->disable_11be = !!atoi(pos);
@@ -57,7 +57,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  # item allows this list be filtered so that only the listed rates will be left
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -966,6 +966,7 @@ struct hostapd_bss_config {
+@@ -981,6 +981,7 @@ struct hostapd_bss_config {
  	u8 ext_capa[EXT_CAPA_MAX_LEN];
  
  	u8 rnr;
@@ -67,7 +67,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -2525,6 +2525,8 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2606,6 +2606,8 @@ int ieee802_11_build_ap_params(struct ho
  		}
  	}
  
@@ -78,7 +78,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	    !hapd->conf->disable_11be) {
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1358,11 +1358,18 @@ struct wpa_driver_associate_params {
+@@ -1383,11 +1383,18 @@ struct wpa_driver_associate_params {
  	enum sae_pwe sae_pwe;
  
  	/**
@@ -101,7 +101,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	 * disable_eht - Disable EHT for this connection
  	 */
  	int disable_eht;
-@@ -1790,6 +1797,13 @@ struct wpa_driver_ap_params {
+@@ -1821,6 +1828,13 @@ struct wpa_driver_ap_params {
  	bool ema;
  
  	/**
@@ -115,7 +115,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	 * punct_bitmap - Preamble puncturing bitmap
  	 * Each bit corresponds to a 20 MHz subchannel, the lowest bit for the
  	 * channel with the lowest frequency. A bit set to 1 indicates that the
-@@ -1895,6 +1909,7 @@ struct wpa_driver_mesh_join_params {
+@@ -1926,6 +1940,7 @@ struct wpa_driver_mesh_join_params {
  	unsigned int flags;
  	bool handle_dfs;
  	int mcast_rate;
@@ -125,7 +125,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  struct wpa_driver_set_key_params {
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -5103,6 +5103,7 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5133,6 +5133,7 @@ static int wpa_driver_nl80211_set_ap(voi
  	wpa_printf(MSG_DEBUG, "nl80211: beacon_rate=%u", params->beacon_rate);
  	wpa_printf(MSG_DEBUG, "nl80211: rate_type=%d", params->rate_type);
  	wpa_printf(MSG_DEBUG, "nl80211: dtim_period=%d", params->dtim_period);
@@ -133,7 +133,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	wpa_printf(MSG_DEBUG, "nl80211: ssid=%s",
  		   wpa_ssid_txt(params->ssid, params->ssid_len));
  	if (!(msg = nl80211_bss_msg(bss, 0, cmd)) ||
-@@ -5114,7 +5115,9 @@ static int wpa_driver_nl80211_set_ap(voi
+@@ -5144,7 +5145,9 @@ static int wpa_driver_nl80211_set_ap(voi
  	    nl80211_put_beacon_rate(msg, drv->capa.flags, drv->capa.flags2,
  				    params) ||
  	    nl80211_put_dtim_period(msg, params->dtim_period) ||
@@ -144,7 +144,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  		goto fail;
  
  	if (params->mld_ap) {
-@@ -12122,7 +12125,9 @@ static int nl80211_join_mesh(struct i802
+@@ -12307,7 +12310,9 @@ static int nl80211_join_mesh(struct i802
  	    nl80211_put_mesh_id(msg, params->meshid, params->meshid_len) ||
  	    nl80211_put_beacon_int(msg, params->beacon_int) ||
  	    nl80211_put_mcast_rate(msg, params->mcast_rate) ||
@@ -165,7 +165,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
  	{ INT_RANGE(disable_eht, 0, 1)},
  	{ INT_RANGE(enable_4addr_mode, 0, 1)},
  	{ INT_RANGE(max_idle, 0, 65535)},
-@@ -3383,6 +3384,7 @@ void wpa_config_set_network_defaults(str
+@@ -3385,6 +3386,7 @@ void wpa_config_set_network_defaults(str
  #endif /* CONFIG_MACSEC */
  	ssid->mac_addr = WPAS_MAC_ADDR_STYLE_NOT_SET;
  	ssid->max_oper_chwidth = DEFAULT_MAX_OPER_CHWIDTH;
@@ -182,7 +182,7 @@ Signed-off-by: Maharaja Kennadyrajan <mkenna@codeaurora.org>
 +	INT(beacon_tx_mode);
  	INT(enable_4addr_mode);
  	INT(max_idle);
- 
+ 	INT(ssid_protection);
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
 @@ -45,6 +45,7 @@

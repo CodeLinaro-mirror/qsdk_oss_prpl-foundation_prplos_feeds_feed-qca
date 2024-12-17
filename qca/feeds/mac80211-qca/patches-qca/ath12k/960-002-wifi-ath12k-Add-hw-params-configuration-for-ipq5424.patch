@@ -1,11 +1,7 @@
-<<<<<<< HEAD   (3e3c1d Merge "QSDK: wifi: ath12k: Fix warn_on during rmmod")
-From 159785ae2b78be54cd3aecf0c5f6bda37f565ab0 Mon Sep 17 00:00:00 2001
-=======
-From c1d0b8ec780dded8c32001ea6e5fb53dc2620dd2 Mon Sep 17 00:00:00 2001
->>>>>>> CHANGE (20032f wifi: ath12k: Enable caldata download for ipq5424)
+From 254a59e08cc250bac8af70b2dcd73f56fc1130da Mon Sep 17 00:00:00 2001
 From: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
 Date: Thu, 2 May 2024 14:51:44 +0530
-Subject: [PATCH 2/6] wifi: ath12k: Add hw params configuration for ipq5424
+Subject: [PATCH] wifi: ath12k: Add hw params configuration for ipq5424
 
 - Added hw ops and hardware register config
 - Added hw hal params
@@ -15,17 +11,12 @@ Patch-dependency:710-004-ath12k-Add-and-initialize-hw-params-for-IPQ5332.patch
 
 Signed-off-by: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
 ---
- drivers/net/wireless/ath/ath12k/hw.c | 166 ++++++++++++++++++++++++++-
- 1 file changed, 165 insertions(+), 1 deletion(-)
+ drivers/net/wireless/ath/ath12k/hw.c | 165 +++++++++++++++++++++++++++
+ 1 file changed, 165 insertions(+)
 
-<<<<<<< HEAD   (3e3c1d Merge "QSDK: wifi: ath12k: Fix warn_on during rmmod")
-=======
-diff --git a/drivers/net/wireless/ath/ath12k/hw.c b/drivers/net/wireless/ath/ath12k/hw.c
-index 3a61831..6cba09b 100644
->>>>>>> CHANGE (20032f wifi: ath12k: Enable caldata download for ipq5424)
 --- a/drivers/net/wireless/ath/ath12k/hw.c
 +++ b/drivers/net/wireless/ath/ath12k/hw.c
-@@ -1485,6 +1485,90 @@ const struct ath12k_hw_regs ipq5332_regs
+@@ -1480,6 +1480,90 @@ const struct ath12k_hw_regs ipq5332_regs
  
  };
  
@@ -116,7 +107,7 @@ index 3a61831..6cba09b 100644
  static const struct ath12k_hw_regs wcn7850_regs = {
  	/* SW2TCL(x) R0 ring configuration address */
  	.hal_tcl1_ring_id = 0x00000908,
-@@ -2192,6 +2276,87 @@ static struct ath12k_hw_params ath12k_hw
+@@ -2187,6 +2271,89 @@ static struct ath12k_hw_params ath12k_hw
  					(CFR_HDR_MAX_LEN_WORDS_QCN6432 *4) +
  					CFR_DATA_MAX_LEN_QCN6432,
  	},
@@ -156,7 +147,7 @@ index 3a61831..6cba09b 100644
 +#endif
 +
 +		.idle_ps = false,
-+		.cold_boot_calib = false,
++		.cold_boot_calib = true,
 +		.download_calib = true,
 +		.supports_suspend = false,
 +		.tcl_ring_retry = true,
@@ -183,13 +174,15 @@ index 3a61831..6cba09b 100644
 +		.m3_fw_support = false,
 +		.compact_rx_tlv = true,
 +		.send_platform_model = true,
-+		.en_fwlog = false,
-+		.support_umac_reset = false,
++		.en_fwlog = true,
++		.support_umac_reset = true,
++		.umac_irq_line_reset = false,
++		.umac_reset_ipc = ATH12K_UMAC_RESET_IPC_IPQ5332,
 +		.support_ce_manual_poll = false,
-+		.en_qdsslog = false,
++		.en_qdsslog = true,
 +		.fw_mem_mode = ATH12K_QMI_TARGET_MEM_MODE,
-+		.is_plink_preferable = false,
-+		.support_fse = false,
++		.is_plink_preferable = true,
++		.support_fse = true,
 +		.handle_beacon_miss = true,
 +		.cfr_support = false,
 +		.cfr_dma_hdr_size = sizeof(struct ath12k_cfir_enh_dma_hdr),

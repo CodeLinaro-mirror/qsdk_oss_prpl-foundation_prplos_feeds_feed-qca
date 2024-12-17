@@ -57,7 +57,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	wpa_printf(MSG_DEBUG, "DFS new chan checking %d channels", n_chans);
  	for (i = 0; i < mode->num_channels; i++) {
-@@ -434,11 +438,11 @@ static void dfs_adjust_center_freq(struc
+@@ -441,11 +445,11 @@ static void dfs_adjust_center_freq(struc
  
  
  /* Return start channel idx we will use for mode->channels[idx] */
@@ -71,7 +71,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	int res = -1, i;
  	int chan_seg1 = -1;
  
-@@ -449,9 +453,9 @@ static int dfs_get_start_chan_idx(struct
+@@ -456,9 +460,9 @@ static int dfs_get_start_chan_idx(struct
  		channel_no -= 4;
  
  	/* VHT/HE/EHT */
@@ -84,7 +84,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  		case CONF_OPER_CHWIDTH_USE_HT:
  			break;
  		case CONF_OPER_CHWIDTH_80MHZ:
-@@ -858,11 +862,13 @@ static int dfs_are_channels_overlapped(s
+@@ -865,11 +869,13 @@ static int dfs_are_channels_overlapped(s
  	int n_chans, n_chans1, i, j, frequency = freq, radar_n_chans = 1;
  	u8 radar_chan;
  	int res = 0;
@@ -100,7 +100,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	/* Check we are on DFS channel(s) */
  	if (!dfs_check_chans_radar(iface, start_chan_idx, n_chans))
-@@ -952,6 +958,7 @@ int hostapd_handle_dfs(struct hostapd_if
+@@ -959,6 +965,7 @@ int hostapd_handle_dfs(struct hostapd_if
  {
  	int res, n_chans, n_chans1, start_chan_idx, start_chan_idx1;
  	int skip_radar = 0;
@@ -108,7 +108,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  	if (is_6ghz_freq(iface->freq))
  		return 1;
-@@ -971,12 +978,13 @@ int hostapd_handle_dfs(struct hostapd_if
+@@ -978,12 +985,13 @@ int hostapd_handle_dfs(struct hostapd_if
  	do {
  		/* Get start (first) channel for current configuration */
  		start_chan_idx = dfs_get_start_chan_idx(iface,
@@ -124,7 +124,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  
  		/* Setup CAC time */
  		iface->dfs_cac_ms = dfs_get_cac_time(iface, start_chan_idx,
-@@ -1071,14 +1079,17 @@ int hostapd_handle_dfs(struct hostapd_if
+@@ -1077,14 +1085,17 @@ int hostapd_handle_dfs(struct hostapd_if
  int hostapd_is_dfs_chan_available(struct hostapd_iface *iface)
  {
  	int n_chans, n_chans1, start_chan_idx, start_chan_idx1;

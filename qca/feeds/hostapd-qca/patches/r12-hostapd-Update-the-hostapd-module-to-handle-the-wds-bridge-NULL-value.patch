@@ -36,7 +36,7 @@ Signed-off-by: Arulanbu Balusamy <quic_abalusam@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -2383,7 +2383,8 @@ static int hostapd_config_fill(struct ho
+@@ -2408,7 +2408,8 @@ static int hostapd_config_fill(struct ho
  	} else if (os_strcmp(buf, "vlan_bridge") == 0) {
  		os_strlcpy(bss->vlan_bridge, pos, sizeof(bss->vlan_bridge));
  	} else if (os_strcmp(buf, "wds_bridge") == 0) {

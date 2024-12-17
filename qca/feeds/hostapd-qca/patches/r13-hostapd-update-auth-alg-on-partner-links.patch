@@ -17,7 +17,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -4708,6 +4708,7 @@ static int ieee80211_ml_process_link(str
+@@ -4784,6 +4784,7 @@ static int ieee80211_ml_process_link(str
  
  	sta->flags |= WLAN_STA_ASSOC_REQ_OK;
  	sta->vlan_id = origin_sta->vlan_id;

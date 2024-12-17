@@ -139,10 +139,10 @@ Signed-off-by: Avula Sri Charan <quic_asrichar@quicinc.com>
  enum ath12k_ahb_smp2p_msg_id {
  	ATH12K_AHB_POWER_SAVE_ENTER = 1,
  	ATH12K_AHB_POWER_SAVE_EXIT,
-@@ -31,6 +36,7 @@ struct ath12k_base;
- 
- struct ath12k_ahb {
+@@ -33,6 +38,7 @@ struct ath12k_ahb {
  	struct rproc *tgt_rproc, *tgt_text_rproc, *tgt_rrproc;
+ 	enum ath12k_core_crash_type crash_type;
+ 	bool collect_dump;
 +	void *interrupt_reset_base_addr;
  	struct {
  		struct device *dev;

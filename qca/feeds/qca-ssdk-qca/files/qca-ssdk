@@ -16,6 +16,7 @@
 #
 
 START=16
+STOP=99
 
 #!/bin/sh
 ruletype="ip4 ip6"
@@ -302,5 +303,9 @@ stop() {
 		#delete_acl_byp_egstp_rules $chip_ver
 		echo ''
 	fi
+
+	#The following commands should be uncommented to stop mac polling task
+	#echo 0 > /sys/ssdk/mac_polling
+
 	echo stoping
 }

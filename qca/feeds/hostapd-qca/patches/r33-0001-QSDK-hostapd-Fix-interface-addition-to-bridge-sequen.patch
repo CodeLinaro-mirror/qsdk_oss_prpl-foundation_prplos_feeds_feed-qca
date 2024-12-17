@@ -14,13 +14,11 @@ Signed-off-by: Pavankumar Nandeshwar <quic_pnandesh@quicinc.com>
  src/drivers/driver_nl80211.c | 15 ++++++++-------
  1 file changed, 8 insertions(+), 7 deletions(-)
 
-diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
-index 9d8bf6b..ae5a97c 100644
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -9045,24 +9045,25 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
- 		for (i = 0; i < MAX_NUM_MLD_LINKS; i++)
- 			new_bss->links[i].link_id = NL80211_DRV_LINK_ID_NA;
+@@ -9202,24 +9202,25 @@ static int wpa_driver_nl80211_if_add(voi
+ 			return -1;
+ 		}
  
 -		if (bridge &&
 -		    i802_check_bridge(drv, new_bss, bridge, ifname) < 0) {
@@ -51,6 +49,3 @@ index 9d8bf6b..ae5a97c 100644
  		os_strlcpy(new_bss->ifname, ifname, IFNAMSIZ);
  		os_memcpy(new_bss->addr, if_addr, ETH_ALEN);
  		new_bss->ifindex = ifidx;
--- 
-2.34.1
-

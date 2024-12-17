@@ -11,7 +11,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4575,6 +4575,8 @@ static int hostapd_config_fill(struct ho
+@@ -4653,6 +4653,8 @@ static int hostapd_config_fill(struct ho
  		bss->wowlan_triggers = os_strdup(pos);
  	} else if (os_strcmp(buf, "enable_320mhz_bw") == 0) {
  		conf->enable_320mhz_bw = atoi(pos);
@@ -22,7 +22,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  	} else if (os_strcmp(buf, "disable_40mhz_scan") == 0) {
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1262,6 +1262,7 @@ struct hostapd_config {
+@@ -1289,6 +1289,7 @@ struct hostapd_config {
  	bool ht_vht_twt_responder;
  
  	int use_ru_puncture_dfs;
@@ -32,7 +32,7 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1405,6 +1405,12 @@ struct wpa_driver_associate_params {
+@@ -1430,6 +1430,12 @@ struct wpa_driver_associate_params {
  	u16 punct_bitmap;
  
  	/**
@@ -79,4 +79,4 @@ Signed-off-by: Ramya Gnanasekar <quic_rgnanase@quicinc.com>
 +	INT(ccfs);
  	INT(enable_4addr_mode);
  	INT(max_idle);
- 
+ 	INT(ssid_protection);

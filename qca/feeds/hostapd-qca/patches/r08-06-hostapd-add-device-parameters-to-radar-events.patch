@@ -71,7 +71,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  			/*
  			 * Radar event from background chain for the selected
-@@ -1458,11 +1474,13 @@ int hostapd_dfs_complete_cac(struct host
+@@ -1459,11 +1475,13 @@ int hostapd_dfs_complete_cac(struct host
  
  int hostapd_dfs_pre_cac_expired(struct hostapd_iface *iface, int freq,
  				int ht_enabled, int chan_offset, int chan_width,
@@ -88,7 +88,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	if (!hostapd_is_freq_in_current_hw_info(iface, freq)) {
  		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_PRE_CAC_EXPIRED
-@@ -1728,25 +1746,79 @@ enum oper_chan_width convert_to_oper_cha
+@@ -1729,25 +1747,79 @@ enum oper_chan_width convert_to_oper_cha
  	return CHAN_WIDTH_UNKNOWN;
  }
  
@@ -175,7 +175,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		iface->conf->punct_bitmap = radar_bit_pattern;
  	}
  
-@@ -1760,9 +1832,16 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1761,9 +1833,16 @@ int hostapd_dfs_radar_detected(struct ho
  		return 0;
  
  	/* mark radar frequency as invalid */
@@ -195,7 +195,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	 if (iface->conf->dfs_test_mode) {
  		 set_dfs_state(iface, freq, ht_enabled, chan_offset,
-@@ -1780,7 +1859,7 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1781,7 +1860,7 @@ int hostapd_dfs_radar_detected(struct ho
  	}
  
  	if (iface->conf->use_ru_puncture_dfs && hostapd_is_usable_punct_bitmap(iface)) {
@@ -204,7 +204,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		iface->conf->punct_bitmap = cur_punct_bits;
  		u8 oper_centr_freq_seg0_idx = hostapd_get_oper_centr_freq_seg0_idx(iface->conf);
  		u8 oper_centr_freq_seg1_idx = hostapd_get_oper_centr_freq_seg1_idx(iface->conf);
-@@ -1816,11 +1895,17 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1817,11 +1896,17 @@ int hostapd_dfs_radar_detected(struct ho
  			oper_centr_freq_seg0_idx, oper_centr_freq_seg1_idx);
  	}
  
@@ -223,7 +223,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  		if (!iface->conf->disable_csa_dfs) {
  			/* Radar detected while operating, switch the channel. */
  			return hostapd_dfs_start_channel_switch(iface);
-@@ -1838,11 +1923,11 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1839,11 +1924,11 @@ int hostapd_dfs_radar_detected(struct ho
  
  int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
  			     int ht_enabled, int chan_offset, int chan_width,
@@ -238,7 +238,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	if (!hostapd_is_freq_in_current_hw_info(iface, freq)) {
  		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_NOP_FINISHED
-@@ -1855,8 +1940,13 @@ int hostapd_dfs_nop_finished(struct host
+@@ -1856,8 +1941,13 @@ int hostapd_dfs_nop_finished(struct host
  		return 0;
  
  	/* TODO add correct implementation here */
@@ -254,7 +254,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	if (iface->state == HAPD_IFACE_DFS && !iface->cac_started) {
  		/* Handle cases where all channels were initially unavailable */
-@@ -1903,7 +1993,8 @@ int hostapd_is_dfs_required(struct hosta
+@@ -1904,7 +1994,8 @@ int hostapd_is_dfs_required(struct hosta
  
  int hostapd_dfs_start_cac(struct hostapd_iface *iface, int freq,
  			  int ht_enabled, int chan_offset, int chan_width,
@@ -264,7 +264,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  {
  	int n_chans, n_chans1, ch_idx, ch_idx_1, dfs_cac_ms;
  	int chwidth;
-@@ -1996,10 +2087,10 @@ int hostapd_dfs_start_cac(struct hostapd
+@@ -1997,10 +2088,10 @@ int hostapd_dfs_start_cac(struct hostapd
  
  	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_CAC_START
  		"freq=%d chan=%d chan_offset=%d width=%d seg0=%d "
@@ -315,7 +315,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  			   int center_freq);
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2236,7 +2236,8 @@ static void hostapd_event_dfs_radar_dete
+@@ -2263,7 +2263,8 @@ static void hostapd_event_dfs_radar_dete
  	wpa_printf(MSG_DEBUG, "DFS radar detected on %d MHz", radar->freq);
  	hostapd_dfs_radar_detected(hapd->iface, radar->freq, radar->ht_enabled,
  				   radar->chan_offset, radar->chan_width,
@@ -325,7 +325,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  static void hostapd_event_awgn_detected(struct hostapd_data *hapd,
-@@ -2253,7 +2254,8 @@ static void hostapd_event_dfs_pre_cac_ex
+@@ -2280,7 +2281,8 @@ static void hostapd_event_dfs_pre_cac_ex
  	wpa_printf(MSG_DEBUG, "DFS Pre-CAC expired on %d MHz", radar->freq);
  	hostapd_dfs_pre_cac_expired(hapd->iface, radar->freq, radar->ht_enabled,
  				    radar->chan_offset, radar->chan_width,
@@ -335,7 +335,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  
-@@ -2263,7 +2265,8 @@ static void hostapd_event_dfs_cac_finish
+@@ -2290,7 +2292,8 @@ static void hostapd_event_dfs_cac_finish
  	wpa_printf(MSG_DEBUG, "DFS CAC finished on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(hapd->iface, 1, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -345,7 +345,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  
-@@ -2273,7 +2276,8 @@ static void hostapd_event_dfs_cac_aborte
+@@ -2300,7 +2303,8 @@ static void hostapd_event_dfs_cac_aborte
  	wpa_printf(MSG_DEBUG, "DFS CAC aborted on %d MHz", radar->freq);
  	hostapd_dfs_complete_cac(hapd->iface, 0, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -355,7 +355,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  
-@@ -2283,7 +2287,8 @@ static void hostapd_event_dfs_nop_finish
+@@ -2310,7 +2314,8 @@ static void hostapd_event_dfs_nop_finish
  	wpa_printf(MSG_DEBUG, "DFS NOP finished on %d MHz", radar->freq);
  	hostapd_dfs_nop_finished(hapd->iface, radar->freq, radar->ht_enabled,
  				 radar->chan_offset, radar->chan_width,
@@ -365,7 +365,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  }
  
  
-@@ -2293,7 +2298,8 @@ static void hostapd_event_dfs_cac_starte
+@@ -2320,7 +2325,8 @@ static void hostapd_event_dfs_cac_starte
  	wpa_printf(MSG_DEBUG, "DFS offload CAC started on %d MHz", radar->freq);
  	hostapd_dfs_start_cac(hapd->iface, radar->freq, radar->ht_enabled,
  			      radar->chan_offset, radar->chan_width,
@@ -377,7 +377,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #endif /* NEED_AP_MLME */
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -6872,6 +6872,8 @@ union wpa_event_data {
+@@ -6960,6 +6960,8 @@ union wpa_event_data {
  		int link_id;
  		u16 radar_bitmap;
  		bool is_background;
@@ -388,7 +388,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	/**
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2611,11 +2611,12 @@ static void nl80211_process_radar_event(
+@@ -2605,11 +2605,12 @@ static void nl80211_process_radar_event(
  					enum nl80211_radar_event event_type)
  {
  	wpa_printf(MSG_DEBUG,
@@ -403,7 +403,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	switch (event_type) {
  	case NL80211_RADAR_DETECTED:
-@@ -2696,6 +2697,12 @@ static void nl80211_radar_event(struct i
+@@ -2690,6 +2691,12 @@ static void nl80211_radar_event(struct i
  		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
  	if (tb[NL80211_ATTR_RADAR_BITMAP])
  		data.dfs_event.radar_bitmap = nla_get_u16(tb[NL80211_ATTR_RADAR_BITMAP]);

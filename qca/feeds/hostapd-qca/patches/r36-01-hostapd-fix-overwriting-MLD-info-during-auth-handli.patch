@@ -24,34 +24,13 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3212,6 +3212,30 @@ static void handle_auth(struct hostapd_d
- 	    (!(sta->flags & WLAN_STA_MFP) || !ap_sta_is_authorized(sta)) &&
- 	    !(hapd->conf->mesh & MESH_ENABLED) &&
- 	    !(sta->added_unassoc) && auth_alg != WLAN_AUTH_PASN) {
-+#ifdef CONFIG_IEEE80211BE
-+		if (auth_transaction == 1) {
-+			os_memset(&sta->mld_info, 0, sizeof(sta->mld_info));
-+
-+			if (mld_sta) {
-+				u8 link_id = hapd->mld_link_id;
-+
-+				sta->mld_info.mld_sta = true;
-+				sta->mld_assoc_link_id = link_id;
-+
-+				/*
-+				 * Set the MLD address as the station address and the
-+				 * station addresses.
-+				 */
-+				os_memcpy(sta->mld_info.common_info.mld_addr, sa,
-+					  ETH_ALEN);
-+				os_memcpy(sta->mld_info.links[link_id].peer_addr,
-+					  mgmt->sa, ETH_ALEN);
-+				os_memcpy(sta->mld_info.links[link_id].local_addr,
-+					  hapd->own_addr, ETH_ALEN);
-+			}
-+		}
-+#endif /* CONFIG_IEEE80211BE */
-+
- 		if (ap_sta_re_add(hapd, sta) < 0) {
- 			resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
- 			goto fail;
+@@ -3237,7 +3237,8 @@ static void handle_auth(struct hostapd_d
+ 	 * will translate addresses in the frame and we need to avoid overriding
+ 	 * peer_addr based on mgmt->sa which would have been translated to the
+ 	 * MLD MAC address. */
+-	if (!sta->added_unassoc && auth_transaction == 1) {
++	if ((!(sta->flags & WLAN_STA_MFP) || !ap_sta_is_authorized(sta)) &&
++	    !sta->added_unassoc && auth_transaction == 1) {
+ 		ap_sta_free_sta_profile(&sta->mld_info);
+ 		os_memset(&sta->mld_info, 0, sizeof(sta->mld_info));
+ 

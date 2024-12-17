@@ -3,15 +3,15 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-ovsmgr
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
-PKG_RELEASE:=2
+PKG_BRANCH:=win.nss.1.0.r24
+PKG_RELEASE:=1
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ovsmgr
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=6c1fafc4fbdc28474d2199fa2bef6e10c89d2118
 
-LOCAL_SRC:=$(TOPDIR)/feeds/feed_qca/qca/src/qca-ovsmgr
-
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-  PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 

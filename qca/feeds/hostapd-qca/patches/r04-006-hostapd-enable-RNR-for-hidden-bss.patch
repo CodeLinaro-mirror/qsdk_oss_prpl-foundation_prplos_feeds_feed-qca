@@ -20,7 +20,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7901,8 +7901,7 @@ repeat_rnr_len:
+@@ -7924,8 +7924,7 @@ repeat_rnr_len:
  			ap_mld = bss->conf->mld_ap;
  #endif /* CONFIG_IEEE80211BE */
  
@@ -30,7 +30,7 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
  				continue;
  
  			if (hostapd_skip_rnr(i, skip_profiles, ap_mld,
-@@ -8169,7 +8168,7 @@ static bool hostapd_eid_rnr_bss(struct h
+@@ -8188,7 +8187,7 @@ static bool hostapd_eid_rnr_bss(struct h
  #endif /* CONFIG_IEEE80211BE */
  
  	if (!bss || !bss->conf || !bss->started ||

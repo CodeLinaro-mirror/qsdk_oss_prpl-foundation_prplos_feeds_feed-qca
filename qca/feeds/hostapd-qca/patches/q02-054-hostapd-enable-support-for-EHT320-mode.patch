@@ -16,7 +16,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/common/hw_features_common.c
 +++ b/src/common/hw_features_common.c
-@@ -775,9 +775,9 @@ int hostapd_set_freq_params(struct hosta
+@@ -772,9 +772,9 @@ int hostapd_set_freq_params(struct hosta
  		break;
  	case CONF_OPER_CHWIDTH_320MHZ:
  		data->bandwidth = 320;

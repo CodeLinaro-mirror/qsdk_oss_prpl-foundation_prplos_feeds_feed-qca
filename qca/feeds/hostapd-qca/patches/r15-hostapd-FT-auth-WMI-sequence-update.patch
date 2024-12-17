@@ -29,7 +29,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  	/* FIX: add STA entry to kernel/driver here? The set_key will fail
  	 * most likely without this.. At the moment, STA entry is added only
  	 * after association has been completed. This function will be called
-@@ -3772,7 +3769,7 @@ pmk_r1_derived:
+@@ -3786,7 +3783,7 @@ pmk_r1_derived:
  	sm->pairwise = pairwise;
  	sm->PTK_valid = true;
  	sm->tk_already_set = false;

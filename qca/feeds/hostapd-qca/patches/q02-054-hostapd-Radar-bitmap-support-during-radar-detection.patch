@@ -26,7 +26,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -767,7 +767,7 @@ static int set_dfs_state_freq(struct hos
+@@ -774,7 +774,7 @@ static int set_dfs_state_freq(struct hos
  
  static int set_dfs_state(struct hostapd_iface *iface, int freq, int ht_enabled,
  			 int chan_offset, int chan_width, int cf1,
@@ -35,7 +35,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  {
  	int n_chans = 1, i;
  	struct hostapd_hw_modes *mode;
-@@ -822,12 +822,25 @@ static int set_dfs_state(struct hostapd_
+@@ -829,12 +829,25 @@ static int set_dfs_state(struct hostapd_
  	wpa_printf(MSG_DEBUG, "DFS freq: %dMHz, n_chans: %d", frequency,
  		   n_chans);
  	for (i = 0; i < n_chans; i++) {
@@ -131,7 +131,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  			     int chan_offset, int chan_width, int cf1, int cf2);
 --- a/src/ap/drv_callbacks.c
 +++ b/src/ap/drv_callbacks.c
-@@ -2196,7 +2196,7 @@ static void hostapd_event_dfs_radar_dete
+@@ -2235,7 +2235,7 @@ static void hostapd_event_dfs_radar_dete
  	wpa_printf(MSG_DEBUG, "DFS radar detected on %d MHz", radar->freq);
  	hostapd_dfs_radar_detected(hapd->iface, radar->freq, radar->ht_enabled,
  				   radar->chan_offset, radar->chan_width,
@@ -142,7 +142,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  static void hostapd_event_awgn_detected(struct hostapd_data *hapd,
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -2514,13 +2514,15 @@ static void nl80211_radar_event(struct w
+@@ -2567,13 +2567,15 @@ static void nl80211_radar_event(struct w
  		data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
  	if (tb[NL80211_ATTR_CENTER_FREQ2])
  		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
@@ -161,7 +161,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	switch (event_type) {
  	case NL80211_RADAR_DETECTED:
-@@ -2933,12 +2935,14 @@ static void qca_nl80211_dfs_offload_rada
+@@ -2986,12 +2988,14 @@ static void qca_nl80211_dfs_offload_rada
  		data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
  	if (tb[NL80211_ATTR_CENTER_FREQ2])
  		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
@@ -180,7 +180,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED:
 --- a/wpa_supplicant/ap.c
 +++ b/wpa_supplicant/ap.c
-@@ -2146,7 +2146,8 @@ void wpas_ap_event_dfs_radar_detected(st
+@@ -2148,7 +2148,8 @@ void wpas_ap_event_dfs_radar_detected(st
  	hostapd_dfs_radar_detected(iface, radar->freq,
  				   radar->ht_enabled, radar->chan_offset,
  				   radar->chan_width,
@@ -192,7 +192,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -6756,6 +6756,7 @@ union wpa_event_data {
+@@ -6871,6 +6871,7 @@ union wpa_event_data {
  		int cf1;
  		int cf2;
  		int link_id;

@@ -42,7 +42,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
 
 --- a/wpa_supplicant/bss.c
 +++ b/wpa_supplicant/bss.c
-@@ -593,8 +593,8 @@ static int are_ies_equal(const struct wp
+@@ -644,8 +644,8 @@ static int are_ies_equal(const struct wp
  }
  
  
@@ -53,7 +53,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  {
  	u32 changes = 0;
  	int caps_diff = old->caps ^ new_res->caps;
-@@ -667,9 +667,10 @@ void notify_bss_changes(struct wpa_suppl
+@@ -718,9 +718,10 @@ void notify_bss_changes(struct wpa_suppl
  }
  
  
@@ -66,7 +66,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  {
  	u32 changes;
  
-@@ -698,13 +699,20 @@ wpa_bss_update(struct wpa_supplicant *wp
+@@ -749,13 +750,20 @@ wpa_bss_update(struct wpa_supplicant *wp
  			   (unsigned int) update_time.usec,
  			   res->freq,
  			   (res->flags & WPA_SCAN_ASSOCIATED) ? " assoc" : "");
@@ -89,7 +89,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  		wpa_printf(MSG_DEBUG,
  			   "Accept this BSS entry since it looks more current than the previous update");
  	}
-@@ -893,7 +901,7 @@ void wpa_bss_update_scan_res(struct wpa_
+@@ -944,7 +952,7 @@ void wpa_bss_update_scan_res(struct wpa_
  	if (bss == NULL)
  		bss = wpa_bss_add(wpa_s, ssid + 2, ssid[1], res, fetch_time);
  	else {
@@ -98,7 +98,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  		if (wpa_s->last_scan_res) {
  			unsigned int i;
  			for (i = 0; i < wpa_s->last_scan_res_used; i++) {
-@@ -1227,6 +1235,40 @@ const u8 * wpa_bss_get_ie(const struct w
+@@ -1303,6 +1311,40 @@ const u8 * wpa_bss_get_ie_beacon(const s
  }
  
  
@@ -141,16 +141,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
   * @bss: BSS table entry
 --- a/wpa_supplicant/bss.h
 +++ b/wpa_supplicant/bss.h
-@@ -175,6 +175,8 @@ struct wpa_bss * wpa_bss_get_id(struct w
- struct wpa_bss * wpa_bss_get_id_range(struct wpa_supplicant *wpa_s,
- 				      unsigned int idf, unsigned int idl);
- const u8 * wpa_bss_get_ie(const struct wpa_bss *bss, u8 ie);
-+const u8 * wpa_bss_get_ie_pos(const struct wpa_bss *bss, u8 ie, u8 idx);
-+u8 wpa_bss_get_mbssid_idx(const struct wpa_bss *bss);
- const u8 * wpa_bss_get_ie_ext(const struct wpa_bss *bss, u8 ext);
- const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type);
- const u8 * wpa_bss_get_vendor_ie_beacon(const struct wpa_bss *bss,
-@@ -224,5 +226,11 @@ int wpa_bss_parse_basic_ml_element(struc
+@@ -228,6 +228,12 @@ int wpa_bss_parse_basic_ml_element(struc
  				   u8 *ap_mld_id);
  u16 wpa_bss_parse_reconf_ml_element(struct wpa_supplicant *wpa_s,
  				    struct wpa_bss *bss);
@@ -161,10 +152,19 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
 +		struct wpa_scan_res *res, struct os_reltime *fetch_time,
 +		bool override);
  
+ const u8 * wpa_bss_get_rsne(struct wpa_supplicant *wpa_s,
+ 			    const struct wpa_bss *bss, struct wpa_ssid *ssid,
+@@ -235,5 +241,7 @@ const u8 * wpa_bss_get_rsne(struct wpa_s
+ const u8 * wpa_bss_get_rsnxe(struct wpa_supplicant *wpa_s,
+ 			     const struct wpa_bss *bss, struct wpa_ssid *ssid,
+ 			     bool mlo);
++const u8 * wpa_bss_get_ie_pos(const struct wpa_bss *bss, u8 ie, u8 idx);
++u8 wpa_bss_get_mbssid_idx(const struct wpa_bss *bss);
+ 
  #endif /* BSS_H */
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -4085,6 +4085,49 @@ out:
+@@ -4249,6 +4249,51 @@ out:
  }
  
  
@@ -178,8 +178,10 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
 +	u8 link_count = 0, freq_count = 0;
 +
 +	/* If valid_links is not set, consider that all links are associated
++	 * Note: freq_list is not mandotary to present in station
++	 * configuration file.
 +	 */
-+	if (!valid_links)
++	if (!valid_links || !freq_list)
 +		return true;
 +
 +	freq = freq_list[i];
@@ -214,7 +216,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
  				       union wpa_event_data *data)
  {
-@@ -4414,6 +4457,17 @@ static void wpa_supplicant_event_assoc(s
+@@ -4578,6 +4623,17 @@ static void wpa_supplicant_event_assoc(s
  
  	if (wpa_s->current_ssid && wpa_s->current_ssid->enable_4addr_mode)
  		wpa_supplicant_set_4addr_mode(wpa_s);
@@ -234,7 +236,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  
 --- a/wpa_supplicant/scan.c
 +++ b/wpa_supplicant/scan.c
-@@ -3866,3 +3866,173 @@ void wpas_scan_restart_sched_scan(struct
+@@ -3852,3 +3852,173 @@ void wpas_scan_restart_sched_scan(struct
  	wpa_s->prev_sched_ssid = NULL;
  	wpa_supplicant_cancel_sched_scan(wpa_s);
  }
@@ -389,7 +391,7 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
 +		if (!mld_addr)
 +			continue;
 +
-+		if (os_memcmp(wpa_s->current_bss->bssid, mld_addr, ETH_ALEN) != 0) {
++		if (os_memcmp(wpa_s->bssid, mld_addr, ETH_ALEN) != 0) {
 +			/* Need to check any scan entry for current assoc bssid */
 +			continue;
 +		}
@@ -427,16 +429,16 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
  int wpa_supplicant_delayed_sched_scan(struct wpa_supplicant *wpa_s,
 --- a/wpa_supplicant/wpa_supplicant_i.h
 +++ b/wpa_supplicant/wpa_supplicant_i.h
-@@ -2013,4 +2013,6 @@ bool wpas_is_6ghz_supported(struct wpa_s
- bool wpa_is_non_eht_scs_traffic_desc_supported(struct wpa_bss *bss);
- bool wpas_ap_link_address(struct wpa_supplicant *wpa_s, const u8 *addr);
+@@ -2036,4 +2036,6 @@ bool wpas_ap_supports_rsn_overriding_2(s
+ int wpas_get_owe_trans_network(const u8 *owe_ie, const u8 **bssid,
+ 			       const u8 **ssid, size_t *ssid_len);
  
 +void wpas_scan_for_rnr_entries(void *eloop_ctx, void *timeout_ctx);
 +
  #endif /* WPA_SUPPLICANT_I_H */
 --- a/src/common/ieee802_11_common.c
 +++ b/src/common/ieee802_11_common.c
-@@ -2542,6 +2542,30 @@ const u8 * get_ie(const u8 *ies, size_t
+@@ -2574,6 +2574,30 @@ const u8 * get_ie(const u8 *ies, size_t
  	return NULL;
  }
  
@@ -469,11 +471,21 @@ Signed-off-by: Karthik M <<quic_karm@quicinc.com>
   * get_ie_ext - Fetch a specified extended information element from IEs buffer
 --- a/src/common/ieee802_11_common.h
 +++ b/src/common/ieee802_11_common.h
-@@ -270,6 +270,7 @@ extern const struct oper_class_map globa
+@@ -283,6 +283,7 @@ extern const struct oper_class_map globa
  extern size_t global_op_class_size;
  
  const u8 * get_ie(const u8 *ies, size_t len, u8 eid);
 +const u8 * get_ie_pos(const u8 *ies, size_t len, u8 eid, u8 idx);
  const u8 * get_ie_ext(const u8 *ies, size_t len, u8 ext);
  const u8 * get_vendor_ie(const u8 *ies, size_t len, u32 vendor_type);
+ 
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -616,6 +616,7 @@ static void wpa_supplicant_cleanup(struc
+ 	eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
+ 	eloop_cancel_timeout(wpas_clear_disabled_interface, wpa_s, NULL);
+ 	eloop_cancel_timeout(wpas_verify_ssid_beacon, wpa_s, NULL);
++	eloop_cancel_timeout(wpas_scan_for_rnr_entries, wpa_s, NULL);
+ 
+ 	wpas_wps_deinit(wpa_s);
  

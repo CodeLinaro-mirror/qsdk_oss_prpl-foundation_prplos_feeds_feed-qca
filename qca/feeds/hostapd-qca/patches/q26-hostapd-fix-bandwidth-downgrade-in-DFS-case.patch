@@ -22,7 +22,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/ap/dfs.c
 +++ b/src/ap/dfs.c
-@@ -1494,7 +1494,10 @@ dfs_downgrade_bandwidth(struct hostapd_i
+@@ -1495,7 +1495,10 @@ dfs_downgrade_bandwidth(struct hostapd_i
  				continue;
  			}
  			*channel_type = DFS_AVAILABLE;

@@ -17,7 +17,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -4558,6 +4558,8 @@ static int hostapd_config_fill(struct ho
+@@ -4635,6 +4635,8 @@ static int hostapd_config_fill(struct ho
  	} else if (os_strcmp(buf, "wowlan_triggers") == 0) {
  		os_free(bss->wowlan_triggers);
  		bss->wowlan_triggers = os_strdup(pos);
@@ -28,7 +28,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  #ifdef CONFIG_FST
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1163,6 +1163,7 @@ struct hostapd_config {
+@@ -1180,6 +1180,7 @@ struct hostapd_config {
  	} *acs_chan_bias;
  	unsigned int num_acs_chan_bias;
  #endif /* CONFIG_ACS */
@@ -38,7 +38,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	struct wpabuf *lci;
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -1388,6 +1388,11 @@ struct wpa_driver_associate_params {
+@@ -1413,6 +1413,11 @@ struct wpa_driver_associate_params {
  	int beacon_tx_mode;
  
  	/**
@@ -69,7 +69,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 +	INT(enable_160mhz_bw);
  	INT(enable_4addr_mode);
  	INT(max_idle);
- 
+ 	INT(ssid_protection);
 --- a/wpa_supplicant/config_ssid.h
 +++ b/wpa_supplicant/config_ssid.h
 @@ -1274,7 +1274,12 @@ struct wpa_ssid {
@@ -98,7 +98,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
 --- a/wpa_supplicant/wpa_supplicant.conf
 +++ b/wpa_supplicant/wpa_supplicant.conf
-@@ -1776,6 +1776,11 @@ fast_reauth=1
+@@ -1785,6 +1785,11 @@ fast_reauth=1
  # Enable EDMG capability in STA/AP mode, default value is false
  #enable_edmg=1
  

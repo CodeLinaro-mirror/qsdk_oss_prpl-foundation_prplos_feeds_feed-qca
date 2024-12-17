@@ -19,7 +19,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
 
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -1860,7 +1860,7 @@ static int nl80211_channel_info(void *pr
+@@ -1862,7 +1862,7 @@ static int nl80211_channel_info(void *pr
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	struct nl_msg *msg;
  
@@ -28,7 +28,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	return send_and_recv_resp(drv, msg, get_channel_info, ci);
  }
  
-@@ -4525,7 +4525,7 @@ static int wpa_driver_nl80211_set_acl(vo
+@@ -4539,7 +4539,7 @@ static int wpa_driver_nl80211_set_acl(vo
  		nla_total_size(acl_nla_sz);
  	nlmsg_sz = nlmsg_total_size(nla_sz);
  	if (!(msg = nl80211_ifindex_msg_build(drv, nlmsg_alloc_size(nlmsg_sz),
@@ -37,7 +37,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  					      NL80211_CMD_SET_MAC_ACL)) ||
  	    nla_put_u32(msg, NL80211_ATTR_ACL_POLICY, params->acl_policy ?
  			NL80211_ACL_POLICY_DENY_UNLESS_LISTED :
-@@ -7501,16 +7501,16 @@ fail:
+@@ -7564,16 +7564,16 @@ fail:
  }
  
  
@@ -58,7 +58,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (!msg || nla_put_u32(msg, NL80211_ATTR_IFTYPE, mode))
  		goto fail;
  
-@@ -7541,7 +7541,7 @@ static int wpa_driver_nl80211_set_mode_i
+@@ -7604,7 +7604,7 @@ static int wpa_driver_nl80211_set_mode_i
  	if (TEST_FAIL())
  		return -1;
  
@@ -67,7 +67,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (mode_switch_res && nlmode == nl80211_get_ifmode(bss))
  		mode_switch_res = 0;
  
-@@ -7605,7 +7605,7 @@ static int wpa_driver_nl80211_set_mode_i
+@@ -7668,7 +7668,7 @@ static int wpa_driver_nl80211_set_mode_i
  		}
  
  		/* Try to set the mode again while the interface is down */
@@ -76,7 +76,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  		if (mode_switch_res == -EBUSY) {
  			wpa_printf(MSG_DEBUG,
  				   "nl80211: Delaying mode set while interface going down");
-@@ -7869,7 +7869,7 @@ static int i802_set_rts(void *priv, int
+@@ -7932,7 +7932,7 @@ static int i802_set_rts(void *priv, int
  	else
  		val = rts;
  
@@ -85,7 +85,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	    nla_put_u32(msg, NL80211_ATTR_WIPHY_RTS_THRESHOLD, val)) {
  		nlmsg_free(msg);
  		return -ENOBUFS;
-@@ -7897,7 +7897,7 @@ static int i802_set_frag(void *priv, int
+@@ -7960,7 +7960,7 @@ static int i802_set_frag(void *priv, int
  	else
  		val = frag;
  
@@ -94,16 +94,16 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	    nla_put_u32(msg, NL80211_ATTR_WIPHY_FRAG_THRESHOLD, val)) {
  		nlmsg_free(msg);
  		return -ENOBUFS;
-@@ -10520,7 +10520,7 @@ static int wpa_driver_nl80211_get_survey
- 	arg.acs_exclude_6ghz_non_psc = acs_exclude_6ghz_non_psc;
+@@ -10597,7 +10597,7 @@ static int wpa_driver_nl80211_get_survey
  
  	dl_list_init(&arg.survey_results->survey_list);
+ 
 -	msg = nl80211_drv_msg(drv, NLM_F_DUMP, NL80211_CMD_GET_SURVEY);
 +	msg = nl80211_bss_msg(bss, NLM_F_DUMP, NL80211_CMD_GET_SURVEY);
  	if (!msg)
  		return -ENOBUFS;
  
-@@ -10719,7 +10719,7 @@ static int nl80211_start_radar_detection
+@@ -10794,7 +10794,7 @@ static int nl80211_start_radar_detection
  		return -1;
  	}
  
@@ -112,7 +112,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	    nl80211_put_freq_params(msg, freq) < 0) {
  		nlmsg_free(msg);
  		return -1;
-@@ -11965,7 +11965,7 @@ static int nl80211_set_qos_map(void *pri
+@@ -12065,7 +12065,7 @@ static int nl80211_set_qos_map(void *pri
  	wpa_hexdump(MSG_DEBUG, "nl80211: Setting QoS Map",
  		    qos_map_set, qos_map_set_len);
  
@@ -121,7 +121,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	    nla_put(msg, NL80211_ATTR_QOS_MAP, qos_map_set_len, qos_map_set)) {
  		nlmsg_free(msg);
  		return -ENOBUFS;
-@@ -12196,7 +12196,7 @@ static int nl80211_add_sta_node(void *pr
+@@ -12296,7 +12296,7 @@ static int nl80211_add_sta_node(void *pr
  
  	wpa_printf(MSG_DEBUG, "nl80211: Add STA node");
  
@@ -130,7 +130,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
  			QCA_NL80211_VENDOR_SUBCMD_ADD_STA_NODE) ||
-@@ -12933,7 +12933,7 @@ static int nl80211_set_band(void *priv,
+@@ -13040,7 +13040,7 @@ static int nl80211_set_band(void *priv,
  		   "nl80211: QCA_BAND_MASK = 0x%x, QCA_BAND_VALUE = %d",
  		   qca_band_mask, qca_band_value);
  
@@ -139,7 +139,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
  			QCA_NL80211_VENDOR_SUBCMD_SETBAND) ||
-@@ -13688,11 +13688,11 @@ static int nl80211_set_secure_ranging_ct
+@@ -13795,11 +13795,11 @@ static int nl80211_set_secure_ranging_ct
  	if (!params->peer_addr || !params->own_addr)
  		return -1;
  
@@ -153,7 +153,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (!msg ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
  	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-@@ -14085,10 +14085,10 @@ static int nl80211_send_external_auth_st
+@@ -14490,10 +14490,10 @@ static int nl80211_send_external_auth_st
  	    (drv->capa.flags & WPA_DRIVER_FLAGS_SME))
  		return -1;
  
@@ -166,7 +166,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	if (!msg ||
  	    nla_put_u16(msg, NL80211_ATTR_STATUS_CODE, params->status) ||
  	    (params->ssid && params->ssid_len &&
-@@ -14492,7 +14492,7 @@ static int nl80211_set_scs(void *priv, s
+@@ -14899,7 +14899,7 @@ static int nl80211_set_scs(void *priv, s
  	struct nlattr *params;
  	int ret;
  
@@ -195,7 +195,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	return send_and_recv_resp(drv, msg, get_noise_for_scan_results, info);
  }
  
-@@ -1028,8 +1029,9 @@ static void nl80211_update_scan_res_nois
+@@ -1029,8 +1030,9 @@ static void nl80211_update_scan_res_nois
  
  
  static struct wpa_scan_results *
@@ -206,7 +206,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  	struct nl_msg *msg;
  	struct wpa_scan_results *res;
  	int ret;
-@@ -1040,7 +1042,7 @@ try_again:
+@@ -1041,7 +1043,7 @@ try_again:
  	res = os_zalloc(sizeof(*res));
  	if (res == NULL)
  		return NULL;
@@ -215,7 +215,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  				    NL80211_CMD_GET_SCAN))) {
  		wpa_scan_results_free(res);
  		return NULL;
-@@ -1067,7 +1069,7 @@ try_again:
+@@ -1068,7 +1070,7 @@ try_again:
  
  		wpa_printf(MSG_DEBUG, "nl80211: Received scan results (%lu "
  			   "BSSes)", (unsigned long) res->num);
@@ -224,7 +224,7 @@ Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
  			size_t i;
  
  			for (i = 0; i < res->num; ++i)
-@@ -1096,7 +1098,7 @@ struct wpa_scan_results * wpa_driver_nl8
+@@ -1097,7 +1099,7 @@ struct wpa_scan_results * wpa_driver_nl8
  	struct wpa_driver_nl80211_data *drv = bss->drv;
  	struct wpa_scan_results *res;
  

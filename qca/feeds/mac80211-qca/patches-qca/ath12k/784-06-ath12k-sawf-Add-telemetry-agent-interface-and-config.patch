@@ -31,7 +31,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  #define SVC_INDEX(svc_id) svc_id - 1
  #define DRV_TO_FW_SVC_ID(svc_id) (svc_id - 1)
-@@ -126,6 +128,15 @@ void ath12k_update_svc_class(struct ath1
+@@ -133,6 +135,15 @@ void ath12k_update_svc_class(struct ath1
  	new_param->ul_max_latency = sawf_params->ul_max_latency;
  	new_param->ul_ofdma_disable = sawf_params->ul_ofdma_disable;
  	new_param->ul_mu_mimo_disable = sawf_params->ul_mu_mimo_disable;
@@ -47,7 +47,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  }
  
  bool ath12k_validate_sawf_param(struct ath12k_sawf_svc_params *params)
-@@ -267,6 +278,15 @@ bool ath12k_disable_svc_class(u8 svc_id)
+@@ -272,6 +283,15 @@ bool ath12k_disable_svc_class(u8 svc_id)
  	sawf_svc_class = &sawf_ctx->svc_classes[SVC_INDEX(svc_id)];
  	memset(sawf_svc_class, 0, sizeof(*sawf_svc_class));
  
@@ -111,7 +111,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	sawf_ctx = ath12k_get_sawf_context();
  	if (!sawf_ctx)
-@@ -1402,8 +1437,9 @@ void ath12k_sawf_stats_update(struct ath
+@@ -1462,8 +1497,9 @@ void ath12k_sawf_stats_update(struct ath
  	u64 entry_ts, enqueue_timestamp;
  	struct ath12k_base *ab = ar->ab;
  	struct sawf_tx_stats *tx_stats;
@@ -123,7 +123,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	if (!ts || !peer_ctx)
  		return;
-@@ -1425,6 +1461,10 @@ void ath12k_sawf_stats_update(struct ath
+@@ -1485,6 +1521,10 @@ void ath12k_sawf_stats_update(struct ath
  	tid = u32_get_bits(msduq_id, MSDUQID_TID_MASK);
  	q_id = u32_get_bits(msduq_id, MSDUQID_Q_MASK) - ab->default_msduq_per_tid;
  
@@ -134,7 +134,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	if (!(ath12k_debugfs_is_sawf_stats_enabled(ar) & ATH12K_SAWF_STATS_BASIC))
  		goto latency_stats_update;
  
-@@ -1471,6 +1511,13 @@ void ath12k_sawf_stats_update(struct ath
+@@ -1531,6 +1571,13 @@ void ath12k_sawf_stats_update(struct ath
  
  	tx_stats->queue_depth--;
  
@@ -148,7 +148,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  latency_stats_update:
  
  	tx_delay_stats = &sawf_stats->tx_delay_stats[tid][q_id];
-@@ -1494,6 +1541,11 @@ latency_stats_update:
+@@ -1554,6 +1601,11 @@ latency_stats_update:
  		sw_delay = (u32) (enqueue_timestamp - entry_ts);
  	tx_delay_stats->swdelay_win_total += sw_delay;
  
@@ -160,7 +160,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	if (!(tx_delay_stats->num_pkt % pkt_win)) {
  		tx_delay_stats->nwdelay_avg = div_u64(tx_delay_stats->nwdelay_win_total,
  					  pkt_win);
-@@ -1502,6 +1554,12 @@ latency_stats_update:
+@@ -1562,6 +1614,12 @@ latency_stats_update:
  		tx_delay_stats->hwdelay_avg = div_u64(tx_delay_stats->hwdelay_win_total,
  					  pkt_win);
  
@@ -173,7 +173,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		tx_delay_stats->nwdelay_win_total = 0;
  		tx_delay_stats->swdelay_win_total = 0;
  		tx_delay_stats->hwdelay_win_total = 0;
-@@ -1516,6 +1574,12 @@ latency_stats_update:
+@@ -1576,6 +1634,12 @@ latency_stats_update:
  			tx_delay_stats->failure++;
  		else
  			tx_delay_stats->success++;
@@ -186,7 +186,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	}
  	return;
  }
-@@ -1585,19 +1649,21 @@ static void ath12k_copy_tx_stats(struct
+@@ -1645,19 +1709,21 @@ static void ath12k_copy_tx_stats(struct
  	dst->tx_failed = src->tx_failed;
  	dst->queue_depth = src->queue_depth;
  
@@ -211,7 +211,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	u8 sawf_max_user_queues;
  
  	sawf_max_user_queues = sawf_ctx->max_msduq_per_tid - sawf_ctx->default_msduq_per_tid;
-@@ -1608,6 +1674,12 @@ static int ath12k_telemetry_get_txstats(
+@@ -1668,6 +1734,12 @@ static int ath12k_telemetry_get_txstats(
  		goto end_stats;
  	}
  
@@ -224,7 +224,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	sawf_stats = &peer->sawf_stats;
  	if(!sawf_stats) {
  		ret = -ENODATA;
-@@ -1620,6 +1692,17 @@ static int ath12k_telemetry_get_txstats(
+@@ -1680,6 +1752,17 @@ static int ath12k_telemetry_get_txstats(
  			for (q_idx = 0; q_idx < sawf_max_user_queues; q_idx++) {
  				stats = &sawf_stats->tx_stats[tid][q_idx];
  				tx = &tx_stats->tx[tid][q_idx];
@@ -242,7 +242,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  				ath12k_copy_tx_stats(stats, tx);
  			}
  		}
-@@ -1631,6 +1714,14 @@ static int ath12k_telemetry_get_txstats(
+@@ -1691,6 +1774,14 @@ static int ath12k_telemetry_get_txstats(
  		}
  		stats = &sawf_stats->tx_stats[tid][q_id];
  		tx = &tx_stats->tx[0][0];
@@ -257,7 +257,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		ath12k_copy_tx_stats(stats, tx);
  		tx_stats->tid = tid;
  		tx_stats->msduq = q_id;
-@@ -1654,9 +1745,9 @@ static void ath12k_copy_delay_stats(stru
+@@ -1714,9 +1805,9 @@ static void ath12k_copy_delay_stats(stru
  	dst_hist_stats->max = src_hist_stats->max;
  	dst_hist_stats->avg = src_hist_stats->avg;
  
@@ -270,7 +270,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	dst->delay_bound_success = src->success;
  	dst->delay_bound_failure = src->failure;
  }
-@@ -1669,7 +1760,9 @@ static int ath12k_telemetry_get_delaysta
+@@ -1729,7 +1820,9 @@ static int ath12k_telemetry_get_delaysta
  	struct sawf_tx_delay_stats *stats;
  	struct telemetry_sawf_delay_stat *delay;
  	struct ath12k_peer *peer;
@@ -280,7 +280,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	u8 sawf_max_user_queues;
  
  	sawf_max_user_queues = sawf_ctx->max_msduq_per_tid - sawf_ctx->default_msduq_per_tid;
-@@ -1686,12 +1779,29 @@ static int ath12k_telemetry_get_delaysta
+@@ -1746,12 +1839,29 @@ static int ath12k_telemetry_get_delaysta
  		goto end_stats;
  	}
  
@@ -310,7 +310,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  				ath12k_copy_delay_stats(stats, delay);
  			}
  		}
-@@ -1705,6 +1815,16 @@ static int ath12k_telemetry_get_delaysta
+@@ -1765,6 +1875,16 @@ static int ath12k_telemetry_get_delaysta
  
  		stats = &sawf_stats->tx_delay_stats[tid][q_id];
  		delay = &delay_stats->delay[0][0];
@@ -327,7 +327,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		ath12k_copy_delay_stats(stats, delay);
  		delay_stats->tid = tid;
  		delay_stats->msduq = q_id;
-@@ -1751,3 +1871,156 @@ int telemetry_extract_data(struct stats_
+@@ -1811,3 +1931,215 @@ int telemetry_extract_data(struct stats_
  
  	return ret;
  }
@@ -457,6 +457,65 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +	return ret;
 +}
 +
++void ath12k_send_breach_indication(struct work_struct *work)
++{
++	struct ath12k_telemetry_ctx *telemetry_ctx = container_of(work, struct ath12k_telemetry_ctx, indicate_breach);
++	struct ath12k_tele_breach_params *breach_params, *tmp;
++
++	if (!telemetry_ctx) {
++		ath12k_err(NULL, "Telemetry ctx is unavailable\n");
++		return;
++	}
++
++	spin_lock_bh(&telemetry_ctx->breach_ind_lock);
++	list_for_each_entry_safe(breach_params, tmp, &telemetry_ctx->list, list) {
++		list_del(&breach_params->list);
++		spin_unlock_bh(&telemetry_ctx->breach_ind_lock);
++		ath12k_telemetry_notify_breach(breach_params->mac_addr,
++					       breach_params->svc_id,
++					       breach_params->param,
++					       breach_params->set_clear,
++					       breach_params->tid);
++		kfree(breach_params);
++		spin_lock_bh(&telemetry_ctx->breach_ind_lock);
++	}
++	spin_unlock_bh(&telemetry_ctx->breach_ind_lock);
++	return;
++}
++
++void ath12k_telemetry_breach_indication(u8 *mac_addr, u8 svc_id, u8 param, bool set_clear, u8 tid)
++{
++	struct ath12k_tele_breach_params *breach_params;
++	struct ath12k_telemetry_ctx *telemetry_ctx = NULL;
++
++	if (!mac_addr)
++		return;
++
++	telemetry_ctx = get_telemetry_context();
++	if (!telemetry_ctx) {
++		ath12k_err(NULL, "Breach detection received when telemetry ctx is unavailable\n");
++		return;
++	}
++
++	breach_params = kzalloc(sizeof(*breach_params), GFP_NOWAIT);
++	if (!breach_params) {
++		ath12k_err(NULL, "Failed to allocate memory to indicate breach detection\n");
++		return;
++	}
++
++	ether_addr_copy(breach_params->mac_addr, mac_addr);
++	breach_params->svc_id = svc_id;
++	breach_params->param = param;
++	breach_params->set_clear = set_clear;
++	breach_params->tid = tid;
++
++	spin_lock_bh(&telemetry_ctx->breach_ind_lock);
++	list_add_tail(&breach_params->list, &telemetry_ctx->list);
++	spin_unlock_bh(&telemetry_ctx->breach_ind_lock);
++
++	queue_work(telemetry_ctx->workqueue, &telemetry_ctx->indicate_breach);
++}
++
 +void ath12k_telemetry_notify_breach(u8 *mac_addr, u8 svc_id, u8 param,
 +				    bool set_clear, u8 tid)
 +{
@@ -496,7 +555,33 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  #define MIN_THERSHOLD_PERCENTAGE 0
  #define MAX_THERSHOLD_PERCENTAGE 100
-@@ -73,6 +74,12 @@ int ath12k_telemetry_sawf_sla_samples_co
+@@ -29,6 +30,10 @@ void ath12k_telemetry_init(struct ath12k
+ 		ath12k_err(NULL, "telemetry context failed to initialize\n");
+ 		return;
+ 	}
++	spin_lock_init(&telemetry_ctx->breach_ind_lock);
++	telemetry_ctx->workqueue = create_singlethread_workqueue("breach_ind_wq");
++	INIT_WORK(&telemetry_ctx->indicate_breach, ath12k_send_breach_indication);
++	INIT_LIST_HEAD(&telemetry_ctx->list);
+ 	ath12k_info(NULL, "telemetry context initialized\n");
+ 	return;
+ }
+@@ -41,6 +46,14 @@ void ath12k_telemetry_deinit(struct ath1
+ 	if (!telemetry_ctx)
+ 		return;
+ 
++	if (test_bit(ATH12K_FLAG_CRASH_FLUSH, &ab->dev_flags)) {
++		cancel_work_sync(&telemetry_ctx->indicate_breach);
++		return;
++	}
++
++	cancel_work_sync(&telemetry_ctx->indicate_breach);
++	destroy_workqueue(telemetry_ctx->workqueue);
++
+ 	kfree(telemetry_ctx);
+ 	telemetry_ctx = NULL;
+ 	ath12k_info(NULL, "telemetry context freed\n");
+@@ -73,6 +86,12 @@ int ath12k_telemetry_sawf_sla_samples_co
  	telemetry_param->sla_num_pkt = param.sla_num_pkt;
  	telemetry_param->sla_time_sec = param.sla_time_sec;
  
@@ -509,7 +594,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	ath12k_info(NULL, "telemetry sla samples configuration done, "
  		    "movavgpkt:%d movavgwin:%d slanumpkt:%d slatimesec:%d \n",
  		    telemetry_param->moving_avg_pkt,telemetry_param->moving_avg_win,
-@@ -114,6 +121,15 @@ int ath12k_telemetry_sawf_sla_thershold_
+@@ -114,6 +133,15 @@ int ath12k_telemetry_sawf_sla_thershold_
  	sla_thershold_param->msdu_ttl = param.msdu_ttl;
  	sla_thershold_param->msdu_rate_loss = param.msdu_rate_loss;
  
@@ -525,7 +610,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	ath12k_info(NULL, "telemetry sla thershold configuration done, "
  		    "svcid: %d MinThrRate:%d MaxThrRate:%d BurstSize:%d "
  		    "serviceInt:%d \n DelayBound: %d MsduTtl:%d "
-@@ -172,6 +188,15 @@ int ath12k_telemetry_sawf_sla_detection_
+@@ -172,6 +200,15 @@ int ath12k_telemetry_sawf_sla_detection_
  	telemetry_param->msdu_ttl = param.msdu_ttl;
  	telemetry_param->msdu_rate_loss = param.msdu_rate_loss;
  
@@ -541,7 +626,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	ath12k_info(NULL, "telemetry sla detection configuration done, detect option: %d "
  		   "MinThrRate:%d MaxThrRate:%d BurstSize:%d ServiceInt:%d \n DelayBound: %d "
  		   "MsduTtl:%d MsduRateLoss:%d \n", telemetry_param->sla_detect,
-@@ -182,3 +207,25 @@ int ath12k_telemetry_sawf_sla_detection_
+@@ -182,3 +219,25 @@ int ath12k_telemetry_sawf_sla_detection_
  
  	return ret;
  }
@@ -916,7 +1001,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +			       bool set_clear,
 +			       u8 tid)
 +{
-+	ath12k_telemetry_notify_breach(mac_addr, svc_id, param, set_clear, tid);
++	ath12k_telemetry_breach_indication(mac_addr, svc_id, param, set_clear, tid);
 +}
 --- /dev/null
 +++ b/drivers/net/wireless/ath/ath12k/telemetry_agent_if.h
@@ -990,7 +1075,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +#endif /* ATH12K_TELEMETRY_AGENT_IF_H */
 --- a/drivers/net/wireless/ath/ath12k/Makefile
 +++ b/drivers/net/wireless/ath/ath12k/Makefile
-@@ -33,7 +33,7 @@ ath12k-$(CPTCFG_ATH12K_PKTLOG) += pktlog
+@@ -31,7 +31,7 @@ ath12k-$(CPTCFG_ATH12K_PKTLOG) += pktlog
  ath12k-$(CPTCFG_ATH12K_AHB) += ahb.o
  ath12k-$(CPTCFG_ATH12K_PPE_DS_SUPPORT) += ppe.o
  ath12k-$(CPTCFG_ATH12K_BONDED_DS_SUPPORT) += bondif.o
@@ -1001,7 +1086,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  CFLAGS_trace.o := -I$(src)
 --- a/drivers/net/wireless/ath/ath12k/core.c
 +++ b/drivers/net/wireless/ath/ath12k/core.c
-@@ -22,6 +22,7 @@
+@@ -21,6 +21,7 @@
  #include "ppe.h"
  #include "ahb.h"
  #include "telemetry.h"
@@ -1009,7 +1094,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  #ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
  #include <linux/rtnetlink.h>
-@@ -2632,6 +2633,43 @@ int ath12k_core_sawf_ul_config(struct ne
+@@ -2617,6 +2618,43 @@ int ath12k_core_sawf_ul_config(struct ne
  	return ret;
  }
  
@@ -1063,7 +1148,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  #ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
  #include <ppe_ds_wlan.h>
  #include <ppe_vp_public.h>
-@@ -1611,6 +1612,7 @@ void ath12k_fw_stats_free(struct ath12k_
+@@ -1595,6 +1596,7 @@ void ath12k_fw_stats_free(struct ath12k_
  int ath12k_send_sawf_configs_soc(struct ath12k_sawf_svc_params *new_param);
  int ath12k_sawf_send_disable_soc(u8 svc_id);
  int ath12k_core_sawf_ul_config(struct net_device *dev, struct ath12k_sawf_wmi_peer_latency_param *latency_info);
@@ -1073,7 +1158,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  static inline const char *ath12k_scan_state_str(enum ath12k_scan_state state)
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -2066,8 +2066,10 @@ static void ath12k_htt_sawf_info_ind_han
+@@ -2088,8 +2088,10 @@ static void ath12k_htt_sawf_info_ind_han
  					     struct sk_buff *skb)
  {
  	struct htt_t2h_sawf_info_ind *resp = (struct htt_t2h_sawf_info_ind *)skb->data;
@@ -1086,7 +1171,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  
  	htt_qtype = u32_get_bits(__le32_to_cpu(resp->info0),
  				 HTT_T2H_SAWF_MSDUQ_INFO_0_IND_HTT_QTYPE_ID);
-@@ -2101,6 +2103,24 @@ static void ath12k_htt_sawf_info_ind_han
+@@ -2123,6 +2125,24 @@ static void ath12k_htt_sawf_info_ind_han
  		   flow_or,
  		   ast_idx,
  		   tgt_opaque_id);
@@ -1113,7 +1198,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  void ath12k_dp_htt_htc_t2h_msg_handler(struct ath12k_base *ab,
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -1039,6 +1039,10 @@ void ath12k_mac_peer_cleanup_all(struct
+@@ -1175,6 +1175,10 @@ void ath12k_mac_peer_cleanup_all(struct
  		ath12k_dp_rx_peer_tid_cleanup(ar, peer);
  		ath12k_peer_rhash_delete(ab, peer);
  		list_del(&peer->list);
@@ -1124,7 +1209,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  		kfree(peer);
  	}
  	spin_unlock_bh(&ab->base_lock);
-@@ -6749,6 +6753,10 @@ static void ath12k_mac_station_post_remo
+@@ -6838,6 +6842,10 @@ static void ath12k_mac_station_post_remo
  		ath12k_peer_rhash_delete(ar->ab, peer);
  		peer->sta = NULL;
  		list_del(&peer->list);
@@ -1137,7 +1222,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/peer.c
 +++ b/drivers/net/wireless/ath/ath12k/peer.c
-@@ -141,6 +141,10 @@ void ath12k_peer_unmap_event(struct ath1
+@@ -159,6 +159,10 @@ void ath12k_peer_unmap_event(struct ath1
  		   peer->vdev_id, peer->addr, peer_id);
  
  	list_del(&peer->list);
@@ -1148,7 +1233,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	kfree(peer);
  	wake_up(&ab->peer_mapping_wq);
  
-@@ -343,6 +347,10 @@ void ath12k_peer_cleanup(struct ath12k *
+@@ -361,6 +365,10 @@ void ath12k_peer_cleanup(struct ath12k *
  			    peer->addr, vdev_id);
  		ath12k_peer_rhash_delete(ab, peer);
  		list_del(&peer->list);
@@ -1161,7 +1246,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  	}
 --- a/drivers/net/wireless/ath/ath12k/sawf.h
 +++ b/drivers/net/wireless/ath/ath12k/sawf.h
-@@ -217,10 +217,13 @@ struct ath12k_sawf_def_queue_report {
+@@ -231,10 +231,13 @@ struct ath12k_sawf_def_queue_report {
   * The allocation is mapped with the service class ID.
   * @msduq_table: map table of msduq and svc id per peer
   * @def_q_map: default q map report
@@ -1175,7 +1260,23 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  };
  
  /* MSG_TYPE => HTT_H2T_SAWF_DEF_QUEUES_MAP_REQ
-@@ -850,6 +853,19 @@ int telemetry_extract_data(struct stats_
+@@ -811,6 +814,15 @@ struct htt_stats_strm_gen_mpdus_details_
+ 	__le16 burst_size_margin_bytes;
+ } __packed;
+ 
++struct ath12k_tele_breach_params {
++	struct list_head list;
++	u8 mac_addr[ETH_ALEN];
++	u8 svc_id;
++	u8 param;
++	bool set_clear;
++	u8 tid;
++};
++
+ extern bool ath12k_sawf_enable;
+ struct ath12k_sawf_ctx *ath12k_get_sawf_context(void);
+ void ath12k_sawf_init(struct ath12k_base *ab);
+@@ -865,6 +877,22 @@ int telemetry_extract_data(struct stats_
  			   struct telemetry_sawftx_stats *tx_stats,
  			   struct telemetry_sawfdelay_stats *delay_stats,
  			   struct ath12k_base *ab);
@@ -1192,18 +1293,33 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
 +					    u8 tid, u8 msduq_id);
 +void ath12k_telemetry_notify_breach(u8 *mac_addr, u8 svc_id, u8 param,
 +				    bool set_clear, u8 tid);
++void ath12k_telemetry_breach_indication(u8 *mac_addr, u8 svc_id,
++					u8 param, bool set_clear,
++					u8 tid);
  #else /* CPTCFG_ATH12K_SAWF */
  
  static inline void ath12k_sawf_init(struct ath12k_base *ab) {
 --- a/drivers/net/wireless/ath/ath12k/telemetry.h
 +++ b/drivers/net/wireless/ath/ath12k/telemetry.h
-@@ -101,7 +101,8 @@ struct ath12k_telemetry_ctx *get_telemet
+@@ -93,6 +93,10 @@ struct ath12k_telemetry_ctx {
+ 	struct ath12k_sla_samples_cfg sla_samples_params;
+ 	struct ath12k_sla_thershold_cfg sla_thershold_params;
+ 	struct ath12k_sla_detect_cfg sla_detect_params;
++	spinlock_t breach_ind_lock;
++	struct workqueue_struct *workqueue;
++	struct work_struct indicate_breach;
++	struct list_head list;
+ };
+ 
+ void ath12k_telemetry_init(struct ath12k_base *ab);
+@@ -101,7 +105,9 @@ struct ath12k_telemetry_ctx *get_telemet
  int ath12k_telemetry_sawf_sla_samples_config(struct ath12k_sla_samples_cfg param);
  int ath12k_telemetry_sawf_sla_thershold_config(struct ath12k_sla_thershold_cfg param);
  int ath12k_telemetry_sawf_sla_detection_config(struct ath12k_sla_detect_cfg param);
 -
 +bool ath12k_telemetry_get_sla_num_pkts(u32 *pkt_num);
 +bool ath12k_telemetry_get_sla_mov_avg_num_pkt(u32 *mov_avg);
++void ath12k_send_breach_indication(struct work_struct *work);
  #else /* CPTCFG_ATH12K_SAWF */
  
  static inline void ath12k_telemetry_init(struct ath12k_base *ab) {
@@ -1228,7 +1344,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  static void ath12k_set_default_values(struct ath12k_sawf_svc_params *param)
  {
  	param->min_throughput_rate = SAWF_SVC_PARAM_DEFAULT_MIN_THRUPUT;
-@@ -892,6 +904,110 @@ end_stats:
+@@ -896,6 +908,110 @@ end_stats:
  	return ret;
  }
  
@@ -1339,7 +1455,7 @@ Signed-off-by: Nagarajan Maran <quic_nmaran@quicinc.com>
  #endif /* CPTCFG_ATH12K_SAWF */
  static struct wiphy_vendor_command ath12k_vendor_commands[] = {
  #ifdef CPTCFG_ATH12K_SAWF
-@@ -977,12 +1093,31 @@ static struct wiphy_vendor_command ath12
+@@ -981,12 +1097,31 @@ static struct wiphy_vendor_command ath12
  		.maxattr = QCA_WLAN_VENDOR_ATTR_TELEMETRIC_MAX,
  		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV,
  	},

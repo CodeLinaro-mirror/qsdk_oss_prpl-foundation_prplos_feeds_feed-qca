@@ -157,7 +157,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  	sta = container_of((void *)ahsta, struct ieee80211_sta, drv_priv);
  
-@@ -3303,13 +3368,26 @@ static bool ath12k_mac_set_he_txbf_conf(
+@@ -3306,13 +3371,26 @@ static bool ath12k_mac_set_he_txbf_conf(
  	u32 param = WMI_VDEV_PARAM_SET_HEMU_MODE;
  	u32 value = 0;
  	int ret;
@@ -187,7 +187,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		    ahvif->vdev_type == WMI_VDEV_TYPE_AP)
  			value |= FIELD_PREP(HE_MODE_MU_TX_BFER, HE_MU_BFER_ENABLE);
  	}
-@@ -3318,13 +3396,14 @@ static bool ath12k_mac_set_he_txbf_conf(
+@@ -3321,13 +3399,14 @@ static bool ath12k_mac_set_he_txbf_conf(
  		value |= FIELD_PREP(HE_MODE_DL_OFDMA, HE_DL_MUOFDMA_ENABLE) |
  			 FIELD_PREP(HE_MODE_UL_OFDMA, HE_UL_MUOFDMA_ENABLE);
  
@@ -204,7 +204,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	ret = ath12k_wmi_vdev_set_param_cmd(ar, arvif->vdev_id, param, value);
  	if (ret) {
  		ath12k_warn(ar->ab, "failed to set vdev %d HE MU mode: %d\n",
-@@ -3359,9 +3438,24 @@ static bool ath12k_mac_vif_recalc_sta_he
+@@ -3362,9 +3441,24 @@ static bool ath12k_mac_vif_recalc_sta_he
  	u32 hemode = 0;
  	int ret;
  	u8 link_id = arvif->link_id;
@@ -230,7 +230,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  	if (vif->type != NL80211_IFTYPE_STATION)
  		return false;
-@@ -3421,13 +3515,26 @@ static bool ath12k_mac_set_eht_txbf_conf
+@@ -3424,13 +3518,26 @@ static bool ath12k_mac_set_eht_txbf_conf
  	u32 param = WMI_VDEV_PARAM_SET_EHT_MU_MODE;
  	u32 value = 0;
  	int ret;
@@ -260,7 +260,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		    ahvif->vdev_type == WMI_VDEV_TYPE_AP)
  			value |= FIELD_PREP(EHT_MODE_MU_TX_BFER, EHT_MU_BFER_ENABLE) |
  				 FIELD_PREP(EHT_MODE_DL_OFDMA_MUMIMO, EHT_DL_MUOFDMA_ENABLE) |
-@@ -3438,13 +3545,15 @@ static bool ath12k_mac_set_eht_txbf_conf
+@@ -3441,13 +3548,15 @@ static bool ath12k_mac_set_eht_txbf_conf
  		value |= FIELD_PREP(EHT_MODE_DL_OFDMA, EHT_DL_MUOFDMA_ENABLE) |
  			 FIELD_PREP(EHT_MODE_UL_OFDMA, EHT_UL_MUOFDMA_ENABLE);
  
@@ -278,7 +278,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	ret = ath12k_wmi_vdev_set_param_cmd(ar, arvif->vdev_id, param, value);
  	if (ret) {
  		ath12k_warn(ar->ab, "failed to set vdev %d EHT MU mode: %d\n",
-@@ -3956,10 +4065,10 @@ static void ath12k_mac_bss_info_changed(
+@@ -3959,10 +4068,10 @@ static void ath12k_mac_bss_info_changed(
  		else
  			arvif->do_not_send_tmpl = false;
  
@@ -291,7 +291,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  				param_value = WMI_BA_MODE_BUFFER_SIZE_1024;
  			else
  				param_value = WMI_BA_MODE_BUFFER_SIZE_256;
-@@ -4011,12 +4120,13 @@ static void ath12k_mac_bss_info_changed(
+@@ -4014,12 +4123,13 @@ static void ath12k_mac_bss_info_changed(
  		}
  		ath12k_control_beaconing(arvif, info);
  
@@ -309,7 +309,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  				ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
  					   "he oper param: %x set for VDEV: %d\n",
  					   param_value, arvif->vdev_id);
-@@ -4118,12 +4228,12 @@ static void ath12k_mac_bss_info_changed(
+@@ -4121,12 +4231,12 @@ static void ath12k_mac_bss_info_changed(
  	if (changed & BSS_CHANGED_MCAST_RATE &&
  	    !ath12k_mac_vif_chan(ahvif->vif, &def, link_id)) {
  		band = def.chan->band;
@@ -324,7 +324,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  		if (ar->pdev->cap.supported_bands & WMI_HOST_WLAN_5G_CAP)
  			rateidx += ATH12K_MAC_FIRST_OFDM_RATE_IDX;
-@@ -4181,7 +4291,7 @@ static void ath12k_mac_bss_info_changed(
+@@ -4184,7 +4294,7 @@ static void ath12k_mac_bss_info_changed(
  							    arvif->vdev_id,
  							    info->he_bss_color.color,
  							    ATH12K_BSS_COLOR_AP_PERIODS,
@@ -333,7 +333,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  							    0 : color_collision_detect);
  			if (ret)
  				ath12k_warn(ar->ab, "failed to set bss color collision on vdev %i: %d\n",
-@@ -8432,33 +8542,48 @@ static int ath12k_mac_setup_vdev_args_mb
+@@ -8440,33 +8550,49 @@ static int ath12k_mac_setup_vdev_args_mb
  	struct ath12k *ar = arvif->ar;
  	struct ath12k_link_vif *tx_arvif;
  	struct ieee80211_vif *tx_vif;
@@ -373,6 +373,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  		*tx_vdev_id = tx_arvif->vdev_id;
  	} else if (tx_arvif == arvif) {
  		*flags = WMI_HOST_VDEV_FLAGS_TRANSMIT_AP;
++		*tx_vdev_id = arvif->vdev_id;
  	} else {
 +		rcu_read_unlock();
  		return -EINVAL;
@@ -386,7 +387,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	return 0;
  }
  
-@@ -9396,6 +9521,7 @@ static int ath12k_mac_set_6g_nonht_dup_c
+@@ -9404,6 +9530,7 @@ static int ath12k_mac_set_6g_nonht_dup_c
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	struct ieee80211_bss_conf *link_conf;
  	u8 link_addr[ETH_ALEN];
@@ -394,7 +395,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  
  	rcu_read_lock();
  
-@@ -9407,10 +9533,11 @@ static int ath12k_mac_set_6g_nonht_dup_c
+@@ -9415,10 +9542,11 @@ static int ath12k_mac_set_6g_nonht_dup_c
  	}
  
  	memcpy(link_addr, link_conf->addr, ETH_ALEN);
@@ -407,7 +408,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  	    (chandef->chan->band == NL80211_BAND_6GHZ)) {
  		param_id = WMI_VDEV_PARAM_6GHZ_PARAMS;
  		if (mode > MODE_11AX_HE20 && !is_psc) {
-@@ -10433,7 +10560,7 @@ void ath12k_mac_fill_reg_tpc_info(struct
+@@ -10441,7 +10569,7 @@ void ath12k_mac_fill_reg_tpc_info(struct
          struct ath12k_base *ab = ar->ab;
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	struct ieee80211_vif *vif = ahvif->vif;
@@ -416,7 +417,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
          struct ath12k_reg_tpc_power_info *reg_tpc_info = &arvif->reg_tpc_info;
          struct ieee80211_channel *chan, *temp_chan;
          u8 pwr_lvl_idx, num_pwr_levels, pwr_reduction;
-@@ -10443,12 +10570,22 @@ void ath12k_mac_fill_reg_tpc_info(struct
+@@ -10451,12 +10579,22 @@ void ath12k_mac_fill_reg_tpc_info(struct
          u16 oper_freq = 0, start_freq = 0, center_freq = 0;
  	u8 reg_6g_power_mode;
  
@@ -440,7 +441,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
         else if (ahvif->vdev_type == WMI_VDEV_TYPE_AP) {
                 struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
                 /* With respect to ieee80211, the 6G AP power mode starts from index
-@@ -10467,6 +10604,8 @@ void ath12k_mac_fill_reg_tpc_info(struct
+@@ -10475,6 +10613,8 @@ void ath12k_mac_fill_reg_tpc_info(struct
          start_freq = ath12k_mac_get_6g_start_frequency(&ctx->def);
          pwr_reduction = bss_conf->pwr_reduction;
  
@@ -449,7 +450,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
          if (ahvif->vdev_type == WMI_VDEV_TYPE_STA &&
  	    arvif->reg_tpc_info.num_pwr_levels) {
                  is_tpe_present = true;
-@@ -10627,7 +10766,7 @@ static void ath12k_mac_parse_tx_pwr_env(
+@@ -10646,7 +10786,7 @@ static void ath12k_mac_parse_tx_pwr_env(
          struct ath12k_base *ab = ar->ab;
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	struct ieee80211_vif *vif = ahvif->vif;
@@ -458,7 +459,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
          struct ieee80211_tx_pwr_env *single_tpe;
          enum wmi_reg_6g_client_type client_type;
          int i;
-@@ -10636,6 +10775,16 @@ static void ath12k_mac_parse_tx_pwr_env(
+@@ -10655,6 +10795,16 @@ static void ath12k_mac_parse_tx_pwr_env(
          bool use_local_tpe, non_psd_set = false, psd_set = false;
  	struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
  
@@ -475,7 +476,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
          if (wdev)
                  client_type = wdev->reg_6g_power_mode;
          else
-@@ -10659,6 +10808,7 @@ static void ath12k_mac_parse_tx_pwr_env(
+@@ -10678,6 +10828,7 @@ static void ath12k_mac_parse_tx_pwr_env(
          }
  
          if (!reg_tpe_count && !local_tpe_count) {
@@ -483,7 +484,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
                  ath12k_warn(ab,
                              "no transmit power envelope match client power type %d\n",
                              client_type);
-@@ -10743,6 +10893,7 @@ static void ath12k_mac_parse_tx_pwr_env(
+@@ -10762,6 +10913,7 @@ static void ath12k_mac_parse_tx_pwr_env(
                          }
                  }
          }
@@ -491,7 +492,7 @@ Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
  }
  
  static int
-@@ -10839,7 +10990,7 @@ ath12k_mac_op_assign_vif_chanctx(struct
+@@ -10858,7 +11010,7 @@ ath12k_mac_op_assign_vif_chanctx(struct
  	if (ar->supports_6ghz && ctx->def.chan->band == NL80211_BAND_6GHZ &&
              (ahvif->vdev_type == WMI_VDEV_TYPE_STA ||
               ahvif->vdev_type == WMI_VDEV_TYPE_AP)) {

@@ -25,27 +25,17 @@ Signed-off-by: Dhanavandhana Kannan <quic_dhanavan@quicinc.com>
 
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -1502,11 +1502,15 @@ int hostapd_ctrl_iface_bss_tm_req(struct
+@@ -1616,7 +1616,9 @@ int hostapd_ctrl_iface_bss_tm_req(struct
  	}
  
  	sta = ap_get_sta(hapd, addr);
 -	if (sta == NULL) {
--		wpa_printf(MSG_DEBUG, "Station " MACSTR
--			   " not found for BSS TM Request message",
--			   MAC2STR(addr));
--		return -1;
-+	if (!sta && hapd->mld) {
++	if (!sta && hapd->mld)
 +		sta = ap_get_link_sta(hapd, addr);
-+		if (!sta) {
-+			wpa_printf(MSG_DEBUG, "Station " MACSTR
-+				   " not found for BSS TM Request message",
-+				   MAC2STR(addr));
-+			return -1;
-+		}
-+
- 	}
- 
- 	pos = os_strstr(cmd, " disassoc_timer=");
++	if (!sta) {
+ 		wpa_printf(MSG_DEBUG, "Station " MACSTR
+ 			   " not found for BSS TM Request message",
+ 			   MAC2STR(addr));
 --- a/src/ap/sta_info.c
 +++ b/src/ap/sta_info.c
 @@ -102,6 +102,19 @@ struct sta_info * ap_get_sta(struct host
@@ -70,7 +60,7 @@ Signed-off-by: Dhanavandhana Kannan <quic_dhanavan@quicinc.com>
  struct sta_info * ap_get_sta_p2p(struct hostapd_data *hapd, const u8 *addr)
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
-@@ -383,6 +383,7 @@ int ap_for_each_sta(struct hostapd_data
+@@ -370,6 +370,7 @@ int ap_for_each_sta(struct hostapd_data
  struct hostapd_ft_over_ds_ml_sta_entry *ap_get_ft_ds_ml_sta(struct hostapd_data *hapd,
  							    const u8 *sta_mld);
  struct sta_info * ap_get_sta(struct hostapd_data *hapd, const u8 *sta);
