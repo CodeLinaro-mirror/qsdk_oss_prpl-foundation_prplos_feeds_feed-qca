@@ -44,10 +44,10 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-drv-pptp kmod-pptp kmod-emesh-sp \
 	kmod-qca-nss-ppe-mirror-test \
 	kmod-qca-nss-macsec kmod-qca-nss-crypto qca-wifi-hk-fw-hw1-10.4-asic kmod-qca-nss-ecm-wifi-plugin \
-	kmod-qca-nss-sfe kmod-crypto-authenc kmod-qca-nss-ecm-premium  kmod-qca-ovsmgr kmod-qca-nss-eip-ipsec \
+	kmod-qca-nss-sfe kmod-crypto-authenc kmod-qca-nss-ecm-premium  kmod-qca-ovsmgr \
 	-kmod-qca-nss-cfi-cryptoapi  -kmod-qca-nss-gmac \
 	-kmod-qca-nss-cfi-ocf kmod-qca-nss-ppe-mirror-test  \
-	kmod-qca-nss-eip-crypto kmod-qca-nss-eip kmod-bootconfig
+	kmod-nss-udp-st-drv kmod-qca-nss-dscpstats kmod-qca-nss-nsm
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
 

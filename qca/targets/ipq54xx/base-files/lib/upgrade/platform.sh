@@ -163,6 +163,13 @@ do_flash_emmc() {
 	dd if=/tmp/${bin}.bin of=${emmcblock}
 }
 
+set_boot_part() {
+	local output=$(find /sys/block/ -name '*boot*')
+	echo "$output" | while read -r line; do
+		echo $1 > ${line}/force_ro
+	done
+}
+
 do_flash_partition() {
 	local bin=$1
 	local mtdname=$2
@@ -184,6 +191,7 @@ do_flash_bootconfig() {
 		do_flash_partition $bin $mtdname
 	else
 		echo " Bootconfig binary is missing.... "
+		return 1
 	fi
 }
 
@@ -192,14 +200,21 @@ get_upgrade_bank() {
 	local boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
 	local image_status_A=$(grep "Image-set-status-A" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
 	local image_status_B=$(grep "Image-set-status-B" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+	local current_bank=0
 
 	if [ "$boot_set" -eq 0 ] && [ "$image_status_A" -eq 0 ]; then
 		mtdname="${mtdname}_1"
+		current_bank=1
 	elif [ "$boot_set" -eq 1 ] && [ "$image_status_B" -ne 0 ]; then
 		mtdname="${mtdname}_1"
+		current_bank=1
 	fi
 
-	echo $mtdname
+	if [[ -z "$mtdname" || "$mtdname" == "_1" ]]; then
+		echo $current_bank
+	else
+		echo $mtdname
+	fi
 }
 
 do_flash_failsafe_partition() {
@@ -294,6 +309,7 @@ flash_section() {
 		esac
 		echo "Flashed ${image_name}"
 	done < $output_list
+	return 0
 }
 
 erase_emmc_config() {
@@ -373,11 +389,6 @@ platform_check_image() {
 
 do_upgrade() {
 	v "Performing system upgrade..."
-	if [ ! -e /proc/boot_info/bootconfig0/ ] && [ ! -e /proc/boot_info/bootconfig1/ ]; then
-		echo " Bootconfig is not available. Aborting upgrade..... "
-		exit 1
-	fi
-
 	if type 'platform_do_upgrade' >/dev/null 2>/dev/null; then
 		platform_do_upgrade "$ARGV"
 	else
@@ -419,7 +430,9 @@ platform_do_upgrade() {
 		image_name=$(echo $line | cut -d ' ' -f1)
 		if [ ! -e /tmp/${image_name}.bin ]; then
 			echo "Error: Cant' find ${image_name} after switching to ramfs, aborting upgrade!"
-			reboot
+			if [ $alive -eq 0 ]; then
+				reboot
+			fi
 		fi
 	done < $output_list
 
@@ -431,7 +444,9 @@ platform_do_upgrade() {
 	dumpimage -b $image_set_default
 	if [[ "$?" == 1 ]];then
 		echo "bootconfig functionality failed, rebooting.."
-		reboot
+		if [ $alive -eq 0 ]; then
+			reboot
+		fi
 		return 1
 	fi
 
@@ -440,22 +455,20 @@ platform_do_upgrade() {
 
 	case "$upgrade_set" in
 	true)
-		flash_section $1
-
-		#passing value '0' to parse the bootconfig and
-		# setting ther bank back as valid is being handled in driver
-		dumpimage -b 0
-		if [[ "$?" == 1 ]];then
-			echo "bootconfig functionality failed, rebooting.."
-			reboot
+		#setting boot mmc device to write enabled
+		set_boot_part 0
+		if ! flash_section "$1"; then
+			echo " Failed to flash firmwares "
 			return 1
 		fi
-		do_flash_bootconfig "0:BOOTCONFIG"
 
+		#setting back boot mmc devices to read only
+		set_boot_part 1
 		#setting Try bit for upgrade without config preserve
 		if [ $alive -eq 0 ]; then
-			if [ -e /proc/upgrade_info/trybit ]; then
-				echo 1 > /proc/upgrade_info/trybit
+			if ! set_trybit; then
+				echo " Try-bit set failed "
+				return 1
 			fi
 		fi
 
@@ -468,42 +481,64 @@ platform_do_upgrade() {
 	return 1;
 }
 
-# activate_bootconfig() - activates bootconfig0 or bootconfig1 for OMCI upgrade
-# It sets trybit only if the upgraded bootconfig is having lower age
-activate_bootconfig() {
-	local boot_set
+set_trybit() {
+	local pbl_bank=$(get_upgrade_bank)
+	echo 1 > /sys/devices/platform/firmware:scm/trybit
+	echo $pbl_bank > /sys/devices/platform/firmware:scm/tcsr_boot_info
+	return 0
+}
 
-	dumpimage -b 4
-	if [ -e /tmp/bootconfig_members.txt ]; then
-		boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
-	else
+trymode_boot_update() {
+	#setting boot mmc device to write enabled
+	set_boot_part 0
+	#passing value '0' to parse the bootconfig and
+	# setting the bank back as valid is being handled in drive
+	extract_bootconfig "0:BOOTCONFIG"
+	dumpimage -b 0
+	if [[ "$?" == 1 ]];then
+		echo "bootconfig functionality failed, rebooting.."
+		return 1
+	fi
+	do_flash_bootconfig "0:BOOTCONFIG"
+	#setting back boot mmc devices to read only
+	set_boot_part 1
+}
+
+# activate_bootconfig() - activates Bank-A or Bank-B for OMCI upgrade
+# If the current booted and activating bank matches, skip trybit
+# else set try-bit to boot from upgraded bank.
+activate_bootconfig() {
+	extract_bootconfig "0:BOOTCONFIG"
+	dumpimage -b 4 &> /dev/null
+	if [ ! -e /tmp/bootconfig_members.txt ]; then
 		echo " Boot info is not available "
+		return 1
 	fi
 
-	if [ "$boot_set" -eq "0" ]; then
-		dumpimage -b boot_set 1
+	upgrade_bank=$(get_upgrade_bank)
+	if [ $upgrade_bank -eq $1 ]; then
+		set_trybit
 	else
-		dumpimage -b boot_set 0
+		echo " Activating current booted bank "
 	fi
 }
 
-# commit_bootconfig() - commits bootconfig0 or bootconfig1 for OMCI upgrade
-# It increaments age of the currently booted bootconfig and updates into
-# flash after age increament.
+# commit_bootconfig() - commits Bank A or Bank B for OMCI upgrade
+# Setting the bootset and it's health status as valid and updates into
+# flash after boot-info update.
 commit_bootconfig() {
-        local boot_set
-
-	dumpimage -b 4
-	if [ -e /tmp/bootconfig_members.txt ]; then
-		boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
-	else
+	extract_bootconfig "0:BOOTCONFIG"
+	dumpimage -b 4 &> /dev/null
+	if [ ! -e /tmp/bootconfig_members.txt ]; then
 		echo " Boot info is not available "
+		return 1
 	fi
 
-	if [ "$boot_set" -eq "0" ]; then
-		dumpimage -b boot_set 1
+	dumpimage -b boot_set $1 &> /dev/null
+	if [ "$1" -eq "0" ]; then
+		dumpimage -b image_set_status_A 0
 	else
-		dumpimage -b boot_set 0
+		dumpimage -b image_set_status_B 0
 	fi
 	do_flash_bootconfig "0:BOOTCONFIG"
 }
@@ -537,20 +572,7 @@ platform_copy_config() {
 	local upgradepart="rootfs"
 	mkdir -p /tmp/overlay
 
-	#setting Try bit
-	if [ $alive -eq 0 ]; then
-		if [ -e /proc/upgrade_info/trybit ]; then
-			echo 1 > /proc/upgrade_info/trybit
-		fi
-	fi
-
 	upgradepart=$(get_upgrade_bank $upgradepart)
-	if [ "$upgradepart" = "rootfs" ]; then
-		upgradepart="rootfs_1"
-	else
-		upgradepart="rootfs"
-	fi
-
 	if [ -e "${nand_part%% *}" ]; then
 		local mtdpart
 		mtdpart=$(grep "\"${upgradepart}\"" /proc/mtd | awk -F: '{print $1}')
@@ -570,7 +592,6 @@ platform_copy_config() {
 		losetup --detach-all
 		local data_blockoffset="$(platform_get_offset $(ls /tmp/rootfs-*))"
 		local loopdev="$(losetup -f)"
-		[ "$upgradepart" == "rootfs" ] && upgradepart="rootfs_1" || upgradepart="rootfs"
 		emmcblock="$(find_mmc_part ${upgradepart})"
 		losetup -o $data_blockoffset $loopdev $emmcblock || {
 			echo "Failed to mount looped rootfs_data."
