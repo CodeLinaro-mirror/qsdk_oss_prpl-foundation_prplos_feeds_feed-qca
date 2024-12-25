@@ -1,0 +1,62 @@
+From 42da66ac7bcb19181385e851094ceedfe7c81984 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20Wei=C3=9F?= <michael.weiss@aisec.fraunhofer.de>
+Date: Mon, 24 Oct 2022 21:15:52 +0200
+Subject: [PATCH] squashfs: enable idmapped mounts
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+For squashfs all needed functionality for idmapped mounts is already
+implemented by the generic handlers in the VFS. Thus, it is sufficient
+to just enable the corresponding FS_ALLOW_IDMAP flag to support
+idmapped mounts.
+
+We use this for unprivileged (user namespaced) containers based on
+squashfs images as rootfs in GyroidOS.
+
+A simple test using the mount-idmapped tool executed as user with
+uid=1000 looks as follows:
+
+$ mkdir test
+$ echo "test" > test/test_file
+$ mksquashfs test/ fs.img
+$ sudo mkdir /mnt/test
+$ sudo mkdir /mnt/mapped
+$ sudo mount fs.img -o loop /mnt/test/
+$ sudo ./mount-idmapped --map-mount b:1000:2000:1 /mnt/test/ /mnt/mapped/
+
+$ mount | tail -n2
+fs.img on /mnt/test type squashfs (ro,relatime,errors=continue)
+fs.img on /mnt/mapped type squashfs (ro,relatime,idmapped,errors=continue)
+
+$ ls -lan /mnt/test/
+total 5
+drwxr-xr-x 2 1000 1000   32 Okt 24 13:36 .
+drwxr-xr-x 6    0    0 4096 Okt 24 13:38 ..
+-rw-r--r-- 1 1000 1000    5 Okt 24 13:36 test_file
+
+$ ls -lan /mnt/mapped/
+total 5
+drwxr-xr-x 2 2000 2000   32 Okt 24 13:36 .
+drwxr-xr-x 6    0    0 4096 Okt 24 13:38 ..
+-rw-r--r-- 1 2000 2000    5 Okt 24 13:36 test_file
+
+Signed-off-by: Michael Weiß <michael.weiss@aisec.fraunhofer.de>
+Reviewed-by: Christian Brauner <brauner@kernel.org>
+Reviewed-by: Phillip Lougher <phillip@squashfs.org.uk>
+Signed-off-by: Christian Brauner (Microsoft) <brauner@kernel.org>
+---
+ fs/squashfs/super.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/fs/squashfs/super.c
++++ b/fs/squashfs/super.c
+@@ -608,7 +608,7 @@ static struct file_system_type squashfs_
+ 	.init_fs_context = squashfs_init_fs_context,
+ 	.parameters = squashfs_fs_parameters,
+ 	.kill_sb = kill_block_super,
+-	.fs_flags = FS_REQUIRES_DEV
++	.fs_flags = FS_REQUIRES_DEV | FS_ALLOW_IDMAP,
+ };
+ MODULE_ALIAS_FS("squashfs");
+ 
