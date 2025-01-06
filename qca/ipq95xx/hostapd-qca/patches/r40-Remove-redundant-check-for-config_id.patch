@@ -1,0 +1,27 @@
+From 1dd51a278934d0cec0468cebdc0592b196923464 Mon Sep 17 00:00:00 2001
+From: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
+Date: Thu, 19 Dec 2024 12:22:47 +0530
+Subject: [PATCH] Remove redundant check for config_id
+The existing code contains two condition check for config_id,
+leading to redundancy and potential conflicts.
+Fix  redundant config_id check into a single block,
+ensuring consistent behavior and preventing memory management issues.
+Signed-off-by: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
+---
+ hostapd/config_file.c | 2 --
+ 1 file changed, 2 deletions(-)
+diff --git a/hostapd/config_file.c b/hostapd/config_file.c
+index df64dac44ed3..3c6053f74198 100644
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -2352,8 +2352,6 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+ 		bss->isolate = atoi(pos);
+ 	} else if (os_strcmp(buf, "ap_max_inactivity") == 0) {
+ 		bss->ap_max_inactivity = atoi(pos);
+-	} else if (os_strcmp(buf, "config_id") == 0) {
+-		bss->config_id = os_strdup(pos);
+ 	} else if (os_strcmp(buf, "skip_inactivity_poll") == 0) {
+ 		bss->skip_inactivity_poll = atoi(pos);
+ 	} else if (os_strcmp(buf, "config_id") == 0) {
+-- 
+2.34.1
