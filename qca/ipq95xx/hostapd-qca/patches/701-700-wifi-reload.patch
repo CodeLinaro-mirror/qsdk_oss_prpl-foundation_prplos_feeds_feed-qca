@@ -1,0 +1,18 @@
+--- a/hostapd/ctrl_iface.c	2025-07-07 12:34:41.883707619 +0530
++++ b/hostapd/ctrl_iface.c	2025-07-07 12:38:07.723060042 +0530
+@@ -1367,6 +1367,15 @@ static int hostapd_ctrl_iface_set(struct
+ 					     hapd->iface, NULL);
+ 		}
+ 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
++		if((ret == 0) && (os_strcasecmp(cmd,"config_id") == 0)) {
++			if(os_strcasecmp(hapd->config_id,value) != 0) {
++				if(hapd->config_id)	{	
++					os_free(hapd->config_id);
++				}
++				hapd->config_id = os_strdup(value);	
++			}
++		}
++
+ 		if (ret)
+ 			return ret;
+ 
