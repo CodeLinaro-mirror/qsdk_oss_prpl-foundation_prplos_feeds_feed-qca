@@ -15,7 +15,7 @@ KERNEL_PATCHVER:=6.1
 
 include $(INCLUDE_DIR)/target.mk
 DEFAULT_PACKAGES += \
-	e2fsprogs uboot-envtools kmod-gpio-button-hotplug kmod-button-hotplug \
+	e2fsprogs uboot-envtools \
 	kmod-ata-core kmod-ata-ahci kmod-ata-ahci-platform kmod-usb3 \
 	kmod-usb-phy-ipq807x kmod-usb-dwc3-qcom-internal \
 	kmod-qca-nss-ppe kmod-qca-nss-ppe-ds kmod-qca-nss-ppe-vp \
