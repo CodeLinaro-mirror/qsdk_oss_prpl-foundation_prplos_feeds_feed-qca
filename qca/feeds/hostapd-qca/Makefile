@@ -86,8 +86,9 @@ DRIVER_MAKEOPTS= \
 	CONFIG_ACS=y CONFIG_DRIVER_NL80211=y \
 	CONFIG_IEEE80211AC=$(HOSTAPD_IEEE80211AC) \
 	CONFIG_IEEE80211AX=$(HOSTAPD_IEEE80211AX) \
-	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT) \
-	CONFIG_UCODE=y
+	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT)
+
+#CONFIG_UCODE=y
 
 ifeq ($(SSL_VARIANT),openssl)
   DRIVER_MAKEOPTS += CONFIG_TLS=openssl CONFIG_SAE=y
@@ -180,7 +181,10 @@ Package/hostapd-qca-openssl/description = $(Package/hostapd-qca/description)
 define Package/hostapd-qca-macsec
 $(call Package/hostapd-qca/Default,$(1))
   TITLE+= (macsec)
+  PROVIDES:=hostapd-qca-macsec
+  CONFLICTS:=
   VARIANT:=macsec
+  DEPENDS+=$(OPENSSL_DEPENDS) +kmod-qca-nss-macsec +libnl
 endef
 
 define Package/hostapd-qca-macsec/description
@@ -451,7 +455,10 @@ endef
 define Package/wpa-supplicant-qca-macsec
 $(call Package/wpa-supplicant-qca/Default,$(1))
   TITLE:=WPA Supplicant (MACSEC)
+  PROVIDES:=wpa-supplicant-qca-macsec
+  CONFLICTS:=
   VARIANT:=supplicant-qca-macsec
+  DEPENDS+=$(OPENSSL_DEPENDS) +kmod-qca-nss-macsec +libnl
 endef
 
 define Package/wpa-supplicant-qca-macsec/Description
@@ -588,6 +595,11 @@ endif
 
 define Build/Configure
 	$(Build/Configure/rebuild)
+	# Revert specific patch for wpa-supplicant-macsec
+	$(if $(filter supplicant-qca-macsec,$(BUILD_VARIANT)), \
+		$(PATCH) -d $(PKG_BUILD_DIR) -p1 -R < $(EXTERNAL_PATCH_DIR)/zz-r31-hostapd-display-the-link_type-of-a-station-through-hostapd_cli.patch && \
+		$(PATCH) -d $(PKG_BUILD_DIR) -p1 -R < $(EXTERNAL_PATCH_DIR)/zz-b00-034-hostapd-Add-max-rate-information-into-STATUS-and-STA.patch \
+	)
 	$(if $(wildcard ./files/hostapd-$(CONFIG_VARIANT).config), \
 		$(CP) ./files/hostapd-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/hostapd/.config \
 	)
@@ -623,20 +635,19 @@ TARGET_CPPFLAGS := \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
 TARGET_LDFLAGS += -lubox -lubus -lblobmsg_json -lucode -lm -lnl-tiny -ludebug
-TARGET_CFLAGS += -fPIC
-
-ifdef CONFIG_DEBUG
-	TARGET_CFLAGS += -g3
-endif
-
+TARGET_CFLAGS += -fPIC -Wall -g3
 
 ifdef CONFIG_WPA_ENABLE_WEP
     DRIVER_MAKEOPTS += CONFIG_WEP=y
 endif
 
 ifeq ($(LOCAL_VARIANT),macsec)
-	TARGET_LDFLAGS += -lcrypto -lssl -lfal -L$(STAGING_DIR)/usr/lib
-	TARGET_CPPFLAGS += \
+	EXTERNAL_PATCH_DIR:=$(CURDIR)/patches
+	TARGET_LDFLAGS += -lcrypto -lssl -lfal -L$(STAGING_DIR)/usr/lib -lnl-3 -lnl-genl-3 -lnl-route-3 -ldl -pie
+	TARGET_LDFLAGS := $(filter-out -lnl-tiny, $(TARGET_LDFLAGS))
+	TARGET_CFLAGS += -Wno-implicit-function-declaration -Wno-int-conversion
+	TARGET_CPPFLAGS := \
+	-I$(STAGING_DIR)/usr/include \
 	-I$(STAGING_DIR)/usr/include/qca-nss-macsec
 endif
 
@@ -745,7 +756,6 @@ Package/hostapd-qca/conffiles = $(Package/hostapd-full/conffiles)
 Package/hostapd-qca-openssl/conffiles = $(Package/hostapd-full/conffiles)
 Package/hostapd-qca-wolfssl/conffiles = $(Package/hostapd-full/conffiles)
 Package/hostapd-qca-mbedtls/conffiles = $(Package/hostapd-full/conffiles)
-Package/hostapd-qca-macsec/conffiles = $(Package/hostapd-full/conffiles)
 endif
 
 define Install/hostapd-qca
@@ -782,7 +792,7 @@ Package/hostapd-qca-wolfssl/install = $(Package/hostapd-qca/install)
 Package/hostapd-qca-mbedtls/install = $(Package/hostapd-qca/install)
 
 define Package/hostapd-qca-macsec/install
-	$(call Install/hostapd-qca,$(1))
+	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hostapd/hostapd $(1)/usr/sbin/hostapd-macsec
 endef
 
@@ -795,12 +805,16 @@ ifneq ($(LOCAL_VARIANT),macsec)
 endif
 endif
 
+EXTERNAL_DIR:=$(CURDIR)
+
 define Package/wpad-qca/install
 	$(call Install/hostapd-qca,$(1))
 	$(call Install/supplicant-qca,$(1))
+	$(INSTALL_DIR) $(1)/etc/sysctl.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/wpad $(1)/usr/sbin/
 	$(LN) wpad $(1)/usr/sbin/hostapd
 	$(LN) wpad $(1)/usr/sbin/wpa_supplicant
+	$(INSTALL_BIN) $(EXTERNAL_DIR)/files/hostapd.sysctl $(1)/etc/sysctl.d/hostapd.conf
 endef
 Package/wpad-qca-basic/install = $(Package/wpad-qca/install)
 Package/wpad-qca-basic-openssl/install = $(Package/wpad-qca/install)
@@ -829,7 +843,7 @@ Package/wpa-supplicant-qca-mesh-wolfssl/install = $(Package/wpa-supplicant-qca/i
 Package/wpa-supplicant-qca-mesh-mbedtls/install = $(Package/wpa-supplicant-qca/install)
 
 define Package/wpa-supplicant-qca-macsec/install
-	$(call Install/supplicant-qca,$(1))
+	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/wpa_supplicant/wpa_supplicant $(1)/usr/sbin/wpa_supplicant-macsec
 endef
 
@@ -910,3 +924,5 @@ $(eval $(call BuildPackage,eapol-test-qca))
 $(eval $(call BuildPackage,eapol-test-qca-openssl))
 $(eval $(call BuildPackage,eapol-test-qca-wolfssl))
 $(eval $(call BuildPackage,eapol-test-qca-mbedtls))
+$(eval $(call BuildPackage,hostapd-qca-macsec))
+$(eval $(call BuildPackage,wpa-supplicant-qca-macsec))

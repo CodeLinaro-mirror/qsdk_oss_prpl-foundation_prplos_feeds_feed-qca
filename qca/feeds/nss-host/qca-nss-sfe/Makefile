@@ -3,11 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-sfe
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=2
+PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/shortcut-fe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=6b4426ae629418cbbc1d4169f111199cdafafbfd
+PKG_VERSION:=ff9e33fb06b4e6b1f2c492fa92013d7cf33e1c56
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -73,6 +74,10 @@ ifneq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq54xx),
 EXTRA_CFLAGS+= -I$(STAGING_DIR)/usr/include/qca-nss-ppe
 SFE_MAKE_OPTS+=SFE_RFS_SUPPORTED=y
 endif
+endif
+
+ifneq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq54xx),)
+SFE_MAKE_OPTS+=SFE_DSA_ACCEL_ENABLE=y
 endif
 
 #PPE_QOS is supported only if PPE Qdisc is enabled

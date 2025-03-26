@@ -1,7 +1,7 @@
 #!/bin/sh  /etc/rc.common
 #
 # Copyright (c) 2014, 2019-2021 The Linux Foundation. All rights reserved.
-# Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -73,8 +73,13 @@ load_sfe() {
 	fi
 }
 
+unload_flowmgr() {
+	[ -d /sys/module/qca_nss_flowmgr ] && rmmod qca-nss-flowmgr
+}
+
 unload_sfe() {
 
+	unload_flowmgr
 	[ -d /sys/module/qca_nss_sfe ] && rmmod qca-nss-sfe
 }
 
@@ -177,6 +182,13 @@ start() {
 	if [ -d /sys/module/qca_ovsmgr ]; then
 		insmod ecm_ovs
 	fi
+
+	# Enable SAWF and EMESH classifier by default for Out-of box prioritization
+	echo 3 > /sys/kernel/debug/ecm/ecm_classifier_emesh/enabled
+	echo 3 > /sys/kernel/debug/ecm/ecm_classifier_emesh/sawf_enabled
+
+	# If UDP classifier is present, start it.
+	[ -f /etc/init.d/udp-clf ] && /etc/init.d/udp-clf start
 }
 
 stop() {
@@ -184,6 +196,9 @@ stop() {
 	if [ ! -d /sys/module/ecm ]; then
 		return
 	fi
+
+	# If UDP classifier is present, stop it.
+	[ -f /etc/init.d/udp-clf ] && /etc/init.d/udp-clf stop
 
 	# If the acceleration engine is NSS, disable wifi redirect.
 	[ -d /sys/kernel/debug/ecm/ecm_nss_ipv4 ] && sysctl -w dev.nss.general.redirect=0

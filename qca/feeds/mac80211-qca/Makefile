@@ -83,7 +83,7 @@ PKG_CONFIG_DEPENDS += \
 define KernelPackage/cfg80211-qca
   $(call KernelPackage/mac80211-qca/Default)
   TITLE:=cfg80211 - wireless configuration API
-  DEPENDS+= +iw-qca-full +iwinfo +wifi-scripts +wireless-regdb +USE_RFKILL:kmod-rfkill
+  DEPENDS+= +iw-qca-full +iwinfo +wireless-regdb +USE_RFKILL:kmod-rfkill
   ABI_VERSION:=$(PKG_VERSION)-$(PKG_RELEASE)
   FILES:= \
 	$(PKG_BUILD_DIR)/compat/compat.ko \
@@ -233,7 +233,7 @@ endif
 
 MAKE_OPTS:= \
 	$(subst -C $(LINUX_DIR),-C "$(PKG_BUILD_DIR)",$(KERNEL_MAKEOPTS)) \
-	EXTRA_CFLAGS="-I$(PKG_BUILD_DIR)/include $(IREMAP_CFLAGS) $(C_DEFINES) -I$(STAGING_DIR)/usr/include/qca-nss-drv -I$(STAGING_DIR)/usr/include/qca-nss-ppe -I$(STAGING_DIR)/usr/include/qca-nss-clients -I$(TOPDIR)/feeds/feed_qca/qca/feeds/mac80211-qca/src/include/telemetry_agent/inc/ -Wall -Werror -Wno-incompatible-pointer-types -Wno-discarded-qualifiers -Wno-int-conversion" \
+	EXTRA_CFLAGS="-I$(PKG_BUILD_DIR)/include $(IREMAP_CFLAGS) $(C_DEFINES) -I$(STAGING_DIR)/usr/include/qca-nss-drv -I$(STAGING_DIR)/usr/include/qca-nss-ppe -I$(STAGING_DIR)/usr/include/qca-nss-clients -I$(TOPDIR)/feeds/feed_qca/qca/feeds/mac80211-qca/src/include/telemetry_agent/inc/ -Wall" \
 	KLIB_BUILD="$(LINUX_DIR)" \
 	MODPROBE=true \
 	KLIB=$(TARGET_MODULES_DIR) \

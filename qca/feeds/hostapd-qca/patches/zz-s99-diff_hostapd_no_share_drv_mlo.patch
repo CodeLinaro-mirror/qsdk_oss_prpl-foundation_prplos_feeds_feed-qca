@@ -1,0 +1,13 @@
+diff --git a/hostapd/main.c b/hostapd/main.c
+index f700d5e358d8..16263e019e36 100644
+--- a/hostapd/main.c
++++ b/hostapd/main.c
+@@ -252,7 +252,7 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
+ 	params.own_addr = hapd->own_addr;
+ 
+ #ifdef CONFIG_IEEE80211BE
+-	if (hapd->driver->can_share_drv &&
++	if (conf->mld_ap && hapd->driver->can_share_drv &&
+ 	    !hapd->driver->can_share_drv(hapd, &params, &hapd->drv_priv)) {
+ 		hapd->interface_added = 1;
+ 		os_free(params.bridge);

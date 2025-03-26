@@ -1,0 +1,177 @@
+From 72150a400dc487a2d766e15775a099bb0c1b46b6 Mon Sep 17 00:00:00 2001
+From: Mohan Raj <quic_mrajraje@quicinc.com>
+Date: Wed, 24 Jul 2024 19:22:10 +0530
+Subject: [PATCH] UPSTREAM:CP: wifi: ath12k: add support to get the is_emlsr_active 
+and add emlsr_support value in  htt_ml_peer_stats
+
+Enhanced Multi-Link-Single-Radio is a mode used in Wi-Fi 7 technology.
+It Focuses on optimizing the setup and recovery processes of
+multi-link operations.
+
+API requirement to fetch EMSLR support , status(active)
+is_emlsr_active to indicate if the ml-peer has emlsr active and
+emlsr_support to indicate whether emlsr is supported by the peer
+
+usage:
+
+echo 47 > /sys/kernel/debug/ieee80211/phy<*>/ath12k_hw<*>/htt_stats_type
+
+cat /sys/kernel/debug/ieee80211/phy<*>/ath12k_hw<*>/htt_stats
+
+output:
+HTT_ML_PEER_DETAILS_TLV:
+========================
+remote_mld_mac_addr = 26:bb:87:80:e4:cf
+ml_peer_flags = 0x2
+num_links = 2
+ml_peer_id = 0
+primary_link_idx = 0
+primary_chip_id = 2
+link_init_count = 2
+non_str = 0
+is_emlsr_active = 1
+is_stako = 0
+num_local_links = 1
+allocated = 1
+emlsr_support = 1
+participating_chips_bitmap = 0x6
+
+Patch-dependency: 704-b-ath12k-Add-support-for-new-htt_stats.patch
+Patch-work: none
+
+Signed-off-by: Mohan Raj <quic_mrajraje@quicinc.com>
+---
+ .../wireless/ath/ath12k/debugfs_htt_stats.c   |  7 +-
+ .../wireless/ath/ath12k/debugfs_htt_stats.h   | 60 ++++++++++++++++---
+ 2 files changed, 54 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
+index 568d908..8a18fef 100644
+--- a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
++++ b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
+@@ -7735,8 +7735,8 @@ htt_print_ml_peer_details_stats_tlv(const void *tag_buf,
+ 		"non_str = %u\n",
+ 		HTT_ML_PEER_DETAILS_NON_STR_GET(htt_stats_buf->msg_dword_1));
+ 	len += scnprintf(buf + len, buf_len - len,
+-		"emlsr = %u\n",
+-		HTT_ML_PEER_DETAILS_EMLSR_GET(htt_stats_buf->msg_dword_1));
++		"is_emlsr_active = %u\n",
++		HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_GET(htt_stats_buf->msg_dword_1));
+ 	len += scnprintf(buf + len, buf_len - len,
+ 		"is_stako = %u\n",
+ 		HTT_ML_PEER_DETAILS_IS_STA_KO_GET(htt_stats_buf->msg_dword_1));
+@@ -7746,6 +7746,9 @@ htt_print_ml_peer_details_stats_tlv(const void *tag_buf,
+ 	len += scnprintf(buf + len, buf_len - len,
+ 		"allocated = %u\n",
+ 		HTT_ML_PEER_DETAILS_ALLOCATED_GET(htt_stats_buf->msg_dword_1));
++	len += scnprintf(buf + len, buf_len - len,
++		"emlsr_support = %u\n",
++		HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_GET(htt_stats_buf->msg_dword_1));
+ 	len += scnprintf(buf + len, buf_len - len,
+ 		"participating_chips_bitmap = 0x%x\n",
+ 		HTT_ML_PEER_DETAILS_PARTICIPATING_CHIPS_BITMAP_GET(
+diff --git a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.h b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.h
+index 4634cc9..2eaa7f5 100644
+--- a/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.h
++++ b/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.h
+@@ -3470,14 +3470,18 @@ struct htt_latency_prof_cal_stats_tlv {
+ #define HTT_ML_PEER_DETAILS_LINK_INIT_COUNT_S		19
+ #define HTT_ML_PEER_DETAILS_NON_STR_M			0x00400000
+ #define HTT_ML_PEER_DETAILS_NON_STR_S			22
+-#define HTT_ML_PEER_DETAILS_EMLSR_M			0x00800000
+-#define HTT_ML_PEER_DETAILS_EMLSR_S			23
++#define HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_M               0x00800000
++#define HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_S               23
++#define HTT_ML_PEER_DETAILS_EMLSR_M HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_M
++#define HTT_ML_PEER_DETAILS_EMLSR_S HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_S
+ #define HTT_ML_PEER_DETAILS_IS_STA_KO_M			0x01000000
+ #define HTT_ML_PEER_DETAILS_IS_STA_KO_S			24
+ #define HTT_ML_PEER_DETAILS_NUM_LOCAL_LINKS_M		0x06000000
+ #define HTT_ML_PEER_DETAILS_NUM_LOCAL_LINKS_S		25
+ #define HTT_ML_PEER_DETAILS_ALLOCATED_M			0x08000000
+ #define HTT_ML_PEER_DETAILS_ALLOCATED_S			27
++#define HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_M		0x10000000
++#define HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_S		28
+ 
+ #define HTT_ML_PEER_DETAILS_PARTICIPATING_CHIPS_BITMAP_M	0x000000ff
+ #define HTT_ML_PEER_DETAILS_PARTICIPATING_CHIPS_BITMAP_S	0
+@@ -3547,17 +3552,29 @@ struct htt_latency_prof_cal_stats_tlv {
+ 		((_var) |= ((_val) << HTT_ML_PEER_DETAILS_NON_STR_S)); \
+ 	} while (0)
+ 
+-#define HTT_ML_PEER_DETAILS_EMLSR_GET(_var) \
+-	(((_var) & HTT_ML_PEER_DETAILS_EMLSR_M) >> \
+-	 HTT_ML_PEER_DETAILS_EMLSR_S)
++#define HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_GET(_var) \
++	(((_var) & HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_M) >> \
++	HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_S)
++#define HTT_STATS_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_GET(_var) \
++	HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_GET(_var)
+ 
+-#define HTT_ML_PEER_DETAILS_EMLSR_SET(_var, _val) \
++#define HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_SET(_var, _val) \
+ 	do { \
+-		HTT_CHECK_SET_VAL(HTT_ML_PEER_DETAILS_EMLSR, _val); \
+-		((_var) &= ~(HTT_ML_PEER_DETAILS_EMLSR_M)); \
+-		((_var) |= ((_val) << HTT_ML_PEER_DETAILS_EMLSR_S)); \
++		HTT_CHECK_SET_VAL(HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE, _val); \
++		((_var) &= ~(HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_M)); \
++		((_var) |= ((_val) << HTT_ML_PEER_DETAILS_IS_EMLSR_ACTIVE_S)); \
+ 	} while (0)
+ 
++#define HTT_ML_PEER_DETAILS_EMLSR_GET(_var) \
++	(((_var) & HTT_ML_PEER_DETAILS_EMLSR_M) >> \
++	HTT_ML_PEER_DETAILS_EMLSR_S)
++#define HTT_ML_PEER_DETAILS_EMLSR_SET(_var, _val) \
++	do { \
++		HTT_CHECK_SET_VAL(HTT_ML_PEER_DETAILS_EMLSR, _val); \
++		((_var) &= ~(HTT_ML_PEER_DETAILS_EMLSR_M)); \
++		((_var) |= ((_val) << HTT_ML_PEER_DETAILS_EMLSR_S)); \
++	} while (0)
++
+ #define HTT_ML_PEER_DETAILS_IS_STA_KO_GET(_var) \
+ 	(((_var) & HTT_ML_PEER_DETAILS_IS_STA_KO_M) >> \
+ 	 HTT_ML_PEER_DETAILS_IS_STA_KO_S)
+@@ -3590,6 +3616,19 @@ struct htt_latency_prof_cal_stats_tlv {
+ 		((_var) |= ((_val) << HTT_ML_PEER_DETAILS_ALLOCATED_S)); \
+ 	} while (0)
+ 
++#define HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_GET(_var) \
++	(((_var) & HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_M) >> \
++	HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_S)
++#define HTT_STATS_ML_PEER_DETAILS_EMLSR_SUPPORT_GET(_var) \
++	HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_GET(_var)
++
++#define HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_SET(_var, _val) \
++	do { \
++		HTT_CHECK_SET_VAL(HTT_ML_PEER_DETAILS_EMLSR_SUPPORT, _val); \
++		((_var) &= ~(HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_M)); \
++		((_var) |= ((_val) << HTT_ML_PEER_DETAILS_EMLSR_SUPPORT_S)); \
++	} while (0)
++
+ #define HTT_ML_PEER_DETAILS_PARTICIPATING_CHIPS_BITMAP_GET(_var) \
+ 	(((_var) & HTT_ML_PEER_DETAILS_PARTICIPATING_CHIPS_BITMAP_M) >> \
+ 	 HTT_ML_PEER_DETAILS_PARTICIPATING_CHIPS_BITMAP_S)
+@@ -3611,11 +3652,17 @@ struct htt_ml_peer_details_tlv {
+ 			    primary_chip_id:2,
+ 			    link_init_count:3,
+ 			    non_str:1,
+-			    emlsr:1,
++			    is_emlsr_active:1,
+ 			    is_sta_ko:1,
+ 			    num_local_links:2,
+ 			    allocated:1,
+-			    reserved:4;
++			    emlsr_support     : 1,
++			    reserved          : 3;
++		};
++		struct {
++			     u32 dummy1 : 23,
++				 emlsr  : 1,
++				 dummy2 : 8;
+ 		};
+ 		u32 msg_dword_1;
+ 	};
+-- 
+2.34.1
+

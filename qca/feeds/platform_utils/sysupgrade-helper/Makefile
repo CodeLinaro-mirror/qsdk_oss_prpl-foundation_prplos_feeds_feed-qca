@@ -4,10 +4,10 @@ PKG_DISTNAME:=sysupgrade-helper
 PKG_NAME:=u-boot
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
-PKG_SOURCE_VERSION:=0be23e2430cd9fc7bddaedb7d32976094fba54ff
-PKG_BRANCH:=win.coretech.3.0.r24
+PKG_SOURCE_VERSION:=a258badb1d4e3cf7936046d49cb88bd20e66aa09
+PKG_BRANCH:=win.coretech.3.0.r26
 PKG_RELEASE:=1
-PKG_VERSION:=0be23e24
+PKG_VERSION:=a258badb
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_DISTNAME)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
@@ -30,7 +30,7 @@ endif
 
 SHA_FLAG = "-DUSE_SHA256"
 
-ifneq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq807x)$(CONFIG_TARGET_ipq50xx),)
+ifneq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),)
   SHA_FLAG = "-DUSE_SHA384"
 endif
 

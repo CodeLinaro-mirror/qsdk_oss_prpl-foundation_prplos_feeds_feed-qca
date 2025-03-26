@@ -3,11 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-eip
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
+PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-eip
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=0867bec0529d79d076caae1de711ebff9945a146
+PKG_VERSION:=664f6f7fed9d0241582c42205ce899fe40904766
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

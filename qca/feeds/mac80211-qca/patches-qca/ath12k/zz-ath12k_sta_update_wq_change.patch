@@ -1,0 +1,40 @@
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index 552acbf055f0..36d4e7a67368 100644
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -10244,7 +10244,7 @@ static void ath12k_mac_op_sta_rc_update(struct ieee80211_hw *hw,
+ 	spin_unlock_bh(&ar->data_lock);
+ 	rcu_read_unlock();
+ 
+-	ieee80211_queue_work(hw, &arsta->update_wk);
++	queue_work(ar->ab->workqueue, &arsta->update_wk);
+ }
+ 
+ static int ath12k_conf_tx_uapsd(struct ath12k *ar, struct ath12k_link_vif *arvif,
+@@ -14773,7 +14773,7 @@ ath12k_mac_update_peer_ru_punct_bitmap_iter(void *data,
+ 	arsta->changed |= IEEE80211_RC_BW_CHANGED;
+ 	spin_unlock_bh(&ar->data_lock);
+ 
+-	ieee80211_queue_work(ar->ah->hw, &arsta->update_wk);
++	queue_work(ar->ab->workqueue, &arsta->update_wk);
+ }
+ 
+ void ath12k_mac_update_ru_punct_bitmap(struct ath12k_link_vif *arvif,
+@@ -18401,7 +18401,7 @@ static void ath12k_mac_set_bitrate_mask_iter(void *data,
+ 	arsta->changed |= IEEE80211_RC_SUPP_RATES_CHANGED;
+ 	spin_unlock_bh(&ar->data_lock);
+ 
+-	ieee80211_queue_work(ar->ah->hw, &arsta->update_wk);
++	queue_work(ar->ab->workqueue, &arsta->update_wk);
+ }
+ 
+ static void ath12k_mac_disable_peer_fixed_rate(void *data,
+@@ -18428,7 +18428,7 @@ static void ath12k_mac_disable_peer_fixed_rate(void *data,
+ 	arsta->disable_fixed_rate = true;
+ 	spin_unlock_bh(&ar->data_lock);
+ 
+-	ieee80211_queue_work(ar->ah->hw, &arsta->update_wk);
++	queue_work(ar->ab->workqueue, &arsta->update_wk);
+ }
+ 
+ static bool

@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=emesh-sp
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/emesh-sp
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=279f6dea567009ae932792c2e9fbfbc9e09f218d
+PKG_VERSION:=859d2fc6d469ed9ebf271265a396d40530b2145a
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

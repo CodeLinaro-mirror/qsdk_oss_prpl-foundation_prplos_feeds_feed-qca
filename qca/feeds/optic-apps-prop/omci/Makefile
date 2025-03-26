@@ -103,7 +103,6 @@ define Package/omci/install
 	[ ! -d $(1)/usr/libexec/rpcd ] && $(INSTALL_DIR) $(1)/usr/libexec/rpcd
 	$(CP) -f  $(PKG_BUILD_DIR)/etc/omci/script/init.d/* $(1)/etc/init.d
 	$(CP) -f  $(PKG_BUILD_DIR)/etc/omci/script/rpcd/uci.json $(1)/usr/share/rpcd/acl.d
-	$(CP) -f  $(PKG_BUILD_DIR)/etc/omci/script/rpcd/pots $(1)/usr/libexec/rpcd
 endef
 
 $(eval $(call BuildPackage,omci))

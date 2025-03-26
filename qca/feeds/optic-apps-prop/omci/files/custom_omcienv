@@ -7,7 +7,7 @@ cfm_reverse_mep_direction 0
 anig_type 4
 anig_devport 0
 anig_devaddr0 0x50
-voip_enable 0
+voip_enable 9
 app_wifi_if none
 classf_veip_hw_nat 0
 cf_statistic_enable 0

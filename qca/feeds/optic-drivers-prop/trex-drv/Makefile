@@ -18,7 +18,7 @@ define Package/$(PKG_NAME)
   SECTION:=OPTIC_DRIVERS
   CATEGORY:=OptiCore Packages
   SUBMENU:=Drivers
-  DEPENDS:=+kmod-qca-nss-dp-qca +qca-ssdk-qca +omciibc
+  DEPENDS:=+kmod-qca-nss-dp-qca +kmod-qca-ssdk-qca-nohnat +omciibc
   TITLE:=TREX SDK
 endef
 

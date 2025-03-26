@@ -3,8 +3,9 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-drv
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=2
+PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-drv
 PKG_MIRROR_HASH:=skip
 PKG_VERSION:=d5ee67bd84d1ee7ed81eb6758e62a6db5a0cf4c7

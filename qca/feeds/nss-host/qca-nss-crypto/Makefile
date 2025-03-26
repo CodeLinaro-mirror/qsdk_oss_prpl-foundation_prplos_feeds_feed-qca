@@ -3,8 +3,9 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-crypto
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
+PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-crypto
 PKG_MIRROR_HASH:=skip
 PKG_VERSION:=60e27b91f9cdb1d6de38337c03444021ae8c1040

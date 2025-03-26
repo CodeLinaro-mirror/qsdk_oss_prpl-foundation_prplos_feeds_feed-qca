@@ -3,11 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ecm
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
+PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-ecm
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=6eec321bac1217ca8c2872156594f29f65e5f2b4
+PKG_VERSION:=cceabfeeeb042b3ff9742548e005e6b18220d44e
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -200,8 +201,8 @@ define KernelPackage/qca-nss-ecm-noload
   PROVIDES:=kmod-qca-nss-ecm
   VARIANT:=noload
   DEPENDS+=+kmod-l2tp +kmod-pppol2tp +kmod-pptp +TARGET_ipq95xx:kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe \
-	   +TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe \
-	   +TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
+	   +TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe +TARGET_ipq53xx:kmod-qca-nss-ppe-tunipip6 \
+	   +TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe +TARGET_ipq54xx:kmod-qca-nss-ppe-tunipip6 \
 	   +kmod-bonding +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +PACKAGE_kmod-qca-nss-ppe-mapt:kmod-nat46-qca \
 	   +TARGET_ipq95xx:kmod-emesh-sp +TARGET_ipq95xx:kmod-qca-nss-ppe-tunipip6
 endef
@@ -331,6 +332,8 @@ ifneq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ecm-premium)$(CONFIG_PACKAGE_kmod-qca-nss-ecm-nonss),)
 ECM_MAKE_OPTS+=ECM_INTERFACE_VXLAN_ENABLE=y
 endif
+ECM_MAKE_OPTS+=ECM_INTERFACE_SKIP_ACCEL_ENABLE=n
+ECM_MAKE_OPTS+=ECM_INTERFACE_DSA_ENABLE=y
 endif
 
 ifeq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)

@@ -1,0 +1,243 @@
+From 0709e755fb66e49ec798b75f9baad7b9c34d13dc Mon Sep 17 00:00:00 2001
+From: Dhivya Sankar <quic_dsankar@quicinc.com>
+Date: Fri, 22 Nov 2024 11:35:40 +0530
+Subject: [PATCH] UPSTREAM:CP: wifi: ath12k: add  additional tx/rx stats to
+ link_stats
+
+This change provides total bytes transmitted and
+received for broadcast, multicast and unicast packets
+through the link_stats.
+
+Usage: cat /sys/kernel/debug/ieee80211/phy<*>/netdev:wlan<*>/link_stats
+
+OUTPUT:
+
+link[0] rx_bcast_bytes = 0
+link[0] rx_mcast_bytes = 15660
+link[0] rx_ucast_bytes = 0
+link[0] tx_enqueued  = 13
+link[0] tx_completed = 195
+link[0] tx_bcast_mcast = 182
+link[0] tx_bcast_bytes = 60
+link[0] tx_mcast_bytes = 30132
+link[0] tx_ucast_bytes = 2737
+link[0] tx_dropped = 0
+link[0] tx_encap_type = 0:0 1:182 2:13 3:0
+link[0] tx_encrypt_type = 0:195 1:0 2:0 3:0 4:0 5:0 6:0 7:0 8:0 9:0 10:0
+link[0] tx_desc_type = 0:13 1:182
+
+link[0] rx_bcast_bytes = 0
+link[0] rx_mcast_bytes = 4436
+link[0] rx_ucast_bytes = 0
+link[0] tx_enqueued  = 2
+link[0] tx_completed = 77
+link[0] tx_bcast_mcast = 75
+link[0] tx_bcast_bytes = 30
+link[0] tx_mcast_bytes = 12268
+link[0] tx_ucast_bytes = 412
+link[0] tx_dropped = 0
+link[0] tx_encap_type = 0:0 1:75 2:2 3:0
+link[0] tx_encrypt_type = 0:77 1:0 2:0 3:0 4:0 5:0 6:0 7:0 8:0 9:0 10:0
+link[0] tx_desc_type = 0:2 1:75
+
+link[0] rx_bcast_bytes = 0
+link[0] rx_mcast_bytes = 2954
+link[0] rx_ucast_bytes = 0
+link[0] tx_enqueued  = 2
+link[0] tx_completed = 41
+link[0] tx_bcast_mcast = 39
+link[0] tx_bcast_bytes = 0
+link[0] tx_mcast_bytes = 7120
+link[0] tx_ucast_bytes = 412
+link[0] tx_dropped = 0
+link[0] tx_encap_type = 0:0 1:39 2:2 3:0
+link[0] tx_encrypt_type = 0:41 1:0 2:0 3:0 4:0 5:0 6:0 7:0 8:0 9:0 10:0
+link[0] tx_desc_type = 0:2 1:39
+
+Patch-dependency: 716-b-ath12k-Multicast-support-for-MLO.patch
+Patch-work: None
+
+Signed-off-by: Dhivya Sankar <quic_dsankar@quicinc.com>
+---
+ drivers/net/wireless/ath/ath12k/debugfs.c | 18 +++++++++
+ drivers/net/wireless/ath/ath12k/dp.h      |  6 +++
+ drivers/net/wireless/ath/ath12k/dp_rx.c   | 45 +++++++++++++++++++++++
+ drivers/net/wireless/ath/ath12k/dp_tx.c   | 14 ++++++-
+ 4 files changed, 81 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath12k/debugfs.c b/drivers/net/wireless/ath/ath12k/debugfs.c
+index 631fa4d..be7c194 100644
+--- a/drivers/net/wireless/ath/ath12k/debugfs.c
++++ b/drivers/net/wireless/ath/ath12k/debugfs.c
+@@ -5772,6 +5772,15 @@ static int ath12k_open_link_stats(struct inode *inode, struct file *file)
+ 		else
+ 			break;
+ 
++		len += scnprintf(buf + len, buf_len - len,
++				 "link[%d] rx_bcast_bytes = %u\n",
++				 link_id, linkstat->rx_bcast_bytes);
++		len += scnprintf(buf + len, buf_len - len,
++				 "link[%d] rx_mcast_bytes = %u\n",
++				 link_id, linkstat->rx_mcast_bytes);
++		len += scnprintf(buf + len, buf_len - len,
++				 "link[%d] rx_ucast_bytes = %u\n",
++				 link_id, linkstat->rx_ucast_bytes);
+ 		len += scnprintf(buf + len, buf_len - len,
+ 				 "link[%d] tx_enqueued  = %d\n",
+ 				 link_id, linkstat->tx_enqueued);
+@@ -5781,6 +5790,15 @@ static int ath12k_open_link_stats(struct inode *inode, struct file *file)
+ 		len += scnprintf(buf + len, buf_len - len,
+ 				 "link[%d] tx_bcast_mcast = %d\n",
+ 				 link_id, linkstat->tx_bcast_mcast);
++		len += scnprintf(buf + len, buf_len - len,
++				 "link[%d] tx_bcast_bytes = %u\n",
++				 link_id, linkstat->tx_bcast_bytes);
++		len += scnprintf(buf + len, buf_len - len,
++				 "link[%d] tx_mcast_bytes = %u\n",
++				 link_id, linkstat->tx_mcast_bytes);
++		len += scnprintf(buf + len, buf_len - len,
++				 "link[%d] tx_ucast_bytes = %u\n",
++				 link_id, linkstat->tx_ucast_bytes);
+ 		len += scnprintf(buf + len, buf_len - len,
+ 				 "link[%d] tx_dropped = %d\n",
+ 				 link_id, linkstat->tx_dropped);
+diff --git a/drivers/net/wireless/ath/ath12k/dp.h b/drivers/net/wireless/ath/ath12k/dp.h
+index 044ba6c..2b9bf7c 100644
+--- a/drivers/net/wireless/ath/ath12k/dp.h
++++ b/drivers/net/wireless/ath/ath12k/dp.h
+@@ -377,6 +377,9 @@ struct host_link_stats {
+ 	u32 tx_enqueued;
+ 	u32 tx_completed;
+ 	u32 tx_bcast_mcast;
++	u32 tx_bcast_bytes;
++	u32 tx_mcast_bytes;
++	u32 tx_ucast_bytes;
+ 	u32 tx_dropped;
+ 	u32 tx_encap_type[HAL_TCL_ENCAP_TYPE_MAX];
+ 	u32 tx_encrypt_type[HAL_ENCRYPT_TYPE_MAX];
+@@ -384,6 +387,9 @@ struct host_link_stats {
+ 	u32 rx_dropped;
+ 	u32 tx_errors;
+ 	u32 rx_errors;
++	u32 rx_bcast_bytes;
++	u32 rx_mcast_bytes;
++	u32 rx_ucast_bytes;
+ };
+ 
+ #ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
+diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
+index 7d10e36..6b08a57 100644
+--- a/drivers/net/wireless/ath/ath12k/dp_rx.c
++++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
+@@ -2736,16 +2736,27 @@ static void ath12k_dp_rx_h_undecap(struct ath12k *ar, struct sk_buff *msdu,
+ 	struct ath12k_base *ab = ar->ab;
+ 	u8 decap;
+ 	struct ethhdr *ehdr;
++	struct ath12k_peer *peer;
++	struct ath12k_link_vif *arvif = NULL;
++	struct ath12k_vif *ahvif = NULL;
++	struct ieee80211_hdr *hdr = NULL;
++	u32 peer_id;
++	u8 link_id;
++	u8 *dst_addr = NULL;
+ 
+ 	decap = ath12k_dp_rx_h_decap_type(ab, rx_desc);
+ 
+ 	switch (decap) {
+ 	case DP_RX_DECAP_TYPE_NATIVE_WIFI:
+ 		ath12k_dp_rx_h_undecap_nwifi(ar, msdu, enctype, status);
++		hdr = (struct ieee80211_hdr *)msdu->data;
++		dst_addr = (u8 *)ieee80211_get_DA((struct ieee80211_hdr *)msdu->data);
+ 		break;
+ 	case DP_RX_DECAP_TYPE_RAW:
+ 		ath12k_dp_rx_h_undecap_raw(ar, msdu, enctype, status,
+ 					   decrypted);
++		hdr = (struct ieee80211_hdr *)msdu->data;
++		dst_addr = (u8 *)ieee80211_get_DA((struct ieee80211_hdr *)msdu->data);
+ 		break;
+ 	case DP_RX_DECAP_TYPE_ETHERNET2_DIX:
+ 		ehdr = (struct ethhdr *)msdu->data;
+@@ -2763,12 +2774,46 @@ static void ath12k_dp_rx_h_undecap(struct ath12k *ar, struct sk_buff *msdu,
+ 		 */
+ 		if (ATH12K_SKB_RXCB(msdu)->is_mcbc && decrypted)
+ 			ath12k_dp_rx_h_undecap_eth(ar, msdu, enctype, status);
++		hdr = (struct ieee80211_hdr *)msdu->data;
++		dst_addr = (u8 *)ehdr->h_dest;
+ 		break;
+ 	case DP_RX_DECAP_TYPE_8023:
+ 		/* TODO: Handle undecap for these formats */
+ 		break;
+ 	}
+ 	ar->wmm_stats.total_wmm_rx_pkts[ar->wmm_stats.rx_type]++;
++
++	if (dst_addr != NULL) {
++		rcu_read_lock();
++
++		spin_lock_bh(&ab->base_lock);
++		peer_id = ath12k_dp_rx_h_peer_id(ab, rx_desc);
++
++		peer = ath12k_peer_find_by_peer_list_index(ar, peer_id);
++		if (peer && peer->vif)
++			ahvif = ath12k_vif_to_ahvif(peer->vif);
++
++		if (ahvif) {
++			for_each_set_bit(link_id, &ahvif->links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
++				arvif = ahvif->link[link_id];
++
++				if (WARN_ON(!arvif))
++					continue;
++
++				if (is_broadcast_ether_addr(dst_addr)) {
++					arvif->link_stats.rx_bcast_bytes += msdu->len;
++				} else if (is_multicast_ether_addr(dst_addr)) {
++					arvif->link_stats.rx_mcast_bytes += msdu->len;
++				} else {
++					if (ether_addr_equal(arvif->addr, dst_addr))
++						arvif->link_stats.rx_ucast_bytes += msdu->len;
++				}
++			}
++		}
++
++		spin_unlock_bh(&ab->base_lock);
++		rcu_read_unlock();
++	}
+ }
+ 
+ struct ath12k_peer *
+diff --git a/drivers/net/wireless/ath/ath12k/dp_tx.c b/drivers/net/wireless/ath/ath12k/dp_tx.c
+index 6f4445a..7633176 100644
+--- a/drivers/net/wireless/ath/ath12k/dp_tx.c
++++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
+@@ -419,6 +419,7 @@ int ath12k_dp_tx(struct ath12k *ar, struct ath12k_link_vif *arvif,
+ 	struct dp_tx_ring *tx_ring;
+ 	struct hal_tcl_data_cmd *tcl_cmd;
+ 	struct ethhdr *eth = NULL;
++	u8 *da_addr;
+ 	u8 hal_ring_id;
+ 	int ret;
+ 	u16 peer_id;
+@@ -721,10 +722,19 @@ skip_htt_meta:
+ 	ath12k_dbg_dump(ab, ATH12K_DBG_DP_TX, NULL, "dp tx msdu: ",
+ 			skb->data, skb->len);
+ 
+-	if (gsn_valid)
++	if (gsn_valid) {
+ 		arvif->link_stats.tx_bcast_mcast++;
+-	else
++		da_addr = ieee80211_get_DA(hdr);
++
++	if (is_broadcast_ether_addr(da_addr))
++		arvif->link_stats.tx_bcast_bytes += skb->len;
++	else if (is_multicast_ether_addr(da_addr))
++		arvif->link_stats.tx_mcast_bytes += skb->len;
++	} else {
++		arvif->link_stats.tx_ucast_bytes += skb->len;
++
+ 		arvif->link_stats.tx_enqueued++;
++	}
+ 
+ 	atomic_inc(&ar->dp.num_tx_pending);
+ 	atomic_inc(&ab->ag->num_dp_tx_pending);
+-- 
+2.34.1
+

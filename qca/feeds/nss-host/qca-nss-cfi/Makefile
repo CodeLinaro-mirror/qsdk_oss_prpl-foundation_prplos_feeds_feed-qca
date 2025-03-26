@@ -3,8 +3,9 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-cfi
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r24
+PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
+PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-cfi
 PKG_MIRROR_HASH:=skip
 PKG_VERSION:=6e8f294a298d1ecb745148f552d691f8395363b0
