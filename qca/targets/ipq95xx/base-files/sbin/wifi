@@ -6,7 +6,7 @@
 
 usage() {
 	cat <<EOF
-Usage: $0 [config|up|down|reconf|reload|status|isup]
+Usage: $0 [config|up|down|reconf|reload|status|isup|mlo_add_link <phy> <band> <interface-name> <vap-mac-addr>|mlo_remove_link <phy> <band> <interface-name> <link_id> <removal_timer(5-50)]
 enables (default), disables or configures devices not yet configured.
 EOF
 	exit 1
@@ -198,17 +198,22 @@ wifi_detect_notice() {
 }
 
 wifi_config() {
+	local cmd="$1"
+	file_path="/lib/wifi/mac80211.uc"
 	pre_wifi_config
-	[ ! -f /etc/config/wireless ] && touch /etc/config/wireless
-	ucode /lib/wifi/mac80211.uc | uci -q batch
-
-	for driver in $DRIVERS; do (
-		if eval "type detect_$driver" 2>/dev/null >/dev/null; then
-			eval "detect_$driver" "$1" || echo "$driver: Detect failed" >&2
-		else
-			echo "$driver: Hardware detection not supported" >&2
-		fi
-	); done
+	if [ "$cmd" != "legacy" ] && [ -f "$file_path" ]; then
+		ucode /usr/share/hostap/wifi-detect.uc
+		[ ! -f /etc/config/wireless ] && touch /etc/config/wireless
+		ucode /lib/wifi/mac80211.uc | uci -q batch
+	else
+		for driver in $DRIVERS; do (
+			if eval "type detect_$driver" 2>/dev/null >/dev/null; then
+				eval "detect_$driver" "$1" || echo "$driver: Detect failed" >&2
+			else
+				echo "$driver: Hardware detection not supported" >&2
+			fi
+		); done
+	fi
 	post_wifi_config
 }
 
@@ -362,6 +367,8 @@ case "$1" in
 	unload) wifi_unload "$2";;
 	recover) wifi_recover "$2";;
 	mlo) mlo "$@";;
+	mlo_add_link) mlo_add_link "$2" "$3" "$4" "$5";;
+	mlo_remove_link) mlo_remove_link "$2" "$3" "$4" "$5" "$6";;
 	standby) standby_wifi_radio_updown "$@" ;;
         multi_up|\
         multi_down) [ "$DISABLE_NET_RELOAD" == "1" ] || multi_radio_wifi_updown "$@";;

@@ -198,14 +198,13 @@ do_flash_bootconfig() {
 get_upgrade_bank() {
 	local mtdname=$1
 	local boot_set=$(grep "Boot-set" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
-	local image_status_A=$(grep "Image-set-status-A" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
-	local image_status_B=$(grep "Image-set-status-B" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
+	local image_status=$(grep "Image-set-status" /tmp/bootconfig_members.txt | awk -F: '{print $2}')
 	local current_bank=0
 
-	if [ "$boot_set" -eq 0 ] && [ "$image_status_A" -eq 0 ]; then
+	if [ "$boot_set" -eq 0 ] && [ "$image_status" -ne 1 ]; then
 		mtdname="${mtdname}_1"
 		current_bank=1
-	elif [ "$boot_set" -eq 1 ] && [ "$image_status_B" -ne 0 ]; then
+	elif [ "$boot_set" -eq 1 ] && [ "$image_status" -eq 2 ]; then
 		mtdname="${mtdname}_1"
 		current_bank=1
 	fi
@@ -534,12 +533,7 @@ commit_bootconfig() {
 		return 1
 	fi
 
-	dumpimage -b boot_set $1 &> /dev/null
-	if [ "$1" -eq "0" ]; then
-		dumpimage -b image_set_status_A 0
-	else
-		dumpimage -b image_set_status_B 0
-	fi
+	dumpimage -b image_set_status 0 &> /dev/null
 	do_flash_bootconfig "0:BOOTCONFIG"
 }
 

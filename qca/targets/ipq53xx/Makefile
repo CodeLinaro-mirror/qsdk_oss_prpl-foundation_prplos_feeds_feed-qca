@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 ARCH:=aarch64
 BOARD:=ipq53xx
 BOARDNAME:=Qualcomm Technologies, Inc. IPQ53XX
-FEATURES:=squashfs fpu ramdisk nand pcie
+FEATURES:=squashfs fpu ramdisk nand pcie usbgadget
 CPU_TYPE:=cortex-a53
 CPU_SUBTYPE:=neon-vfpv4
 SUBTARGETS:=generic
@@ -24,7 +24,7 @@ DEFAULT_PACKAGES += \
 	iwinfo kmod-ath12k-qca \
 	kmod-leds-gpio swconfig kmod-fs-ext4 losetup \
 	libudebug libustream-mbedtls libubus-lua \
-	wififw_mount_script qca-wifi-scripts ath-wifi-scripts wifi-scripts \
+	wififw_mount_script qca-wifi-scripts ath-wifi-scripts ath-legacy-wifi-scripts \
 	kmod-bonding wpad-qca-mesh-openssl \
 	kmod-qca-nss-drv kmod-qca-nss-drv-bridge-mgr kmod-qca-nss-drv-gre \
 	kmod-qca-nss-drv-igs kmod-qca-nss-drv-l2tpv2 kmod-qca-nss-drv-lag-mgr kmod-qca-nss-drv-map-t \
@@ -47,7 +47,11 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-sfe kmod-crypto-authenc kmod-qca-nss-ecm-premium  kmod-qca-ovsmgr \
 	-kmod-qca-nss-cfi-cryptoapi  -kmod-qca-nss-gmac \
 	-kmod-qca-nss-cfi-ocf kmod-qca-nss-ppe-mirror-test  \
-	kmod-nss-udp-st-drv kmod-qca-nss-dscpstats kmod-qca-nss-nsm
+	kmod-nss-udp-st-drv kmod-qca-nss-dscpstats kmod-qca-nss-nsm \
+	kmod-qca8084 kmod-qca81xx kmod-aqr-phy kmod-qca8xxx-phc kmod-qca8k \
+	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
+	ftm myftm diag cnssdiag
+
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
 

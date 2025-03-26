@@ -25,32 +25,32 @@ ubootenv_mtdinfo () {
 	mtd_erase=$(echo $UBOOTENV_PART | awk '{print "0x"$3}')
 	nor_flash=$(find /sys/bus/spi/devices/*/mtd -name ${mtd_dev})
 
-	if [ -n "$nor_flash" ]; then
+	if [ -z "$UBOOTENV_PART" ]; then
+		mtd_dev=$(echo $(find_mmc_part "0:APPSBLENV") | sed 's/^.\{5\}//')
+		if [ -n "$mtd_dev" ]; then
+			EMMC_UBOOTENV_PART=$(cat /proc/partitions | grep $mtd_dev)
+			#convert block to bytes
+			emmc_ubootenv_size=`expr $(echo $EMMC_UBOOTENV_PART | awk '{print $3}') \* 1024`
+			ubootenv_size=0x`printf "%x" $emmc_ubootenv_size`
+		fi
+		mtd_erase=""
+	elif [ -n "$nor_flash" ]; then
 		ubootenv_size=$mtd_size
+		sectors=$(( $ubootenv_size / $mtd_erase ))
+		sectors=0x`printf "%x" $sectors`
 	else
 		# size is fixed to 0x40000 in u-boot
 		ubootenv_size=0x40000
+		sectors=$(( $ubootenv_size / $mtd_erase ))
+		sectors=0x`printf "%x" $sectors`
 	fi
 
-	sectors=$(( $ubootenv_size / $mtd_erase ))
 	echo /dev/$mtd_dev 0x0 $ubootenv_size $mtd_erase $sectors
 }
 
 case "$board" in
-qcom,ipq5424-rdp466 |\
-qcom,ipq5424-rdp485)
-	uboot_env_part_path=$(find_mtd_part "0:APPSBLENV")
-	uboot_env_part_name=${uboot_env_part_path#"/dev/"}
-	uboot_env_part_offset="$(cat /sys/block/${uboot_env_part_name}/alignment_offset)"
-	uboot_env_part_size="$(blockdev --getsize64 ${uboot_env_part_path})"
-	ubootenv_add_uci_config "$uboot_env_part_path" "$(to_hex "$uboot_env_part_offset")" $(to_hex "$uboot_env_part_size") $(to_hex "$uboot_env_part_size")
-	;;
-*)
-	uboot_env_part_path=$(find_mmc_part "0:APPSBLENV")
-	uboot_env_part_name=${uboot_env_part_path#"/dev/"}
-	uboot_env_part_offset="$(cat /sys/block/mmcblk*/${uboot_env_part_name}/alignment_offset)"
-	uboot_env_part_size="$(blockdev --getsize64 ${uboot_env_part_path})"
-	ubootenv_add_uci_config "$uboot_env_part_path" "$(to_hex "$uboot_env_part_offset")" $(to_hex "$uboot_env_part_size") $(to_hex "$uboot_env_part_size")
+qcom,ipq5424-rdp*)
+	ubootenv_add_uci_config $(ubootenv_mtdinfo)
 	;;
 esac
 
