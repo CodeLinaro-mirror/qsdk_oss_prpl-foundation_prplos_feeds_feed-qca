@@ -1,11 +1,15 @@
 
-FW_MAJOR_VER="0x0506"
-FW_MINOR_VER="0x0071"
+FW_MAJOR_VER="0x506"
+FW_MINOR_VER="0x71"
+SLOW_DOWNLOAD_DELAY=25
+QUICK_DOWNLOAD_DELAY=2
+DOWNLOAD_INTF=wan
+
 log_file=/tmp/aq_fw_download.log
 
 i=0
 
-sleep 25
+sleep $QUICK_DOWNLOAD_DELAY
 
 major_minor_version=`ssdk_sh debug phy get 8 0x401e0020 | grep Data | cut -d ':'  -f2`
 firmware_build_provision_id=`ssdk_sh debug phy get 8 0x401ec885 | grep Data | cut -d ':'  -f2`
@@ -25,7 +29,8 @@ do
 	fi
 	i=$((i+1))	
 
-	aq-fw-download /lib/firmware/AQR-G4_v5.6.7-AQR_Marvell_NoSwap_USX_ID44858_VER1922.cld lan1 8 ram > /dev/null &
+	ifconfig $DOWNLOAD_INTF up
+	aq-fw-download /lib/firmware/AQR-G4_v5.6.7-AQR_Marvell_NoSwap_USX_ID44858_VER1922.cld $DOWNLOAD_INTF 8 ram > /dev/null &
 	for j in $(seq 1 120)
 	do
 		sleep 1
