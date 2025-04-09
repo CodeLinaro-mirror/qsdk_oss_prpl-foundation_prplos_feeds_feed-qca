@@ -343,6 +343,7 @@ define KernelPackage/ath12k-qca
   DEPENDS+= +kmod-ath-qca +@DRIVER_11N_SUPPORT +@DRIVER_11W_SUPPORT +@DRIVER_11AC_SUPPORT +@DRIVER_11AX_SUPPORT
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ath12k.ko
   AUTOLOAD:=$(call AutoProbe,ath12k)
+  MODPARAMS.ath12k:=cold_boot_cal=0
 endef
 
 define KernelPackage/ath12k-qca/description
