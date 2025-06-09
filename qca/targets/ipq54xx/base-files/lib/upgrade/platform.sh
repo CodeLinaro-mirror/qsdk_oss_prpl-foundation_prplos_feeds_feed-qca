@@ -533,6 +533,7 @@ commit_bootconfig() {
 		return 1
 	fi
 
+	dumpimage -b boot_set $1 &> /dev/null
 	dumpimage -b image_set_status 0 &> /dev/null
 	do_flash_bootconfig "0:BOOTCONFIG"
 }
