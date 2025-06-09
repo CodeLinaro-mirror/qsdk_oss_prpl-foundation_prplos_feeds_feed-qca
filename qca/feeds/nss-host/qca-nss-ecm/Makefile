@@ -8,7 +8,7 @@ PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-ecm
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=cceabfeeeb042b3ff9742548e005e6b18220d44e
+PKG_VERSION:=22c5c10822cc6ecf74c59d2a3f5d42f9f7cb7de0
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

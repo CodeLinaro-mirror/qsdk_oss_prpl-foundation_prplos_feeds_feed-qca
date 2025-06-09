@@ -1,0 +1,38 @@
+From e42e5e1e02fff190b1b8ac35e78acb7ff71c7113 Mon Sep 17 00:00:00 2001
+From: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+Date: Mon, 19 May 2025 09:45:51 +0530
+Subject: [PATCH] QSDK:PROTOCOL: Remove deinit link for the first bss in setup
+ interface fails
+
+Currently if the setup bss getting failed its remove first
+bss, but ucode expects one config bss should be there to bring the
+link. This cause the issue to bring up 5GHz link in repeater after
+CAC completed Root AP.
+
+Remove the added fix deinit link for the first bss when '
+the interface setup fails.
+
+Patch-dependency: None
+Patch-work: None
+
+Signed-off-by: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+---
+ src/ap/hostapd.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 09874b7..cca7e9b 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -4435,8 +4435,6 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
+ 				goto fail;
+ 
+ 			if (hostapd_setup_interface(hapd_iface)) {
+-				/* Deinit link for the first bss */
+-				hostapd_bss_link_deinit(hapd_iface->bss[0]);
+ 				hostapd_deinit_driver(
+ 					hapd_iface->bss[0]->driver,
+ 					hapd_iface->bss[0]->drv_priv,
+-- 
+2.34.1
+

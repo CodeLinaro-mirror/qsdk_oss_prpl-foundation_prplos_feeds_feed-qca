@@ -47,6 +47,7 @@ DEPENDS:=@TARGET_ipq806x||TARGET_ipq_ipq806x||TARGET_ipq_ipq807x||TARGET_ipq_ipq
 	+TARGET_ipq60xx:kmod-qca-nss-drv \
 	+TARGET_ipq_ipq60xx:kmod-qca-nss-drv \
 	+TARGET_ipq_ipq60xx_64:kmod-qca-nss-drv @!LINUX_3_18
+KCONFIG:=CONFIG_CRYPTO_DISABLE_AHASH_TYPE2_TESTS=y
 endef
 
 define KernelPackage/qca-nss-crypto

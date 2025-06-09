@@ -139,6 +139,8 @@ struct agent_telemtry_db {
 
 struct agent_rm_telemetry {
 	bool app_init[RM_MAX_SERVICE];
+	bool init_stats_pending[RM_MAX_SERVICE];
+	bool is_container[RM_MAX_SERVICE];
 	/* relay(fs) channel for main service */
 	struct rchan *rfs_channel_main;
 	/* delyed work for main service */
@@ -147,16 +149,12 @@ struct agent_rm_telemetry {
 	struct rchan *rfs_channel_pmlo;
 	/* delyed work for pmlo service */
 	struct delayed_work stats_work_init_pmlo;
-	/* delyed work for containerized pmlo service */
-	struct delayed_work stats_work_init_cont_pmlo;
 	/* delyed work periodic for pmlo service*/
 	struct delayed_work stats_work_periodic_pmlo;
 	/* relay(fs) telemetry channel for deterministic scheduler*/
 	struct rchan *rfs_channel_deter;
 	/* delyed work for deter sched service */
 	struct delayed_work stats_work_init_deter;
-	/* delyed work for containerized deter sched service */
-	struct delayed_work stats_work_init_cont_deter;
 	/* delayed telemetry deterministic stats work periodic*/
 	struct delayed_work stats_work_periodic_deter;
 	/* relay(fs) channel for erp service */
@@ -171,16 +169,12 @@ struct agent_rm_telemetry {
 	struct rchan *rfs_channel_admctrl;
 	/* delayed work init for admission control service */
 	struct delayed_work stats_work_init_admctrl;
-	/* delayed work init for containerized admission control service */
-	struct delayed_work stats_work_init_cont_admctrl;
 	/* delayed work periodic for admission control stats */
 	struct delayed_work stats_work_periodic_admctrl;
 	/* relay(fs) channel for energy service */
 	struct rchan *rfs_channel_energysvc;
 	/* delayed work init for energy service */
 	struct delayed_work stats_work_init_energysvc;
-	/* delayed work init for containerized energy service */
-	struct delayed_work stats_work_init_cont_energysvc;
 	/* delayed work periodic for energy service */
 	struct delayed_work stats_work_periodic_energysvc;
 	/* delyed work for dynamic service init */

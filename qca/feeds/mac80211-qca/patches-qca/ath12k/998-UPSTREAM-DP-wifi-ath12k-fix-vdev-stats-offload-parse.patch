@@ -36,7 +36,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -336,12 +336,14 @@ struct ath12k_fw_vdev_ol_stats {
+@@ -338,12 +338,14 @@ struct ath12k_fw_vdev_ol_stats {
  	u64 rx_msdu_pkt_cnt;
  	u64 tx_msdu_byte_cnt;
  	u64 tx_msdu_pkt_cnt;
@@ -94,7 +94,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	u32 tqm_bypass_byte_cnt_lo;
 --- a/drivers/net/wireless/ath/ath12k/dp.h
 +++ b/drivers/net/wireless/ath/ath12k/dp.h
-@@ -1543,9 +1543,7 @@ struct htt_resp_msg {
+@@ -1541,9 +1541,7 @@ struct htt_resp_msg {
  	(((u64)__le32_to_cpu(msg_u32) << 32) | (__le32_to_cpu(msg_l32)))
  #define HTT_T2H_VDEV_STATS_PERIODIC_MSG_TYPE		GENMASK(7, 0)
  #define HTT_T2H_VDEV_STATS_PERIODIC_PDEV_ID		GENMASK(15, 8)
@@ -105,7 +105,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
  struct htt_t2h_vdev_txrx_stats_ind {
  	__le32 vdev_id;
-@@ -1557,18 +1555,22 @@ struct htt_t2h_vdev_txrx_stats_ind {
+@@ -1555,18 +1553,22 @@ struct htt_t2h_vdev_txrx_stats_ind {
  	__le32 tx_msdu_byte_cnt_hi;
  	__le32 tx_msdu_cnt_lo;
  	__le32 tx_msdu_cnt_hi;
@@ -142,7 +142,34 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  struct htt_t2h_vdev_common_stats_tlv {
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -2425,6 +2425,9 @@ exit:
+@@ -1141,6 +1141,7 @@ int ath12k_dp_rx_peer_tid_setup(struct a
+ 	struct ath12k_dp *dp = &ab->dp;
+ 	struct hal_rx_reo_queue *addr_aligned;
+ 	struct ath12k_dp_rx_tid *rx_tid;
++	struct ath12k_link_vif *arvif;
+ 	u32 hw_desc_sz;
+ 	void *vaddr;
+ 	dma_addr_t paddr;
+@@ -1202,10 +1203,14 @@ int ath12k_dp_rx_peer_tid_setup(struct a
+ 	}
+ 
+ 	addr_aligned = PTR_ALIGN(vaddr, HAL_LINK_DESC_ALIGN);
+-
+-	ath12k_hal_reo_qdesc_setup(addr_aligned, tid, ba_win_sz,
+-				   ssn, pn_type);
+-
++	arvif = ath12k_mac_get_arvif(ar, peer->vdev_id);
++	if(!arvif) {
++		ath12k_warn(ab, "failed to get arvif with vdev id %d\n", peer->vdev_id);
++		ret= -EINVAL;
++        } else {
++		ath12k_hal_reo_qdesc_setup(addr_aligned, tid, ba_win_sz,
++                                   ssn, pn_type, arvif->vdev_stats_id);
++       }
+ #ifndef CONFIG_IO_COHERENCY
+ 	paddr = dma_map_single(ab->dev, addr_aligned, hw_desc_sz,
+ 			       DMA_BIDIRECTIONAL);
+@@ -2430,6 +2435,9 @@ exit:
  	rcu_read_unlock();
  }
  
@@ -152,7 +179,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  static void ath12k_htt_vdev_txrx_stats_handler(struct ath12k_base *ab,
  					       struct sk_buff *skb)
  {
-@@ -2436,21 +2439,30 @@ static void ath12k_htt_vdev_txrx_stats_h
+@@ -2441,21 +2449,30 @@ static void ath12k_htt_vdev_txrx_stats_h
  	u16 payload_bytes, tlv_tag, tlv_len;
  
  	payload_bytes = u32_get_bits(*data, HTT_T2H_VDEV_STATS_PERIODIC_PAYLOAD_BYTES);
@@ -188,7 +215,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  
  			arvif->vdev_stats.rx_msdu_byte_cnt =
  				HTT_VDEV_GET_STATS_U64(vdev_tlv->rx_msdu_byte_cnt_lo,
-@@ -2464,30 +2476,43 @@ static void ath12k_htt_vdev_txrx_stats_h
+@@ -2469,30 +2486,43 @@ static void ath12k_htt_vdev_txrx_stats_h
  			arvif->vdev_stats.tx_msdu_pkt_cnt =
  				HTT_VDEV_GET_STATS_U64(vdev_tlv->tx_msdu_cnt_lo,
  						       vdev_tlv->tx_msdu_cnt_hi);
@@ -249,7 +276,7 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  	rcu_read_unlock();
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -9996,15 +9996,23 @@ ath12k_wmi_fw_vdev_stats_fill(struct ath
+@@ -10028,15 +10028,23 @@ ath12k_wmi_fw_vdev_stats_fill(struct ath
  	len += scnprintf(buf + len, buf_len - len, "%30s %llu\n",
  			 "retry pkt cnt", arvif->vdev_stats.tx_retry_pkt_cnt);
  	len += scnprintf(buf + len, buf_len - len, "%30s %llu\n",
@@ -301,3 +328,90 @@ Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
  			 "tqm_bypass_frame_cnt = 0x%08x%08x\n",
  			 htt_stats_buf->tqm_bypass_frame_cnt_hi,
  			 htt_stats_buf->tqm_bypass_frame_cnt_lo);
+--- a/drivers/net/wireless/ath/ath12k/hal.h
++++ b/drivers/net/wireless/ath/ath12k/hal.h
+@@ -1224,7 +1224,7 @@ extern const struct hal_ops hal_qcn6432_
+ u32 ath12k_hal_reo_qdesc_size(u32 ba_window_size, u8 tid);
+ void ath12k_hal_reo_qdesc_setup(struct hal_rx_reo_queue *qdesc,
+ 				int tid, u32 ba_window_size,
+-				u32 start_seq, enum hal_pn_type type);
++				u32 start_seq, enum hal_pn_type type, u8 vdev_stats_id);
+ void ath12k_hal_reo_init_cmd_ring(struct ath12k_base *ab,
+ 				  struct hal_srng *srng);
+ void ath12k_hal_reo_hw_setup(struct ath12k_base *ab, u32 ring_hash_map);
+--- a/drivers/net/wireless/ath/ath12k/hal_desc.h
++++ b/drivers/net/wireless/ath/ath12k/hal_desc.h
+@@ -2386,19 +2386,21 @@ enum hal_rx_reo_queue_pn_size {
+ #define HAL_RX_REO_QUEUE_INFO1_PN_ERR			BIT(24)
+ #define HAL_RX_REO_QUEUE_INFO1_PN_VALID			BIT(31)
+ 
+-#define HAL_RX_REO_QUEUE_INFO2_MPDU_COUNT		GENMASK(6, 0)
+-#define HAL_RX_REO_QUEUE_INFO2_MSDU_COUNT		(31, 7)
++#define HAL_RX_REO_QUEUE_INFO2_STATISTICS_COUNTER       GENMASK(13, 8)
+ 
+-#define HAL_RX_REO_QUEUE_INFO3_TIMEOUT_COUNT		GENMASK(9, 4)
+-#define HAL_RX_REO_QUEUE_INFO3_FWD_DUE_TO_BAR_CNT	GENMASK(15, 10)
+-#define HAL_RX_REO_QUEUE_INFO3_DUPLICATE_COUNT		GENMASK(31, 16)
+-
+-#define HAL_RX_REO_QUEUE_INFO4_FRAME_IN_ORD_COUNT	GENMASK(23, 0)
+-#define HAL_RX_REO_QUEUE_INFO4_BAR_RECVD_COUNT		GENMASK(31, 24)
+-
+-#define HAL_RX_REO_QUEUE_INFO5_LATE_RX_MPDU_COUNT	GENMASK(11, 0)
+-#define HAL_RX_REO_QUEUE_INFO5_WINDOW_JUMP_2K		GENMASK(15, 12)
+-#define HAL_RX_REO_QUEUE_INFO5_HOLE_COUNT		GENMASK(31, 16)
++#define HAL_RX_REO_QUEUE_INFO3_MPDU_COUNT		GENMASK(6, 0)
++#define HAL_RX_REO_QUEUE_INFO3_MSDU_COUNT		(31, 7)
++
++#define HAL_RX_REO_QUEUE_INFO4_TIMEOUT_COUNT		GENMASK(9, 4)
++#define HAL_RX_REO_QUEUE_INFO4_FWD_DUE_TO_BAR_CNT	GENMASK(15, 10)
++#define HAL_RX_REO_QUEUE_INFO4_DUPLICATE_COUNT		GENMASK(31, 16)
++
++#define HAL_RX_REO_QUEUE_INFO5_FRAME_IN_ORD_COUNT	GENMASK(23, 0)
++#define HAL_RX_REO_QUEUE_INFO5_BAR_RECVD_COUNT		GENMASK(31, 24)
++
++#define HAL_RX_REO_QUEUE_INFO6_LATE_RX_MPDU_COUNT	GENMASK(11, 0)
++#define HAL_RX_REO_QUEUE_INFO6_WINDOW_JUMP_2K		GENMASK(15, 12)
++#define HAL_RX_REO_QUEUE_INFO6_HOLE_COUNT		GENMASK(31, 16)
+ 
+ struct hal_rx_reo_queue {
+ 	struct hal_desc_header desc_hdr;
+@@ -2409,15 +2411,16 @@ struct hal_rx_reo_queue {
+ 	__le32 last_rx_enqueue_timestamp;
+ 	__le32 last_rx_dequeue_timestamp;
+ 	__le32 next_aging_queue[2];
+-	__le32 prev_aging_queue[2];
+-	__le32 rx_bitmap[9];
++	__le32 prev_aging_queue;
+ 	__le32 info2;
++	__le32 rx_bitmap[9];
+ 	__le32 info3;
+ 	__le32 info4;
++	__le32 info5;
+ 	__le32 processed_mpdus;
+ 	__le32 processed_msdus;
+ 	__le32 processed_total_bytes;
+-	__le32 info5;
++	__le32 info6;
+ 	__le32 rsvd[2];
+ 	struct hal_rx_reo_queue_ext ext_desc[];
+ } __packed;
+--- a/drivers/net/wireless/ath/ath12k/hal_rx.c
++++ b/drivers/net/wireless/ath/ath12k/hal_rx.c
+@@ -758,7 +758,7 @@ u32 ath12k_hal_reo_qdesc_size(u32 ba_win
+ 
+ void ath12k_hal_reo_qdesc_setup(struct hal_rx_reo_queue *qdesc,
+ 				int tid, u32 ba_window_size,
+-				u32 start_seq, enum hal_pn_type type)
++				u32 start_seq, enum hal_pn_type type, u8 vdev_stats_id)
+ {
+ 	struct hal_rx_reo_queue_ext *ext_desc;
+ 
+@@ -813,6 +813,8 @@ void ath12k_hal_reo_qdesc_setup(struct h
+ 	if (tid == HAL_DESC_REO_NON_QOS_TID)
+ 		return;
+ 
++	qdesc->info2 |= le32_encode_bits(vdev_stats_id, HAL_RX_REO_QUEUE_INFO2_STATISTICS_COUNTER);
++
+ 	ext_desc = qdesc->ext_desc;
+ 
+ 	/* TODO: HW queue descriptors are currently allocated for max BA

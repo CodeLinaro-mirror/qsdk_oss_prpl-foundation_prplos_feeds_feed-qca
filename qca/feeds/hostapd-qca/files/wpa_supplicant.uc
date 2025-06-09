@@ -390,6 +390,7 @@ function iface_hostapd_notify(phy, radio, ifname, iface, state)
 		return;
 	}
 
+	wpas.printf(`apsta_state message passed ${msg}`);
 	ubus.call("hostapd", "apsta_state", msg);
 }
 

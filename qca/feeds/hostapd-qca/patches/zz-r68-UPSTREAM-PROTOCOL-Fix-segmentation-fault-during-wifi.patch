@@ -1,0 +1,42 @@
+From 1c977a77076c04bb6b8f59368e198c23aed36043 Mon Sep 17 00:00:00 2001
+From: Karthik M <karm@qti.qualcomm.com>
+Date: Thu, 15 May 2025 10:53:55 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL: Fix segmentation fault during wifi down
+
+In wifi down scenario, when there is no active links,
+interface is removed.
+
+We are trying to hold the ctx of the link which was freed
+eariler. Hence pass correct ctx for EVENT_MLD_INTERFACE_FREED.
+
+Patch-work: None
+Patch-dependency: r47-hostapd-fix-crash-due-to-passing-wrong-parameter.patch
+
+Signed-off-by: Karthik M <karm@qti.qualcomm.com>
+---
+ src/drivers/driver_nl80211.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+index 8f4bfa9..4b505a9 100644
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -11314,7 +11314,6 @@ static int driver_nl80211_link_remove(void *priv, enum wpa_driver_if_type type,
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	void *hapd = bss->ctx;
+ 	int ret;
+ 
+ 	if (type != WPA_IF_AP_BSS)
+@@ -11332,6 +11331,7 @@ static int driver_nl80211_link_remove(void *priv, enum wpa_driver_if_type type,
+ 		drv->ctx = bss->ctx;
+ 
+ 	if (!bss->valid_links) {
++		void *hapd = bss->ctx;
+ 		wpa_printf(MSG_DEBUG,
+ 			   "nl80211: No more links remaining, so remove interface");
+ 		ret = wpa_driver_nl80211_if_remove(bss, type, ifname);
+-- 
+2.34.1
+

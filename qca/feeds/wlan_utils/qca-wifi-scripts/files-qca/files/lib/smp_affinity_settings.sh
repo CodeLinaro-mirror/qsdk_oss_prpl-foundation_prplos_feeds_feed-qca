@@ -20,6 +20,18 @@ type ipq806x_board_name &>/dev/null  || ipq806x_board_name() {
         echo $(board_name) | sed 's/^\([^-]*-\)\{1\}//g'
 }
 
+update_rx_hash() {
+    local value="0x21321321"
+    local base_dir="/sys/kernel/debug/ath12k"
+
+    for entry in "$base_dir"/*; do
+        if [ -d "$entry" ]; then
+            echo $value > "$entry/rx_hash_ix2"
+            echo $value > "$entry/rx_hash_ix3"
+        fi
+    done
+}
+
 enable_affinity_hk10_c2() {
 
 	# Enable smp affinity for PCIE attach
@@ -314,6 +326,8 @@ enable_affinity_mpc1() {
 
 enable_affinity_al02_c4() {
 
+	update_rx_hash
+
 	#pci 3
 	#assign 4 rx interrupts to each cores
 	irq_affinity_num=`grep -E -m1 'pci3_wlan_dp_4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -410,6 +424,8 @@ enable_affinity_al02_c4() {
 
 
 enable_affinity_al02_c20() {
+
+	update_rx_hash
 
 	#pci 3
 	#assign 4 rx interrupts to each cores
@@ -512,6 +528,8 @@ enable_affinity_al02_c20() {
 
 enable_affinity_al02_c6() {
 
+	update_rx_hash
+
 	#pci 3
 	#assign 4 rx interrupts to each cores
 	irq_affinity_num=`grep -E -m1 'pci3_wlan_dp_4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -596,6 +614,8 @@ enable_affinity_al02_c6() {
 
 enable_affinity_al02_c9() {
 
+	update_rx_hash
+
 	# Enable smp affinity for PCIE attach
 	#pci 1
 
@@ -658,6 +678,8 @@ enable_affinity_al02_c9() {
 }
 
 enable_affinity_mi01_2() {
+
+	update_rx_hash
 
 	#IPQ5332 2G radio
 	#assign 4 rx interrupts to each cores
@@ -755,6 +777,8 @@ enable_affinity_mi01_2() {
 
 enable_affinity_mi01_6() {
 
+	update_rx_hash
+
         #IPQ5332 2G radio
         #assign 4 rx interrupts to each cores
         irq_affinity_num=`grep -E -m1 'reo2host-destination-ring4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -820,6 +844,8 @@ enable_affinity_mi01_6() {
 }
 
 enable_affinity_mi01_3() {
+
+	update_rx_hash
 
         #IPQ5332 2G radio
         #assign 4 rx interrupts to each cores
@@ -915,6 +941,8 @@ enable_affinity_mi01_3() {
 
 enable_affinity_mi01_3_c2() {
 
+	update_rx_hash
+
         #IPQ5332 2G radio
         #assign 4 rx interrupts to each cores
         irq_affinity_num=`grep -E -m1 'reo2host-destination-ring4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -978,6 +1006,9 @@ enable_affinity_mi01_3_c2() {
 
 }
 enable_affinity_mi01_3_c3() {
+
+	update_rx_hash
+
 	#IPQ5332 2G radio
 	#assign 4 rx interrupts to each cores
 	irq_affinity_num=`grep -E -m1 'reo2host-destination-ring4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -1040,6 +1071,9 @@ enable_affinity_mi01_3_c3() {
 }
 
 enable_affinity_mi01_9() {
+
+	update_rx_hash
+
 	#pci 0
 	#assign 4 rx interrupts to each cores
 	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -1100,6 +1134,8 @@ enable_affinity_mi01_9() {
 }
 
 enable_affinity_mi01_14() {
+
+	update_rx_hash
 
 	#IPQ5332 2G radio
 	#assign 4 rx interrupts to each cores
@@ -1197,6 +1233,8 @@ enable_affinity_mi01_14() {
 
 enable_affinity_mi01_12() {
 
+	update_rx_hash
+
 	#IPQ5332 2G radio
 	#assign 4 rx interrupts to each cores
 	irq_affinity_num=`grep -E -m1 'reo2host-destination-ring4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -1290,6 +1328,8 @@ enable_affinity_mi01_12() {
 }
 
 enable_affinity_mr01() {
+
+	update_rx_hash
 
 	#IPQ5424 2G radio
 	#assign 4 rx interrupts to each cores
@@ -1416,6 +1456,8 @@ enable_affinity_mr01() {
 
 enable_affinity_mr02() {
 
+	update_rx_hash
+
 	#IPQ5424 2G radio
 	#assign 4 rx interrupts to each cores
 	irq_affinity_num=`grep -E -m1 'reo2host-destination-ring4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
@@ -1511,6 +1553,8 @@ enable_affinity_mr02() {
 }
 
 enable_affinity_mr03() {
+
+	update_rx_hash
 
 	#IPQ5424 2G radio
 	#assign 4 rx interrupts to each cores

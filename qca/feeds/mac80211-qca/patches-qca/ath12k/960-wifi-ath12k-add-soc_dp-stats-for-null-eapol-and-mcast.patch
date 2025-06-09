@@ -53,7 +53,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1314,7 +1314,9 @@ struct ath12k_soc_dp_stats {
+@@ -1329,7 +1329,9 @@ struct ath12k_soc_dp_stats {
  	u32 null_tx_complete[MAX_TCL_RING];
  	u32 reo_rx[DP_REO_DST_RING_MAX] [ATH12K_MAX_SOCS];
  	u32 fast_rx[DP_REO_DST_RING_MAX] [ATH12K_MAX_SOCS];
@@ -64,7 +64,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  	u32 rx_wbm_rel_source[HAL_WBM_REL_SRC_MODULE_MAX] [ATH12K_MAX_SOCS];
  
  	struct ath12k_soc_dp_tx_err_stats tx_err;
-@@ -1323,6 +1325,12 @@ struct ath12k_soc_dp_stats {
+@@ -1338,6 +1340,12 @@ struct ath12k_soc_dp_stats {
  	u32 first_and_last_msdu_bit_miss;
  	u32 reo_excep_msdu_buf_type;
  	u32 free_excess_alloc_skb;
@@ -79,7 +79,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  struct ath12k_reg_freq {
 --- a/drivers/net/wireless/ath/ath12k/debugfs.c
 +++ b/drivers/net/wireless/ath/ath12k/debugfs.c
-@@ -1846,8 +1846,10 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -1854,8 +1854,10 @@ static ssize_t ath12k_debugfs_dump_soc_d
  	struct ath12k_base *ab = file->private_data;
  	struct ath12k_soc_dp_stats *soc_stats = &ab->soc_stats;
  	struct ath12k *ar;
@@ -91,7 +91,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  	static const char *rxdma_err[HAL_REO_ENTR_RING_RXDMA_ECODE_MAX] = {
  			"Overflow", "MPDU len", "FCS", "Decrypt", "TKIP MIC",
  			"Unencrypt", "MSDU len", "MSDU limit", "WiFi parse",
-@@ -1868,6 +1870,17 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -1876,6 +1878,17 @@ static ssize_t ath12k_debugfs_dump_soc_d
  	if (!buf)
  		return -ENOMEM;
  
@@ -109,7 +109,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  	len += scnprintf(buf + len, size - len, "SOC RX STATS:\n\n");
  	len += scnprintf(buf + len, size - len, "err ring pkts: %u\n",
  			 soc_stats->err_ring_pkts);
-@@ -1977,10 +1990,10 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -1985,10 +1998,10 @@ static ssize_t ath12k_debugfs_dump_soc_d
  
  	len += scnprintf(buf + len, size - len,
  			"\ntx_enqueued: 0:%u 1:%u 2:%u 3:%u\n",
@@ -124,7 +124,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  
  	len += scnprintf(buf + len, size - len,
  			 "\nTx Peers Not Present: %d\n",
-@@ -2036,9 +2049,40 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -2044,9 +2057,40 @@ static ssize_t ath12k_debugfs_dump_soc_d
  		len += scnprintf(buf + len, size - len,
  				 "Ring%d: 0:%u\t1:%u\t2:%u\n",
  				 i + 1,
@@ -168,7 +168,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  
  	len += scnprintf(buf + len, size - len, "\nRx WBM REL SRC Errors:\n");
  	for (i = 0; i < HAL_WBM_REL_SRC_MODULE_MAX; i++)
-@@ -2057,6 +2101,34 @@ static ssize_t ath12k_debugfs_dump_soc_d
+@@ -2065,6 +2109,34 @@ static ssize_t ath12k_debugfs_dump_soc_d
  			 "\nfree excess alloc skb: %u\n",
  			 soc_stats->free_excess_alloc_skb);
  
@@ -205,7 +205,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  	if (len > size)
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -3367,6 +3367,33 @@ free_out:
+@@ -3397,6 +3397,32 @@ free_out:
  	return ret;
  }
  
@@ -217,10 +217,9 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
 +	struct ath12k_base *ab = ar->ab;
 +	struct ath12k_dp_rx_rfc1042_hdr *llc;
 +	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
-+	struct hal_rx_desc *rx_desc = (struct hal_rx_desc *)msdu->data;
 +	size_t hdr_len;
 +
-+	if (ab->hw_params->hal_ops->rx_desc_is_da_mcbc(rx_desc)) {
++	if (rx_info->is_mcbc) {
 +		ab->soc_stats.non_fast_mcast_rx[ring_id][ar->ab->chip_id]++;
 +	} else if (rx_info->decap_type == DP_RX_DECAP_TYPE_NATIVE_WIFI) {
 +		hdr = (struct ieee80211_hdr *)msdu->data;
@@ -239,7 +238,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  static void ath12k_dp_rx_process_received_packets(struct ath12k_base *ab,
  						  struct napi_struct *napi,
  						  struct sk_buff_head *msdu_list,
-@@ -3431,7 +3458,8 @@ static void ath12k_dp_rx_process_receive
+@@ -3462,7 +3488,8 @@ static void ath12k_dp_rx_process_receive
  		}
  
  		if (!fast_rx) {
@@ -251,7 +250,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  			ab->soc_stats.fast_rx[ring_id][ar->ab->chip_id]++;
 --- a/drivers/net/wireless/ath/ath12k/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_tx.c
-@@ -370,7 +370,7 @@ int ath12k_dp_tx_direct(struct ath12k_li
+@@ -372,7 +372,7 @@ int ath12k_dp_tx_direct(struct ath12k_li
  		goto fail_remove_tx_buf;
  	}
  
@@ -260,7 +259,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  
  	memcpy(hal_tcl_desc, &tcl_desc, sizeof(tcl_desc));
  	dsb(st);
-@@ -392,7 +392,7 @@ EXPORT_SYMBOL(ath12k_dp_tx_direct);
+@@ -394,7 +394,7 @@ EXPORT_SYMBOL(ath12k_dp_tx_direct);
  
  int ath12k_dp_tx(struct ath12k *ar, struct ath12k_link_vif *arvif,
  		 struct ath12k_sta *ahsta, struct sk_buff *skb,
@@ -269,7 +268,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  {
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	struct ath12k_base *ab = ar->ab;
-@@ -524,9 +524,9 @@ int ath12k_dp_tx(struct ath12k *ar, stru
+@@ -526,9 +526,9 @@ int ath12k_dp_tx(struct ath12k *ar, stru
  
  	switch (ti.encap_type) {
  	case HAL_TCL_ENCAP_TYPE_NATIVE_WIFI:
@@ -281,7 +280,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  			is_diff_encap = true;
  		else
  			ath12k_dp_tx_encap_nwifi(skb);
-@@ -657,7 +657,15 @@ skip_htt_meta:
+@@ -660,7 +660,15 @@ skip_htt_meta:
  		goto fail_remove_ext_desc;
  	}
  
@@ -300,7 +299,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  	arvif->link_stats.tx_desc_type[ti.type]++;
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -12408,6 +12408,7 @@ static void ath12k_mgmt_rx_event(struct
+@@ -12497,6 +12497,7 @@ static void ath12k_mgmt_rx_event(struct
  
  	if (ieee80211_is_data(hdr->frame_control) && !is_4addr_null_pkt) {
  		dev_kfree_skb(skb);
@@ -308,7 +307,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  		goto exit;
  	}
  	if (is_4addr_null_pkt) {
-@@ -12426,6 +12427,7 @@ static void ath12k_mgmt_rx_event(struct
+@@ -12515,6 +12516,7 @@ static void ath12k_mgmt_rx_event(struct
  			status->link_id = peer->link_id;
  		}
  		spin_unlock_bh(&ab->base_lock);
@@ -318,7 +317,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  	} else {
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -10109,7 +10109,7 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -10160,7 +10160,7 @@ static void ath12k_mac_op_tx(struct ieee
  			return;
  		}
  
@@ -327,7 +326,7 @@ Signed-off-by: Sarika Sharma <quic_sarishar@quicinc.com>
  		if (unlikely(ret)) {
  			if (ret == -ENOMEM)
  				ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
-@@ -10197,7 +10197,7 @@ static void ath12k_mac_op_tx(struct ieee
+@@ -10248,7 +10248,7 @@ static void ath12k_mac_op_tx(struct ieee
  			spin_unlock_bh(&tmp_ar->ab->base_lock);
  skip_peer_find:
  			ret = ath12k_dp_tx(tmp_ar, tmp_arvif, ahsta,
