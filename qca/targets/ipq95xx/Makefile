@@ -24,7 +24,7 @@ DEFAULT_PACKAGES += \
 	iwinfo kmod-ath12k-qca \
 	kmod-leds-gpio swconfig kmod-fs-ext4 losetup \
 	libudebug libustream-mbedtls libubus-lua \
-	wififw_mount_script qca-wifi-scripts ath-wifi-scripts ath-legacy-wifi-scripts \
+	wififw_mount_script qca-wifi-scripts ath-wifi-scripts \
 	kmod-bonding wpad-qca-mesh-openssl \
 	kmod-qca-nss-drv kmod-qca-nss-drv-bridge-mgr kmod-qca-nss-drv-gre \
 	kmod-qca-nss-drv-igs kmod-qca-nss-drv-l2tpv2 kmod-qca-nss-drv-lag-mgr kmod-qca-nss-drv-map-t \
