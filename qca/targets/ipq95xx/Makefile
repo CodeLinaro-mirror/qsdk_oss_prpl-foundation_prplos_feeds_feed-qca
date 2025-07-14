@@ -52,13 +52,6 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
 	ftm myftm diag cnssdiag
 
-export KERNEL_DETAILS_FILE_CUSTOM=$(PLATFORM_DIR)/kernel-$(KERNEL_PATCHVER)
-GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
-export GENERIC_BACKPORT_DIR_CUSTOM := empty
-export GENERIC_PATCH_DIR_CUSTOM := empty
-export GENERIC_HACK_DIR_CUSTOM := empty
-export GENERIC_FILES_DIR_CUSTOM := $(FILES_DIR)
-
 define Kernel/Prepare
 	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)
 
