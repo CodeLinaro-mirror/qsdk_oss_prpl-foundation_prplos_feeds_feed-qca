@@ -1,0 +1,118 @@
+From 394ea879d956704002aa7ffc6941db335f6f0aaf Mon Sep 17 00:00:00 2001
+From: Manish Dharanenthiran <quic_mdharane@quicinc.com>
+Date: Tue, 1 Apr 2025 11:53:37 +0530
+Subject: [PATCH] QSDK: WAR: Add cases to check for split-phy cases during
+ reassociation
+
+Currently, is_all_link_associated() API will check whether all the
+frequency list configured by the user is associated with AP or not.
+Association might not have happened because either AP will be in CAC/ACS
+or it will get added dynamically later. Here, frequencies configured is
+checked and list is saved only for 2 GHz, 5 GHz and 6 GHz individually.
+But, it didn't considered about whether underlying hardware has
+split-phy or not. Because of this, if user configures both split-phy
+frequencies, if either one of the frequency is associated, station won't
+try to reconnect even after it starts to beaconing.
+
+Fix this by considering whether split-phy case is present and save the
+frequency list accordingly.
+
+Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
+---
+ wpa_supplicant/events.c | 37 +++++++++++++++++++++++++++++--------
+ wpa_supplicant/scan.h   | 10 ++++++----
+ 2 files changed, 35 insertions(+), 12 deletions(-)
+
+diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
+index ca415c4..8044203 100644
+--- a/wpa_supplicant/events.c
++++ b/wpa_supplicant/events.c
+@@ -4254,11 +4254,14 @@ out:
+ /* Returns true if all freq count and link count
+  * are same, false otherwise
+  */
+-static bool is_all_links_associated(int *freq_list, u16 valid_links)
++static bool is_all_links_associated(struct wpa_supplicant *wpa_s)
+ {
+ 	int i = 0, freq;
++	int *freq_list = &wpa_s->conf->freq_list[0];
++	u16 valid_links = wpa_s->valid_links;
+ 	u8 freq_lists = 0; /* Bitmap of user configured frequencies */
+ 	u8 link_count = 0, freq_count = 0;
++	bool is_split_phy_5ghz = false, is_split_phy_6ghz = false;
+ 
+ 	/* If valid_links is not set, consider that all links are associated
+ 	 * Note: freq_list is not mandotary to present in station
+@@ -4267,13 +4270,32 @@ static bool is_all_links_associated(int *freq_list, u16 valid_links)
+ 	if (!valid_links || !freq_list)
+ 		return true;
+ 
++	for (i = 0; i < wpa_s->num_multi_hws; i++) {
++		struct hostapd_multi_hw_info *hw_info = &wpa_s->multi_hw_info[i];
++
++		if(hw_info->start_freq > 5925 && hw_info->end_freq < 6425)
++			is_split_phy_6ghz = true;
++
++		if (hw_info->start_freq > 5490 && hw_info->end_freq < 5895)
++			is_split_phy_5ghz = true;
++	}
++	i = 0;
++
+ 	freq = freq_list[i];
+ 	while(freq) {
+-		if (!(freq < 5180 || freq > 5885))
+-			freq_lists |= SCAN_FREQ_BAND_5GHZ;
+-		else if (is_6ghz_freq(freq))
+-			freq_lists |= SCAN_FREQ_BAND_6GHZ;
+-		else
++		if (!(freq < 5180 || freq > 5885)) {
++			if (is_split_phy_5ghz &&
++			    (freq >= 5180 && freq < 5490))
++				freq_lists |= SCAN_FREQ_BAND_5GHZ_LOW;
++			else
++				freq_lists |= SCAN_FREQ_BAND_5GHZ;
++		} else if (is_6ghz_freq(freq)) {
++			if (is_split_phy_6ghz &&
++			    (freq > 5925 && freq < 6425))
++				freq_lists |= SCAN_FREQ_BAND_6GHZ_LOW;
++			else
++				freq_lists |= SCAN_FREQ_BAND_6GHZ;
++		} else
+ 			freq_lists |= SCAN_FREQ_BAND_2GHZ;
+ 
+ 		freq = freq_list[++i];
+@@ -4630,8 +4652,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
+ 	 * otherwise trigger a scan request in background to re-associate
+ 	 * to all the links after CAC/ACS timer is completed in AP MLD
+ 	 */
+-	if ((!is_all_links_associated(&wpa_s->conf->freq_list[0],
+-				     wpa_s->valid_links)) &&
++	if ((!is_all_links_associated(wpa_s)) &&
+ 	    wpa_s->current_ssid && !wpa_s->current_ssid->disable_reconfig)
+ 		eloop_register_timeout(5, 0,
+ 				       wpas_scan_for_rnr_entries,
+diff --git a/wpa_supplicant/scan.h b/wpa_supplicant/scan.h
+index 989f5dd..a00fd70 100644
+--- a/wpa_supplicant/scan.h
++++ b/wpa_supplicant/scan.h
+@@ -39,11 +39,13 @@
+ #define TX_POWER_NO_CONSTRAINT 64
+ 
+ enum configured_freq_band {
+-	SCAN_FREQ_BAND_2GHZ = BIT(0),
+-	SCAN_FREQ_BAND_5GHZ = BIT(1),
+-	SCAN_FREQ_BAND_6GHZ = BIT(2),
++	SCAN_FREQ_BAND_2GHZ		= BIT(0),
++	SCAN_FREQ_BAND_5GHZ_LOW		= BIT(1),
++	SCAN_FREQ_BAND_5GHZ		= BIT(2),
++	SCAN_FREQ_BAND_6GHZ_LOW		= BIT(3),
++	SCAN_FREQ_BAND_6GHZ		= BIT(4),
+ 
+-	SCAN_FREQ_BAND_MAX,
++	SCAN_FREQ_BAND_MAX		= BIT(5),
+ };
+ 
+ int wpa_supplicant_enabled_networks(struct wpa_supplicant *wpa_s);
+-- 
+2.34.1
+

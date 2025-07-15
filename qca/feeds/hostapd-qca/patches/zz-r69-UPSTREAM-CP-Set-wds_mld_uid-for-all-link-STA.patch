@@ -1,0 +1,50 @@
+From 754c710a40994a134f40f1fb26251aa3ee474063 Mon Sep 17 00:00:00 2001
+From: Harish Rachakonda <rachakon@qti.qualcomm.com>
+Date: Thu, 8 May 2025 12:42:26 +0530
+Subject: [PATCH] UPSTREAM:CP: Set wds_mld_uid for all link STA
+
+Currently when the primary link is removed via ML reconfig in a WDS
+connection and the STA gets disconnected, the VLAN is not deleted,
+resulting in a stale entry. This occurs because the wrong interface
+name is sent to the driver.
+
+Fix is to set wds_mld_uid flag for all the links to ensure
+correct interface is sent to driver.
+
+Fixes-patch:
+r57-UPSTREAM-CP-hostapd-Set-WDS-flag-for-all-link-STA.patch
+(UPSTREAM:CP:hostapd: Set WDS flag for all link STA)
+Patch-dependency: r03-029-hostapd-Enable-WDS-AP-MLO-Support.patch
+Patch-work: None
+
+Signed-off-by: Harish Rachakonda <rachakon@qti.qualcomm.com>
+---
+ src/ap/ieee802_11.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 19e7a35..a3e456f 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -7165,14 +7165,17 @@ static void set_wds_sta_flag(struct hostapd_data *hapd, struct
+ {
+ 	struct sta_info *psta;
+ 	struct hostapd_data *phapd;
++	u16 aid = sta->wds_mld_uid;
+ 
+ 	if (ap_sta_is_mld(hapd, sta)) {
+ 		for_each_mld_link(phapd, hapd) {
+ 			if (phapd == hapd)
+ 				continue;
+ 			psta = ap_get_sta(phapd, sta->addr);
+-			if (psta)
++			if (psta) {
++				psta->wds_mld_uid = aid;
+ 				psta->flags |= WLAN_STA_WDS;
++			}
+ 		}
+ 	}
+ }
+-- 
+2.34.1
+

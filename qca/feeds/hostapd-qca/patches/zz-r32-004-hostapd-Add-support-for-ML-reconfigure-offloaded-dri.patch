@@ -139,7 +139,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  int hostapd_get_seqnum(const char *ifname, struct hostapd_data *hapd,
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -455,8 +455,91 @@ static void hostapd_link_remove_timeout_
+@@ -455,8 +455,111 @@ static void hostapd_link_remove_timeout_
  }
  
  
@@ -173,7 +173,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +{
 +	struct hostapd_mld *mld = hapd->mld;
 +	struct hostapd_iface *iface = hapd->iface;
-+	struct hostapd_data *link_bss;
++	struct hostapd_data *link_bss, *bss;
 +	size_t i;
 +	u8 list_len;
 +
@@ -192,15 +192,35 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
 +
 +	if (iface->conf->mbssid != MBSSID_DISABLED &&
 +	    hapd == hostapd_mbssid_get_tx_bss(hapd)) {
-+		for (i = 1; i < hapd->iface->num_bss; i++) {
-+			struct hostapd_data *bss = hapd->iface->bss[i];
-+			mld = bss->mld;
++		if (iface->conf->mbssid == MULTI_MBSSID_GROUP_ENABLED) {
++			struct hostapd_multi_mbssid_group *group = hapd->mbssid_group;
 +
-+			list_len = dl_list_len(&mld->links);
-+			if (!list_len || list_len == 1) {
-+				wpa_printf(MSG_INFO, "link reconfigure is currently not applicable for this list:%u\n",
-+					   list_len);
-+				return false;
++			dl_list_for_each(bss, &group->bss_list,
++					 struct hostapd_data, mbssid_bss) {
++				if (bss == hapd)
++					continue;
++				if (!bss->conf->mld_ap)
++					return false;
++				mld = bss->mld;
++
++				list_len = dl_list_len(&mld->links);
++				if (list_len <= 1) {
++					wpa_printf(MSG_INFO, "link reconfigure is currently not applicable for this list:%u\n", list_len);
++					return false;
++				}
++			}
++		} else {
++			for (i = 1; i < hapd->iface->num_bss; i++) {
++				bss = hapd->iface->bss[i];
++				if (!bss->conf->mld_ap)
++					return false;
++				mld = bss->mld;
++
++				list_len = dl_list_len(&mld->links);
++				if (list_len <= 1) {
++					wpa_printf(MSG_INFO, "link reconfigure is currently not applicable for this list:%u\n", list_len);
++					return false;
++				}
 +			}
 +		}
 +	}
@@ -231,7 +251,7 @@ Signed-off-by: Manish Dharanenthiran <quic_mdharane@quicinc.com>
  	if (!hapd->conf->mld_ap)
  		return -1;
  
-@@ -466,6 +549,35 @@ int hostapd_link_remove(struct hostapd_d
+@@ -466,6 +569,35 @@ int hostapd_link_remove(struct hostapd_d
  
  	hapd->eht_mld_link_removal_count = count;
  

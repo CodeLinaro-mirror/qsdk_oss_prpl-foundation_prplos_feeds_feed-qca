@@ -926,14 +926,19 @@ let main_obj = {
 				return libubus.STATUS_INVALID_ARGUMENT;
 
 			let config = hostapd.data.config[phy];
-			if (!config || !config.bss || !config.bss[0] || !config.bss[0].ifname)
+			if (!config || !config.bss || !config.bss[0] || !config.bss[0].ifname) {
+				hostapd.printf(`apsta_state: config not found for radio ${req.args.radio}`);
 				return 0;
+			}
 
 			let iface = hostapd.interfaces[phy];
-			if (!iface)
+			if (!iface) {
+				hostapd.printf(`apsta_state: iface not found for radio ${req.args.radio}`);
 				return 0;
+			}
 
 			if (!req.args.up) {
+				hostapd.printf(`apsta_state: Stopping interfaces for radio ${req.args.radio}`);
 				iface.stop();
 				return 0;
 			}
@@ -945,6 +950,7 @@ let main_obj = {
 			if (!freq_info)
 				return libubus.STATUS_UNKNOWN_ERROR;
 
+			hostapd.printf(`apsta_state: freq_info for radio ${req.args.radio} is ${freq_info}`);
 			let ret;
 			if (req.args.csa) {
 				freq_info.csa_count = req.args.csa_count ?? 10;

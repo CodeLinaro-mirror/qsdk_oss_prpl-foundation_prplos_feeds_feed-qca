@@ -1,0 +1,13 @@
+Index: backports-6.6.15/drivers/net/wireless/ath/ath12k/mac.c
+===================================================================
+--- backports-6.6.15.orig/drivers/net/wireless/ath/ath12k/mac.c
++++ backports-6.6.15/drivers/net/wireless/ath/ath12k/mac.c
+@@ -13553,7 +13553,7 @@ int ath12k_mac_vdev_create(struct ath12k
+ 
+ 	if (vif->type == NL80211_IFTYPE_STATION &&
+ 	    (wdev && wdev->use_4addr)) {
+-		ath12k_wmi_vdev_set_param_cmd(arvif->ar, arvif->vdev_id,
++		ret = ath12k_wmi_vdev_set_param_cmd(arvif->ar, arvif->vdev_id,
+ 					      WMI_VDEV_PARAM_WDS, 1);
+ 		if (!ret)
+ 			ahvif->set_wds_vdev_param = true;

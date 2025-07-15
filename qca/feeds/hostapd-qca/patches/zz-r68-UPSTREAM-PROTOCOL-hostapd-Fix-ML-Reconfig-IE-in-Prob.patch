@@ -1,0 +1,54 @@
+From b9834ea3375c1fe1693bd9e23bf86cb3831e0183 Mon Sep 17 00:00:00 2001
+From: Yuvarani V <yuvarani@qti.qualcomm.com>
+Date: Thu, 8 May 2025 12:16:55 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL: hostapd: Fix ML Reconfig IE in Probe
+ response
+
+Currently, a check to enusre Reconfig IE is added only for ML AP
+in probe response frame is missing.
+
+Add a check to ensure ML Reconfig IE is added in probe response
+only for ML AP.
+
+Fixes: I3b07fb604 (UPSTREAM:PROTOCOL: hostapd: Fix ML Reconfig IE in
+Probe response)
+
+Fixes-patch: r48-hostapd-add-ML-probing-support-for-MBSSID.patch
+(UPSTREAM: HOSTAPD: add ML probing support for MBSSID)
+
+Patch-dependency: r48-hostapd-add-ML-probing-support-for-MBSSID.patch
+
+Patch-work: None
+
+Signed-off-by: Yuvarani V <yuvarani@qti.qualcomm.com>
+---
+ src/ap/beacon.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index d4a92d9..d8be83c 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -818,7 +818,8 @@ static size_t hostapd_probe_resp_elems_len(struct hostapd_data *hapd,
+ 		}
+ 
+ 		/* ML reconfigure feature */
+-		buflen += hostapd_eid_eht_ml_reconfig_len(hapd);
++		if (hapd->conf->mld_ap)
++			buflen += hostapd_eid_eht_ml_reconfig_len(hapd);
+ 
+ 		/* QCN Vendor IE for 240MHz */
+ 		if (is_5ghz_freq(hapd->iface->freq))
+@@ -993,7 +994,8 @@ static u8 * hostapd_probe_resp_fill_elems(struct hostapd_data *hapd,
+ 				WLAN_FC_STYPE_PROBE_RESP);
+ 
+ 		/* ML reconfigure feature */
+-		pos = hostapd_eid_eht_reconf_ml(hapd, pos);
++		if (hapd->conf->mld_ap)
++			pos = hostapd_eid_eht_reconf_ml(hapd, pos);
+ 
+ 		pos = hostapd_eid_eht_capab(hapd, pos, IEEE80211_MODE_AP);
+ 		pos = hostapd_eid_eht_operation(hapd, pos);
+-- 
+2.34.1
+

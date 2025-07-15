@@ -1,0 +1,43 @@
+From 112e328db43585390c0042635e51ceaa221c9524 Mon Sep 17 00:00:00 2001
+From: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
+Date: Mon, 7 Apr 2025 16:00:47 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL: Fix for hostapd crash during SA Query
+ Procedure
+
+In non-MLD case, during SA Query Procedure, hostapd crashes when
+SA Query Response is received.
+
+This issue occurs in non-MLD case where MLD structures are accessed
+when cleaning up the unadded station in sta_hash. This causes
+NULL pointer dereference and results in hostapd crash.
+
+Fix this issue by adding appropriate checks for MLD structures
+in ap_free_unadded_link_sta() function.
+
+Fixes: Ic342a11f9746(UPSTREAM:PROTOCOL Allow slo station connect to partner link)
+
+Patch-dependency: r25-hostapd-Add-support-slo-sta-reconnect-with-partner-l.patch
+Patch-work: None
+
+Signed-off-by: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
+---
+ src/ap/sta_info.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/ap/sta_info.c b/src/ap/sta_info.c
+index bfea67edd365..65f95ac1e62b 100644
+--- a/src/ap/sta_info.c
++++ b/src/ap/sta_info.c
+@@ -232,6 +232,9 @@ void ap_free_unadded_link_sta(struct hostapd_data *hapd, struct sta_info *sta)
+ 	struct hostapd_data *phapd;
+ 	struct sta_info *psta;
+ 
++	if (!ap_sta_is_mld(hapd, sta))
++		return;
++
+ 	for_each_mld_link(phapd, hapd) {
+ 		psta = ap_get_sta(phapd, sta->addr);
+ 		if (!(psta && psta->unadded_sta))
+-- 
+2.34.1
+

@@ -7,8 +7,8 @@ PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-phy
-PKG_MIRROR_HASH:=0d35fe6403cd059f786c6cd4fe838ee1dd2fa7642ff8a48ed92997e3298f94c2
-PKG_VERSION:=5a70c334200fe4728be20a0f0aebf9c09519377c
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=3fc55c23bc94322da3202ff50a6e5072996948cc
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -38,6 +38,7 @@ define KernelPackage/qca81xx
   SUBMENU:=Network Devices
   TITLE:=QCA81XX PHY driver
   FILES:=$(PKG_BUILD_DIR)/linux_std/qca81xx/qca81xx-phy.ko
+  DEPENDS:=+kmod-hwmon-core
   PROVIDES:=qca81xx
   AUTOLOAD:=$(call AutoLoad,07,qca81xx-phy)
 endef
