@@ -7,7 +7,7 @@ PKG_BRANCH:=win.nss.1.0.r26
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-nsm
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=9d5f9a0a08c1be74552bbefc53898d44ca511ea3f56228eeda848559b9a4239b
 PKG_VERSION:=823b380b5b7abaf8ce1167e790fad287d08f454b
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
