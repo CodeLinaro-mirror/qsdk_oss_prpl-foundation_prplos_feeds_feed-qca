@@ -1,31 +1,82 @@
 #!/bin/sh
 
-wait_for_uci_wireless() {
-	local timeout=10
-	local elapsed=0
-	local uci_detect
+# nothing to do if there is already a wireless config:
+uci -q get wireless && exit 0
 
-	uci_detect=$(uci show wireless > /dev/null 2>/dev/null;echo $?)
+touch /etc/config/wireless
 
-	while [ "$uci_detect" -ne "0" ] && [ $elapsed -lt $timeout ]; do
-		uci_detect=$(uci show wireless > /dev/null 2>/dev/null;echo $?)
-		elapsed=$((elapsed + 1))
-		sleep 1
-	done
-}
+uci batch <<'EOF'
 
-init_vendor_uci_wireless() {
-	uci get wireless.vendor 1>/dev/null 2>/dev/null || {
-		uci set wireless.vendor=vendor
-	}
+set wireless.mac80211=smp_affinity
+set wireless.mac80211.enable_smp_affinity='1'
+set wireless.mac80211.enable_color='1'
+set wireless.radio0_band0=wifi-device
+set wireless.radio0_band0.type='mac80211'
+set wireless.radio0_band0.path='soc@0/10000000.pci/pci0001:00/0001:00:00.0/0001:01:00.0'
+set wireless.radio0_band0.band='2g'
+set wireless.radio0_band0.channel='6'
+set wireless.radio0_band0.radio='0'
+set wireless.radio0_band0.channels='1-14'
+set wireless.radio0_band0.htmode='EHT20'
+set wireless.radio0_band0.disabled='1'
+set wireless.default_radio0_band0=wifi-iface
+set wireless.default_radio0_band0.device='radio0_band0'
+set wireless.default_radio0_band0.network='lan'
+set wireless.default_radio0_band0.mode='ap'
+set wireless.default_radio0_band0.ssid='prplOS'
+set wireless.default_radio0_band0.encryption='none'
+set wireless.guest_radio0_band0=wifi-iface
+set wireless.guest_radio0_band0.device='radio0_band0'
+set wireless.guest_radio0_band0.network='guest'
+set wireless.guest_radio0_band0.mode='ap'
+set wireless.guest_radio0_band0.ssid='prplOS-guest'
+set wireless.guest_radio0_band0.encryption='none'
+set wireless.radio0_band1=wifi-device
+set wireless.radio0_band1.type='mac80211'
+set wireless.radio0_band1.path='soc@0/10000000.pci/pci0001:00/0001:00:00.0/0001:01:00.0'
+set wireless.radio0_band1.band='5g'
+set wireless.radio0_band1.channel='36'
+set wireless.radio0_band1.radio='1'
+set wireless.radio0_band1.channels='36-177'
+set wireless.radio0_band1.htmode='EHT80'
+set wireless.radio0_band1.disabled='1'
+set wireless.default_radio0_band1=wifi-iface
+set wireless.default_radio0_band1.device='radio0_band1'
+set wireless.default_radio0_band1.network='lan'
+set wireless.default_radio0_band1.mode='ap'
+set wireless.default_radio0_band1.ssid='prplOS'
+set wireless.default_radio0_band1.encryption='none'
+set wireless.guest_radio0_band1=wifi-iface
+set wireless.guest_radio0_band1.device='radio0_band1'
+set wireless.guest_radio0_band1.network='guest'
+set wireless.guest_radio0_band1.mode='ap'
+set wireless.guest_radio0_band1.ssid='prplOS-guest'
+set wireless.guest_radio0_band1.encryption='none'
+set wireless.radio0_band2=wifi-device
+set wireless.radio0_band2.type='mac80211'
+set wireless.radio0_band2.path='soc@0/10000000.pci/pci0001:00/0001:00:00.0/0001:01:00.0'
+set wireless.radio0_band2.band='6g'
+set wireless.radio0_band2.channel='49'
+set wireless.radio0_band2.radio='2'
+set wireless.radio0_band2.channels='2-233'
+set wireless.radio0_band2.htmode='EHT160'
+set wireless.radio0_band2.disabled='1'
+set wireless.default_radio0_band2=wifi-iface
+set wireless.default_radio0_band2.device='radio0_band2'
+set wireless.default_radio0_band2.network='lan'
+set wireless.default_radio0_band2.mode='ap'
+set wireless.default_radio0_band2.ssid='prplOS'
+set wireless.default_radio0_band2.encryption='sae'
+set wireless.default_radio0_band2.sae_pwe='1'
+set wireless.default_radio0_band2.key='0123456789'
+set wireless.guest_radio0_band2=wifi-iface
+set wireless.guest_radio0_band2.device='radio0_band2'
+set wireless.guest_radio0_band2.network='guest'
+set wireless.guest_radio0_band2.mode='ap'
+set wireless.guest_radio0_band2.ssid='prplOS-guest'
+set wireless.guest_radio0_band2.encryption='sae'
+set wireless.guest_radio0_band2.sae_pwe='1'
+set wireless.guest_radio0_band2.key='0123456789'
 
-	uci  set wireless.vendor.min_phy=3
-	uci  set wireless.vendor.phy_detect_timeout=10
-	uci commit wireless
-}
-
-wait_for_uci_wireless
-init_vendor_uci_wireless
-
-exit 0
-
+commit wireless
+EOF
