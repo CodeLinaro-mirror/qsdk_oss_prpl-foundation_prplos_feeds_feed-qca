@@ -9,4 +9,5 @@ define Target/Description
 endef
 
 DEFAULT_PACKAGES += \
-	sysupgrade-helper
+	sysupgrade-helper \
+	u-boot-freedom
