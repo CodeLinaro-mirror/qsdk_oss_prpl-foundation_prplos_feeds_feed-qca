@@ -1,0 +1,110 @@
+From 2d3934295540690ee9236d7c3743bd6fb21037a9 Mon Sep 17 00:00:00 2001
+From: Nefi Guclu <nefi.guclu@airties.com>
+Date: Mon, 21 Jul 2025 15:21:34 +0300
+Subject: [PATCH]     AP: Add status/reason codes to PSK mismatch logs
+
+    Changes:
+    - SAE authentication failure paths now log the status code.
+    - WPA-PSK 4-way handshake failures now
+      trigger a log with the corresponding disconnect reason code.
+    - Disconnect reason codes adjusted to better reflect failure causes.
+
+    This improves the ability to distinguish between different types of
+    authentication failures in logs.
+
+    Signed-off-by: Nefi Guclu <nefi.guclu@airties.com>
+---
+ src/ap/ieee802_11.c    |  2 ++
+ src/ap/wpa_auth.c      | 13 ++++++++-----
+ src/ap/wpa_auth.h      |  2 +-
+ src/ap/wpa_auth_glue.c |  6 +++---
+ 4 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index af7be71..4360a1e 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -1589,6 +1589,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
+ 			if (sae_check_confirm(sta->sae, var, var_len,
+ 					      NULL) < 0) {
+ 				resp = WLAN_STATUS_CHALLENGE_FAIL;
++				wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_POSSIBLE_PSK_MISMATCH MACSTR " status=%d",
++					MAC2STR(sta->addr), resp);
+ 				goto reply;
+ 			}
+ 			sta->sae->rc = peer_send_confirm;
+diff --git a/src/ap/wpa_auth.c b/src/ap/wpa_auth.c
+index 05d9962..5d0193a 100644
+--- a/src/ap/wpa_auth.c
++++ b/src/ap/wpa_auth.c
+@@ -172,10 +172,10 @@ static inline int wpa_auth_mic_failure_report(
+ 
+ 
+ static inline void wpa_auth_psk_failure_report(
+-	struct wpa_authenticator *wpa_auth, const u8 *addr)
++	struct wpa_authenticator *wpa_auth, const u8 *addr, u16 disconnect_reason)
+ {
+ 	if (wpa_auth->cb->psk_failure_report)
+-		wpa_auth->cb->psk_failure_report(wpa_auth->cb_ctx, addr);
++		wpa_auth->cb->psk_failure_report(wpa_auth->cb_ctx, addr, disconnect_reason);
+ }
+ 
+ 
+@@ -3488,7 +3488,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
+ 				LOGGER_DEBUG,
+ 				"invalid MIC in msg 2/4 of 4-Way Handshake");
+ 		if (psk_found)
+-			wpa_auth_psk_failure_report(sm->wpa_auth, sm->addr);
++			sm->disconnect_reason = WLAN_REASON_MICHAEL_MIC_FAILURE;
++			wpa_auth_psk_failure_report(sm->wpa_auth, sm->addr, sm->disconnect_reason);
+ 		goto out;
+ 	}
+ 
+@@ -4787,8 +4788,10 @@ SM_STEP(WPA_PTK)
+ 					 LOGGER_DEBUG,
+ 					 "PTKSTART: Retry limit %u reached",
+ 					 conf->wpa_pairwise_update_count);
+-			sm->disconnect_reason =
+-				WLAN_REASON_4WAY_HANDSHAKE_TIMEOUT;
++			if (sm->disconnect_reason != WLAN_REASON_MICHAEL_MIC_FAILURE) {
++				sm->disconnect_reason = WLAN_REASON_4WAY_HANDSHAKE_TIMEOUT;
++				wpa_auth_psk_failure_report(sm->wpa_auth, sm->addr, sm->disconnect_reason);
++			}
+ 			SM_ENTER(WPA_PTK, DISCONNECT);
+ 		} else if (sm->TimeoutEvt)
+ 			SM_ENTER(WPA_PTK, PTKSTART);
+diff --git a/src/ap/wpa_auth.h b/src/ap/wpa_auth.h
+index b263963..b8e6f78 100644
+--- a/src/ap/wpa_auth.h
++++ b/src/ap/wpa_auth.h
+@@ -331,7 +331,7 @@ struct wpa_auth_callbacks {
+ 		       const char *txt);
+ 	void (*disconnect)(void *ctx, const u8 *addr, u16 reason);
+ 	int (*mic_failure_report)(void *ctx, const u8 *addr);
+-	void (*psk_failure_report)(void *ctx, const u8 *addr);
++	void (*psk_failure_report)(void *ctx, const u8 *addr, u16 disconnect_reason);
+ 	void (*set_eapol)(void *ctx, const u8 *addr, wpa_eapol_variable var,
+ 			  int value);
+ 	int (*get_eapol)(void *ctx, const u8 *addr, wpa_eapol_variable var);
+diff --git a/src/ap/wpa_auth_glue.c b/src/ap/wpa_auth_glue.c
+index 07639af..ffe6d52 100644
+--- a/src/ap/wpa_auth_glue.c
++++ b/src/ap/wpa_auth_glue.c
+@@ -328,11 +328,11 @@ static int hostapd_wpa_auth_mic_failure_report(void *ctx, const u8 *addr)
+ }
+ 
+ 
+-static void hostapd_wpa_auth_psk_failure_report(void *ctx, const u8 *addr)
++static void hostapd_wpa_auth_psk_failure_report(void *ctx, const u8 *addr, u16 disconnect_reason)
+ {
+ 	struct hostapd_data *hapd = ctx;
+-	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_POSSIBLE_PSK_MISMATCH MACSTR,
+-		MAC2STR(addr));
++	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_POSSIBLE_PSK_MISMATCH MACSTR " reason=%d",
++		MAC2STR(addr), disconnect_reason);
+ 	hostapd_ubus_notify(hapd, "key-mismatch", addr);
+ }
+ 
+-- 
+2.25.1
+
