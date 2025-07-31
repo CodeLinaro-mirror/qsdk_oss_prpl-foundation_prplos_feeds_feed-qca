@@ -1,0 +1,11 @@
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -6014,7 +6014,7 @@ void hostapd_mld_interface_freed(struct
+ {
+	struct hostapd_data *link_bss = NULL;
+
+-	if (!hapd || !hapd->conf->mld_ap)
++	if (!hapd || !hapd->conf->mld_ap || !hapd->mld)
+		return;
+
+	for_each_mld_link(link_bss, hapd)
