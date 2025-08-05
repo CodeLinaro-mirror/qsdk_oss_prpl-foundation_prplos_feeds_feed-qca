@@ -4,6 +4,7 @@ PKG_DISTNAME:=sysupgrade-helper
 PKG_NAME:=u-boot
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
+PKG_MIRROR_HASH:=a050cd0531b62c4cb0755f9916ef5b721caea5fc7c1a7d010b736751dedc6e3e
 PKG_SOURCE_VERSION:=5ff1c70490372a0332be22bfccb59aa2f264bdb5
 PKG_BRANCH:=win.coretech.3.0.r26
 PKG_RELEASE:=1
