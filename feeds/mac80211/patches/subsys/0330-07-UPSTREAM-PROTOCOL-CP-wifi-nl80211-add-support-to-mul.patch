@@ -1,0 +1,104 @@
+From cabbc9b01162abf47e8150764ee336a88490efd0 Mon Sep 17 00:00:00 2001
+From: Hari Chandrakanthan <haric@qti.qualcomm.com>
+Date: Mon, 7 Jul 2025 11:47:08 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:CP:wifi:nl80211: add support to send multicast Qos Management
+ notification
+
+Add support to send multicast notification of Qos Management event.
+
+User space applications can listen to this event and handle it if needed.
+
+Patch-dependency: 0310-06-UPSTREAM-PROTOCOL-CP-wifi-mac80211-Define-QM-enums-and-codes.patch
+Patch-work: NA
+Tag: SCS
+
+Signed-off-by: Hari Chandrakanthan <haric@qti.qualcomm.com>
+---
+ net/wireless/nl80211.c | 64 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 64 insertions(+)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 03445ef..664b75f 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -18696,6 +18696,66 @@ nla_fail:
+ 	return -ENOBUFS;
+ }
+ 
++static int
++nl80211_qm_notify_resp(struct genl_info *info,
++		     struct cfg80211_qm_req_data *qm_req,
++		     struct cfg80211_qm_resp_data *qm_resp)
++{
++	struct cfg80211_registered_device *rdev = info->user_ptr[0];
++	struct nlattr *qm, *qm_desc;
++	struct sk_buff *msg;
++	int ret = -ENOBUFS;
++	void *hdr;
++	int idx;
++
++	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
++	if (!msg)
++		return -ENOMEM;
++
++	hdr = nl80211hdr_put(msg, 0, 0, 0,
++			     NL80211_CMD_QOS_MGMT);
++	if (!hdr)
++		goto nla_fail;
++
++	qm = nla_nest_start(msg, NL80211_ATTR_QOS_MGMT);
++	if (!qm)
++		goto nla_fail;
++
++	if (nla_put(msg, NL80211_QM_ATTR_MAC_ADDR, ETH_ALEN,
++		    qm_req->peer_mac) ||
++	    nla_put_u8(msg, NL80211_QM_ATTR_QM_TYPE, qm_req->qm_type) ||
++	    nla_put_u8(msg, NL80211_QM_ATTR_DIALOG_TOKEN, qm_req->dialog_token))
++		goto nla_qm_fail;
++
++	qm_desc = nla_nest_start(msg, NL80211_QM_ATTR_DESCRIPTOR_PARAMS);
++	if (!qm_desc)
++		goto nla_qm_fail;
++
++	/* Nest the response descriptor params array */
++	for (idx = 0; idx < qm_req->num_qm_desc; idx++) {
++		ret = nl80211_set_qm_resp_desc(msg, qm_resp->qm_resp_desc[idx],
++					       idx);
++		if (ret)
++			goto nla_qm_desc_fail;
++	}
++
++	nla_nest_end(msg, qm_desc);
++	nla_nest_end(msg, qm);
++	genlmsg_end(msg, hdr);
++
++	genlmsg_multicast_netns(&nl80211_fam, wiphy_net(&rdev->wiphy), msg, 0,
++				NL80211_MCGRP_MLME, GFP_KERNEL);
++
++	return 0;
++
++nla_qm_desc_fail:
++	nla_nest_cancel(msg, qm_desc);
++nla_qm_fail:
++	nla_nest_cancel(msg, qm);
++nla_fail:
++	nlmsg_free(msg);
++	return -ENOBUFS;
++}
+ static int
+ nl80211_qos_mgmt_cfg(struct sk_buff *skb, struct genl_info *info)
+ {
+@@ -18752,6 +18812,10 @@ nl80211_qos_mgmt_cfg(struct sk_buff *skb, struct genl_info *info)
+ 	if (ret)
+ 		return ret;
+ 
++	ret = nl80211_qm_notify_resp(info, &qm_req, &qm_resp);
++	if (ret)
++		return ret;
++
+ 	return 0;
+ }
+ 
+-- 
+2.34.1
+

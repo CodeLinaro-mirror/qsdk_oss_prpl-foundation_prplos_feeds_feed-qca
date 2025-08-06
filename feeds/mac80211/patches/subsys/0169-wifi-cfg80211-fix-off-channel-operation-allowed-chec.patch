@@ -1,0 +1,95 @@
+From 7e5755c765cc2cae832a38aac7c9e89a26b1c0ac Mon Sep 17 00:00:00 2001
+From: Balamurugan Ramar <quic_bramar@quicinc.com>
+Date: Thu, 10 Apr 2025 23:26:32 +0530
+Subject: [PATCH] mac80211: wifi fix off channel operation allowed check for 
+ MLO
+
+Currently, in off channel operation allowed check, if any link in the
+interface operates on a RADAR channel, the check returns false under
+the assumption that RADAR channel can not be left for off channel
+scanning. But this assumption is true only for non-MLO case.
+
+This is because, with MLO, there could be multiple links associated
+with the interface and scan could happen in other underlying HW. Hence,
+it can do a off channel scan.
+
+Add fix to check if there is a requested channel on the HW which already
+operate on the RADAR channel, and if so then return false for the off
+channel operation check or else true.
+
+Signed-off-by: Aditya Kumar Singh <quic_adisi@quicinc.com>
+Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
+---
+ net/wireless/nl80211.c | 33 +++++++++++++++++++++++++++------
+ 1 file changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 6e32453..2b14a66 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -9803,6 +9803,7 @@ static bool cfg80211_off_channel_oper_allowed(struct wireless_dev *wdev,
+ {
+ 	unsigned int link_id;
+ 	bool all_ok = true;
++	int req_hw_idx;
+ 
+ 	lockdep_assert_wiphy(wdev->wiphy);
+ 
+@@ -9810,7 +9811,16 @@ static bool cfg80211_off_channel_oper_allowed(struct wireless_dev *wdev,
+ 		return false;
+ 
+ 	if (!cfg80211_beaconing_iface_active(wdev))
+-		return true;
++		return all_ok;
++
++	if (WARN_ON(!chan))
++		return !all_ok;
++
++	if (wdev->valid_links) {
++		req_hw_idx = cfg80211_get_hw_idx_by_chan(wdev->wiphy, chan);
++		if (WARN_ON(req_hw_idx == -1))
++			return !all_ok;
++	}
+ 
+ 	/*
+ 	 * FIXME: check if we have a free HW resource/link for chan
+@@ -9822,20 +9832,31 @@ static bool cfg80211_off_channel_oper_allowed(struct wireless_dev *wdev,
+ 	/* we cannot leave radar channels */
+ 	for_each_valid_link(wdev, link_id) {
+ 		struct cfg80211_chan_def *chandef;
++		int link_hw_idx;
+ 
+ 		chandef = wdev_chandef(wdev, link_id);
+ 		if (!chandef || !chandef->chan)
+ 			continue;
+ 
++		if (!(chandef->chan->flags & IEEE80211_CHAN_RADAR))
++			continue;
++
+ 		/*
+-		 * FIXME: don't require all_ok, but rather check only the
+-		 *	  correct HW resource/link onto which 'chan' falls,
+-		 *	  as only that link leaves the channel for doing
+-		 *	  the off-channel operation.
++		 * okay so channel is radar channel. If the HW resource/link onto
++		 * which 'chan' falls is the same HW resource/link onto which this
++		 * channel falls then it will go off-channel
+ 		 */
+ 
+-		if (chandef->chan->flags & IEEE80211_CHAN_RADAR)
++		if (wdev->valid_links) {
++			link_hw_idx = cfg80211_get_hw_idx_by_chan(wdev->wiphy, chandef->chan);
++			if (WARN_ON(link_hw_idx == -1))
++				all_ok = false;
++
++			if (link_hw_idx == req_hw_idx)
++				all_ok = false;
++		} else {
+ 			all_ok = false;
++		}
+ 	}
+ 
+ 	if (all_ok)
+-- 
+2.34.1
+

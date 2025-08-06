@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+
+START=13
+
+io_expander_set() {
+	# echo "********* config I/O expander **********" > /dev/console
+	echo 465 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio465/direction
+	echo 1 > /sys/class/gpio/gpio465/value
+	i2cset -y 0 0x71 0x0 0xff
+	i2cset -y 0 0x20 0x0 0x0
+	i2cset -y 0 0x20 0x06 0x80
+	i2cset -y 0 0x20 0x07 0x01
+	i2cset -y 0 0x20 0x03 0x7e
+	i2cset -y 0 0x20 0x02 0xfe
+}
+
+boot() {
+	io_expander_set
+}
