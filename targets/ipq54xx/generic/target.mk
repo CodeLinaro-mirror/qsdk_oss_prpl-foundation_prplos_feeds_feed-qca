@@ -7,4 +7,8 @@ define Target/Description
 endef
 
 DEFAULT_PACKAGES += \
+	uboot-ipq5424-mmc uboot-ipq5424-norplusmmc \
+	uboot-ipq5424-norplusnand uboot-ipq5424-nand \
+	uboot-ipq5424-debug-mmc uboot-ipq5424-debug-norplusmmc \
+	uboot-ipq5424-debug-norplusnand uboot-ipq5424-debug-nand \
 	sysupgrade-helper
