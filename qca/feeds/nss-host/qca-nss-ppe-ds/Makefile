@@ -38,6 +38,8 @@ else ifeq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),512)
 EXTRA_CFLAGS+= -DPPE_DS_MEM_PROFILE_MEDIUM
 endif
 
+PKG_BUILD_DEPENDS:=qca-nss-ppe-vp
+
 define KernelPackage/qca-nss-ppe-ds
   SECTION:=kernel
   CATEGORY:=Kernel modules
