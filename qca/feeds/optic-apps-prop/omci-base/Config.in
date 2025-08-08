@@ -1,5 +1,0 @@
-
-config OMCI_BM_ENABLE
-	bool "enable MAC Signature check"
-	depends on PACKAGE_omci
-	default n
