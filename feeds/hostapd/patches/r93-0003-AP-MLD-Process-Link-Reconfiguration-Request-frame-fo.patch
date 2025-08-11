@@ -21,11 +21,11 @@ Signed-off-by: Pooventhiran G <pooventh@qti.qualcomm.com>
  src/ap/sta_info.h       |   1 +
  5 files changed, 586 insertions(+)
 
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index 34a5a7e..c15e851 100644
---- a/src/ap/ieee802_11.c
-+++ b/src/ap/ieee802_11.c
-@@ -4339,6 +4339,7 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+Index: hostapd-2025.03.10~95ad7115/src/ap/ieee802_11.c
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/ieee802_11.c
++++ hostapd-2025.03.10~95ad7115/src/ap/ieee802_11.c
+@@ -4344,6 +4344,7 @@ static int __check_assoc_ies(struct host
  	resp = check_ssid(hapd, sta, elems->ssid, elems->ssid_len);
  	if (resp != WLAN_STATUS_SUCCESS)
  		return resp;
@@ -33,7 +33,7 @@ index 34a5a7e..c15e851 100644
  	resp = check_wmm(hapd, sta, elems->wmm, elems->wmm_len);
  	if (resp != WLAN_STATUS_SUCCESS)
  		return resp;
-@@ -6963,6 +6964,7 @@ static int handle_action(struct hostapd_data *hapd,
+@@ -6999,6 +7000,7 @@ static int handle_action(struct hostapd_
  				   mgmt->u.action.u.ttlm_resp.action);
  			break;
  		}
@@ -41,10 +41,10 @@ index 34a5a7e..c15e851 100644
  		return 1;
  #endif /* CONFIG_IEEE80211BE */
  	}
-diff --git a/src/ap/ieee802_11.h b/src/ap/ieee802_11.h
-index 1e57e5d..08e53a4 100644
---- a/src/ap/ieee802_11.h
-+++ b/src/ap/ieee802_11.h
+Index: hostapd-2025.03.10~95ad7115/src/ap/ieee802_11.h
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/ieee802_11.h
++++ hostapd-2025.03.10~95ad7115/src/ap/ieee802_11.h
 @@ -10,6 +10,7 @@
  #define IEEE802_11_H
  
@@ -89,7 +89,7 @@ index 1e57e5d..08e53a4 100644
  
  enum colocation_mode {
  	NO_COLOCATED_6GHZ,
-@@ -396,6 +426,11 @@ int hostapd_process_assoc_ml_info(struct hostapd_data *hapd,
+@@ -391,6 +421,11 @@ int hostapd_process_assoc_ml_info(struct
  				  bool *set_beacon);
  
  #ifdef CONFIG_IEEE80211BE
@@ -101,11 +101,11 @@ index 1e57e5d..08e53a4 100644
  void hostapd_epcs_timeout_handler(void *eloop_ctx, void *timeout_ctx);
  #endif /* CONFIG_IEEE80211BE */
  u8 * hostapd_fragment_multi_link_element(struct wpabuf *buf, u8 *pos);
-diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index d7aae92..ee90dae 100644
---- a/src/ap/ieee802_11_eht.c
-+++ b/src/ap/ieee802_11_eht.c
-@@ -21,6 +21,8 @@
+Index: hostapd-2025.03.10~95ad7115/src/ap/ieee802_11_eht.c
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/ieee802_11_eht.c
++++ hostapd-2025.03.10~95ad7115/src/ap/ieee802_11_eht.c
+@@ -20,6 +20,8 @@
  #include "utils/eloop.h"
  #include "wmm.h"
  #include "ap/ctrl_iface_ap.h"
@@ -114,12 +114,18 @@ index d7aae92..ee90dae 100644
  
  static u16 ieee80211_eht_ppet_size(u16 ppe_thres_hdr, const u8 *phy_cap_info)
  {
-@@ -1491,6 +1493,551 @@ out:
+@@ -1170,7 +1172,6 @@ out:
+ 	return ret;
+ }
+ 
+-
+ u16 hostapd_process_ml_assoc_req(struct hostapd_data *hapd,
+ 				 struct ieee802_11_elems *elems,
+ 				 struct sta_info *sta)
+@@ -1429,6 +1430,549 @@ out:
  	return WLAN_STATUS_SUCCESS;
  }
  
-+
-+
 +#ifdef CONFIG_IEEE80211BE
 +void ml_deinit_link_reconf_req(struct link_reconf_req_list **req_list_ptr)
 +{
@@ -663,14 +669,14 @@ index d7aae92..ee90dae 100644
 +#endif /* CONFIG_IEEE80211BE */
 +
 +
- u16 copy_sta_eht_240mhz_capab(struct hostapd_data *hapd, struct sta_info *sta,
- 			      enum ieee80211_op_mode opmode,
- 			      const u8 *eht_240mhz_capab, size_t eht_240mhz_capab_len)
-diff --git a/src/ap/sta_info.c b/src/ap/sta_info.c
-index 2897c4a..b40e1aa 100644
---- a/src/ap/sta_info.c
-+++ b/src/ap/sta_info.c
-@@ -543,6 +543,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
+ 
+ /* Common info (1) + MLD Mac address (6) + STA Info
+  * length(1) + STA Mac address(6) + AP removal
+Index: hostapd-2025.03.10~95ad7115/src/ap/sta_info.c
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/sta_info.c
++++ hostapd-2025.03.10~95ad7115/src/ap/sta_info.c
+@@ -564,6 +564,7 @@ void ap_free_sta(struct hostapd_data *ha
  #ifdef CONFIG_IEEE80211BE
  	eloop_cancel_timeout(hostapd_epcs_timeout_handler, hapd, sta);
  	ap_sta_free_sta_profile(&sta->mld_info);
@@ -678,11 +684,11 @@ index 2897c4a..b40e1aa 100644
  #endif /* CONFIG_IEEE80211BE */
  
  #ifdef CONFIG_TESTING_OPTIONS
-diff --git a/src/ap/sta_info.h b/src/ap/sta_info.h
-index 0f0531c..0feb236 100644
---- a/src/ap/sta_info.h
-+++ b/src/ap/sta_info.h
-@@ -329,6 +329,7 @@ struct sta_info {
+Index: hostapd-2025.03.10~95ad7115/src/ap/sta_info.h
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/sta_info.h
++++ hostapd-2025.03.10~95ad7115/src/ap/sta_info.h
+@@ -338,6 +338,7 @@ struct sta_info {
  #ifdef CONFIG_IEEE80211BE
  	struct mld_info mld_info;
  	u8 mld_assoc_link_id;
@@ -690,6 +696,3 @@ index 0f0531c..0feb236 100644
  #endif /* CONFIG_IEEE80211BE */
  
  	u16 max_idle_period; /* if nonzero, the granted BSS max idle period in
--- 
-2.34.1
-

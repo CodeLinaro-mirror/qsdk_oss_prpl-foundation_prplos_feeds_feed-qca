@@ -56,9 +56,10 @@ index 5b6670216a1a..62ce68a7e649 100644
  enum hostapd_chan_width_attr {
  	HOSTAPD_CHAN_WIDTH_10   = BIT(0),
 @@ -223,6 +225,16 @@ struct hostapd_channel_data {
- 	const struct ieee80211_240mhz_vendor_oper *eht_240mhz_capab;
- 	size_t eht_240mhz_len;
- 
+ 	 * punct_bitmap - RU puncturing bitmap
+ 	 */
+ 	u16 punct_bitmap;
++
 +	/**
 +	 * psd_power - PSD power
 +	 */
@@ -68,10 +69,9 @@ index 5b6670216a1a..62ce68a7e649 100644
 +	 * eirp_power - EIRP power
 +	 */
 +	s8 eirp_power;
-+
+ 
  	/**
  	 * This array is used to store the psd value of each power mode
- 	 * supported in 6G band.
 @@ -296,6 +308,16 @@ struct ieee80211_edmg_config {
  	enum edmg_bw_config bw_config;
  };

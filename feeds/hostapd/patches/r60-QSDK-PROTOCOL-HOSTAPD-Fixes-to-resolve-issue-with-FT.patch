@@ -48,9 +48,9 @@ Signed-off-by: Arunpandi Kannan <quic_arunpand@quicinc.com>
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
 @@ -333,6 +333,7 @@ struct sta_info {
+ 			   * units of 1000 TUs */
  
- 	struct ieee80211_240mhz_vendor_oper *eht_240mhz_capab;
- 	size_t eht_240mhz_len;
+ 	u64 last_known_sta_id_timestamp;
 +	bool ft_re_add;
  };
  

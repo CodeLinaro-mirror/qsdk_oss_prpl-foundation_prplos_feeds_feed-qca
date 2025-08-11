@@ -88,9 +88,9 @@ Signed-off-by: Yuvarani V <quic_yuvarani@quicinc.com>
 +		if (hapd->conf->mld_ap)
 +			buflen += hostapd_eid_eht_ml_reconfig_len(hapd);
 +
- 		/* QCN Vendor IE for 240MHz */
- 		if (is_5ghz_freq(hapd->iface->freq))
- 			buflen += (6 + 2 + 4 +
+ 	}
+ 
+ 	/* TODO: hanlde ML probe len */
 @@ -814,7 +827,7 @@ static size_t hostapd_probe_resp_elems_l
  	/* TODO: hanlde ML probe len */
  #endif /* CONFIG_IEEE80211BE */

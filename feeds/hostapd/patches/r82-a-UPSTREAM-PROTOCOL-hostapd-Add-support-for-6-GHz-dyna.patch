@@ -75,11 +75,9 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  src/common/ieee802_11_defs.h |  76 ++++++++
  10 files changed, 498 insertions(+), 7 deletions(-)
 
-diff --git a/hostapd/config_file.c b/hostapd/config_file.c
-index 561dbbc23c95..6d357466cb30 100644
 --- a/hostapd/config_file.c
 +++ b/hostapd/config_file.c
-@@ -3655,6 +3655,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+@@ -3655,6 +3655,8 @@ static int hostapd_config_fill(struct ho
  				   line);
  			return 1;
  		}
@@ -88,16 +86,15 @@ index 561dbbc23c95..6d357466cb30 100644
  	} else if (os_strcmp(buf, "reg_def_cli_eirp_psd") == 0) {
  		conf->reg_def_cli_eirp_psd = atoi(pos);
  	} else if (os_strcmp(buf, "reg_sub_cli_eirp_psd") == 0) {
-diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
-index 529b3c06e886..0183fa445c15 100644
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -2941,6 +2941,19 @@ static int hostapd_ctrl_iface_chan_switch(struct hostapd_iface *iface,
+@@ -2932,6 +2932,20 @@ static int hostapd_ctrl_iface_chan_switc
  		return -1;
  	}
  
 +
-+	if (hostapd_allow_6ghz_dynamic_puncture(iface, settings.power_mode)) {
++	if (hostapd_allow_6ghz_dynamic_puncture(iface, settings.freq_params.freq,
++						settings.power_mode)) {
 +		u16 best_6ghz_pp = settings.freq_params.punct_bitmap;
 +
 +		if (!hostapd_get_6ghz_best_pp(iface, settings.freq_params.freq,
@@ -112,8 +109,6 @@ index 529b3c06e886..0183fa445c15 100644
  	ret = hostapd_ctrl_check_freq_params(&settings.freq_params,
  					     settings.freq_params.punct_bitmap);
  	if (ret) {
-diff --git a/hostapd/hostapd.conf b/hostapd/hostapd.conf
-index d461ca17b756..000d4b1561de 100644
 --- a/hostapd/hostapd.conf
 +++ b/hostapd/hostapd.conf
 @@ -1139,6 +1139,12 @@ wmm_ac_vo_acm=0
@@ -129,11 +124,9 @@ index d461ca17b756..000d4b1561de 100644
  ##### IEEE 802.1X-2004 related configuration ##################################
  
  # Require IEEE 802.1X authorization
-diff --git a/src/ap/ap_config.c b/src/ap/ap_config.c
-index 4083a1fffa45..24e78ef73c3e 100644
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -353,6 +353,7 @@ struct hostapd_config * hostapd_config_defaults(void)
+@@ -352,6 +352,7 @@ struct hostapd_config * hostapd_config_d
  	conf->discard_6g_awgn_event = 0;
  	conf->he_6ghz_reg_pwr_type = HE_REG_INFO_6GHZ_AP_TYPE_VLP;
  	conf->enable_best_power_mode = 1;
@@ -141,11 +134,9 @@ index 4083a1fffa45..24e78ef73c3e 100644
  	conf->reg_def_cli_eirp_psd = -1;
  	conf->reg_sub_cli_eirp_psd = -1;
  	conf->reg_def_cli_eirp = -1;
-diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
-index d54cf7b7d937..7a4acbb67595 100644
 --- a/src/ap/ap_config.h
 +++ b/src/ap/ap_config.h
-@@ -1239,6 +1239,14 @@ struct hostapd_config {
+@@ -1227,6 +1227,14 @@ struct hostapd_config {
  	 * selection, etc.
  	 */
  	bool enable_best_power_mode;
@@ -160,11 +151,9 @@ index d54cf7b7d937..7a4acbb67595 100644
  	bool discard_6g_awgn_event;
  
  	int reg_def_cli_eirp_psd;
-diff --git a/src/ap/ctrl_iface_ap.c b/src/ap/ctrl_iface_ap.c
-index d3154a77a075..88d6fe36ea48 100644
 --- a/src/ap/ctrl_iface_ap.c
 +++ b/src/ap/ctrl_iface_ap.c
-@@ -1156,6 +1156,15 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
+@@ -1156,6 +1156,15 @@ int hostapd_ctrl_iface_status(struct hos
  			len += ret;
  		}
  
@@ -180,11 +169,9 @@ index d3154a77a075..88d6fe36ea48 100644
  		if (hapd->conf->mld_ap) {
  			struct hostapd_data *link_bss;
  
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 4eb91b13d873..c797fab90bd3 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3123,6 +3123,7 @@ static int hostapd_setup_interface_complete_sync(struct hostapd_iface *iface,
+@@ -3030,6 +3030,7 @@ static int hostapd_setup_interface_compl
  		}
  #endif /* CONFIG_MESH */
  
@@ -192,7 +179,7 @@ index 4eb91b13d873..c797fab90bd3 100644
  		if (is_6ghz_freq(iface->freq) && iface->conf->enable_best_power_mode) {
  			u8 best_power_mode;
  
-@@ -7188,6 +7189,340 @@ hostapd_get_bonded_chan_center_freq(u16 freq, u16 bw, u16 center_freq_320_mhz,
+@@ -7065,6 +7066,342 @@ hostapd_get_bonded_chan_center_freq(u16
  }
  
  
@@ -290,9 +277,10 @@ index 4eb91b13d873..c797fab90bd3 100644
 +}
 +
 +
-+bool hostapd_allow_6ghz_dynamic_puncture(struct hostapd_iface *iface, u8 pwr_type)
++bool hostapd_allow_6ghz_dynamic_puncture(struct hostapd_iface *iface, u16 freq, u8 pwr_type)
 +{
-+	return (iface->conf->ieee80211be && !iface->conf->puncture_strict_6ghz &&
++	return (is_6ghz_freq(freq) && iface->conf->ieee80211be &&
++		!iface->conf->puncture_strict_6ghz &&
 +		(pwr_type == NL80211_REG_AP_SP || iface->conf->enable_best_power_mode));
 +}
 +
@@ -304,7 +292,8 @@ index 4eb91b13d873..c797fab90bd3 100644
 +	u8 center_chan_no;
 +	s8 ret;
 +
-+	if (!hostapd_allow_6ghz_dynamic_puncture(iface, iface->conf->he_6ghz_reg_pwr_type))
++	if (!hostapd_allow_6ghz_dynamic_puncture(iface, iface->freq,
++						 iface->conf->he_6ghz_reg_pwr_type))
 +		return;
 +
 +	center_chan_no = hostapd_get_oper_centr_freq_seg0_idx(iface->conf);
@@ -533,7 +522,7 @@ index 4eb91b13d873..c797fab90bd3 100644
  u8
  hostapd_get_best_ap_6ghz_power_mode(struct hostapd_iface *iface,
  				    u16 freq, u16 center_freq, u16 bw,
-@@ -7201,6 +7536,7 @@ hostapd_get_best_ap_6ghz_power_mode(struct hostapd_iface *iface,
+@@ -7078,6 +7415,7 @@ hostapd_get_best_ap_6ghz_power_mode(stru
  	int i;
  	u8 best_ap_pwr_mode = NL80211_REG_NUM_POWER_MODES;
  	s16 max_eirp_pwr = CHAN_MIN_TX_POWER;
@@ -541,7 +530,7 @@ index 4eb91b13d873..c797fab90bd3 100644
  
  	if (bw > 20 && !hostapd_get_bonded_chan_entry(freq, bw, center_freq)) {
  		wpa_printf(MSG_ERROR,
-@@ -7209,14 +7545,9 @@ hostapd_get_best_ap_6ghz_power_mode(struct hostapd_iface *iface,
+@@ -7086,14 +7424,9 @@ hostapd_get_best_ap_6ghz_power_mode(stru
  		return best_ap_pwr_mode;
  	}
  
@@ -558,11 +547,9 @@ index 4eb91b13d873..c797fab90bd3 100644
  
  		wpa_printf(MSG_INFO,
  			   "%s freq %d, cfreq %d, bw %d, pp %d, pwr_type %d, EIRP %d",
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index eb49ae61a8e2..31d304c526a4 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -1077,6 +1077,14 @@ static inline bool hostapd_mld_is_first_bss(struct hostapd_data *hapd)
+@@ -1073,6 +1073,14 @@ static inline bool hostapd_mld_is_first_
  #define CHAN_MIN_TWICE_TX_POWER              (CHAN_MIN_TX_POWER * 2)
  #define CHAN_MAX_TWICE_TX_POWER              ((CHAN_MAX_TX_POWER * 2) + 1)
  
@@ -577,18 +564,19 @@ index eb49ae61a8e2..31d304c526a4 100644
  /**
   * hostapd_iface_get_6ghz_chan_list() - Find the 6 GHz channel data for the given freq
   * @iface: Pointer to hostapd_iface
-@@ -1122,6 +1130,42 @@ s16 hostapd_get_eirp_pwr(struct hostapd_iface *iface, u16 freq, u16 center_freq,
- enum chan_width
+@@ -1119,6 +1127,44 @@ enum chan_width
  hostapd_get_chan_width_from_oper_chan_width(struct hostapd_config *iconf);
  
-+/**
+ /**
 + * hostapd_allow_6ghz_dynamic_puncture() - Check if dynamic puncturing is allowed
 + * @iface: Pointer to hostapd_iface
++ * @freq: Frequency in MHz
 + * @pwr_type: 6 GHz Power type.
 + *
 + * Return: true if dynamic puncturing is allowed, false otherwise.
 + */
-+bool hostapd_allow_6ghz_dynamic_puncture(struct hostapd_iface *iface, u8 pwr_type);
++bool hostapd_allow_6ghz_dynamic_puncture(struct hostapd_iface *iface, u16 freq,
++					 u8 pwr_type);
 +
 +/**
 + * hostapd_apply_6ghz_dynamic_puncturing() - Apply dynamic puncturing for 6 GHz
@@ -617,11 +605,10 @@ index eb49ae61a8e2..31d304c526a4 100644
 +			    u16 center_freq, u16 bw, u16 *pp,
 +			    bool is_bpm_enabled);
 +
- /**
++/**
   * hostapd_get_best_ap_6ghz_power_mode() - Get the best 6 GHz AP power mode
   * @iface: Pointer to hostapd_iface
-diff --git a/src/ap/ucode.c b/src/ap/ucode.c
-index 88489d8bf1d9..f33c6bc028da 100644
+  * @freq: Frequency in MHz
 --- a/src/ap/ucode.c
 +++ b/src/ap/ucode.c
 @@ -679,6 +679,7 @@ out:
@@ -632,11 +619,9 @@ index 88489d8bf1d9..f33c6bc028da 100644
  	if (is_6ghz_freq(iface->freq) && iface->conf->enable_best_power_mode) {
  		u8 best_power_mode;
  
-diff --git a/src/common/ieee802_11_defs.h b/src/common/ieee802_11_defs.h
-index 809203fcd360..96b9dba6721c 100644
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -2395,6 +2395,82 @@ struct bw_bonded_array_pair bw_bonded_array_pair_map[] = {
+@@ -2395,6 +2395,82 @@ struct bw_bonded_array_pair bw_bonded_ar
  		ARRAY_SIZE(bonded_chan_320mhz_list_freq)},
  };
  
@@ -719,6 +704,3 @@ index 809203fcd360..96b9dba6721c 100644
  #define RRM_CAPABILITIES_IE_LEN 5
  
  /* IEEE Std 802.11-2020, 9.6.6.4 - Link Measurement Request frame format */
--- 
-2.34.1
-

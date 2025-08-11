@@ -41,8 +41,8 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  int ieee802_11_build_ap_params(struct hostapd_data *hapd,
  			       struct wpa_driver_ap_params *params)
 @@ -2649,6 +2665,9 @@ int ieee802_11_build_ap_params(struct ho
+ 		hostapd_eid_update_cu_info(hapd, &elemid_modified, startpos,
  						   tailpos-startpos, ELEMID_CU_PARAM_EXT_EHTOP);
- 		tailpos = hostapd_eid_vendor_240mhz(hapd, tailpos, IEEE80211_MODE_AP);
  	}
 +
 +	if (hapd->conf->mld_ap)

@@ -19,11 +19,9 @@ Signed-off-by: Arun Vikas T <vikast@qti.qualcomm.com>
  src/ap/robust_av.c | 62 +++++++++++++++++++++++++++++++++++++++++++++-
  1 file changed, 61 insertions(+), 1 deletion(-)
 
-diff --git a/src/ap/robust_av.c b/src/ap/robust_av.c
-index 04a459e..6f5258b 100644
 --- a/src/ap/robust_av.c
 +++ b/src/ap/robust_av.c
-@@ -932,6 +932,60 @@ static void hostapd_update_scs_resp_err(struct hostapd_scs_req_data *scs_req,
+@@ -932,6 +932,60 @@ static void hostapd_update_scs_resp_err(
  }
  
  
@@ -84,7 +82,7 @@ index 04a459e..6f5258b 100644
  static int hostapd_handle_scs_req(struct hostapd_data *hapd, const u8 *buf,
  				  size_t frame_length)
  {
-@@ -998,11 +1052,17 @@ static int hostapd_handle_scs_req(struct hostapd_data *hapd, const u8 *buf,
+@@ -998,11 +1052,17 @@ static int hostapd_handle_scs_req(struct
  	if (ret) {
  		wpa_printf(MSG_ERROR, "Send SCS data failed, ret:%d", ret);
  		hostapd_update_scs_resp_err(&scs_req, &scs_resp);
@@ -103,6 +101,25 @@ index 04a459e..6f5258b 100644
  	return ret;
  }
  
--- 
-2.34.1
-
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -15451,12 +15451,17 @@ static int testing_nl80211_register_fram
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct nl_sock *handle;
++	int ret;
+ 
+ 	if (!bss->nl_mgmt)
+ 		return -1;
+ 	handle = (void *) (((intptr_t) bss->nl_mgmt) ^ ELOOP_SOCKET_INVALID);
+-	return nl80211_register_frame(bss, handle, type, match, match_len,
+-				      multicast);
++	ret = nl80211_register_frame(bss, handle, type, match, match_len,
++				     multicast);
++	if (ret == -EALREADY)
++		return 0;
++
++	return ret;
+ }
+ 
+ 

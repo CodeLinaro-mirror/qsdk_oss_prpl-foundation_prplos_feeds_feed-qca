@@ -59,7 +59,7 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
  
  	if (hapd->driver == NULL)
  		return -1;
-@@ -3208,12 +3210,24 @@ static int hostapd_configure_epcs(struct
+@@ -3208,6 +3210,17 @@ static int hostapd_configure_epcs(struct
  		return -1;
  	}
  
@@ -75,16 +75,9 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
 +	}
 +
  	/* Send the QoS request */
- 	if (hapd->driver->set_qos(hapd->drv_priv, &qm_req, &qm_resp)) {
- 		wpa_printf(MSG_ERROR, "Set QoS failed");
- 		return -1;
- 	}
- 
-+
- 	if (qm_resp.qm_resp_desc[0].qm_id != qm_req.qm_req_desc[0].qm_id) {
- 		wpa_printf(MSG_ERROR, "EPCS QM ID mismatch in response:%u",
- 			   qm_resp.qm_resp_desc[0].qm_id);
-@@ -3226,6 +3240,18 @@ static int hostapd_configure_epcs(struct
+ 	if (hapd->driver && hapd->driver->set_qos &&
+ 	    hapd->driver->set_qos(hapd->drv_priv, &qm_req, &qm_resp)) {
+@@ -3227,6 +3240,18 @@ static int hostapd_configure_epcs(struct
  		return -1;
  	}
  
@@ -103,7 +96,7 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
  	return 0;
  }
  
-@@ -3339,7 +3365,6 @@ failed:
+@@ -3340,7 +3365,6 @@ failed:
  			   "for sta with mld addr" MACSTR, prev_epcs_state, epcs_info->action_code, sta_epcs->state,
  			   MAC2STR(sta->mld_info.common_info.mld_addr));
  		return -1;

@@ -37,9 +37,9 @@ index 7f45c31..6bd52a0 100644
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
 @@ -5324,6 +5324,7 @@ static int add_associated_sta(struct hostapd_data *hapd,
- 		hostapd_get_eht_240mhz_capab(hapd, sta->eht_240mhz_capab,
- 					     &eht_240mhz_cap,
- 					     sta->eht_240mhz_len);
+ 						     WLAN_FC_STYPE_ASSOC_RESP);
+ 		p = hostapd_eid_eht_capab(hapd, p, IEEE80211_MODE_AP);
+ 		p = hostapd_eid_eht_operation(hapd, p);
 +		hostapd_get_epcs_capab(hapd, sta);
  	}
  #endif /* CONFIG_IEEE80211BE */

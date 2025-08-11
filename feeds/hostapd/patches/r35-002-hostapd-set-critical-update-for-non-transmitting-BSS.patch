@@ -207,10 +207,10 @@ Signed-off-by: Mohan Kumar G <quic_mkumarg@quicinc.com>
 +		if (hapd == tx_bss)
 +			hostapd_eid_update_cu_info(hapd, &elemid_modified, startpos,
 +						   tailpos-startpos, ELEMID_CU_PARAM_EXT_EHTOP);
- 		tailpos = hostapd_eid_vendor_240mhz(hapd, tailpos, IEEE80211_MODE_AP);
  	}
  #endif /* CONFIG_IEEE80211BE */
-@@ -2576,8 +2562,9 @@ int ieee802_11_build_ap_params(struct ho
+ 
+@@ -2582,8 +2568,9 @@ int ieee802_11_build_ap_params(struct ho
  	startpos = tailpos;
  	tailpos = hostapd_eid_wmm(hapd, tailpos);
  #ifdef CONFIG_IEEE80211BE

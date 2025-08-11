@@ -17,7 +17,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
 
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
-@@ -3514,7 +3514,7 @@ fail:
+@@ -3541,7 +3541,7 @@ fail:
  }
  
  
@@ -26,11 +26,11 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  {
  	struct hostapd_iface *iface = hapd->iface;
  	struct hostapd_multi_mbssid_group *group = NULL, **all_group;
-@@ -3574,6 +3574,27 @@ fail:
+@@ -3606,6 +3606,27 @@ fail:
  	hapd->mbssid_group = NULL;
  }
  
-+static void hostapd_mbssid_setup_bss(struct hostapd_data *hapd)
++void hostapd_mbssid_setup_bss(struct hostapd_data *hapd)
 +{
 +	struct hostapd_data *tx_bss;
 +	size_t num_bss, i;
@@ -54,7 +54,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  static void hostapd_cleanup_unused_mlds(struct hapd_interfaces *interfaces)
  {
  #ifdef CONFIG_IEEE80211BE
-@@ -3703,7 +3724,7 @@ struct hostapd_iface * hostapd_init(stru
+@@ -3735,7 +3756,7 @@ struct hostapd_iface * hostapd_init(stru
  		 */
  		hapd->mbssid_idx = i;
  		hostapd_bss_setup_multi_link(hapd, interfaces);
@@ -63,7 +63,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  	}
  
  	hapd_iface->is_ch_switch_dfs = false;
-@@ -3859,7 +3880,7 @@ hostapd_interface_init_bss(struct hapd_i
+@@ -3882,7 +3903,7 @@ hostapd_interface_init_bss(struct hapd_i
  		iface->bss[iface->num_bss] = hapd;
  		hapd->msg_ctx = hapd;
  		hostapd_bss_setup_multi_link(hapd, interfaces);
@@ -72,7 +72,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  
  
  		bss_idx = iface->num_bss++;
-@@ -4269,7 +4290,7 @@ static int hostapd_data_alloc(struct hos
+@@ -4288,7 +4309,7 @@ static int hostapd_data_alloc(struct hos
  		}
  		hapd->msg_ctx = hapd;
  		hostapd_bss_setup_multi_link(hapd, hapd_iface->interfaces);
@@ -83,7 +83,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  	hapd_iface->conf = conf;
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3486,7 +3486,7 @@ static u32 hostapd_get_aid_word(struct h
+@@ -3661,7 +3661,7 @@ static u32 hostapd_get_aid_word(struct h
  					   "MLD: Failed to get link BSS for AID");
  				continue;
  			}
@@ -92,7 +92,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  			aid_word |= link_bss->sta_aid[i];
  		}
  
-@@ -3578,7 +3578,7 @@ int hostapd_get_aid(struct hostapd_data
+@@ -3755,7 +3755,7 @@ int hostapd_get_aid(struct hostapd_data
  	}
  	if (j == 32)
  		return -1;
@@ -101,7 +101,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  	if (aid > 2007)
  		return -1;
  
-@@ -4777,7 +4777,7 @@ static int ieee80211_ml_process_link(str
+@@ -5042,7 +5042,7 @@ static int ieee80211_ml_process_link(str
  			status = WLAN_STATUS_UNSPECIFIED_FAILURE;
  			goto out;
  		}
@@ -112,7 +112,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  			ieee802_11_update_beacons(hapd->iface);
 --- a/src/ap/sta_info.c
 +++ b/src/ap/sta_info.c
-@@ -301,8 +301,8 @@ void ap_free_sta(struct hostapd_data *ha
+@@ -316,8 +316,8 @@ void ap_free_sta(struct hostapd_data *ha
  	ap_sta_list_del(hapd, sta);
  
  	if (sta->aid > 0)
@@ -125,7 +125,7 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  		hapd->wds_sta_uid[(sta->wds_mld_uid - 1) / 32] &=
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -262,7 +262,7 @@ struct hostapd_data {
+@@ -260,7 +260,7 @@ struct hostapd_data {
  
  	/*
  	 * Bitfield for indicating which AIDs are allocated. Only AID values
@@ -134,3 +134,22 @@ Signed-off-by: Rathees Kumar R Chinannan <quic_rrchinan@quicinc.com>
  	 * 1.
  	 */
  #define AID_WORDS ((2008 + 31) / 32)
+@@ -867,6 +867,7 @@ int hostapd_setup_bss(struct hostapd_dat
+ void hostapd_bss_deinit(struct hostapd_data *hapd);
+ void hostapd_bss_setup_multi_link(struct hostapd_data *hapd,
+ 				  struct hapd_interfaces *interfaces);
++void hostapd_mbssid_setup_bss(struct hostapd_data *hapd);
+ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
+ 			   int reassoc);
+ void hostapd_interface_deinit_free(struct hostapd_iface *iface);
+--- a/wpa_supplicant/ap.c
++++ b/wpa_supplicant/ap.c
+@@ -1200,6 +1200,8 @@ int wpa_supplicant_create_ap(struct wpa_
+ 		ssid->acs = 1;
+ 	}
+ #endif /* CONFIG_P2P && CONFIG_ACS */
++	for (i = 0; i < conf->num_bss; i++)
++		hostapd_mbssid_setup_bss(hapd_iface->bss[i]);
+ 
+ 	if (hostapd_setup_interface(wpa_s->ap_iface)) {
+ 		wpa_printf(MSG_ERROR, "Failed to initialize AP interface");

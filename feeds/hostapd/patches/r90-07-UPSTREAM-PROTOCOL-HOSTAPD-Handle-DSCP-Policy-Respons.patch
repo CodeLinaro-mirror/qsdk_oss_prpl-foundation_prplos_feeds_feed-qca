@@ -28,11 +28,11 @@ Signed-off-by: Aishwarya R <aisr@qti.qualcomm.com>
  src/ap/ieee802_11.c  |   3 +
  3 files changed, 209 insertions(+)
 
-diff --git a/src/ap/dscp_policy.c b/src/ap/dscp_policy.c
-index 6b26061..ed7ddb0 100644
+Index: b/src/ap/dscp_policy.c
+===================================================================
 --- a/src/ap/dscp_policy.c
 +++ b/src/ap/dscp_policy.c
-@@ -1365,4 +1365,199 @@ cleanup:
+@@ -1327,4 +1327,199 @@ cleanup:
  	return 0;
  }
  
@@ -114,7 +114,7 @@ index 6b26061..ed7ddb0 100644
 +
 +	if (*more) {
 +		u8 *buf_ptr = wpabuf_mhead_u8(buf);
-+		buf_ptr[6] |= 0x02;
++		buf_ptr[7] |= 0x01;
 +	}
 +
 +	if (next_offset)
@@ -179,11 +179,11 @@ index 6b26061..ed7ddb0 100644
 +	response_control = *pos++;
 +
 +	/* Handle reset case */
-+	if (response_control & 0x01)
++	if (response_control & 0x02)
 +		free_dscp_policies(sta);
 +
 +	/* Unsolicited Response (Dialog Token 0) */
-+	if (dialog_token == 0 && (response_control & 0x01)) {
++	if (dialog_token == 0 && (response_control & 0x02)) {
 +		wpa_printf(MSG_DEBUG, "DSCP: STA issued unsolicited reset");
 +		free_dscp_policies(sta);
 +		return 0;
@@ -224,7 +224,7 @@ index 6b26061..ed7ddb0 100644
 +	}
 +
 +	/* If More bit is set, STA wants more policies */
-+	if ((response_control & 0x02) && sta->dscp_state.pending_more) {
++	if ((response_control & 0x01) && sta->dscp_state.pending_more) {
 +		wpa_printf(MSG_DEBUG, "DSCP: STA requested additional policy batch");
 +		hostapd_send_next_dscp_policy_batch(hapd, sta, sta->dscp_state.offset);
 +	}
@@ -232,8 +232,8 @@ index 6b26061..ed7ddb0 100644
 +	return 0;
 +}
  
-diff --git a/src/ap/dscp_policy.h b/src/ap/dscp_policy.h
-index f495fec..2aec6be 100644
+Index: b/src/ap/dscp_policy.h
+===================================================================
 --- a/src/ap/dscp_policy.h
 +++ b/src/ap/dscp_policy.h
 @@ -37,6 +37,14 @@
@@ -259,17 +259,17 @@ index f495fec..2aec6be 100644
  };
  
  size_t hostapd_dscp_cap_ie_len(struct hostapd_data *hapd);
-@@ -117,3 +126,5 @@ void hostapd_send_unsolicited_dscp_policy_request(struct hostapd_data *hapd,
+@@ -117,3 +126,5 @@ void hostapd_send_unsolicited_dscp_polic
  						  size_t num_policies);
  int hostapd_handle_dscp_policy_query(struct hostapd_data *hapd, struct sta_info *sta,
  				     const u8 *data, size_t len);
 +int hostapd_handle_dscp_policy_response(struct hostapd_data *hapd, struct sta_info *sta,
 +					const u8 *data, size_t len);
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index 29c09a4..5ee1eb3 100644
+Index: b/src/ap/ieee802_11.c
+===================================================================
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -6731,6 +6731,9 @@ static void hostapd_dscp_action(struct hostapd_data *hapd,
+@@ -6731,6 +6731,9 @@ static void hostapd_dscp_action(struct h
  	case QM_DSCP_POLICY_QUERY:
  		hostapd_handle_dscp_policy_query(hapd, sta, pos, end - pos);
  		break;
@@ -279,6 +279,3 @@ index 29c09a4..5ee1eb3 100644
  	default:
  		wpa_printf(MSG_DEBUG, "QM Action: Unknown subtype %u", subtype);
  		break;
--- 
-2.34.1
-

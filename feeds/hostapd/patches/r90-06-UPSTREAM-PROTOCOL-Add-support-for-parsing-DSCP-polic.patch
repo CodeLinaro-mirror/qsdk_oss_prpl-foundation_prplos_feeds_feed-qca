@@ -27,11 +27,11 @@ Signed-off-by: Aishwarya R <aisr@qti.qualcomm.com>
  src/ap/ieee802_11.c  |  30 +-
  3 files changed, 747 insertions(+), 1 deletion(-)
 
-diff --git a/src/ap/dscp_policy.c b/src/ap/dscp_policy.c
-index c0023b3..6b26061 100644
+Index: b/src/ap/dscp_policy.c
+===================================================================
 --- a/src/ap/dscp_policy.c
 +++ b/src/ap/dscp_policy.c
-@@ -664,3 +664,705 @@ void hostapd_send_unsolicited_dscp_policy_request(struct hostapd_data *hapd,
+@@ -629,3 +629,702 @@ void hostapd_send_unsolicited_dscp_polic
  	sta->dscp_state.pending_more = more;
  }
  
@@ -573,17 +573,14 @@ index c0023b3..6b26061 100644
 +
 +	/* DSCP Policy attribute */
 +	wpabuf_put_u8(elem, QM_ATTR_DSCP_POLICY);
-+	wpabuf_put_u8(elem, 4); /* Length */
++	wpabuf_put_u8(elem, 3); 
 +	wpabuf_put_u8(elem, policy->policy_id);
 +	wpabuf_put_u8(elem, policy->req_type);
 +
-+	if (policy->req_type == DSCP_POLICY_REQ_REMOVE) {
++	if (policy->req_type == DSCP_POLICY_REQ_REMOVE)
 +		wpabuf_put_u8(elem, 255); /* DSCP = 255 for REMOVE */
-+		wpabuf_put_u8(elem, 0);   /* Reserved */
-+	} else {
++	else
 +		wpabuf_put_u8(elem, policy->dscp);
-+		wpabuf_put_u8(elem, 0); /* Reserved */
-+	}
 +
 +	if (policy->frame_classifier && policy->frame_classifier_len) {
 +		wpabuf_put_u8(elem, QM_ATTR_TCLAS);
@@ -639,17 +636,17 @@ index c0023b3..6b26061 100644
 +
 +	/* Request Control */
 +	rc_field = wpabuf_put(buf, 1);
-+	*rc_field = sta->dscp_reset ? 0x01 : 0x00;
++	*rc_field = sta->dscp_reset ? 0x02 : 0x00;
 +	*more = false;
 +
 +	for (i = offset; i < ctx->num_req_policies; i++) {
 +		const struct hostapd_dscp_policy *policy = ctx->req_policy[i];
 +
-+		if ((sta->dscp_reset & 0x01) && policy->req_type == DSCP_POLICY_REQ_REMOVE)
++		if (sta->dscp_reset && policy->req_type == DSCP_POLICY_REQ_REMOVE)
 +			continue;
 +
 +		if (wpabuf_len(buf) + policy_element_len(policy) > MAX_DSCP_REQ_SIZE) {
-+			*rc_field |= 0x02;
++			*rc_field |= 0x01;
 +			*more = true;
 +			break;
 +		}
@@ -737,8 +734,8 @@ index c0023b3..6b26061 100644
 +}
 +
 +
-diff --git a/src/ap/dscp_policy.h b/src/ap/dscp_policy.h
-index b45a763..f495fec 100644
+Index: b/src/ap/dscp_policy.h
+===================================================================
 --- a/src/ap/dscp_policy.h
 +++ b/src/ap/dscp_policy.h
 @@ -70,6 +70,20 @@ struct type4_params {
@@ -762,17 +759,17 @@ index b45a763..f495fec 100644
  struct hostapd_dscp_policy {
  	u8 policy_id;  /* Unique Identifier*/
  	u8 req_type;
-@@ -101,3 +115,5 @@ void hostapd_send_unsolicited_dscp_policy_request(struct hostapd_data *hapd,
+@@ -101,3 +115,5 @@ void hostapd_send_unsolicited_dscp_polic
  						  u8 reset,
  						  const int *policy_ids,
  						  size_t num_policies);
 +int hostapd_handle_dscp_policy_query(struct hostapd_data *hapd, struct sta_info *sta,
 +				     const u8 *data, size_t len);
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index c136221..29c09a4 100644
+Index: b/src/ap/ieee802_11.c
+===================================================================
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -6714,6 +6714,28 @@ static void handle_beacon(struct hostapd_data *hapd,
+@@ -6714,6 +6714,28 @@ static void handle_beacon(struct hostapd
  	ap_list_process_beacon(hapd->iface, mgmt, &elems, fi);
  }
  
@@ -801,7 +798,7 @@ index c136221..29c09a4 100644
  
  static int hostapd_action_vs(struct hostapd_data *hapd,
  			     struct sta_info *sta,
-@@ -6737,6 +6759,13 @@ static int hostapd_action_vs(struct hostapd_data *hapd,
+@@ -6737,6 +6759,13 @@ static int hostapd_action_vs(struct host
  	case WFA_CAPAB_VENDOR_TYPE:
  		hostapd_wfa_capab(hapd, sta, pos, end);
  		return 0;
@@ -815,7 +812,7 @@ index c136221..29c09a4 100644
  	default:
  		wpa_printf(MSG_DEBUG,
  			   "Ignore unknown Vendor Specific Action frame OUI/type %08x%s",
-@@ -6747,7 +6776,6 @@ static int hostapd_action_vs(struct hostapd_data *hapd,
+@@ -6747,7 +6776,6 @@ static int hostapd_action_vs(struct host
  	return -1;
  }
  
@@ -823,6 +820,3 @@ index c136221..29c09a4 100644
  static int robust_action_frame(u8 category)
  {
  	return category != WLAN_ACTION_PUBLIC &&
--- 
-2.34.1
-

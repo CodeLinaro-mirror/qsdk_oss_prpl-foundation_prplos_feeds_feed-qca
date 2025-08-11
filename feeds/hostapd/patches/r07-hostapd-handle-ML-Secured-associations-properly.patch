@@ -223,8 +223,8 @@ Signed-off-by: Hari Naraayana Desikan Kannan <quic_hnaraaya@quicinc.com>
 +					    sta->supported_rates_len,
 +					    0, NULL, NULL, NULL, 0, NULL, 0, NULL,
 +					    sta->flags, 0, 0, 0, 0,
-+					    mld_link_addr, mld_link_sta, eml_cap,
-+					    NULL, 0)) {
++					    mld_link_addr, mld_link_sta,
++					    eml_cap)) {
 +				hostapd_logger(hapd, sta->addr,HOSTAPD_MODULE_IEEE80211,HOSTAPD_LEVEL_NOTICE,
 +					       "Could not add STA to kernel driver");
 +				return -1;

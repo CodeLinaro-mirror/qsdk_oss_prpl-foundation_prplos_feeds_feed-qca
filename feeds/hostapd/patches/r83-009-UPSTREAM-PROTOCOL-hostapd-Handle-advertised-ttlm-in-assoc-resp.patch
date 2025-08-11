@@ -73,7 +73,7 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  #ifdef CONFIG_IEEE80211R_AP
 --- a/src/ap/ttlm.c
 +++ b/src/ap/ttlm.c
-@@ -931,6 +931,62 @@ static int hostapd_parse_ttlm_elem(struc
+@@ -971,6 +971,62 @@ static int hostapd_parse_ttlm_elem(struc
  	return 0;
  }
  
@@ -136,12 +136,13 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  
  int hostapd_handle_ttlm_assoc_req(struct hostapd_data *hapd, const struct ieee80211_mgmt *mgmt,
  				  size_t len, struct sta_info *sta, const u8 *elem,
-@@ -938,11 +994,18 @@ int hostapd_handle_ttlm_assoc_req(struct
+@@ -978,11 +1034,19 @@ int hostapd_handle_ttlm_assoc_req(struct
  {
  	struct ttlm_ongoing_negotiation_info *ongoing_ttlm;
  	struct ieee802_11_elems elems;
 +	struct hostapd_mld *mld = hapd->mld;
  	struct ttlm_info ttlm_info;
++	bool homogeneous_map;
  	enum ttlm_dir dir;
  	int retval;
 +	enum ttlm_resp_type resp_type = TTLM_RESP_TYPE_SUCCESS;
@@ -155,7 +156,7 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  	sta->mld_info.tid_map_info.ttlm_ongoing_negotiation_info.ttlm_resp_type = -1;
  	if (!hapd->conf->ttlm_enable)
  		return WLAN_STATUS_REQUEST_DECLINED;
-@@ -961,22 +1024,39 @@ int hostapd_handle_ttlm_assoc_req(struct
+@@ -1001,22 +1065,39 @@ int hostapd_handle_ttlm_assoc_req(struct
  
  	if (!elems.ttlm_num) {
  		wpa_printf(MSG_ERROR, "No TTLM elements present");
@@ -199,7 +200,7 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  		}
  	}
  
-@@ -984,32 +1064,40 @@ int hostapd_handle_ttlm_assoc_req(struct
+@@ -1024,32 +1105,43 @@ int hostapd_handle_ttlm_assoc_req(struct
  	     ongoing_ttlm->ttlm_info[TTLM_DIRECTION_UL].direction == TTLM_DIRECTION_UL) &&
  	    ongoing_ttlm->ttlm_info[TTLM_DIRECTION_BIDI].direction == TTLM_DIRECTION_BIDI) {
  		wpa_printf(MSG_DEBUG, "Both DL/UL and BIDI TTLM IEs cannot exist at same time");
@@ -239,10 +240,13 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
 +		goto copy_info;
 +	}
 +
-+	/*TODO: check if homogeneous mapping requested or not, if not add default
-+	 * ttlm element in assoc response frame.
-+	 */
-+
++	homogeneous_map = hostapd_is_mapping_homogeneous(ongoing_ttlm);
++	if (homogeneous_map == false) {
++		wpa_printf(MSG_DEBUG, "Assoc request is with disjoint mapping");
++		copy_established_ttlm_to_ongoing(ongoing_ttlm, mld);
++		resp_type = WLAN_STATUS_DENIED_TID_TO_LINK_MAPPING;
++		goto copy_info;
++	}
 +	/* if established ttlm present and the requested negotiation is not subset of established
 +	 * ttlm, deny the negotiation with established ttlm element included in assoc response
 +	 */

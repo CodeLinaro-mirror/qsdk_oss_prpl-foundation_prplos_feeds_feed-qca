@@ -6,7 +6,7 @@ PKG_SOURCE_PROTO:=git
 PKG_BRANCH:=win.openwrt.24.0.r29
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/fontana/middleware/onu-hal
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=9576f0b5b0885a4dec847757b9820dd2a94370d2
+PKG_VERSION:=55d6c893c81274bf68ee1f69e3cf8ff27a04393b
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

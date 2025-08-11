@@ -42,7 +42,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
 @@ -5336,6 +5336,11 @@ static int add_associated_sta(struct hos
- 					     sta->eht_240mhz_len);
+ 		p = hostapd_eid_eht_operation(hapd, p);
  		hostapd_get_epcs_capab(hapd, sta);
  	}
 +
@@ -53,7 +53,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  #endif /* CONFIG_IEEE80211BE */
  
  	/*
-@@ -5707,6 +5712,22 @@ rsnxe_done:
+@@ -5701,6 +5706,22 @@ rsnxe_done:
  	}
  #endif /* CONFIG_FILS */
  
@@ -76,7 +76,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0, NULL, 0, 0) < 0) {
  		wpa_printf(MSG_INFO, "Failed to send assoc resp: %s",
  			   strerror(errno));
-@@ -6092,6 +6113,12 @@ static void handle_assoc(struct hostapd_
+@@ -6086,6 +6107,12 @@ static void handle_assoc(struct hostapd_
  			}
  		}
  	}
@@ -91,7 +91,35 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  #ifdef CONFIG_IEEE80211R_AP
 --- a/src/ap/ttlm.c
 +++ b/src/ap/ttlm.c
-@@ -425,3 +425,157 @@ int hostapd_handle_ttlm_resp(struct host
+@@ -411,6 +411,27 @@ int hostapd_apply_ttlm_mapping_to_driver
+ }
+ 
+ 
++bool hostapd_is_mapping_homogeneous(struct ttlm_ongoing_negotiation_info *ongoing_ttlm)
++{
++	u8 tid, i;
++
++	for (i = 0; i < TTLM_DIRECTION_MAX; i++) {
++		for (tid = 1; tid < NUM_MAX_TIDS; tid++) {
++			if (ongoing_ttlm->ttlm_info[i].direction == TTLM_DIRECTION_INVALID)
++				break;
++
++			if (ongoing_ttlm->ttlm_info[i].ieee_link_map_tid[tid] !=
++			    ongoing_ttlm->ttlm_info[i].ieee_link_map_tid[0]) {
++				wpa_printf(MSG_DEBUG, "Mapping is not homogeneous");
++				return false;
++			}
++		}
++	}
++
++	return true;
++}
++
++
+ int hostapd_handle_ttlm_resp(struct hostapd_data *hapd, struct sta_info *sta,
+ 			     const u8 *buf, size_t len)
+ {
+@@ -444,3 +465,157 @@ int hostapd_handle_ttlm_resp(struct host
  
  	return ret;
  }
@@ -251,12 +279,13 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +}
 --- a/src/ap/ttlm.h
 +++ b/src/ap/ttlm.h
-@@ -140,5 +140,7 @@ int hostapd_build_ttlm_elem(struct ttlm_
+@@ -140,5 +140,8 @@ int hostapd_build_ttlm_elem(struct ttlm_
  int hostapd_handle_ttlm_resp(struct hostapd_data *hapd, struct sta_info *sta,
  			     const u8 *buf, size_t len);
  int hostapd_apply_ttlm_mapping_to_driver(struct hostapd_data *hapd, struct sta_info *sta);
 +int hostapd_handle_ttlm_assoc_req(struct hostapd_data *hapd, const struct ieee80211_mgmt *mgmt,
 +				  size_t len, struct sta_info *sta, const u8 *ie, size_t ie_len);
++bool hostapd_is_mapping_homogeneous(struct ttlm_ongoing_negotiation_info *ongoing_ttlm);
  
  #endif /* TTLM_H */
 --- a/src/common/ieee802_11_common.c
@@ -291,16 +320,16 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  	u8 ssid_len;
  	u8 supp_rates_len;
 @@ -205,6 +208,7 @@ struct ieee802_11_elems {
- 
- 	const u8 *eht_240mhz_capab;
- 	u8 eht_240mhz_len;
+ 	 * fragmented element.
+ 	 */
+ 	unsigned int num_frag_elems;
 +	u8 ttlm_num;
  };
  
  typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
 --- a/src/common/ieee802_11_defs.h
 +++ b/src/common/ieee802_11_defs.h
-@@ -3492,4 +3492,15 @@ struct elem_header {
+@@ -3483,4 +3483,15 @@ struct elem_header {
  	u8 elem_id;
  	u8 elem_len;
  } STRUCT_PACKED;

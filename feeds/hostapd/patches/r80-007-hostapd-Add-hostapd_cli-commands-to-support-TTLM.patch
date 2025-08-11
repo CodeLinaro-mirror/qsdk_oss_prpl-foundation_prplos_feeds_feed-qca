@@ -79,7 +79,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  
  
  #define HOSTAPD_CLI_DUP_VALUE_MAX_LEN 256
-@@ -4647,6 +4648,354 @@ static int hostapd_ctrl_iface_link_remov
+@@ -4647,6 +4648,369 @@ static int hostapd_ctrl_iface_link_remov
  
  	return ret;
  }
@@ -93,6 +93,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +	struct sta_info *sta;
 +	char *input, *token, *saveptr, *tid_str, *map_str;
 +	int ret, i, num_tids, dir = -1;
++	bool homogeneous_map;
 +	u8 addr[ETH_ALEN];
 +	u8 tid_num = 0;
 +	u16 link_map = 0;
@@ -211,6 +212,12 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +		}
 +	}
 +
++	homogeneous_map = hostapd_is_mapping_homogeneous(ongoing_ttlm);
++	if (homogeneous_map == false) {
++		wpa_printf(MSG_DEBUG, "Mapping is not homogeneous");
++		goto fail;
++	}
++
 +	ret = hostapd_send_ttlm_req(hapd, ongoing_ttlm, sta);
 +	os_free(input);
 +	os_free(ttlm_conf);
@@ -261,6 +268,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +	struct sta_info *sta, *lsta;
 +	struct hostapd_data *lhapd;
 +	char *tid_str, *map_str;
++	bool homogeneous_map;
 +	char *input, *token;
 +	int assoc_frame = 0;
 +	int resp_code = 0;
@@ -384,6 +392,13 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +					link_map;
 +			}
 +		}
++
++		homogeneous_map = hostapd_is_mapping_homogeneous(ongoing_ttlm);
++		if (homogeneous_map == false) {
++			wpa_printf(MSG_DEBUG, "Preferred Mapping is not homogeneous");
++			goto fail;
++		}
++
 +	} else if (resp_code == TTLM_RESP_TYPE_DENIED_TID_TO_LINK_MAPPING) {
 +		ongoing_ttlm->ttlm_resp_type = TTLM_RESP_TYPE_DENIED_TID_TO_LINK_MAPPING;
 +		ongoing_ttlm->ttlm_info[TTLM_DIRECTION_BIDI].direction = TTLM_DIRECTION_BIDI;
@@ -434,7 +449,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  #endif /* CONFIG_IEEE80211BE */
  
  
-@@ -5567,6 +5916,9 @@ static int hostapd_ctrl_iface_receive_pr
+@@ -5567,6 +5931,9 @@ static int hostapd_ctrl_iface_receive_pr
  	} else if (os_strncmp(buf, "EPCS ", 5) == 0) {
  		reply_len = hostapd_epcs_handle_cli(hapd, buf + 5,
  						    reply, reply_size);

@@ -28,8 +28,6 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
  src/ap/ucode.h     |  21 ++++++
  7 files changed, 368 insertions(+), 13 deletions(-)
 
-diff --git a/hostapd/main.c b/hostapd/main.c
-index df748dc..24aa6fc 100644
 --- a/hostapd/main.c
 +++ b/hostapd/main.c
 @@ -32,6 +32,7 @@
@@ -73,8 +71,6 @@ index df748dc..24aa6fc 100644
   out:
  	hostapd_global_ctrl_iface_deinit(&interfaces);
  	/* Sending deauth to all stations before deinit */
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index 38169f7..d280983 100644
 --- a/src/ap/hostapd.c
 +++ b/src/ap/hostapd.c
 @@ -11,6 +11,7 @@
@@ -94,7 +90,7 @@ index 38169f7..d280983 100644
  
  static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
  #ifdef CONFIG_WEP
-@@ -1810,6 +1811,7 @@ int hostapd_setup_bss(struct hostapd_data *hapd, int first, bool start_beacon)
+@@ -1810,6 +1811,7 @@ int hostapd_setup_bss(struct hostapd_dat
  	u8 if_addr[ETH_ALEN];
  	int flush_old_stations = 1;
  	struct hostapd_data *tx_hapd;
@@ -114,29 +110,26 @@ index 38169f7..d280983 100644
  	/* If TX BSS is already beaconing, update it with newly added profile
  	 */
  	if (start_beacon && tx_hapd && tx_hapd != hapd && tx_hapd->beacon_set_done)
-@@ -4827,13 +4834,18 @@ int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx,
+@@ -4827,12 +4834,18 @@ int hostapd_remove_bss(struct hostapd_if
  		       bool is_link_remove)
  {
  	size_t i;
 +	char buf[128] = {0};
-+	struct hostapd_data *hapd = iface->bss[idx];
  
  	wpa_printf(MSG_INFO, "Remove BSS '%s'", iface->conf->bss[idx]->iface);
  
-+	if (hapd->conf->scs) {
-+		os_snprintf(buf, 128, "%s_%s", CHAIN_NAME, hapd->conf->iface);
-+		hostapd_ucode_config_nft_chain(hapd, TABLE_NAME, buf, false);
-+	}
-+
  	/* Remove hostapd_data only if it has already been initialized */
  	if (idx < iface->num_bss) {
 -		struct hostapd_data *hapd = iface->bss[idx];
--
++ 		struct hostapd_data *hapd = iface->bss[idx];
++
++		if (hapd && hapd->conf && hapd->conf->scs) {
++			os_snprintf(buf, sizeof(buf), "%s_%s", CHAIN_NAME, hapd->conf->iface);
++			hostapd_ucode_config_nft_chain(hapd, TABLE_NAME, buf, false);
++		}
+ 
  		hostapd_bss_deinit(hapd);
  		wpa_printf(MSG_DEBUG, "%s: free hapd %p (%s)",
- 			   __func__, hapd, hapd->conf->iface);
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index 3c3bdf6..1fb3d63 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
 @@ -29,6 +29,9 @@
@@ -149,8 +142,6 @@ index 3c3bdf6..1fb3d63 100644
  struct wpa_ctrl_dst;
  struct radius_server_data;
  struct upnp_wps_device_sm;
-diff --git a/src/ap/robust_av.c b/src/ap/robust_av.c
-index 6f5258b..05c0dba 100644
 --- a/src/ap/robust_av.c
 +++ b/src/ap/robust_av.c
 @@ -10,6 +10,7 @@
@@ -161,7 +152,7 @@ index 6f5258b..05c0dba 100644
  
  u8 *hostapd_add_scs_ie(u8 *frm, bool scs)
  {
-@@ -728,9 +729,150 @@ hostapd_copy_and_send_scs_data(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -728,9 +729,150 @@ hostapd_copy_and_send_scs_data(struct ho
  	return ret;
  }
  
@@ -313,7 +304,7 @@ index 6f5258b..05c0dba 100644
  			struct hostapd_scs_req_desc_data *scs_req_desc_tmp,
  			u8 status)
  {
-@@ -763,12 +905,13 @@ hostapd_process_scs_add(struct sta_info *sta,
+@@ -763,12 +905,13 @@ hostapd_process_scs_add(struct sta_info
  	sta->scs_req_desc[idx] = scs_req_desc;
  	sta->scs_session_count++;
  
@@ -329,7 +320,7 @@ index 6f5258b..05c0dba 100644
  			   struct hostapd_scs_req_desc_data *scs_req_desc,
  			   u8 status)
  {
-@@ -789,6 +932,8 @@ hostapd_process_scs_remove(struct sta_info *sta,
+@@ -789,6 +932,8 @@ hostapd_process_scs_remove(struct sta_in
  		return -EINVAL;
  	}
  
@@ -338,7 +329,7 @@ index 6f5258b..05c0dba 100644
  	os_free(sta->scs_req_desc[idx]);
  
  	while (idx < (scs_session_count - 1)) {
-@@ -804,7 +949,7 @@ hostapd_process_scs_remove(struct sta_info *sta,
+@@ -804,7 +949,7 @@ hostapd_process_scs_remove(struct sta_in
  
  
  static int
@@ -347,7 +338,7 @@ index 6f5258b..05c0dba 100644
  			   struct hostapd_scs_req_desc_data *scs_req_desc_tmp,
  			   u8 status)
  {
-@@ -826,14 +971,19 @@ hostapd_process_scs_change(struct sta_info *sta,
+@@ -826,14 +971,19 @@ hostapd_process_scs_change(struct sta_in
  		return -EINVAL;
  	}
  
@@ -368,7 +359,7 @@ index 6f5258b..05c0dba 100644
  				    struct hostapd_scs_req_data *scs_req,
  				    struct hostapd_scs_resp_data *scs_resp)
  {
-@@ -870,7 +1020,7 @@ static void hostapd_process_scs_req(struct sta_info *sta,
+@@ -870,7 +1020,7 @@ static void hostapd_process_scs_req(stru
  
  		switch (request_type) {
  		case QM_ADD_REQ:
@@ -377,7 +368,7 @@ index 6f5258b..05c0dba 100644
  						      status);
  			if (!ret)
  				scs_resp_desc->status = WLAN_STATUS_SUCCESS;
-@@ -881,7 +1031,7 @@ static void hostapd_process_scs_req(struct sta_info *sta,
+@@ -881,7 +1031,7 @@ static void hostapd_process_scs_req(stru
  			break;
  
  		case QM_REMOVE_REQ:
@@ -386,7 +377,7 @@ index 6f5258b..05c0dba 100644
  							 status);
  			if (!ret)
  				scs_resp_desc->status =
-@@ -893,7 +1043,7 @@ static void hostapd_process_scs_req(struct sta_info *sta,
+@@ -893,7 +1043,7 @@ static void hostapd_process_scs_req(stru
  			break;
  
  		case QM_CHANGE_REQ:
@@ -395,7 +386,7 @@ index 6f5258b..05c0dba 100644
  							 status);
  			if (!ret)
  				scs_resp_desc->status = WLAN_STATUS_SUCCESS;
-@@ -1055,7 +1205,7 @@ static int hostapd_handle_scs_req(struct hostapd_data *hapd, const u8 *buf,
+@@ -1055,7 +1205,7 @@ static int hostapd_handle_scs_req(struct
  		goto send_error_resp;
  	}
  
@@ -412,8 +403,6 @@ index 6f5258b..05c0dba 100644
  void
  hostapd_handle_robust_av(struct hostapd_data *hapd, const u8 *buf, size_t len)
  {
-diff --git a/src/ap/robust_av.h b/src/ap/robust_av.h
-index 9bcc659..37f6f9c 100644
 --- a/src/ap/robust_av.h
 +++ b/src/ap/robust_av.h
 @@ -87,6 +87,26 @@ struct hostapd_data;
@@ -470,8 +459,6 @@ index 9bcc659..37f6f9c 100644
  u8 *hostapd_add_scs_ie(u8 *frm, bool scs);
  
  void
-diff --git a/src/ap/ucode.c b/src/ap/ucode.c
-index f33c6bc..3262ea2 100644
 --- a/src/ap/ucode.c
 +++ b/src/ap/ucode.c
 @@ -9,6 +9,7 @@
@@ -482,7 +469,7 @@ index f33c6bc..3262ea2 100644
  #include <libubox/uloop.h>
  #include "sta_info.h"
  
-@@ -926,3 +927,112 @@ void hostapd_ucode_free_bss(struct hostapd_data *hapd)
+@@ -926,3 +927,112 @@ void hostapd_ucode_free_bss(struct hosta
  	ucv_put(wpa_ucode_call(2));
  	ucv_gc(vm);
  }
@@ -595,8 +582,6 @@ index f33c6bc..3262ea2 100644
 +	ucv_put(wpa_ucode_call(16));
 +	ucv_gc(vm);
 +}
-diff --git a/src/ap/ucode.h b/src/ap/ucode.h
-index c875b70..4453f38 100644
 --- a/src/ap/ucode.h
 +++ b/src/ap/ucode.h
 @@ -2,8 +2,10 @@
@@ -610,7 +595,7 @@ index c875b70..4453f38 100644
  
  struct hostapd_ucode_bss {
  #ifdef UCODE_SUPPORT
-@@ -28,6 +30,12 @@ void hostapd_ucode_add_bss(struct hostapd_data *hapd);
+@@ -28,6 +30,12 @@ void hostapd_ucode_add_bss(struct hostap
  void hostapd_ucode_free_bss(struct hostapd_data *hapd);
  void hostapd_ucode_reload_bss(struct hostapd_data *hapd);
  
@@ -623,7 +608,7 @@ index c875b70..4453f38 100644
  #else
  
  static inline int hostapd_ucode_init(struct hapd_interfaces *ifaces)
-@@ -50,6 +58,19 @@ static inline void hostapd_ucode_free_bss(struct hostapd_data *hapd)
+@@ -50,6 +58,19 @@ static inline void hostapd_ucode_free_bs
  {
  }
  
@@ -643,6 +628,3 @@ index c875b70..4453f38 100644
  #endif
  
  #endif
--- 
-2.34.1
-

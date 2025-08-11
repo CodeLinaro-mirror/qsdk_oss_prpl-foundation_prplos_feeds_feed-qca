@@ -52,7 +52,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  		return;
 --- a/src/ap/ttlm.c
 +++ b/src/ap/ttlm.c
-@@ -598,3 +598,161 @@ int hostapd_handle_ttlm_assoc_req(struct
+@@ -619,3 +619,170 @@ int hostapd_handle_ttlm_assoc_req(struct
  	wpa_printf(MSG_DEBUG, "TTLM IE in assoc request has been parsed successfully");
  	return WLAN_STATUS_SUCCESS;
  }
@@ -126,6 +126,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +	struct ttlm_ongoing_negotiation_info *ongoing_ttlm, *configured_ttlm;
 +	struct ieee802_11_elems elems;
 +	struct ttlm_info ttlm_info;
++	bool homogeneous_map;
 +	enum ttlm_dir dir;
 +	const u8 *pos;
 +	size_t ie_len;
@@ -168,6 +169,14 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +			return;
 +		}
 +	}
++
++	homogeneous_map = hostapd_is_mapping_homogeneous(ongoing_ttlm);
++	if (homogeneous_map == false) {
++		wpa_printf(MSG_DEBUG, "Request is with disjoint mapping");
++		os_free(ongoing_ttlm);
++		return;
++	}
++
 +	if ((ongoing_ttlm->ttlm_info[TTLM_DIRECTION_DL].direction == TTLM_DIRECTION_DL ||
 +	     ongoing_ttlm->ttlm_info[TTLM_DIRECTION_UL].direction == TTLM_DIRECTION_UL) &&
 +	    ongoing_ttlm->ttlm_info[TTLM_DIRECTION_BIDI].direction == TTLM_DIRECTION_BIDI) {
@@ -216,10 +225,10 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +}
 --- a/src/ap/ttlm.h
 +++ b/src/ap/ttlm.h
-@@ -142,5 +142,10 @@ int hostapd_handle_ttlm_resp(struct host
- int hostapd_apply_ttlm_mapping_to_driver(struct hostapd_data *hapd, struct sta_info *sta);
+@@ -143,5 +143,10 @@ int hostapd_apply_ttlm_mapping_to_driver
  int hostapd_handle_ttlm_assoc_req(struct hostapd_data *hapd, const struct ieee80211_mgmt *mgmt,
  				  size_t len, struct sta_info *sta, const u8 *ie, size_t ie_len);
+ bool hostapd_is_mapping_homogeneous(struct ttlm_ongoing_negotiation_info *ongoing_ttlm);
 +void hostapd_handle_ttlm_req(struct hostapd_data *hapd, struct sta_info *sta,
 +			     const u8 *buf, size_t len);
 +int hostapd_ttlm_resp_tx_status(struct hostapd_data *hapd, struct sta_info *sta, int ok);

@@ -29,8 +29,6 @@ Signed-off-by: Sri Vidya Gunturi <sgunturi@qti.qualcomm.com>
  src/drivers/driver.h    | 23 ++++++++++++++
  3 files changed, 92 insertions(+)
 
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index eb49ae61a8..2f5a84f90c 100644
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
 @@ -884,6 +884,9 @@ enum peer_epcs_state {
@@ -43,11 +41,9 @@ index eb49ae61a8..2f5a84f90c 100644
  /*
   * struct wlan_epcs_info - EPCS information of frame
   */
-diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index 7fb1104a3b..21ec8513f5 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -1915,6 +1915,63 @@ void hostapd_epcs_timeout_handler(void *eloop_ctx, void *timeout_ctx)
+@@ -1924,6 +1924,64 @@ void hostapd_epcs_timeout_handler(void *
  	mld_info->epcs.timer_started = false;
  }
  
@@ -88,7 +84,8 @@ index 7fb1104a3b..21ec8513f5 100644
 +	}
 +
 +	/* Send the QoS request */
-+	if (hapd->driver->set_qos(hapd->drv_priv, &qm_req, &qm_resp)) {
++	if (hapd->drv_priv && hapd->driver->set_qos &&
++	    hapd->driver->set_qos(hapd->drv_priv, &qm_req, &qm_resp)) {
 +		wpa_printf(MSG_ERROR, "Set QoS failed");
 +		return -1;
 +	}
@@ -111,7 +108,7 @@ index 7fb1104a3b..21ec8513f5 100644
  int hostapd_epcs_handle_and_send_action_frame(struct hostapd_data *hapd,
  					      struct wlan_epcs_info *epcs_info,
  					      struct sta_info *sta,
-@@ -1922,6 +1976,7 @@ int hostapd_epcs_handle_and_send_action_frame(struct hostapd_data *hapd,
+@@ -1931,6 +1989,7 @@ int hostapd_epcs_handle_and_send_action_
  {
  	struct mld_peer_epcs_info *sta_epcs;
  	enum peer_epcs_state prev_epcs_state;
@@ -119,7 +116,7 @@ index 7fb1104a3b..21ec8513f5 100644
  
  	if (!sta || !sta->mld_info.mld_sta)
  		return -1;
-@@ -2024,6 +2079,17 @@ failed:
+@@ -2033,6 +2092,17 @@ failed:
  			   "for sta with mld addr" MACSTR, prev_epcs_state, epcs_info->action_code, sta_epcs->state,
  			   MAC2STR(sta->mld_info.common_info.mld_addr));
  		return -1;
@@ -137,8 +134,6 @@ index 7fb1104a3b..21ec8513f5 100644
  	}
  
  	return 0;
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 471fa2fc41..79fb3f4e7a 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
 @@ -162,6 +162,29 @@ enum qos_mgmt_req_type {
@@ -171,6 +166,3 @@ index 471fa2fc41..79fb3f4e7a 100644
  #define IPV4_LEN	4
  #define IPV6_LEN	16
  
--- 
-2.34.1
-

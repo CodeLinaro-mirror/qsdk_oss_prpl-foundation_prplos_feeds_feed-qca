@@ -17,10 +17,10 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
 
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -829,6 +829,16 @@ static size_t hostapd_probe_resp_elems_l
- 		if (is_5ghz_freq(hapd->iface->freq))
- 			buflen += (6 + 2 + 4 +
- 				   sizeof(struct ieee80211_240mhz_vendor_oper));
+@@ -820,6 +820,16 @@ static size_t hostapd_probe_resp_elems_l
+ 		/* ML reconfigure feature */
+ 		if (hapd->conf->mld_ap)
+ 			buflen += hostapd_eid_eht_ml_reconfig_len(hapd);
 +
 +		/* TTLM IE */
 +		if (hapd->mld &&
@@ -31,10 +31,10 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
 +		    hapd->mld->ttlm_ctx.upcoming_ttlm.ttlm.mapping_switch_time_present)
 +			buflen += hostapd_get_ttlm_elem_len(
 +				&hapd->mld->ttlm_ctx.upcoming_ttlm.ttlm);
+ 
  	}
  
- 	/* TODO: hanlde ML probe len */
-@@ -1022,6 +1032,19 @@ static u8 * hostapd_probe_resp_fill_elem
+@@ -993,6 +1001,19 @@ static u8 * hostapd_probe_resp_fill_elem
  
  		pos = hostapd_eid_eht_capab(hapd, pos, IEEE80211_MODE_AP);
  		pos = hostapd_eid_eht_operation(hapd, pos);
@@ -51,12 +51,12 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
 +							 &hapd->mld->ttlm_ctx.upcoming_ttlm.ttlm,
 +							 hapd);
 +
- 		pos = hostapd_eid_vendor_240mhz(hapd, pos, IEEE80211_MODE_AP);
  	}
  
+ 	/*TODO: ML probe IE ? */
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -10107,6 +10107,10 @@ static bool hostapd_eid_rnr_bss(struct h
+@@ -10104,6 +10104,10 @@ static bool hostapd_eid_rnr_bss(struct h
  		if (bss->conf->mld_indicate_disabled)
  			*eid |= RNR_TBTT_INFO_MLD_PARAM2_LINK_DISABLED;
  #endif /* CONFIG_TESTING_OPTIONS */
@@ -67,15 +67,21 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  		eid++;
  	}
  #endif /* CONFIG_IEEE80211BE */
-@@ -10340,6 +10344,7 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -10337,6 +10341,7 @@ static size_t hostapd_eid_mbssid_elem_le
  					  size_t known_bss_len, size_t num_bss)
  {
  	struct hostapd_data *tx_bss = hostapd_mbssid_get_tx_bss(hapd);
-+	struct ttlm_context *tx_bss_ttlm_ctx = &tx_bss->mld->ttlm_ctx;
++	struct ttlm_context *tx_bss_ttlm_ctx;
  	size_t len, i, tx_xrate_len;
  	u8 ext_capa[20], buf[100];
  	u8 ext_cap;
-@@ -10361,6 +10366,7 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -10353,11 +10358,13 @@ static size_t hostapd_eid_mbssid_elem_le
+ 	len = 1;
+ 
+ 	tx_xrate_len = hostapd_eid_ext_supp_rates(tx_bss, buf) - buf;
++	tx_bss_ttlm_ctx = tx_bss->mld ? &tx_bss->mld->ttlm_ctx : NULL;
+ 
+ 	for (i = *bss_index; i < num_bss; i++) {
  		struct hostapd_data *bss;
  		const u8 *auth, *rsn = NULL, *rsnx = NULL;
  		size_t nontx_profile_len, auth_len, xrate_len;
@@ -83,7 +89,7 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  		u8 ie_count = 0;
  
  		if (tx_bss->iconf->mbssid == MULTI_MBSSID_GROUP_ENABLED)
-@@ -10372,6 +10378,9 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -10369,6 +10376,9 @@ static size_t hostapd_eid_mbssid_elem_le
  		    mbssid_known_bss(i, known_bss, known_bss_len))
  			continue;
  
@@ -93,12 +99,12 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  		/*
  		 * Sublement ID: 1 octet
  		 * Length: 1 octet
-@@ -10436,6 +10445,21 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -10433,6 +10443,21 @@ static size_t hostapd_eid_mbssid_elem_le
  				ie_count++;
  		}
  
 +		/* TTLM IE */
-+		if (frame_type == WLAN_FC_STYPE_PROBE_RESP) {
++		if (frame_type == WLAN_FC_STYPE_PROBE_RESP && tx_bss_ttlm_ctx) {
 +			if ((tx_bss_ttlm_ctx->established_ttlm.ttlm.expected_duration_present ||
 +			     tx_bss_ttlm_ctx->upcoming_ttlm.ttlm.mapping_switch_time_present) ||
 +			    (bss_est_ttlm->expected_duration_present ||
@@ -115,15 +121,23 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  		if (ie_count)
  			nontx_profile_len += 4 + ie_count + 1;
  
-@@ -10543,6 +10567,7 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -10540,6 +10565,7 @@ static u8 * hostapd_eid_mbssid_elem(stru
  				    u32 *elemid_modified_bmap, size_t num_bss)
  {
  	struct hostapd_data *tx_bss = hostapd_mbssid_get_tx_bss(hapd);
-+	struct ttlm_context *tx_bss_ttlm_ctx = &tx_bss->mld->ttlm_ctx;
++	struct ttlm_context *tx_bss_ttlm_ctx;
  	size_t i, tx_xrate_len;
  	u8 *eid_len_offset, *max_bssid_indicator_offset;
  	u8 buf[100];
-@@ -10566,6 +10591,7 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -10551,6 +10577,7 @@ static u8 * hostapd_eid_mbssid_elem(stru
+ 	max_bssid_indicator_offset = eid++;
+ 
+ 	tx_xrate_len = hostapd_eid_ext_supp_rates(tx_bss, buf) - buf;
++	tx_bss_ttlm_ctx = tx_bss->mld ? &tx_bss->mld->ttlm_ctx : NULL;
+ 
+ 	for (i = *bss_index; i < num_bss; i++) {
+ 		struct hostapd_data *bss;
+@@ -10563,6 +10590,7 @@ static u8 * hostapd_eid_mbssid_elem(stru
  		u16 capab_info;
  		u8 mbssindex = i;
  		u16 modified_flag = 0;
@@ -131,7 +145,7 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  
  		if (tx_bss->iconf->mbssid == MULTI_MBSSID_GROUP_ENABLED)
  			bss = hostapd_get_multi_group_bss(tx_bss->mbssid_group, i);
-@@ -10576,6 +10602,8 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -10573,6 +10601,8 @@ static u8 * hostapd_eid_mbssid_elem(stru
  		    mbssid_known_bss(i, known_bss, known_bss_len))
  			continue;
  		conf = bss->conf;
@@ -140,12 +154,12 @@ Signed-off-by: Amith A <amitajit@qti.qualcomm.com>
  
  		*eid++ = WLAN_MBSSID_SUBELEMENT_NONTRANSMITTED_BSSID_PROFILE;
  		eid_len_pos = eid++;
-@@ -10648,6 +10676,36 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -10645,6 +10675,36 @@ static u8 * hostapd_eid_mbssid_elem(stru
  		xrate_len = hostapd_eid_ext_supp_rates(bss, eid) - eid;
  		eid += xrate_len;
  
 +		/* TTLM IE */
-+		if (frame_type == WLAN_FC_STYPE_PROBE_RESP) {
++		if (frame_type == WLAN_FC_STYPE_PROBE_RESP && tx_bss_ttlm_ctx) {
 +			/* if tx bss has non-default ttlm mapping, include ttlm element for non-tx
 +			 * bss to avoid TTLM element inheritance. if non-tx vap does not have any
 +			 * non-default mapping advertised, default ttlm element is included in this

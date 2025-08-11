@@ -296,9 +296,9 @@ Signed-off-by: Hariharan Basuthkar <quic_hbasuthk@quicinc.com>
   * enum reg_change_initiator - Regulatory change initiator
   */
 @@ -198,7 +221,18 @@ struct hostapd_channel_data {
+ 	 * punct_bitmap - RU puncturing bitmap
  	 */
- 	const struct ieee80211_240mhz_vendor_oper *eht_240mhz_capab;
- 	size_t eht_240mhz_len;
+ 	u16 punct_bitmap;
 +
 +	/**
 +	 * This array is used to store the psd value of each power mode
