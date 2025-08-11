@@ -25,7 +25,7 @@ include:
 Only device level stats are supported in this patch. Support for the
 remaining levels will be added in subsequent changes.
 
-Dependency:
+Patch-dependency:
 0417-UPSTREAM-DP-wifi-ath12k-Support-for-Aggregate-stats.patch
 
 Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
@@ -941,11 +941,11 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  };
  
  enum qca_nl80211_vendor_events {
- 	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX = 0,
- 	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT_INDEX = 1,
- 	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX = 2,
-+	QCA_NL80211_VENDOR_SUBCMD_WLAN_WIPHY_TELEMETRY_EVENT = 2,
-+	QCA_NL80211_VENDOR_SUBCMD_WLAN_WDEV_TELEMETRY_EVENT = 3,
+ 	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT_INDEX = 0,
+ 	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX = 1,
+ 	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX = 2,
++	QCA_NL80211_VENDOR_SUBCMD_WLAN_WIPHY_TELEMETRY_EVENT = 3,
++	QCA_NL80211_VENDOR_SUBCMD_WLAN_WDEV_TELEMETRY_EVENT = 4,
  };
  
  /**

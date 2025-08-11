@@ -48,6 +48,7 @@ PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_IWLWIFI_DEBUG \
 	CONFIG_PACKAGE_IWLWIFI_DEBUGFS \
 	CONFIG_PACKAGE_RTLWIFI_DEBUG \
+	CONFIG_PACKAGE_QCN_EXTN \
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -246,6 +247,16 @@ define KernelPackage/mac80211/config
 		bool "Enable 802.11s mesh support"
 		default y
 
+	config PACKAGE_MAC80211_ATHDEBUG
+                bool "Enable athdebug module support"
+                default y
+                help
+                  This option enables ATHDEBUG module support.
+
+	config PACKAGE_QCN_EXTN
+		bool "Enable QCN extensions support"
+		default y
+
   endif
 endef
 
@@ -290,8 +301,11 @@ config-$(CONFIG_PACKAGE_MAC80211_DEBUG_MENU) += MAC80211_DEBUG_MENU
 config-$(CONFIG_PACKAGE_MAC80211_VERBOSE_DEBUG) += MAC80211_VERBOSE_DEBUG
 config-$(CONFIG_PACKAGE_MAC80211_PS_DEBUG) += MAC80211_PS_DEBUG
 config-$(CONFIG_PACKAGE_MAC80211_ATHMEMDEBUG) += MAC80211_ATHMEMDEBUG
+config-$(CONFIG_PACKAGE_QCN_EXTN) += QCN_EXTN
 
 config-$(call config_package,mac80211-hwsim) += MAC80211_HWSIM
+
+config-$(CONFIG_PACKAGE_MAC80211_ATHDEBUG) += ATHDEBUG
 
 config-y += WL_TI WILINK_PLATFORM_DATA
 
@@ -358,18 +372,65 @@ define Build/Patch
 	$(if $(QUILT),rm -rf $(PKG_BUILD_DIR)/patches; mkdir -p $(PKG_BUILD_DIR)/patches)
 	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/build,build/)
 	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/subsys,subsys/)
+ifdef CONFIG_PACKAGE_QCN_EXTN
+	$(call PatchDir,$(PKG_BUILD_DIR),./wlan-open-extns/subsys/patches,patches/)
+endif
 #	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath,ath/)
 	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath11k,ath11k/)
 	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath12k,ath12k/)
+ifdef CONFIG_PACKAGE_QCN_EXTN
+	$(call PatchDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/ath12k/patches,patches/)
+	$(call PatchDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/wifi7/patches,patches/)
+	$(CP) ./wlan-open-extns/subsys/src $(PKG_BUILD_DIR)/net/mac80211/qcn_extns
+	$(CP) ./wlan-open-extns/ath/ath12k/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/qcn_extns
+	$(CP) ./wlan-open-extns/ath/wifi7/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7/qcn_extns
+endif
 	$(if $(QUILT),touch $(PKG_BUILD_DIR)/.quilt_used)
+ifneq ($(CONFIG_DEBUG_MEM_USAGE),y)
+ ifneq ($(CONFIG_PACKAGE_MAC80211_ATHMEMDEBUG),y)
+  ifeq ($(CONFIG_PACKAGE_MAC80211_ATHDEBUG),y)
+   ifeq ($(QUILT),)
+	$(Build/refactor)
+   endif
+  endif
+ endif
+endif
 endef
 
 define Quilt/Refresh/Package
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/build,build/)
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/subsys,subsys/)
+ifdef CONFIG_PACKAGE_QCN_EXTN
+	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),./wlan-open-extns/subsys/patches,patches/)
+endif
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath,ath/)
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath11k,ath11k/)
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath12k,ath12k/)
+ifdef CONFIG_PACKAGE_QCN_EXTN
+	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/ath12k/patches,patches/)
+	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/wifi7/patches,patches/)
+endif
+endef
+
+define Build/refactor
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ahb.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ce.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/core.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/coredump.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/debugfs_htt_stats.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/dp_htt.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/dp_mon.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/dp_peer.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/dbring.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/debugfs.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/dp_rx.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/mac.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/peer.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/qmi.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/reg.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wmi.c
+	spatch -sp_file alloc.cocci --in-place $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wow.c
+	spatch -cocci_file alloc.cocci --in-place -dir $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7
 endef
 
 define Build/Compile
@@ -396,6 +457,7 @@ define KernelPackage/ath/install
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_sawf.h $(STAGING_DIR)/usr/include/
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_fse.h $(STAGING_DIR)/usr/include/
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_dp_accel_cfg.h $(STAGING_DIR)/usr/include/
+	$(CP) $(PKG_BUILD_DIR)/include/ath/ppe_public.h $(STAGING_DIR)/usr/include/
 endef
 
 $(eval EXT_KERNEL_DIR:=$(CONFIG_EXTERNAL_KERNEL_TREE))

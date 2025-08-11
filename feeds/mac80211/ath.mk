@@ -148,7 +148,11 @@ define KernelPackage/ath12k
   DEPENDS+= +kmod-ath +@DRIVER_11N_SUPPORT +@DRIVER_11W_SUPPORT +@DRIVER_11AC_SUPPORT +@DRIVER_11AX_SUPPORT
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ath12k.ko \
          $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7/ath12k_wifi7.ko
-  AUTOLOAD:=$(call AutoProbe,ath12k ath12k_wifi7)
+
+ifeq ($(CONFIG_PACKAGE_MAC80211_ATHDEBUG),y)
+  FILES+=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ath_debug/ath_debug.ko
+endif
+  AUTOLOAD:=$(call AutoProbe,ath12k ath12k_wifi7 ath_debug)
 endef
 
 define KernelPackage/ath12k/description

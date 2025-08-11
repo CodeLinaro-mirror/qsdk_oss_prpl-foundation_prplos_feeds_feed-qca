@@ -16,19 +16,14 @@ Signed-off-by: Sarika Sharma <sarishar@qti.qualcomm.com>
  drivers/net/wireless/ath/ath12k/dp.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp.c b/drivers/net/wireless/ath/ath12k/dp.c
-index 8d6f4e6..91f089c 100644
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -166,7 +166,7 @@ int ath12k_dp_peer_setup(struct ath12k *ar, struct ath12k_link_vif *arvif, const
- peer_clean:
- 	spin_lock_bh(&dp->dp_lock);
+@@ -182,7 +182,7 @@ peer_clean:
+ 	}
  
+ tid_clean:
 -	for (; tid >= 0; tid--)
 +	for (tid--; tid >= 0; tid--)
  		ath12k_dp_arch_rx_peer_tid_delete(ab->dp, ar, peer, tid);
  
  	spin_unlock_bh(&dp->dp_lock);
--- 
-2.34.1
-

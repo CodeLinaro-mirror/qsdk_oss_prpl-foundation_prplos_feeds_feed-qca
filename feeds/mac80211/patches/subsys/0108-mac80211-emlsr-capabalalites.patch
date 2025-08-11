@@ -31,9 +31,9 @@ index 9101f61..a020b64 100644
  struct link_station_parameters {
  	const u8 *mld_mac;
 @@ -1801,6 +1803,8 @@ struct link_station_parameters {
+ 	const struct ieee80211_he_6ghz_capa *he_6ghz_capa;
+ 	const struct ieee80211_eht_cap_elem *eht_capa;
  	u8 eht_capa_len;
- 	const struct ieee80211_240mhz_vendor_oper *eht_240mhz_capa;
- 	u8 eht_240mhz_len;
 +	u16 eml_cap;
 +	u16 mld_oper;
  };
@@ -92,9 +92,9 @@ index 5dd7e9e..627e1ca 100644
  	[NL80211_ATTR_RADAR_BITMAP] = { .type = NLA_U16 },
 +	[NL80211_ATTR_EML_CAPABILITY] = { .type = NLA_U16 },
 +	[NL80211_ATTR_MLD_CAPA_AND_OPS] = { .type = NLA_U16 },
- #if LINUX_VERSION_IS_GEQ(5,10,0)
- 	[NL80211_ATTR_EHT_240MHZ_CAPABILITY] =
- 			NLA_POLICY_RANGE(NLA_BINARY,
+ };
+ 
+ /* policy for the key attributes */
 @@ -8004,6 +8006,13 @@ static int nl80211_set_station(struct sk_buff *skb, struct genl_info *info)
  	if (err)
  		return err;

@@ -19,11 +19,9 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  drivers/net/wireless/ath/ath12k/dp_rx.h |  4 +++-
  3 files changed, 18 insertions(+), 27 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp.c b/drivers/net/wireless/ath/ath12k/dp.c
-index c6f463f..0c0e16b 100644
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -97,6 +97,7 @@ int ath12k_dp_peer_setup(struct ath12k *ar, int vdev_id, const u8 *addr)
+@@ -97,6 +97,7 @@ int ath12k_dp_peer_setup(struct ath12k *
  	struct ath12k_dp *dp = ath12k_ab_to_dp(ab);
  	struct ieee80211_sta *sta;
  	struct ath12k_sta *ahsta;
@@ -31,7 +29,7 @@ index c6f463f..0c0e16b 100644
  
  	/* NOTE: reo_dest ring id starts from 1 unlike mac_id which starts from 0 */
  	reo_dest = ar->dp.mac_id + 1;
-@@ -110,12 +111,17 @@ int ath12k_dp_peer_setup(struct ath12k *ar, int vdev_id, const u8 *addr)
+@@ -110,12 +111,17 @@ int ath12k_dp_peer_setup(struct ath12k *
  		return ret;
  	}
  
@@ -50,7 +48,7 @@ index c6f463f..0c0e16b 100644
  	}
  
  	sta = peer->sta;
-@@ -123,7 +129,7 @@ int ath12k_dp_peer_setup(struct ath12k *ar, int vdev_id, const u8 *addr)
+@@ -123,7 +129,7 @@ int ath12k_dp_peer_setup(struct ath12k *
  	if (peer->mlo && peer->link_id != ahsta->primary_link_id) {
  		peer->primary_link = false;
  		spin_unlock_bh(&dp->dp_lock);
@@ -59,16 +57,45 @@ index c6f463f..0c0e16b 100644
  	}
  
  	peer->primary_link = true;
-@@ -139,7 +145,7 @@ int ath12k_dp_peer_setup(struct ath12k *ar, int vdev_id, const u8 *addr)
+@@ -139,24 +145,44 @@ int ath12k_dp_peer_setup(struct ath12k *
  		}
  	}
  
 -	ret = ath12k_dp_rx_peer_frag_setup(ar, addr, vdev_id);
++	spin_lock_bh(&dp->dp_lock);
++	peer = ath12k_dp_link_peer_find_by_vdev_id_and_addr(dp, vdev_id, addr);
++	if (!peer) {
++		ath12k_warn(ab, "failed to find the peer to set up fragment info\n");
++		ret = -ENOENT;
++		spin_unlock_bh(&dp->dp_lock);
++		goto free_shash;
++	}
++
 +	ret = ath12k_dp_rx_peer_frag_setup(ar, peer, tfm);
  	if (ret) {
  		ath12k_warn(ab, "failed to setup rx defrag context\n");
- 		goto peer_clean;
-@@ -157,6 +163,8 @@ peer_clean:
+-		goto peer_clean;
++		goto tid_clean;
+ 	}
+ 
++	spin_unlock_bh(&dp->dp_lock);
++
+ 	/* TODO: Setup other peer specific resource used in data path */
+ 
+ 	return 0;
+ 
+ peer_clean:
+ 	spin_lock_bh(&dp->dp_lock);
++	peer = ath12k_dp_link_peer_find_by_vdev_id_and_addr(dp, vdev_id, addr);
++	if (!peer) {
++		spin_unlock_bh(&dp->dp_lock);
++		ath12k_warn(ab, "failed to find the peer in err case of del rx tid\n");
++		goto free_shash;
++	}
+ 
++tid_clean:
+ 	for (; tid >= 0; tid--)
+ 		ath12k_dp_arch_rx_peer_tid_delete(ab->dp, ar, peer, tid);
  
  	spin_unlock_bh(&dp->dp_lock);
  
@@ -77,11 +104,9 @@ index c6f463f..0c0e16b 100644
  	return ret;
  }
  
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index b71975e..6fe6b2e 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -1088,35 +1088,16 @@ static void ath12k_dp_rx_frag_timer(struct timer_list *timer)
+@@ -1143,34 +1143,16 @@ static void ath12k_dp_rx_frag_timer(stru
  	spin_unlock_bh(&rx_tid->dp->dp_lock);
  }
  
@@ -101,9 +126,9 @@ index b71975e..6fe6b2e 100644
 -	tfm = crypto_alloc_shash("michael_mic", 0, 0);
 -	if (IS_ERR(tfm))
 -		return PTR_ERR(tfm);
- 
- 	spin_lock_bh(&dp->dp_lock);
 -
+-	spin_lock_bh(&dp->dp_lock);
+ 
 -	peer = ath12k_dp_link_peer_find_by_vdev_id_and_addr(dp, vdev_id, peer_mac);
 -	if (!peer) {
 -		spin_unlock_bh(&dp->dp_lock);
@@ -117,15 +142,21 @@ index b71975e..6fe6b2e 100644
 -		crypto_free_shash(tfm);
 -		return 0;
 -	}
--
++	lockdep_assert(&dp->dp_lock);
+ 
  	for (i = 0; i <= IEEE80211_NUM_TIDS; i++) {
  		rx_tid = &peer->dp_peer->rx_tid[i];
- 		rx_tid->dp = dp;
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.h b/drivers/net/wireless/ath/ath12k/dp_rx.h
-index 7b6207f..b5253a6 100644
+@@ -1181,7 +1163,6 @@ int ath12k_dp_rx_peer_frag_setup(struct
+ 
+ 	peer->dp_peer->tfm_mmic = tfm;
+ 	peer->dp_peer->primary_link_frag_setup = true;
+-	spin_unlock_bh(&dp->dp_lock);
+ 
+ 	return 0;
+ }
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
-@@ -188,7 +188,9 @@ int ath12k_dp_rx_bufs_replenish(struct ath12k_dp *dp,
+@@ -173,7 +173,9 @@ int ath12k_dp_rx_bufs_replenish(struct a
  				struct list_head *used_list,
  				int req_entries);
  int ath12k_dp_rx_pdev_mon_attach(struct ath12k *ar);
@@ -136,6 +167,3 @@ index 7b6207f..b5253a6 100644
  
  u8 ath12k_dp_rx_h_l3pad(struct ath12k_base *ab,
  			struct hal_rx_desc *desc);
--- 
-2.34.1
-

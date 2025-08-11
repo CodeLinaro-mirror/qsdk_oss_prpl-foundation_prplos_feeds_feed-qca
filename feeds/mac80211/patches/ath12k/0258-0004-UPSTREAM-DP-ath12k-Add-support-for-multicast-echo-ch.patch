@@ -158,7 +158,7 @@ Signed-off-by: Sarika Sharma <sarishar@qti.qualcomm.com>
  	HAL_REO_ENTR_RING_RXDMA_ECODE_MAX,
  };
  
-@@ -1334,4 +1349,6 @@ void ath12k_hal_rx_buf_addr_info_get(str
+@@ -1336,4 +1351,6 @@ void ath12k_hal_rx_buf_addr_info_get(str
  void ath12k_hal_cc_config(struct ath12k_base *ab);
  enum hal_rx_buf_return_buf_manager
  ath12k_hal_get_idle_link_rbm(struct ath12k_hal *hal, u8 device_id);
@@ -167,7 +167,7 @@ Signed-off-by: Sarika Sharma <sarishar@qti.qualcomm.com>
  #endif
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-@@ -2124,6 +2124,37 @@ static bool ath12k_wifi7_dp_rx_h_tkip_mi
+@@ -2132,6 +2132,42 @@ static bool ath12k_wifi7_dp_rx_h_tkip_mi
  	return false;
  }
  
@@ -179,7 +179,7 @@ Signed-off-by: Sarika Sharma <sarishar@qti.qualcomm.com>
 +	struct ath12k_link_sta *arsta = NULL;
 +	struct ath12k_dp_link_peer *peer;
 +
-+	rcu_read_lock();
++	spin_lock_bh(&dp_pdev->dp->dp_lock);
 +	peer = ath12k_dp_link_peer_find_by_id(dp_pdev->dp, rx_desc_data->peer_id);
 +	if (!peer)
 +		goto drop;
@@ -190,22 +190,27 @@ Signed-off-by: Sarika Sharma <sarishar@qti.qualcomm.com>
 +		goto drop;
 +	}
 +
-+	if (peer && peer->sta)
++	if (peer && peer->sta) {
++		rcu_read_lock();
++
 +		arsta = ath12k_peer_get_link_sta(ab, peer);
-+	if (arsta) {
-+		spin_lock_bh(&ab->base_lock);
-+		arsta->arvif->link_stats.rx_dropped++;
-+		spin_unlock_bh(&ab->base_lock);
++		if (arsta) {
++			spin_lock_bh(&arsta->arvif->link_stats_lock);
++			arsta->arvif->link_stats.rx_dropped++;
++			spin_unlock_bh(&arsta->arvif->link_stats_lock);
++		}
++
++		rcu_read_unlock();
 +	}
 +drop:
-+	rcu_read_unlock();
++	spin_unlock_bh(&dp_pdev->dp->dp_lock);
 +	return true;
 +}
 +
  static bool ath12k_wifi7_dp_rx_h_rxdma_err(struct ath12k_pdev_dp *dp_pdev,
  					   struct sk_buff *msdu,
  					   struct ieee80211_rx_status *status,
-@@ -2136,6 +2167,9 @@ static bool ath12k_wifi7_dp_rx_h_rxdma_e
+@@ -2144,6 +2180,9 @@ static bool ath12k_wifi7_dp_rx_h_rxdma_e
  	dp->device_stats.rxdma_error[rxcb->err_code]++;
  
  	switch (rxcb->err_code) {

@@ -24,7 +24,9 @@ Signed-off-by: Hari Naraayana Desikan Kannan <hnaraaya@qti.qualcomm.com>
 
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -11360,6 +11360,83 @@ void ath12k_mac_assign_middle_link_id(st
+@@ -11442,10 +11442,87 @@ void ath12k_mac_assign_middle_link_id(st
+ 			return;
+ 		}
  	}
  }
  
@@ -108,7 +110,11 @@ Signed-off-by: Hari Naraayana Desikan Kannan <hnaraaya@qti.qualcomm.com>
  int ath12k_mac_op_change_sta_links(struct ieee80211_hw *hw,
  				   struct ieee80211_vif *vif,
  				   struct ieee80211_sta *sta,
-@@ -12100,78 +12177,7 @@ exit_link_migrate_req:
+ 				   u16 old_links, u16 new_links)
+ {
+@@ -12182,82 +12259,11 @@ exit_link_migrate_req:
+ }
+ 
  bool ath12k_mac_op_removed_link_is_primary(struct ieee80211_sta *sta,
  					   u16 removed_links)
  {
@@ -188,3 +194,5 @@ Signed-off-by: Hari Naraayana Desikan Kannan <hnaraaya@qti.qualcomm.com>
  }
  EXPORT_SYMBOL(ath12k_mac_op_removed_link_is_primary);
  
+ bool ath12k_mac_op_can_activate_links(struct ieee80211_hw *hw,
+ 				      struct ieee80211_vif *vif,

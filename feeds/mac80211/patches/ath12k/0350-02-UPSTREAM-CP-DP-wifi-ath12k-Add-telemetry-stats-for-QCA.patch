@@ -213,7 +213,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  		ret = -EINVAL;
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -1088,6 +1088,7 @@ int ath12k_dp_pdev_alloc(struct ath12k_b
+@@ -1106,6 +1106,7 @@ int ath12k_dp_pdev_alloc(struct ath12k_b
  	for (i = 0; i < ab->num_radios; i++) {
  		ar = ab->pdevs[i].ar;
  
@@ -221,7 +221,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  		dp_pdev = &ar->dp;
  
  		dp_pdev->hw = ar->ah->hw;
-@@ -1138,6 +1139,43 @@ out:
+@@ -1156,6 +1157,43 @@ out:
  	return ret;
  }
  
@@ -316,7 +316,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  		break;
  	case HTT_PPDU_STATS_TAG_USR_RATE:
  		if (len < sizeof(struct htt_ppdu_stats_user_rate)) {
-@@ -462,6 +463,7 @@ ath12k_update_per_peer_tx_stats(struct a
+@@ -469,6 +470,7 @@ ath12k_update_per_peer_tx_stats(struct a
  	is_ofdma = (ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA) |
  		(ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO_OFDMA);
  
@@ -324,16 +324,16 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  	/* Note: If host configured fixed rates and in some other special
  	 * cases, the broadcast/management frames are sent in different rates.
  	 * Firmware rate's control to be skipped for this?
-@@ -546,6 +548,8 @@ ath12k_update_per_peer_tx_stats(struct a
- 	}
- 
+@@ -555,6 +557,8 @@ ath12k_update_per_peer_tx_stats(struct a
+ 	peer->tx_retry_failed += tx_retry_failed;
+ 	peer->tx_retry_count += tx_retry_count;
  	peer->txrate.nss = nss;
 +	usr_stats->nss = nss;
 +	ppdu_info->usr_nss_sum += nss;
  	peer->txrate.bw = ath12k_mac_bw_to_mac80211_bw(bw);
  	peer->tx_duration += tx_duration;
  	memcpy(&peer->last_txrate, &peer->txrate, sizeof(struct rate_info));
-@@ -573,11 +577,106 @@ ath12k_update_per_peer_tx_stats(struct a
+@@ -582,11 +586,109 @@ ath12k_update_per_peer_tx_stats(struct a
  	}
  
  	peer_stats->ppdu_type = ppdu_type;
@@ -355,6 +355,8 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +       u16 phy_tx_time_us = 0;
 +       u8 tid;
 +       u8 ac;
++
++	lockdep_assert_held(&ab->dp->dp_lock);
 +
 +       if (!peer || !user || !common) {
 +               ath12k_warn(ab, "Invalid ppdu user info received\n");
@@ -411,36 +413,37 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +       for (uid = 0; uid < HTT_PPDU_STATS_MAX_USERS; uid++) {
 +               user_stats = &ppdu_stats->user_stats[uid];
 +
-+               rcu_read_lock();
++		spin_lock_bh(&dp_pdev->dp->dp_lock);
 +
 +               peer = ath12k_dp_link_peer_find_by_id(dp_pdev->dp,
 +						     user_stats->peer_id);
 +               if (!peer || !peer->sta) {
-+                       rcu_read_unlock();
++			spin_unlock_bh(&dp_pdev->dp->dp_lock);
 +                       return;
 +               }
 +
 +               sta = peer->sta;
++
++		rcu_read_lock();
 +               arsta = ath12k_peer_get_link_sta(ab, peer);
 +               if (!arsta) {
-+                       rcu_read_unlock();
++			rcu_read_unlock();
++			spin_unlock_bh(&dp_pdev->dp->dp_lock);
 +                       return;
 +               }
-+
-+               spin_lock_bh(&ab->base_lock);
++		rcu_read_unlock();
 +
 +               ath12k_ppdu_per_user_stats_phy_tx_time_update(ab, peer,
 +                                                             ppdu_info,
 +                                                             user_stats);
-+               spin_unlock_bh(&ab->base_lock);
-+               rcu_read_unlock();
++		spin_unlock_bh(&dp_pdev->dp->dp_lock);
 +       }
 +}
 +
  static void ath12k_htt_update_ppdu_stats(struct ath12k_pdev_dp *dp_pdev,
  					 struct htt_ppdu_stats_info *ppdu_info)
  {
-@@ -585,6 +684,8 @@ static void ath12k_htt_update_ppdu_stats
+@@ -594,6 +696,8 @@ static void ath12k_htt_update_ppdu_stats
  
  	for (user = 0; user < HTT_PPDU_STATS_MAX_USERS - 1; user++)
  		ath12k_update_per_peer_tx_stats(dp_pdev, ppdu_info, user);
@@ -449,7 +452,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  }
  
  static
-@@ -605,7 +706,12 @@ struct htt_ppdu_stats_info *ath12k_dp_ht
+@@ -614,7 +718,12 @@ struct htt_ppdu_stats_info *ath12k_dp_ht
  						     typeof(*ppdu_info), list);
  			list_del(&ppdu_info->list);
  			dp_pdev->ppdu_stat_list_depth--;
@@ -591,7 +594,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  	peer->rssi_comb = ppdu_info->rssi_comb;
  	ewma_avg_rssi_add(&peer->avg_rssi, ppdu_info->rssi_comb);
  
-@@ -3533,6 +3541,79 @@ ath12k_dp_mon_rx_update_peer_mu_stats(st
+@@ -3533,6 +3541,81 @@ ath12k_dp_mon_rx_update_peer_mu_stats(st
  }
  
  static void
@@ -611,13 +614,14 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +       if (!dp_pdev)
 +               return;
 +
-+       rcu_read_lock();
++	RCU_LOCKDEP_WARN(!rcu_read_lock_held(), "PPDU per user rx time update called without rcu lock\n");
++	lockdep_assert_held(&dp_pdev->dp->dp_lock);
++
 +       peer = ath12k_dp_link_peer_find_by_id(dp_pdev->dp, user_stats->sw_peer_id);
 +       if (!peer || !peer->sta) {
 +               ath12k_dbg(dp_pdev->ar->ab, ATH12K_DBG_PEER,
 +                          "peer stats not found on ppdu peer id %d\n",
 +                          user_stats->sw_peer_id);
-+               rcu_read_unlock();
 +               return;
 +       }
 +
@@ -625,10 +629,8 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +       if (!arsta) {
 +               ath12k_warn(dp_pdev->ar->ab, "link sta not found on peer %pM id %d\n",
 +                           peer->addr, peer->peer_id);
-+               rcu_read_unlock();
 +               return;
 +       }
-+       rcu_read_unlock();
 +
 +       nss_ru_width_sum = ppdu_info->usr_nss_sum * ppdu_info->usr_ru_tones_sum;
 +       if (!nss_ru_width_sum)
@@ -659,6 +661,9 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +{
 +       u32 num_users, uid;
 +
++	RCU_LOCKDEP_WARN(!rcu_read_lock_held(), "PPDU rx time update called without rcu lock\n");
++	lockdep_assert_held(&dp_pdev->dp->dp_lock);
++
 +       num_users = ppdu_info->num_users;
 +       if (num_users > HAL_MAX_UL_MU_USERS)
 +               num_users = HAL_MAX_UL_MU_USERS;
@@ -671,7 +676,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  ath12k_dp_mon_rx_memset_ppdu_info(struct hal_rx_mon_ppdu_info *ppdu_info)
  {
  	memset(ppdu_info, 0, sizeof(*ppdu_info));
-@@ -3703,10 +3784,12 @@ move_next:
+@@ -3703,10 +3786,12 @@ move_next:
  			}
  			ath12k_dp_mon_rx_update_peer_su_stats(pdev_dp, peer,
  							      ppdu_info);
@@ -684,7 +689,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  		}
  
  next_skb:
-@@ -3746,3 +3829,181 @@ int ath12k_dp_mon_process_ring(struct at
+@@ -3746,3 +3831,187 @@ int ath12k_dp_mon_process_ring(struct at
  	return num_buffs_reaped;
  }
  EXPORT_SYMBOL(ath12k_dp_mon_process_ring);
@@ -789,7 +794,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +       if (!pdev || !pdev->ar)
 +               return;
 +       ar = pdev->ar;
-+       spin_lock_bh(&ab->base_lock);
++       spin_lock_bh(&ab->dp->dp_lock);
 +       list_for_each_entry_safe(peer, tmp, &ab->dp->peers, list) {
 +               if (!peer->vif)
 +                       continue;
@@ -806,7 +811,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +
 +               iter(ab, peer, pdev);
 +       }
-+       spin_unlock_bh(&ab->base_lock);
++       spin_unlock_bh(&ab->dp->dp_lock);
 +}
 +
 +int ath12k_dp_mon_pdev_update_telemetry_stats(struct ath12k_base *ab,
@@ -852,9 +857,13 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +                                      struct ath12k_peer_telemetry_stats *stats)
 +{
 +       struct ath12k_dp_link_peer *peer;
++	struct ath12k_dp *dp = ath12k_ab_to_dp(ab);
 +
-+       peer = ath12k_dp_link_peer_find_by_addr(ab->dp, peer_addr);
++	spin_lock_bh(&dp->dp_lock);
++
++       peer = ath12k_dp_link_peer_find_by_addr(dp, peer_addr);
 +       if (!peer) {
++		spin_unlock_bh(&dp->dp_lock);
 +               ath12k_dbg(ab,
 +                          ATH12K_DBG_DP_HTT,
 +                          "Failed to find peer at addr: %pM\n", peer_addr);
@@ -862,6 +871,8 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
 +       }
 +
 +       ath12k_dp_mon_peer_telemetry_stats(peer, stats);
++
++	spin_unlock_bh(&dp->dp_lock);
 +
 +       return 0;
 +}
@@ -1044,7 +1055,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  static int
  ath12k_wmi_tlv_iter(struct ath12k_base *ab, const void *ptr, size_t len,
  		    int (*iter)(struct ath12k_base *ab, u16 tag, u16 len,
-@@ -11434,6 +11492,56 @@ int wmi_print_ctrl_path_afc_stats_tlv(st
+@@ -11435,6 +11493,56 @@ int wmi_print_ctrl_path_afc_stats_tlv(st
  	return 0;
  }
  
@@ -1101,7 +1112,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  static int ath12k_wmi_ctrl_stats_subtlv_parser(struct ath12k_base *ab,
  					       u16 tag, u16 len,
  					       const void *ptr, void *data)
-@@ -11461,6 +11569,9 @@ static int ath12k_wmi_ctrl_stats_subtlv_
+@@ -11462,6 +11570,9 @@ static int ath12k_wmi_ctrl_stats_subtlv_
  	case WMI_CTRL_PATH_AFC_STATS:
  		ret = wmi_print_ctrl_path_afc_stats_tlv(ab, len, ptr, data);
  		break;
@@ -1111,7 +1122,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  		/* Add case for newly wmi ctrl path added stats here */
  	default:
  		ath12k_warn(ab,
-@@ -11567,6 +11678,9 @@ static void ath12k_wmi_ctrl_path_stats_e
+@@ -11568,6 +11679,9 @@ static void ath12k_wmi_ctrl_path_stats_e
  		src = &param.pdev_stats;
  		dst = &stats->pdev_stats;
  		break;
@@ -1121,7 +1132,7 @@ Signed-off-by: Hariharan Ramanathan <hramanat@qti.qualcomm.com>
  	default:
  		goto free;
  	}
-@@ -13410,6 +13524,14 @@ ath12k_wmi_send_wmi_ctrl_stats_cmd(struc
+@@ -13411,6 +13525,14 @@ ath12k_wmi_send_wmi_ctrl_stats_cmd(struc
  
  	pdev_id = cpu_to_le32(ath12k_mac_get_target_pdev_id(ar));
  

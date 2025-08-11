@@ -36,43 +36,43 @@ Signed-off-by: Neha Bisht <nbisht@qti.qualcomm.com>
 Signed-off-by: Aloka Dixit <alokad@qti.qualcomm.com>
 Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 ---
- drivers/net/wireless/ath/ath12k/Kconfig       |    9 +
- drivers/net/wireless/ath/ath12k/Makefile      |    1 +
- drivers/net/wireless/ath/ath12k/core.c        |   47 +
- drivers/net/wireless/ath/ath12k/core.h        |   26 +-
- drivers/net/wireless/ath/ath12k/debug.h       |    1 +
- drivers/net/wireless/ath/ath12k/dp.c          |  267 ++-
- drivers/net/wireless/ath/ath12k/dp.h          |   86 +-
- drivers/net/wireless/ath/ath12k/dp_cmn.h      |    9 +
- drivers/net/wireless/ath/ath12k/dp_htt.h      |   15 +
- drivers/net/wireless/ath/ath12k/dp_peer.h     |    3 +
- drivers/net/wireless/ath/ath12k/dp_rx.c       |   53 +
- drivers/net/wireless/ath/ath12k/dp_rx.h       |   32 +
- drivers/net/wireless/ath/ath12k/dp_tx.c       |  242 +++
- drivers/net/wireless/ath/ath12k/dp_tx.h       |   10 +
- drivers/net/wireless/ath/ath12k/fse.h         |    4 +
- drivers/net/wireless/ath/ath12k/hal.c         |    9 +
- drivers/net/wireless/ath/ath12k/hal.h         |   14 +
- drivers/net/wireless/ath/ath12k/hif.h         |   68 +
- drivers/net/wireless/ath/ath12k/hw.h          |   29 +-
- drivers/net/wireless/ath/ath12k/mac.c         |   96 +-
- drivers/net/wireless/ath/ath12k/mac.h         |    1 +
- drivers/net/wireless/ath/ath12k/pci.c         |    6 +
- drivers/net/wireless/ath/ath12k/pci.h         |    5 +
- drivers/net/wireless/ath/ath12k/pcic.c        |  294 ++-
- drivers/net/wireless/ath/ath12k/pcic.h        |   11 +-
- drivers/net/wireless/ath/ath12k/peer.c        |   15 +
- drivers/net/wireless/ath/ath12k/ppe.c         | 1685 +++++++++++++++++
- drivers/net/wireless/ath/ath12k/ppe.h         |  274 +++
- drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c |    6 +-
- drivers/net/wireless/ath/ath12k/wifi7/hal.h   |   32 +-
- .../net/wireless/ath/ath12k/wifi7/hal_desc.h  |    7 +
- .../wireless/ath/ath12k/wifi7/hal_qcn9274.c   |   41 +-
- .../net/wireless/ath/ath12k/wifi7/hal_rx.c    |   37 +-
- drivers/net/wireless/ath/ath12k/wifi7/hw.c    |   44 +
- drivers/net/wireless/ath/ath12k/wmi.c         |   91 +
- drivers/net/wireless/ath/ath12k/wmi.h         |   80 +-
- 36 files changed, 3573 insertions(+), 77 deletions(-)
+ drivers/net/wireless/ath/ath12k/Kconfig             |    9 
+ drivers/net/wireless/ath/ath12k/Makefile            |    1 
+ drivers/net/wireless/ath/ath12k/core.c              |   47 
+ drivers/net/wireless/ath/ath12k/core.h              |   26 
+ drivers/net/wireless/ath/ath12k/debug.h             |    1 
+ drivers/net/wireless/ath/ath12k/dp.c                |  267 +++
+ drivers/net/wireless/ath/ath12k/dp.h                |   88 -
+ drivers/net/wireless/ath/ath12k/dp_cmn.h            |   10 
+ drivers/net/wireless/ath/ath12k/dp_htt.h            |   15 
+ drivers/net/wireless/ath/ath12k/dp_peer.h           |    3 
+ drivers/net/wireless/ath/ath12k/dp_rx.c             |   53 
+ drivers/net/wireless/ath/ath12k/dp_rx.h             |   32 
+ drivers/net/wireless/ath/ath12k/dp_tx.c             |  242 ++
+ drivers/net/wireless/ath/ath12k/dp_tx.h             |   10 
+ drivers/net/wireless/ath/ath12k/fse.h               |    4 
+ drivers/net/wireless/ath/ath12k/hal.c               |    9 
+ drivers/net/wireless/ath/ath12k/hal.h               |   14 
+ drivers/net/wireless/ath/ath12k/hif.h               |   68 
+ drivers/net/wireless/ath/ath12k/hw.h                |   29 
+ drivers/net/wireless/ath/ath12k/mac.c               |   97 +
+ drivers/net/wireless/ath/ath12k/mac.h               |    1 
+ drivers/net/wireless/ath/ath12k/pci.c               |    6 
+ drivers/net/wireless/ath/ath12k/pci.h               |    5 
+ drivers/net/wireless/ath/ath12k/pcic.c              |  292 +++
+ drivers/net/wireless/ath/ath12k/pcic.h              |   11 
+ drivers/net/wireless/ath/ath12k/peer.c              |   15 
+ drivers/net/wireless/ath/ath12k/ppe.c               | 1684 ++++++++++++++++++++
+ drivers/net/wireless/ath/ath12k/ppe.h               |  274 +++
+ drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c       |    6 
+ drivers/net/wireless/ath/ath12k/wifi7/hal.h         |   32 
+ drivers/net/wireless/ath/ath12k/wifi7/hal_desc.h    |    7 
+ drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c |   41 
+ drivers/net/wireless/ath/ath12k/wifi7/hal_rx.c      |   37 
+ drivers/net/wireless/ath/ath12k/wifi7/hw.c          |   44 
+ drivers/net/wireless/ath/ath12k/wmi.c               |   91 +
+ drivers/net/wireless/ath/ath12k/wmi.h               |   80 
+ 36 files changed, 3572 insertions(+), 79 deletions(-)
  create mode 100644 drivers/net/wireless/ath/ath12k/ppe.c
  create mode 100644 drivers/net/wireless/ath/ath12k/ppe.h
 
@@ -166,7 +166,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	ret = ath12k_core_start_firmware(ab, ab->fw_mode);
  	if (ret) {
  		ath12k_err(ab, "failed to start firmware: %d\n", ret);
-@@ -2791,6 +2832,12 @@ int ath12k_core_init(struct ath12k_base
+@@ -2789,6 +2830,12 @@ int ath12k_core_init(struct ath12k_base
  		}
  	}
  
@@ -1624,7 +1624,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  
  #define CHAN2G(_channel, _freq, _flags) { \
  	.band                   = NL80211_BAND_2GHZ, \
-@@ -4750,6 +4753,11 @@ ath12k_mac_assign_link_vif(struct ath12k
+@@ -4754,6 +4757,11 @@ ath12k_mac_assign_link_vif(struct ath12k
  
  	ath12k_mac_init_arvif(ahvif, arvif, link_id, is_bridge_vdev);
  
@@ -1636,7 +1636,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	return arvif;
  }
  
-@@ -8929,7 +8937,9 @@ static int ath12k_mac_handle_link_sta_st
+@@ -8935,7 +8943,9 @@ static int ath12k_mac_handle_link_sta_st
  		if (ret)
  			ath12k_warn(ar->ab, "Failed to authorize station: %pM\n",
  				    arsta->addr);
@@ -1647,7 +1647,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	/* IEEE80211_STA_AUTHORIZED -> IEEE80211_STA_ASSOC: station may be in removal,
  	 * deauthorize it.
  	 */
-@@ -11134,6 +11144,15 @@ static int ath12k_mac_config_mon_status_
+@@ -11144,6 +11154,15 @@ static int ath12k_mac_config_mon_status_
  
  		if (ath12k_debugfs_rx_filter(ar))
  			tlv_filter.rx_filter = ath12k_debugfs_rx_filter(ar);
@@ -1663,7 +1663,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	} else {
  		tlv_filter.rxmon_disable = true;
  	}
-@@ -11273,7 +11292,6 @@ static int ath12k_mac_start(struct ath12
+@@ -11283,7 +11302,6 @@ static int ath12k_mac_start(struct ath12
  
  	rcu_assign_pointer(ab->pdevs_active[ar->pdev_idx],
  			   &ab->pdevs[ar->pdev_idx]);
@@ -1671,7 +1671,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	return 0;
  err:
  
-@@ -11632,6 +11650,14 @@ static void ath12k_mac_update_vif_offloa
+@@ -11642,6 +11660,14 @@ static void ath12k_mac_update_vif_offloa
  		vif->offload_flags &= ~(IEEE80211_OFFLOAD_ENCAP_ENABLED |
  					IEEE80211_OFFLOAD_DECAP_ENABLED);
  
@@ -1686,7 +1686,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	if (vif->offload_flags & IEEE80211_OFFLOAD_ENCAP_ENABLED)
  		ahvif->dp_vif.tx_encap_type = ATH12K_HW_TXRX_ETHERNET;
  	else if (test_bit(ATH12K_GROUP_FLAG_RAW_MODE, &ab->ag->flags))
-@@ -12321,10 +12347,23 @@ int ath12k_mac_op_add_interface(struct i
+@@ -12332,10 +12358,23 @@ int ath12k_mac_op_add_interface(struct i
  	struct ath12k_vif *ahvif = ath12k_vif_to_ahvif(vif);
  	struct ath12k_link_vif *arvif;
  	struct ath12k *ar = ath12k_ah_to_ar(ah, 0);
@@ -1711,7 +1711,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	if (test_bit(ATH12K_FLAG_RECOVERY, &ar->ab->ag->flags))
  		ahvif->mode0_recover_bridge_vdevs =
  			(ahvif->links_map & ATH12K_BRIDGE_LINKS_MASK) ?
-@@ -12335,9 +12374,37 @@ int ath12k_mac_op_add_interface(struct i
+@@ -12346,9 +12385,37 @@ int ath12k_mac_op_add_interface(struct i
  	ahvif->ah = ah;
  	ahvif->vif = vif;
  	arvif = &ahvif->deflink;
@@ -1749,7 +1749,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	/* Allocate Default Queue now and reassign during actual vdev create */
  	vif->cab_queue = ATH12K_HW_DEFAULT_QUEUE;
  	for (i = 0; i < ARRAY_SIZE(vif->hw_queue); i++)
-@@ -12451,6 +12518,11 @@ err_vdev_del:
+@@ -12462,6 +12529,11 @@ err_vdev_del:
  	ath12k_mac_vif_unref(ath12k_ab_to_dp(ab), vif);
  	dp_link_vif = &ahvif->dp_vif.dp_link_vif[arvif->link_id];
  	ath12k_dp_tx_put_bank_profile(ath12k_ab_to_dp(ab), dp_link_vif->bank_id);
@@ -1761,7 +1761,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	arvif->key_cipher = INVALID_CIPHER;
  
  	/* Recalc txpower for remaining vdev */
-@@ -12469,6 +12541,7 @@ void ath12k_mac_op_remove_interface(stru
+@@ -12480,6 +12552,7 @@ void ath12k_mac_op_remove_interface(stru
  				    struct ieee80211_vif *vif)
  {
  	struct ath12k_vif *ahvif = ath12k_vif_to_ahvif(vif);
@@ -1769,7 +1769,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	struct ath12k_link_vif *arvif;
  	struct ath12k *ar;
  	u8 link_id;
-@@ -12512,6 +12585,9 @@ void ath12k_mac_op_remove_interface(stru
+@@ -12523,6 +12596,9 @@ void ath12k_mac_op_remove_interface(stru
  		ath12k_mac_remove_link_interface(hw, arvif);
  		ath12k_mac_unassign_link_vif(arvif);
  	}
@@ -1779,7 +1779,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  }
  EXPORT_SYMBOL(ath12k_mac_op_remove_interface);
  
-@@ -14172,6 +14248,11 @@ ath12k_mac_assign_vif_chanctx_handle(str
+@@ -14183,6 +14259,11 @@ ath12k_mac_assign_vif_chanctx_handle(str
  
  	ab = ar->ab;
  
@@ -1791,7 +1791,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	if (ctx)
  		ath12k_dbg(ab, ATH12K_DBG_MAC,
  			   "mac chanctx assign ptr %p vdev_id %i, vdev_subtype=%0x\n",
-@@ -14349,6 +14430,8 @@ ath12k_mac_unassign_vif_chanctx_handle(s
+@@ -14360,6 +14441,8 @@ ath12k_mac_unassign_vif_chanctx_handle(s
  			ath12k_warn(ab, "failed to stop vdev %i: %d\n",
  				    arvif->vdev_id, ret);
  	}
@@ -1800,7 +1800,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	arvif->is_started = false;
  
  	if (ar->scan.arvif == arvif && ar->scan.state == ATH12K_SCAN_RUNNING) {
-@@ -17491,6 +17574,9 @@ static int ath12k_mac_hw_register(struct
+@@ -17502,6 +17585,9 @@ static int ath12k_mac_hw_register(struct
  	if (ath12k_frame_mode == ATH12K_HW_TXRX_ETHERNET) {
  		ieee80211_hw_set(hw, SUPPORTS_TX_ENCAP_OFFLOAD);
  		ieee80211_hw_set(hw, SUPPORTS_RX_DECAP_OFFLOAD);
@@ -1810,7 +1810,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  	}
  
  	if (cap->nss_ratio_enabled)
-@@ -17626,6 +17712,11 @@ static int ath12k_mac_hw_register(struct
+@@ -17637,6 +17723,11 @@ static int ath12k_mac_hw_register(struct
  		goto err_cleanup_if_combs;
  	}
  
@@ -2282,7 +2282,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
  
 --- /dev/null
 +++ b/drivers/net/wireless/ath/ath12k/ppe.c
-@@ -0,0 +1,1682 @@
+@@ -0,0 +1,1684 @@
 +// SPDX-License-Identifier: BSD-3-Clause-Clear
 +/*
 + * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
@@ -2848,7 +2848,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +{
 +	int i;
 +
-+	mutex_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +
 +	/* If a VP is already allocated with requested vp number, then return
 +	 * the same VP instead of creating a new profile
@@ -2862,7 +2862,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +	}
 +
 +	if (ab->dp->ppe.num_ppe_vp_profiles == PPE_VP_ENTRIES_MAX) {
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		ath12k_err(ab, "Maximum ppe_vp count reached for soc\n");
 +		return -ENOSR;
 +	}
@@ -2874,7 +2874,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +
 +	if (i == PPE_VP_ENTRIES_MAX) {
 +		WARN_ONCE(1, "All ppe vp profile entries are in use!");
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		return -ENOSR;
 +	}
 +	ab->dp->ppe.num_ppe_vp_profiles++;
@@ -2884,7 +2884,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +end:
 +	ab->dp->ppe.ppe_vp_profile[i].ref_count++;
 +	*vp_profile = &ab->dp->ppe.ppe_vp_profile[i];
-+	mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +
 +	return i;
 +}
@@ -2947,11 +2947,11 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +		return;
 +	}
 +
-+	mutex_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +	vp_profile = &ab->dp->ppe.ppe_vp_profile[ppe_vp_profile_idx];
 +
 +	if (!vp_profile->is_configured) {
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		ath12k_err(ab, "PPE VP profile is not configured at idx:%d", ppe_vp_profile_idx);
 +		return;
 +	}
@@ -2969,7 +2969,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +
 +		ath12k_dp_ppeds_dealloc_vp_tbl_entry(ab, vp_profile->ppe_vp_num_idx);
 +	}
-+	mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +
 +	if (dealloced)
 +		ath12k_dbg(ab, ATH12K_DBG_PPE, "%s success\n", __func__);
@@ -2979,9 +2979,9 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +{
 +	int i;
 +
-+	mutex_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +	if (ab->dp->ppe.num_ppe_vp_profiles == PPE_VP_ENTRIES_MAX) {
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		ath12k_err(ab, "Maximum ppe_vp count reached for soc\n");
 +		return -ENOSR;
 +	}
@@ -2992,14 +2992,14 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +	}
 +
 +	if (i == PPE_VP_ENTRIES_MAX) {
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		WARN_ONCE(1, "All ppe vp table entries are in use!");
 +		return -ENOSR;
 +	}
 +
 +	ab->dp->ppe.num_ppe_vp_entries++;
 +	ab->dp->ppe.ppe_vp_tbl_registered[i] = 1;
-+	mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +
 +	return i;
 +}
@@ -3008,9 +3008,9 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +{
 +	int i;
 +
-+	mutex_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_lock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +	if (ab->dp->ppe.num_ppe_vp_entries == PPE_VP_ENTRIES_MAX) {
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		ath12k_err(ab, "Maximum ppe_vp count reached for soc\n");
 +		return -ENOSR;
 +	}
@@ -3021,14 +3021,14 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +	}
 +
 +	if (i == PPE_VP_ENTRIES_MAX) {
-+		mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++		spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +		WARN_ONCE(1, "All ppe vp table entries are in use!");
 +		return -ENOSR;
 +	}
 +
 +	ab->dp->ppe.num_ppe_vp_search_idx_entries++;
 +	ab->dp->ppe.ppe_vp_search_idx_tbl_set[i] = 1;
-+	mutex_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
++	spin_unlock(&ab->dp->ppe.ppe_vp_tbl_lock);
 +
 +	return i;
 +}
@@ -3319,6 +3319,8 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +		ath12k_err(ab, "Failed to allocate ppe-ds descriptors\n");
 +		return -ENOMEM;
 +	}
++
++	spin_lock_init(&ab->dp->ppe.ppe_vp_tbl_lock);
 +
 +	for (i = 0; i < PPE_VP_ENTRIES_MAX; i++) {
 +		ab->dp->ppe.ppe_vp_tbl_registered[i] = 0;
@@ -4085,7 +4087,7 @@ Signed-off-by: Sidhanta Sahu <sidhanta@qti.qualcomm.com>
 +	int ppe_vp_tbl_registered[PPE_VP_ENTRIES_MAX];
 +	int ppe_vp_search_idx_tbl_set[PPE_VP_ENTRIES_MAX];
 +	struct ath12k_ppeds_napi ppeds_napi_ctxt;
-+	struct mutex ppe_vp_tbl_lock; /* protects ppe_vp_tbl updates */
++	spinlock_t ppe_vp_tbl_lock; /* protects ppe_vp_tbl updates */
 +	u16 *ppeds_rx_idx[ATH12K_MAX_SOCS];
 +	u16 ppeds_rx_num_elem;
 +	int ppeds_soc_idx;

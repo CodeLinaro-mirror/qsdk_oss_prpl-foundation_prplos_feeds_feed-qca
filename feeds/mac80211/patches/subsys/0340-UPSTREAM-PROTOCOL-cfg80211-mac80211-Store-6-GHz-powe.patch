@@ -42,10 +42,10 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  net/wireless/trace.h       |  17 ++++--
  12 files changed, 220 insertions(+), 86 deletions(-)
 
-diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index 545493b371ff..c7ef0b816285 100644
---- a/include/net/cfg80211.h
-+++ b/include/net/cfg80211.h
+Index: backports-20250213-6.6.88-9a0dddfb30f1/include/net/cfg80211.h
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/include/net/cfg80211.h
++++ backports-20250213-6.6.88-9a0dddfb30f1/include/net/cfg80211.h
 @@ -1732,6 +1732,7 @@ struct cfg80211_ap_settings {
  	enum nl80211_beacon_tx_mode beacon_tx_mode;
  	bool ml_max_rec_links_valid;
@@ -62,7 +62,7 @@ index 545493b371ff..c7ef0b816285 100644
  };
  
  /**
-@@ -5691,7 +5693,8 @@ struct cfg80211_ops {
+@@ -5703,7 +5705,8 @@ struct cfg80211_ops {
  				    struct cfg80211_chan_def *chandef);
  
  	enum nl80211_regulatory_power_modes
@@ -72,7 +72,7 @@ index 545493b371ff..c7ef0b816285 100644
  
  	int	(*add_tx_ts)(struct wiphy *wiphy, struct net_device *dev,
  			     u8 tsid, const u8 *peer, u8 user_prio,
-@@ -7367,6 +7370,7 @@ struct wireless_dev {
+@@ -7380,6 +7383,7 @@ struct wireless_dev {
  			struct cfg80211_chan_def preset_chandef;
  			u8 ssid[IEEE80211_MAX_SSID_LEN];
  			u8 ssid_len;
@@ -80,7 +80,7 @@ index 545493b371ff..c7ef0b816285 100644
  		} ap;
  		struct {
  			struct cfg80211_internal_bss *current_bss;
-@@ -7401,11 +7405,11 @@ struct wireless_dev {
+@@ -7414,11 +7418,11 @@ struct wireless_dev {
  		u8 switch_count;
  		u32 link_removal_tbtt_count;
  		u32 ttlm_expec_dur;
@@ -93,11 +93,11 @@ index 545493b371ff..c7ef0b816285 100644
  	bool critical_update;
  	bool is_netdev_going_down; /*Indicates netdev going down - wdev specific*/
  	u8 ppe_vp_type;
-diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
-index d2b2b0094e7c..1243c1434746 100644
---- a/net/mac80211/cfg.c
-+++ b/net/mac80211/cfg.c
-@@ -1638,6 +1638,12 @@ static int ieee80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/cfg.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/cfg.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/cfg.c
+@@ -1646,6 +1646,12 @@ static int ieee80211_start_ap(struct wip
  			params->crypto.control_port_no_preauth;
  	}
  
@@ -110,7 +110,7 @@ index d2b2b0094e7c..1243c1434746 100644
  	link_conf->dtim_period = params->dtim_period;
  	link_conf->enable_beacon = true;
  	link_conf->allow_p2p_go_ps = sdata->vif.p2p;
-@@ -4366,6 +4372,11 @@ static int __ieee80211_csa_finalize(struct ieee80211_link_data *link_data)
+@@ -4345,6 +4351,11 @@ static int __ieee80211_csa_finalize(stru
  
  	lockdep_assert_wiphy(local->hw.wiphy);
  
@@ -122,7 +122,7 @@ index d2b2b0094e7c..1243c1434746 100644
  	/*
  	 * using reservation isn't immediate as it may be deferred until later
  	 * with multi-vif. once reservation is complete it will re-schedule the
-@@ -4693,6 +4704,12 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
+@@ -4671,6 +4682,12 @@ __ieee80211_channel_switch(struct wiphy
  		goto out;
  	}
  
@@ -135,7 +135,7 @@ index d2b2b0094e7c..1243c1434746 100644
  	link_data->csa.chanreq = chanreq;
  	link_conf->csa_active = true;
  
-@@ -5056,37 +5073,48 @@ static int ieee80211_set_ap_chanwidth(struct wiphy *wiphy,
+@@ -5034,37 +5051,48 @@ static int ieee80211_set_ap_chanwidth(st
  }
  
  static enum nl80211_regulatory_power_modes
@@ -200,7 +200,7 @@ index d2b2b0094e7c..1243c1434746 100644
  		break;
  	default:
  		/* do nothing */
-@@ -5446,10 +5474,10 @@ ieee80211_6ghz_power_mode_change(struct wiphy *wiphy, struct wireless_dev *wdev,
+@@ -5424,10 +5452,10 @@ ieee80211_6ghz_power_mode_change(struct
  		return -EINVAL;
  	}
  
@@ -213,11 +213,11 @@ index d2b2b0094e7c..1243c1434746 100644
  
  	return 0;
  }
-diff --git a/net/mac80211/ibss.c b/net/mac80211/ibss.c
-index 8cc0763a2ff7..f2cc4753899d 100644
---- a/net/mac80211/ibss.c
-+++ b/net/mac80211/ibss.c
-@@ -783,7 +783,7 @@ ieee80211_ibss_process_chanswitch(struct ieee80211_sub_if_data *sdata,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/ibss.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/ibss.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/ibss.c
+@@ -783,7 +783,7 @@ ieee80211_ibss_process_chanswitch(struct
  		vht_cap_info = le32_to_cpu(elems->vht_cap_elem->vht_cap_info);
  
  	memset(&params, 0, sizeof(params));
@@ -226,11 +226,11 @@ index 8cc0763a2ff7..f2cc4753899d 100644
  					   ifibss->chandef.chan->band,
  					   vht_cap_info, &conn,
  					   ifibss->bssid, false,
-diff --git a/net/mac80211/ieee80211_i.h b/net/mac80211/ieee80211_i.h
-index 9605a73997d7..e6907f7aa9a4 100644
---- a/net/mac80211/ieee80211_i.h
-+++ b/net/mac80211/ieee80211_i.h
-@@ -1086,6 +1086,7 @@ struct ieee80211_link_data {
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/ieee80211_i.h
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/ieee80211_i.h
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/ieee80211_i.h
+@@ -1083,6 +1083,7 @@ struct ieee80211_link_data {
  	struct {
  		struct wiphy_work finalize_work;
  		struct ieee80211_chan_req chanreq;
@@ -238,7 +238,7 @@ index 9605a73997d7..e6907f7aa9a4 100644
  	} csa;
  
  	struct wiphy_work color_change_finalize_work;
-@@ -1242,6 +1243,36 @@ struct ieee80211_sub_if_data *vif_to_sdata(struct ieee80211_vif *p)
+@@ -1239,6 +1240,36 @@ struct ieee80211_sub_if_data *vif_to_sda
  	return container_of(p, struct ieee80211_sub_if_data, vif);
  }
  
@@ -275,7 +275,7 @@ index 9605a73997d7..e6907f7aa9a4 100644
  #define sdata_dereference(p, sdata) \
  	wiphy_dereference(sdata->local->hw.wiphy, p)
  
-@@ -2398,6 +2429,7 @@ void ieee80211_process_measurement_req(struct ieee80211_sub_if_data *sdata,
+@@ -2395,6 +2426,7 @@ void ieee80211_process_measurement_req(s
  /**
   * ieee80211_parse_ch_switch_ie - parses channel switch IEs
   * @sdata: the sdata of the interface which has received the frame
@@ -283,7 +283,7 @@ index 9605a73997d7..e6907f7aa9a4 100644
   * @elems: parsed 802.11 elements received with the frame
   * @current_band: indicates the current band
   * @vht_cap_info: VHT capabilities of the transmitter
-@@ -2411,6 +2443,7 @@ void ieee80211_process_measurement_req(struct ieee80211_sub_if_data *sdata,
+@@ -2408,6 +2440,7 @@ void ieee80211_process_measurement_req(s
   * Return: 0 on success, <0 on error and >0 if there is nothing to parse.
   */
  int ieee80211_parse_ch_switch_ie(struct ieee80211_sub_if_data *sdata,
@@ -291,7 +291,7 @@ index 9605a73997d7..e6907f7aa9a4 100644
  				 struct ieee802_11_elems *elems,
  				 enum nl80211_band current_band,
  				 u32 vht_cap_info,
-@@ -2783,6 +2816,7 @@ struct ieee80211_channel
+@@ -2777,6 +2810,7 @@ struct ieee80211_channel
  				     const int new_chan_idx);
  
  bool ieee80211_chandef_he_6ghz_oper(struct ieee80211_sub_if_data *sdata,
@@ -299,11 +299,11 @@ index 9605a73997d7..e6907f7aa9a4 100644
  				    const struct ieee80211_he_operation *he_oper,
  				    const struct ieee80211_eht_operation *eht_oper,
  				    struct cfg80211_chan_def *chandef);
-diff --git a/net/mac80211/mesh.c b/net/mac80211/mesh.c
-index 4e96bb9184c1..e756ddc86dc2 100644
---- a/net/mac80211/mesh.c
-+++ b/net/mac80211/mesh.c
-@@ -109,7 +109,7 @@ bool mesh_matches_local(struct ieee80211_sub_if_data *sdata,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/mesh.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/mesh.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/mesh.c
+@@ -109,7 +109,7 @@ bool mesh_matches_local(struct ieee80211
  	ieee80211_chandef_vht_oper(&sdata->local->hw, vht_cap_info,
  				   ie->vht_operation, ie->ht_operation,
  				   &sta_chan_def);
@@ -312,7 +312,7 @@ index 4e96bb9184c1..e756ddc86dc2 100644
  				       ie->eht_operation,
  				       &sta_chan_def);
  
-@@ -1394,7 +1394,7 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
+@@ -1394,7 +1394,7 @@ ieee80211_mesh_process_chnswitch(struct
  			le32_to_cpu(elems->vht_cap_elem->vht_cap_info);
  
  	memset(&params, 0, sizeof(params));
@@ -321,10 +321,10 @@ index 4e96bb9184c1..e756ddc86dc2 100644
  					   vht_cap_info, &conn,
  					   sdata->vif.addr, false,
  					   &csa_ie);
-diff --git a/net/mac80211/mlme.c b/net/mac80211/mlme.c
-index b02e8a0aba20..ce44034547ba 100644
---- a/net/mac80211/mlme.c
-+++ b/net/mac80211/mlme.c
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/mlme.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/mlme.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/mlme.c
 @@ -161,6 +161,7 @@ static int ecw2cw(int ecw)
  
  static enum ieee80211_conn_mode
@@ -333,7 +333,7 @@ index b02e8a0aba20..ce44034547ba 100644
  			    struct ieee80211_channel *channel,
  			    u32 vht_cap_info,
  			    const struct ieee802_11_elems *elems,
-@@ -222,7 +223,7 @@ ieee80211_determine_ap_chan(struct ieee80211_sub_if_data *sdata,
+@@ -221,7 +222,7 @@ ieee80211_determine_ap_chan(struct ieee8
  			mode = IEEE80211_CONN_MODE_HE;
  		}
  
@@ -342,25 +342,25 @@ index b02e8a0aba20..ce44034547ba 100644
  						    eht_oper, chandef)){
  			sdata_info(sdata, "bad HE/EHT 6 GHz operation\n");
  			return IEEE80211_CONN_MODE_LEGACY;
-@@ -974,7 +975,7 @@ again:
+@@ -950,7 +951,7 @@ again:
  	if (!elems)
  		return ERR_PTR(-ENOMEM);
  
 -	ap_mode = ieee80211_determine_ap_chan(sdata, channel, bss->vht_cap_info,
 +	ap_mode = ieee80211_determine_ap_chan(sdata, link_id, channel, bss->vht_cap_info,
- 					      elems, false, conn, ap_chandef,
- 					      elems->eht_240mhz_capab);
+ 					      elems, false, conn, ap_chandef);
  
-@@ -1190,7 +1191,7 @@ static int ieee80211_config_bw(struct ieee80211_link_data *link,
+ 	/* this should be impossible since parsing depends on our mode */
+@@ -1165,7 +1166,7 @@ static int ieee80211_config_bw(struct ie
  	if (elems->vht_cap_elem)
  		vht_cap_info = le32_to_cpu(elems->vht_cap_elem->vht_cap_info);
  
 -	ap_mode = ieee80211_determine_ap_chan(sdata, channel, vht_cap_info,
 +	ap_mode = ieee80211_determine_ap_chan(sdata, link->link_id, channel, vht_cap_info,
  					      elems, true, &link->u.mgd.conn,
- 					      &ap_chandef, elems->eht_240mhz_capab);
+ 					      &ap_chandef);
  
-@@ -2663,7 +2664,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_link_data *link,
+@@ -2628,7 +2629,7 @@ ieee80211_sta_process_chanswitch(struct
  		current_band = cbss->channel->band;
  		bss = (void *)cbss->priv;
  
@@ -369,11 +369,11 @@ index b02e8a0aba20..ce44034547ba 100644
  						   current_band,
  						   bss->vht_cap_info,
  						   &link->u.mgd.conn,
-diff --git a/net/mac80211/spectmgmt.c b/net/mac80211/spectmgmt.c
-index 6f55fb5eafc2..34fb67148f59 100644
---- a/net/mac80211/spectmgmt.c
-+++ b/net/mac80211/spectmgmt.c
-@@ -141,6 +141,7 @@ validate_chandef_by_ht_vht_oper(struct ieee80211_sub_if_data *sdata,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/spectmgmt.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/spectmgmt.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/spectmgmt.c
+@@ -141,6 +141,7 @@ validate_chandef_by_ht_vht_oper(struct i
  
  static void
  validate_chandef_by_6ghz_he_eht_oper(struct ieee80211_sub_if_data *sdata,
@@ -381,7 +381,7 @@ index 6f55fb5eafc2..34fb67148f59 100644
  				     struct ieee80211_conn_settings *conn,
  				     struct cfg80211_chan_def *chandef)
  {
-@@ -212,12 +213,13 @@ validate_chandef_by_6ghz_he_eht_oper(struct ieee80211_sub_if_data *sdata,
+@@ -212,12 +213,13 @@ validate_chandef_by_6ghz_he_eht_oper(str
  		eht_oper = &eht._oper;
  	}
  
@@ -396,7 +396,7 @@ index 6f55fb5eafc2..34fb67148f59 100644
  				 struct ieee802_11_elems *elems,
  				 enum nl80211_band current_band,
  				 u32 vht_cap_info,
-@@ -372,7 +374,7 @@ int ieee80211_parse_ch_switch_ie(struct ieee80211_sub_if_data *sdata,
+@@ -372,7 +374,7 @@ int ieee80211_parse_ch_switch_ie(struct
  
  	/* check if the new chandef fits the capabilities */
  	if (new_band == NL80211_BAND_6GHZ)
@@ -405,10 +405,10 @@ index 6f55fb5eafc2..34fb67148f59 100644
  	else
  		validate_chandef_by_ht_vht_oper(sdata, conn, vht_cap_info,
  						&new_chandef);
-diff --git a/net/mac80211/util.c b/net/mac80211/util.c
-index c9658bd4ce30..0850edc18123 100644
---- a/net/mac80211/util.c
-+++ b/net/mac80211/util.c
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/util.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/mac80211/util.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/mac80211/util.c
 @@ -3453,12 +3453,10 @@ struct ieee80211_channel
  				     const struct ieee80211_he_operation *he_oper,
  				     const int new_chan_idx)
@@ -452,7 +452,7 @@ index c9658bd4ce30..0850edc18123 100644
  				    const struct ieee80211_he_operation *he_oper,
  				    const struct ieee80211_eht_operation *eht_oper,
  				    struct cfg80211_chan_def *chandef)
-@@ -3519,7 +3505,6 @@ bool ieee80211_chandef_he_6ghz_oper(struct ieee80211_sub_if_data *sdata,
+@@ -3519,7 +3505,6 @@ bool ieee80211_chandef_he_6ghz_oper(stru
  	enum nl80211_regulatory_power_modes mode;
  	u32 freq;
  	u8 reg_info;
@@ -460,7 +460,7 @@ index c9658bd4ce30..0850edc18123 100644
  
  	if (chandef->chan->band != NL80211_BAND_6GHZ)
  		return true;
-@@ -3542,21 +3527,22 @@ bool ieee80211_chandef_he_6ghz_oper(struct ieee80211_sub_if_data *sdata,
+@@ -3542,21 +3527,22 @@ bool ieee80211_chandef_he_6ghz_oper(stru
  	if (reg_info == IEEE80211_6GHZ_CTRL_REG_INDOOR_SP_AP)
  		reg_info = IEEE80211_6GHZ_CTRL_REG_SP_AP;
  
@@ -473,16 +473,17 @@ index c9658bd4ce30..0850edc18123 100644
  	 * mode depends on the power mode present in beacon as well as power mode
  	 * configured by the user for that interface
  	 */
-+	if (iftype == NL80211_IFTYPE_AP || iftype == NL80211_IFTYPE_AP_VLAN) {
-+		mode = sdata->wdev.links[link_id].reg_6g_power_mode;
-+	} else if (iftype == NL80211_IFTYPE_MESH_POINT) {
-+		struct cfg80211_chan_def *mesh_chandef = &sdata->wdev.u.mesh.chandef;
- 
+-
 -	if (iftype == NL80211_IFTYPE_AP || iftype == NL80211_IFTYPE_AP_VLAN ||
 -	    iftype == NL80211_IFTYPE_MESH_POINT)
 -		mode = reg_6g_power_mode;
 -	else
 -		mode = 3 * (1 + reg_6g_power_mode) + reg_info;
++	if (iftype == NL80211_IFTYPE_AP || iftype == NL80211_IFTYPE_AP_VLAN) {
++		mode = sdata->wdev.links[link_id].reg_6g_power_mode;
++	} else if (iftype == NL80211_IFTYPE_MESH_POINT) {
++		struct cfg80211_chan_def *mesh_chandef = &sdata->wdev.u.mesh.chandef;
++
 +		mode = cfg80211_get_6ghz_power_mode_from_chan(sdata->local->hw.wiphy,
 +							      mesh_chandef->chan);
 +	} else {
@@ -491,11 +492,11 @@ index c9658bd4ce30..0850edc18123 100644
  
  	/*
  	 * The EHT operation IE does not contain the primary channel so the
-diff --git a/net/wireless/chan.c b/net/wireless/chan.c
-index 8866ff689d47..38d7b86026fc 100644
---- a/net/wireless/chan.c
-+++ b/net/wireless/chan.c
-@@ -1915,6 +1915,7 @@ cfg80211_update_chandef_6ghz_power_mode(const struct net_device *netdev,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/chan.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/wireless/chan.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/chan.c
+@@ -1915,6 +1915,7 @@ cfg80211_update_chandef_6ghz_power_mode(
  	}
  
  	chandef->chan = chan;
@@ -503,7 +504,7 @@ index 8866ff689d47..38d7b86026fc 100644
  
  	return 0;
  }
-@@ -1950,6 +1951,7 @@ cfg80211_get_6ghz_power_mode_from_chan(const struct wiphy *wiphy,
+@@ -1950,6 +1951,7 @@ cfg80211_get_6ghz_power_mode_from_chan(c
  
  	return NL80211_REG_NUM_POWER_MODES;
  }
@@ -511,11 +512,11 @@ index 8866ff689d47..38d7b86026fc 100644
  
  bool cfg80211_chandef_usable(struct wiphy *wiphy,
  			     const struct cfg80211_chan_def *chandef,
-diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-index 12d62132b364..bd082cb3c939 100644
---- a/net/wireless/nl80211.c
-+++ b/net/wireless/nl80211.c
-@@ -3823,7 +3823,7 @@ static int _nl80211_parse_chandef(struct cfg80211_registered_device *rdev,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/nl80211.c
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/wireless/nl80211.c
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/nl80211.c
+@@ -3908,7 +3908,7 @@ static int _nl80211_parse_chandef(struct
  {
  	struct netlink_ext_ack *extack = info->extack;
  	struct nlattr **attrs = info->attrs;
@@ -524,7 +525,7 @@ index 12d62132b364..bd082cb3c939 100644
  	u32 control_freq;
  	int err;
  
-@@ -3839,20 +3839,19 @@ static int _nl80211_parse_chandef(struct cfg80211_registered_device *rdev,
+@@ -3924,20 +3924,19 @@ static int _nl80211_parse_chandef(struct
  		control_freq +=
  		    nla_get_u32(info->attrs[NL80211_ATTR_WIPHY_FREQ_OFFSET]);
  
@@ -551,7 +552,7 @@ index 12d62132b364..bd082cb3c939 100644
  
  	chandef->width = NL80211_CHAN_WIDTH_20_NOHT;
  	chandef->center_freq1 = KHZ_TO_MHZ(control_freq);
-@@ -4035,6 +4034,7 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
+@@ -4120,6 +4119,7 @@ static int __nl80211_set_channel(struct
  	enum nl80211_iftype iftype = NL80211_IFTYPE_MONITOR;
  	struct wireless_dev *wdev = NULL;
  	int link_id = _link_id;
@@ -559,7 +560,7 @@ index 12d62132b364..bd082cb3c939 100644
  
  	if (dev)
  		wdev = dev->ieee80211_ptr;
-@@ -4056,11 +4056,11 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
+@@ -4141,11 +4141,11 @@ static int __nl80211_set_channel(struct
  		return result;
  
  	/* Userspace might advertise the 6G power mode (AP). Just parse and store
@@ -576,7 +577,7 @@ index 12d62132b364..bd082cb3c939 100644
  
  	switch (iftype) {
  	case NL80211_IFTYPE_AP:
-@@ -4115,6 +4115,7 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
+@@ -4200,6 +4200,7 @@ static int __nl80211_set_channel(struct
  			wdev->links[link_id].ap.chandef = chandef;
  		} else {
  			wdev->u.ap.preset_chandef = chandef;
@@ -584,7 +585,7 @@ index 12d62132b364..bd082cb3c939 100644
  		}
  		return 0;
  	case NL80211_IFTYPE_MESH_POINT:
-@@ -4647,10 +4648,6 @@ static int nl80211_send_iface(struct sk_buff *msg, u32 portid, u32 seq, int flag
+@@ -4732,10 +4733,6 @@ static int nl80211_send_iface(struct sk_
  	    nla_put_u32(msg, NL80211_ATTR_VIF_RADIO_MASK, wdev->radio_mask))
  		goto nla_put_failure;
  
@@ -595,7 +596,7 @@ index 12d62132b364..bd082cb3c939 100644
  	switch (wdev->iftype) {
  	case NL80211_IFTYPE_AP:
  	case NL80211_IFTYPE_P2P_GO:
-@@ -4713,6 +4710,13 @@ static int nl80211_send_iface(struct sk_buff *msg, u32 portid, u32 seq, int flag
+@@ -4798,6 +4795,13 @@ static int nl80211_send_iface(struct sk_
  			if (ret == 0 && nl80211_send_chandef(msg, &chandef))
  				goto nla_put_failure;
  
@@ -609,7 +610,7 @@ index 12d62132b364..bd082cb3c939 100644
  			if (rdev->ops->get_tx_power) {
  				int dbm, ret;
  
-@@ -4734,6 +4738,13 @@ static int nl80211_send_iface(struct sk_buff *msg, u32 portid, u32 seq, int flag
+@@ -4819,6 +4823,13 @@ static int nl80211_send_iface(struct sk_
  			ret = rdev_get_channel(rdev, wdev, 0, &chandef);
  			if (ret == 0 && nl80211_send_chandef(msg, &chandef))
  				goto nla_put_failure;
@@ -623,7 +624,7 @@ index 12d62132b364..bd082cb3c939 100644
  		}
  		if (rdev->ops->get_tx_power) {
  			int dbm, ret;
-@@ -5040,13 +5051,10 @@ static int nl80211_set_interface(struct sk_buff *skb, struct genl_info *info)
+@@ -5125,13 +5136,10 @@ static int nl80211_set_interface(struct
  		params.use_4addr = -1;
  	}
  
@@ -640,7 +641,7 @@ index 12d62132b364..bd082cb3c939 100644
  	}
  
  	err = nl80211_parse_mon_options(rdev, ntype, info, &params);
-@@ -7193,12 +7201,30 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
+@@ -7274,12 +7282,30 @@ static int nl80211_start_ap(struct sk_bu
  		err = nl80211_parse_chandef(rdev, info, &params->chandef, wdev);
  		if (err)
  			goto out;
@@ -671,7 +672,7 @@ index 12d62132b364..bd082cb3c939 100644
  	} else if (!nl80211_get_ap_channel(rdev, params)) {
  		err = -EINVAL;
  		goto out;
-@@ -7321,6 +7347,8 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
+@@ -7402,6 +7428,8 @@ static int nl80211_start_ap(struct sk_bu
  	if (!err) {
  		wdev->links[link_id].ap.beacon_interval = params->beacon_interval;
  		wdev->links[link_id].ap.chandef = params->chandef;
@@ -680,7 +681,7 @@ index 12d62132b364..bd082cb3c939 100644
  		wdev->u.ap.ssid_len = params->ssid_len;
  		memcpy(wdev->u.ap.ssid, params->ssid,
  		       params->ssid_len);
-@@ -11976,6 +12004,17 @@ skip_beacons:
+@@ -12055,6 +12083,17 @@ skip_beacons:
  	if (err)
  		goto free;
  
@@ -698,7 +699,7 @@ index 12d62132b364..bd082cb3c939 100644
  	if (!cfg80211_reg_can_beacon_relax(&rdev->wiphy, &params.chandef,
  					   wdev->iftype)) {
  		err = -EINVAL;
-@@ -22531,6 +22570,30 @@ void cfg80211_pmksa_candidate_notify(struct net_device *dev, int index,
+@@ -22729,6 +22768,30 @@ void cfg80211_pmksa_candidate_notify(str
  }
  EXPORT_SYMBOL(cfg80211_pmksa_candidate_notify);
  
@@ -729,7 +730,7 @@ index 12d62132b364..bd082cb3c939 100644
  static void nl80211_ch_switch_notify(struct cfg80211_registered_device *rdev,
  				     struct net_device *netdev,
  				     unsigned int link_id,
-@@ -22563,6 +22626,9 @@ static void nl80211_ch_switch_notify(struct cfg80211_registered_device *rdev,
+@@ -22761,6 +22824,9 @@ static void nl80211_ch_switch_notify(str
  	if (nl80211_send_chandef(msg, chandef))
  		goto nla_put_failure;
  
@@ -739,7 +740,7 @@ index 12d62132b364..bd082cb3c939 100644
  	if (notif == NL80211_CMD_CH_SWITCH_STARTED_NOTIFY) {
  		if (nla_put_u32(msg, NL80211_ATTR_CH_SWITCH_COUNT, count))
  			goto nla_put_failure;
-@@ -22608,6 +22674,8 @@ void cfg80211_ch_switch_notify(struct net_device *dev,
+@@ -22806,6 +22872,8 @@ void cfg80211_ch_switch_notify(struct ne
  	case NL80211_IFTYPE_AP:
  	case NL80211_IFTYPE_P2P_GO:
  		wdev->links[link_id].ap.chandef = *chandef;
@@ -748,11 +749,11 @@ index 12d62132b364..bd082cb3c939 100644
  		break;
  	case NL80211_IFTYPE_ADHOC:
  		wdev->u.ibss.chandef = *chandef;
-diff --git a/net/wireless/rdev-ops.h b/net/wireless/rdev-ops.h
-index e897712df530..a07e60ce3c76 100644
---- a/net/wireless/rdev-ops.h
-+++ b/net/wireless/rdev-ops.h
-@@ -1150,12 +1150,14 @@ rdev_set_ap_chanwidth(struct cfg80211_registered_device *rdev,
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/rdev-ops.h
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/wireless/rdev-ops.h
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/rdev-ops.h
+@@ -1150,12 +1150,14 @@ rdev_set_ap_chanwidth(struct cfg80211_re
  
  static inline enum nl80211_regulatory_power_modes
  rdev_get_ap_6ghz_pwr_mode(struct cfg80211_registered_device *rdev,
@@ -771,10 +772,10 @@ index e897712df530..a07e60ce3c76 100644
  	trace_rdev_return_enum(&rdev->wiphy, ret);
  	return ret;
  }
-diff --git a/net/wireless/trace.h b/net/wireless/trace.h
-index 662c2e864e65..17aa48f44766 100644
---- a/net/wireless/trace.h
-+++ b/net/wireless/trace.h
+Index: backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/trace.h
+===================================================================
+--- backports-20250213-6.6.88-9a0dddfb30f1.orig/net/wireless/trace.h
++++ backports-20250213-6.6.88-9a0dddfb30f1/net/wireless/trace.h
 @@ -2527,11 +2527,18 @@ TRACE_EVENT(rdev_set_ap_chanwidth,
  );
  
@@ -799,6 +800,3 @@ index 662c2e864e65..17aa48f44766 100644
  );
  
  TRACE_EVENT(rdev_add_tx_ts,
--- 
-2.34.1
-

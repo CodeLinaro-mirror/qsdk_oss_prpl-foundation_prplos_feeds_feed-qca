@@ -18,15 +18,12 @@ Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
  net/wireless/nl80211.c       | 59 +++++++++++++++++++++---------------
  4 files changed, 80 insertions(+), 51 deletions(-)
 
-diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index ee3b929..363f37a 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -1501,6 +1501,21 @@ struct cfg80211_rnr_elems {
- 	} elem[] __counted_by(cnt);
+@@ -1502,6 +1502,21 @@ struct cfg80211_rnr_elems {
  };
  
-+/**
+ /**
 + * struct cfg80211_set_cu_params
 + * Critical update Parameter for given beacon update.
 + *
@@ -41,9 +38,10 @@ index ee3b929..363f37a 100644
 +	u32 elemid_modified_bmap;
 +};
 +
- /**
++/**
   * struct cfg80211_beacon_data - beacon data
   * @link_id: the link ID for the AP MLD link sending this beacon
+  * @head: head portion of beacon (before TIM IE)
 @@ -1557,6 +1572,7 @@ struct cfg80211_beacon_data {
  	size_t civicloc_len;
  	struct cfg80211_he_bss_color he_bss_color;
@@ -95,11 +93,9 @@ index ee3b929..363f37a 100644
  };
  
  /**
-diff --git a/include/uapi/linux/nl80211.h b/include/uapi/linux/nl80211.h
-index 1b5913c..d022a58 100644
 --- a/include/uapi/linux/nl80211.h
 +++ b/include/uapi/linux/nl80211.h
-@@ -2968,8 +2968,8 @@ enum nl80211_commands {
+@@ -2962,8 +2962,8 @@ enum nl80211_commands {
   *	update for each MLD. In each nested item, it contains attributes
   *	defined in &enum nl80211_cu_attrs.
   *
@@ -110,13 +106,22 @@ index 1b5913c..d022a58 100644
   *
   * @NL80211_ATTR_CHANNEL_WIDTH_DEVICE: Device channel width (u32). Value
   *	must be zero or twice @NL80211_ATTR_CHANNEL_WIDTH which is the
-@@ -8508,19 +8508,30 @@ enum nl80211_cu_mld_link_attrs {
+@@ -8532,19 +8532,30 @@ enum nl80211_cu_mld_link_attrs {
  };
  
  /**
 - * enum nl80211_set_cu - set critical update params
 + * enum nl80211_set_cu_attrs - set critical update attributes
-+ *
+  *
+- * @NL80211_CU_UNSPEC: reserved
+- * @NL80211_CU_ELEMID_ADDED: Critical update - Element id added
+- * @NL80211_CU_ELEMID_MODIFIED: Critical update - Element id Modified
+- * @NUM_NL80211_CUS: number of CU attributes
+- */
+-enum nl80211_set_cu {
+-	NL80211_CU_UNSPEC = 0,
+-	NL80211_CU_ELEMID_ADDED = BIT(0),
+-	NL80211_CU_ELEMID_MODIFIED = BIT(1),
 + * @NL80211_ATTR_SET_CU_ELEM_ADDED_BMAP: Bitmap of interfaces to which critical update
 + * happened due to addition of new beacon element. Bit 0 represents the (TX) interface
 + * in which the attribute is received. Other bits represents the MBSSID index of NON-TX
@@ -128,34 +133,24 @@ index 1b5913c..d022a58 100644
 + *
 + * @__NL80211_CU_MLD_LINK_ATTR_LAST : internal use
 + * @NL80211_SET_CU_ATTR_MAX : maximum set critical update attributes
-  *
-- * @NL80211_CU_UNSPEC: reserved
-- * @NL80211_CU_ELEMID_ADDED: Critical update - Element id added
-- * @NL80211_CU_ELEMID_MODIFIED: Critical update - Element id Modified
-- * @NUM_NL80211_CUS: number of CU attributes
-  */
--enum nl80211_set_cu {
--	NL80211_CU_UNSPEC = 0,
--	NL80211_CU_ELEMID_ADDED = BIT(0),
--	NL80211_CU_ELEMID_MODIFIED = BIT(1),
++ *
++ */
 +enum nl80211_set_cu_attrs {
 +	__NL80211_SET_CU_ATTR_INVALID,
- 
--	NUM_NL80211_CUS = BIT(2),
++
 +	NL80211_SET_CU_ATTR_ELEM_ADDED_BMAP,
 +	NL80211_SET_CU_ATTR_ELEM_MODIFIED_BMAP,
-+
+ 
+-	NUM_NL80211_CUS = BIT(2),
 +	/* keep last */
 +	__NL80211_SET_CU_ATTR_LAST,
 +	NL80211_SET_CU_ATTR_MAX = __NL80211_SET_CU_ATTR_LAST - 1
  };
  
  /**
-diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
-index fd33334..545039d 100644
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1560,8 +1560,6 @@ static int ieee80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
+@@ -1568,8 +1568,6 @@ static int ieee80211_start_ap(struct wip
  	if (err < 0)
  		goto error;
  
@@ -164,9 +159,9 @@ index fd33334..545039d 100644
  	err = drv_start_ap(sdata->local, sdata, link_conf);
  	if (err) {
  		old = sdata_dereference(link->u.ap.beacon, sdata);
-@@ -1674,9 +1672,6 @@ static int ieee80211_update_ap(struct wiphy *wiphy, struct net_device *dev,
- 	if (err > 0)
- 		changed = err;
+@@ -1683,9 +1681,6 @@ static int ieee80211_update_ap(struct wi
+ 	if (err < 0)
+ 		return err;
  
 -	link_conf->elemid_added = params->elemid_added;
 -	link_conf->elemid_modified = params->elemid_modified;
@@ -174,20 +169,19 @@ index fd33334..545039d 100644
  	ieee80211_link_info_change_notify(sdata, link, changed);
  	link_conf->elemid_added = 0;
  	link_conf->elemid_modified = 0;
-@@ -4473,8 +4468,10 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
+@@ -4468,8 +4463,9 @@ __ieee80211_channel_switch(struct wiphy
  	if (err)
  		goto out;
- 	changed |= BSS_CHANGED_UNSOL_BCAST_PROBE_RESP;
+ 
 -	link_conf->elemid_added = params->beacon_csa_cu;
 -	link_data->u.ap.after_beacon_cu = params->beacon_after_cu;
-+
 +	link_conf->elemid_added = params->beacon_csa.cu_params.elemid_added_bmap ? true : false;
 +	link_data->u.ap.after_beacon_cu =
 +		params->beacon_after.cu_params.elemid_modified_bmap ? true : false;
  
  	err = drv_pre_channel_switch(sdata, &ch_switch);
  	if (err)
-@@ -5566,7 +5563,7 @@ ieee80211_color_change(struct wiphy *wiphy, struct net_device *dev,
+@@ -5561,7 +5557,7 @@ ieee80211_color_change(struct wiphy *wip
  
  	link_conf->color_change_active = true;
  	link_conf->color_change_color = params->color;
@@ -196,8 +190,6 @@ index fd33334..545039d 100644
  
  	err = ieee80211_set_unsol_bcast_probe_resp(sdata, &params->unsol_bcast_probe_resp,
  						   link, link_conf, &changed);
-diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-index 71bef60..a36b418 100644
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
 @@ -521,6 +521,13 @@ cu_policy[NL80211_CU_ATTR_MAX + 1] = {
@@ -214,7 +206,7 @@ index 71bef60..a36b418 100644
  #if LINUX_VERSION_IS_GEQ(6,7,0)
  static const struct netlink_range_validation nl80211_punct_bitmap_range = {
  	.min = 0,
-@@ -942,7 +949,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
+@@ -942,7 +949,7 @@ static const struct nla_policy nl80211_p
  			  .len = NL80211_EHT240_MAX_CAPABILITY_LEN },
  #endif
  	[NL80211_ATTR_RXMGMT_CRITICAL_UPDATE] = NLA_POLICY_NESTED(cu_policy),
@@ -223,7 +215,7 @@ index 71bef60..a36b418 100644
  	[NL80211_ATTR_CHANNEL_WIDTH_DEVICE] = { .type = NLA_U32 },
  	[NL80211_ATTR_CENTER_FREQ_DEVICE] = { .type = NLA_U32 },
  	[NL80211_ATTR_INTERFERENCE_TYPE] = { .type = NLA_U8 },
-@@ -6248,6 +6255,26 @@ static int nl80211_parse_he_bss_color(struct nlattr *attrs,
+@@ -6248,6 +6255,26 @@ static int nl80211_parse_he_bss_color(st
  	return 0;
  }
  
@@ -250,7 +242,7 @@ index 71bef60..a36b418 100644
  static int nl80211_parse_beacon(struct cfg80211_registered_device *rdev,
  				struct nlattr *attrs[],
  				struct cfg80211_beacon_data *bcn,
-@@ -6364,6 +6391,13 @@ static int nl80211_parse_beacon(struct cfg80211_registered_device *rdev,
+@@ -6364,6 +6391,13 @@ static int nl80211_parse_beacon(struct c
  			bcn->rnr_ies = rnr;
  		}
  	}
@@ -264,7 +256,7 @@ index 71bef60..a36b418 100644
  
  	return 0;
  }
-@@ -6698,7 +6732,6 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
+@@ -6698,7 +6732,6 @@ static int nl80211_start_ap(struct sk_bu
  	struct wireless_dev *wdev = dev->ieee80211_ptr;
  	struct cfg80211_ap_settings *params;
  	int err;
@@ -272,7 +264,7 @@ index 71bef60..a36b418 100644
  
  	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_AP &&
  	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_GO)
-@@ -6947,14 +6980,6 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
+@@ -6947,14 +6980,6 @@ static int nl80211_start_ap(struct sk_bu
  			info->attrs[NL80211_ATTR_AP_SETTINGS_FLAGS]);
  	else if (info->attrs[NL80211_ATTR_EXTERNAL_AUTH_SUPPORT])
  		params->flags |= NL80211_AP_SETTINGS_EXTERNAL_AUTH_SUPPORT;
@@ -287,7 +279,7 @@ index 71bef60..a36b418 100644
  
  	if (wdev->conn_owner_nlportid &&
  	    info->attrs[NL80211_ATTR_SOCKET_OWNER] &&
-@@ -11116,7 +11141,6 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
+@@ -11116,7 +11141,6 @@ static int nl80211_channel_switch(struct
  	bool need_new_beacon = false;
  	bool need_handle_dfs_flag = true;
  	u32 cs_count;
@@ -295,7 +287,7 @@ index 71bef60..a36b418 100644
  
  	if (!rdev->ops->channel_switch ||
  	    !(rdev->wiphy.flags & WIPHY_FLAG_HAS_CHANNEL_SWITCH))
-@@ -11218,13 +11242,6 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
+@@ -11218,13 +11242,6 @@ static int nl80211_channel_switch(struct
  	if (err)
  		goto free;
  
@@ -322,6 +314,3 @@ index 71bef60..a36b418 100644
  
  	params.link_id = link_id;
  	err = rdev_channel_switch(rdev, dev, &params);
--- 
-2.34.1
-

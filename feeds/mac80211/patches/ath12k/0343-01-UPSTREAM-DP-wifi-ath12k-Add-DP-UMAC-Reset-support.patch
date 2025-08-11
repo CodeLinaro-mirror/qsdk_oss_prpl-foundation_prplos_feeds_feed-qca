@@ -160,7 +160,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  	/* keep last*/
 --- a/drivers/net/wireless/ath/ath12k/dp.c
 +++ b/drivers/net/wireless/ath/ath12k/dp.c
-@@ -1956,6 +1956,211 @@ void ath12k_dp_cmn_hw_group_assign(struc
+@@ -1972,6 +1972,211 @@ void ath12k_dp_cmn_hw_group_assign(struc
  		dp_hw_grp->fst = ath12k_dp_rx_fst_attach(ab);
  }
  
@@ -639,7 +639,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
 +        void *vaddr;
 +        u32 *addr_aligned;
 +
-+        spin_lock_bh(&ab->base_lock);
++        spin_lock_bh(&ab->dp->dp_lock);
 +        list_for_each_entry(peer, &ab->dp->peers, list) {
 +                for (tid = 0; tid <= IEEE80211_NUM_TIDS; tid++) {
 +                        rx_tid = &peer->dp_peer->rx_tid[tid];
@@ -651,7 +651,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
 +                        }
 +                }
 +        }
-+        spin_unlock_bh(&ab->base_lock);
++        spin_unlock_bh(&ab->dp->dp_lock);
 +}
 +
 +void ath12k_dp_peer_reo_tid_setup(struct ath12k *ar, int vdev_id,

@@ -290,7 +290,7 @@ Signed-off-by: Aaradhana Sahu <aaradhana.sahu@oss.qualcomm.com>
 @@ -2567,6 +2569,7 @@ enum wmi_tlv_service {
  
  	WMI_SERVICE_UMAC_MIGRATION_SUPPORT = 436,
- 	WMI_SERVICE_STA_MLO_RCFG_SUPPORT = 448,
+	WMI_SERVICE_STA_MLO_RCFG_SUPPORT = 448,
 +	WMI_SERVICE_PDEV_SUSPEND_EVENT_SUPPORT = 449,
  
  	WMI_MAX_EXT2_SERVICE,

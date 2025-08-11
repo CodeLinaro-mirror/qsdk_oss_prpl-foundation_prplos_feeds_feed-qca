@@ -158,6 +158,14 @@ mac80211_update_qos_configs()
 				# SCS is not configured, enable by default
 				uci_set wireless "$name" enable_scs "1"
 			fi
+			config_get enable_mscs "$name" enable_mscs
+			if [ -n "$enable_mscs" ]; then
+				# MSCS is configured, use the config
+				uci_set wireless "$name" enable_mscs "$enable_mscs"
+			else
+				# MSCS is not configured, enable by default
+				uci_set wireless "$name" enable_mscs "1"
+			fi
 		fi
 	done
 }
@@ -911,6 +919,10 @@ configure_sla_param() {
 	json_get_var delay_bound delay_bound
 	json_get_var msdu_ttl msdu_ttl
 	json_get_var msdu_rate_loss msdu_rate_loss
+	json_get_var per packet_error_rate
+	json_get_var mcs_min mcs_min_threshold
+	json_get_var mcs_max mcs_max_threshold
+	json_get_var retries_thres retries_threshold
 
 	[ -z "$min_thruput_rate" ] && min_thruput_rate='X'
 	[ -z "$max_thruput_rate" ] && max_thruput_rate='X'
@@ -919,11 +931,15 @@ configure_sla_param() {
 	[ -z "$delay_bound" ] && delay_bound='X'
 	[ -z "$msdu_ttl" ] && msdu_ttl='X'
 	[ -z "$msdu_rate_loss" ] && msdu_rate_loss='X'
+	[ -z "$per" ] && per='X'
+	[ -z "$mcs_min" ] && mcs_min='X'
+	[ -z "$mcs_max" ] && mcs_max='X'
+	[ -z "$retries_thres" ] && retries_thres='X'
 	[ -z "$disable" ] && disable='0'
 
 	if [ "$disable" -eq 0 ]; then
-		cmd="iw $phy telemetry sla_thershold "$svc_id" "$min_thruput_rate" "$max_thruput_rate" "$burst_size" "$service_interval" "$delay_bound" "$msdu_ttl" "$msdu_rate_loss""
-		echo "$svc_id" "$min_thruput_rate" "$max_thruput_rate" "$burst_size" "$service_interval" "$delay_bound" "$msdu_ttl" "$msdu_rate_loss"
+		cmd="iw $phy telemetry sla_thershold "$svc_id" "$min_thruput_rate" "$max_thruput_rate" "$burst_size" "$service_interval" "$delay_bound" "$msdu_ttl" "$msdu_rate_loss" "$per" "$mcs_min" "$mcs_max" "$retries_thres""
+		echo "$svc_id" "$min_thruput_rate" "$max_thruput_rate" "$burst_size" "$service_interval" "$delay_bound" "$msdu_ttl" "$msdu_rate_loss" "$per" "$mcs_min" "$mcs_max" "$retries_thres"
 		eval $cmd
 	fi
 }
@@ -960,6 +976,10 @@ configure_telemetry_sla_detect() {
 	json_select 1_second
 		json_get_var min_throutput min_throutput
 		json_get_var max_throughput max_throughput
+		json_get_var per packet_error_rate
+		json_get_var mcs_min mcs_min_threshold
+		json_get_var mcs_max mcs_max_threshold
+		json_get_var retries_thres retries_threshold
 	json_select ..
 	json_select mov_average
 		json_get_var delay_mov_avg delay
@@ -971,13 +991,13 @@ configure_telemetry_sla_detect() {
 		json_get_var ttl_drop_x_sec ttl_drop
 	json_select ..
 
-	cmd="iw $phy telemetry sla_detection_cfg num_packet 0 0 0 0 $delay_x_packet $ttl_drop_x_packet $msdu_loss_x_packet"
+	cmd="iw $phy telemetry sla_detection_cfg num_packet 0 0 0 0 $delay_x_packet $ttl_drop_x_packet $msdu_loss_x_packet 0 0 0 0"
 	eval $cmd
-	cmd="iw $phy telemetry sla_detection_cfg per_second $min_throutput $max_throughput 0 0 0 0 0"
+	cmd="iw $phy telemetry sla_detection_cfg per_second $min_throutput $max_throughput 0 0 0 0 0 $per $mcs_min $mcs_max $retries_thres"
 	eval $cmd
-	cmd="iw $phy telemetry sla_detection_cfg moving_avg 0 0 0 0 $delay_mov_avg 0 0"
+	cmd="iw $phy telemetry sla_detection_cfg moving_avg 0 0 0 0 $delay_mov_avg 0 0 0 0 0 0"
 	eval $cmd
-	cmd="iw $phy telemetry sla_detection_cfg num_second 0 0 $burst_size $service_interval 0 $ttl_drop_x_sec $msdu_loss_x_sec"
+	cmd="iw $phy telemetry sla_detection_cfg num_second 0 0 $burst_size $service_interval 0 $ttl_drop_x_sec $msdu_loss_x_sec 0 0 0 0"
 	eval $cmd
 }
 
@@ -1068,6 +1088,9 @@ post_mac80211() {
 			if [ ! -f "/tmp/svc_configured" ]; then
 				configure_service_class 1
 				touch /tmp/svc_configured
+				configure_telemetry_sla_samples
+				configure_telemetry_sla_thersholds
+				configure_telemetry_sla_detect
 			fi
 			set_primary_link
 		;;

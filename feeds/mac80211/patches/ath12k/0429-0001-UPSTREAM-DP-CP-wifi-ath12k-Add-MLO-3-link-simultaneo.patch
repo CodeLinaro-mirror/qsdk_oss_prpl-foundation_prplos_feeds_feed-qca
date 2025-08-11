@@ -182,7 +182,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  struct ath12k_hw_ops {
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -13934,6 +13934,17 @@ int ath12k_mac_start(struct ath12k *ar)
+@@ -13936,6 +13936,17 @@ int ath12k_mac_start(struct ath12k *ar)
  		goto err;
  	}
  
@@ -200,7 +200,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  	ret = ath12k_dp_rx_pkt_type_filter(ar, ATH12K_PKT_TYPE_EAP,
  					   ATH12K_ROUTE_EAP_METADATA);
  	if (ret) {
-@@ -14842,6 +14853,20 @@ int ath12k_mac_vdev_create(struct ath12k
+@@ -14844,6 +14855,20 @@ int ath12k_mac_vdev_create(struct ath12k
  	if (ret)
  		goto err_peer_del;
  
@@ -223,7 +223,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  	param_id = WMI_VDEV_PARAM_RTS_THRESHOLD;
 --- a/drivers/net/wireless/ath/ath12k/sdwf.c
 +++ b/drivers/net/wireless/ath/ath12k/sdwf.c
-@@ -309,8 +309,129 @@ struct ath12k *ath12k_sdwf_get_ar_from_v
+@@ -309,8 +309,130 @@ struct ath12k *ath12k_sdwf_get_ar_from_v
  	return ar;
  }
  
@@ -294,14 +294,12 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
 +                        break;
 +        }
 +
-+	spin_lock_bh(&dp->dp_lock);
 +        if (queue_id != QOS_INVALID_MSDUQ) {
 +                if (queue_id < ATH12K_DATA_TID_MAX)
 +                        peer->flow_cnt[queue_id]++;
 +                else
 +                        queue_id = QOS_INVALID_MSDUQ;
 +        }
-+	spin_unlock_bh(&dp->dp_lock);
 +
 +        return queue_id;
 +}
@@ -324,8 +322,11 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
 +               goto err_unlock;
 +       }
 +
-+       if (!peer->sta || !peer->sta->valid_links)
++       if (!peer->sta)
 +               goto err_unlock;
++
++       if (!peer->sta->valid_links)
++	       goto err_unlock;
 +
 +       if (hweight16(peer->sta->valid_links) !=
 +           ATH12K_3LINK_MLO_MAX_STA_LINKS)
@@ -354,7 +355,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  {
  	struct ath12k *ar;
  	struct ieee80211_vif *vif;
-@@ -318,9 +439,15 @@ u16 ath12k_sdwf_get_msduq(struct wireles
+@@ -318,9 +440,15 @@ u16 ath12k_sdwf_get_msduq(struct wireles
  	u16 ret_msduq = SDWF_PEER_MSDUQ_INVALID;
  	u8 msduq = QOS_INVALID_MSDUQ;
  
@@ -373,7 +374,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  
  	ar = ath12k_sdwf_get_ar_from_vif(wdev, vif, peer_mac, &peer_id);
  	if (!ar) {
-@@ -328,8 +455,17 @@ u16 ath12k_sdwf_get_msduq(struct wireles
+@@ -328,8 +456,17 @@ u16 ath12k_sdwf_get_msduq(struct wireles
  		return ret_msduq;
  	}
  
@@ -392,7 +393,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  
  	msduq = ath12k_sdwf_alloc_msduq(ar->ab, svc_id, peer_id, scs);
  	if (msduq != QOS_INVALID_MSDUQ)
-@@ -344,10 +480,67 @@ u16 ath12k_sdwf_get_msduq_peer(struct wi
+@@ -344,10 +481,67 @@ u16 ath12k_sdwf_get_msduq_peer(struct wi
  			      struct sawf_param *dl_params,
  			      bool scs_mscs)
  {
@@ -547,7 +548,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -14275,6 +14275,229 @@ unlock:
+@@ -14275,6 +14275,231 @@ unlock:
  	kfree(tb);
  }
  
@@ -749,15 +750,17 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
 +                return;
 +        }
 +
++	dp = ath12k_ab_to_dp(ab);
++	spin_lock_bh(&dp->dp_lock);
++
 +        for (i = 0; i < ab->num_radios; i++) {
 +               if (!is_zero_ether_addr(tlt_sel_params.mld_addr)) {
-+		       dp = ath12k_ab_to_dp(ab);
-+		       spin_lock_bh(&dp->dp_lock);
 +                       peer = ath12k_dp_link_peer_find_by_addr(dp, tlt_sel_params.mld_addr);
 +                       if (!peer) {
 +			       spin_unlock_bh(&dp->dp_lock);
 +                               continue;
 +		       }
++		       break;
 +               }
 +       }
 +
@@ -777,7 +780,7 @@ Signed-off-by: Adwait Nayak <adwaitn@qti.qualcomm.com>
  static void ath12k_wmi_op_rx(struct ath12k_base *ab, struct sk_buff *skb)
  {
  	struct ath12k_skb_cb *skb_cb = ATH12K_SKB_CB(skb);
-@@ -14507,6 +14730,10 @@ static void ath12k_wmi_op_rx(struct ath1
+@@ -14507,6 +14732,10 @@ static void ath12k_wmi_op_rx(struct ath1
  	case WMI_TWT_BTWT_REMOVE_STA_COMPLETE_EVENTID:
  		ath12k_wmi_twt_btwt_remove_sta_compl_event(ab, skb);
  		break;

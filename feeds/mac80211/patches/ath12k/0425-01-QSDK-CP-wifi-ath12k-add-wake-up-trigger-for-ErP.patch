@@ -50,7 +50,7 @@ Signed-off-by: Aloka Dixit <aloka.dixit@oss.qualcomm.com>
  
  #define ATH12K_NUM_POOL_PPEDS_TX_DESC_DEFAULT 0x8000
  #define ATH12K_PPEDS_HOTLIST_LEN_MAX_DEFAULT 1024
-@@ -1987,6 +1988,9 @@ void ath12k_core_halt(struct ath12k *ar)
+@@ -1973,6 +1974,9 @@ void ath12k_core_halt(struct ath12k *ar)
  	if (ag->recovery_mode == ATH12K_MLO_RECOVERY_MODE0)
  		INIT_LIST_HEAD(&ar->arvifs);
  	idr_init(&ar->txmgmt_idr);
@@ -62,7 +62,7 @@ Signed-off-by: Aloka Dixit <aloka.dixit@oss.qualcomm.com>
  static void ath12k_core_mlo_hw_queues_stop(struct ath12k_hw_group *ag)
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -1204,6 +1204,9 @@ struct ath12k {
+@@ -1205,6 +1205,9 @@ struct ath12k {
  	struct wiphy_work agile_cac_abort_wq;
  	u32 free_map_id;
  	struct ath12k_qos_map *qos_map;
@@ -534,7 +534,7 @@ Signed-off-by: Aloka Dixit <aloka.dixit@oss.qualcomm.com>
  
  #define CHAN2G(_channel, _freq, _flags) { \
  	.band                   = NL80211_BAND_2GHZ, \
-@@ -19106,6 +19107,8 @@ ath12k_mac_reconfig_complete(struct ieee
+@@ -19108,6 +19109,8 @@ ath12k_mac_reconfig_complete(struct ieee
  				}
  			}
  		}
@@ -543,7 +543,7 @@ Signed-off-by: Aloka Dixit <aloka.dixit@oss.qualcomm.com>
  	}
  
  	clear_bit(ATH12K_GROUP_FLAG_RECOVERY, &ar->ab->ag->flags);
-@@ -20952,8 +20955,9 @@ static int ath12k_mac_hw_register(struct
+@@ -20954,8 +20957,9 @@ static int ath12k_mac_hw_register(struct
  		goto err_cleanup_if_combs;
  	}
  
@@ -554,7 +554,7 @@ Signed-off-by: Aloka Dixit <aloka.dixit@oss.qualcomm.com>
  	ieee80211_hw_set(hw, SUPPORT_ECM_REGISTRATION);
  #endif
  
-@@ -21079,6 +21083,8 @@ static void ath12k_mac_setup(struct ath1
+@@ -21081,6 +21085,8 @@ static void ath12k_mac_setup(struct ath1
  	ar->monitor_vdev_id = -1;
  	ar->monitor_vdev_created = false;
  	ar->monitor_started = false;
@@ -649,15 +649,11 @@ Signed-off-by: Aloka Dixit <aloka.dixit@oss.qualcomm.com>
  	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT = 222,
  	QCA_NL80211_VENDOR_SUBCMD_AFC_RESPONSE = 223,
  	QCA_NL80211_VENDOR_SUBCMD_SDWF_PHY_OPS = 235,
-@@ -41,8 +42,9 @@ enum qca_nl80211_vendor_subcmds {
- };
- 
+@@ -43,6 +44,7 @@ enum qca_nl80211_vendor_subcmds {
  enum qca_nl80211_vendor_events {
--	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT_INDEX = 0,
--	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX = 1,
-+	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX = 0,
-+	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT_INDEX = 1,
-+	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX = 2,
+ 	QCA_NL80211_VENDOR_SUBCMD_AFC_EVENT_INDEX = 0,
+ 	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX = 1,
++	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX = 2,
  };
  
  /**

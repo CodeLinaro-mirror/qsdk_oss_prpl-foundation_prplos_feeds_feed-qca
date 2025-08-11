@@ -15,11 +15,9 @@ Signed-off-by: Pavankumar Nandeshwar <pnandesh@qti.qualcomm.com>
  drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c |  4 +---
  2 files changed, 2 insertions(+), 12 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index bca0e9d..04d7b87 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -206,18 +206,14 @@ static void ath12k_dp_rx_mld_addr_conv(struct ath12k_pdev_dp *dp_pdev,
+@@ -206,7 +206,6 @@ static void ath12k_dp_rx_mld_addr_conv(s
  				       struct sk_buff *msdu,
  				       struct hal_rx_desc *rx_desc, u16 peer_id)
  {
@@ -27,18 +25,7 @@ index bca0e9d..04d7b87 100644
  	struct ath12k_dp_link_peer *peer;
  	struct ieee80211_hdr *hdr = (void *)msdu->data;
  
--	spin_lock_bh(&ab->base_lock);
- 	peer = ath12k_dp_rx_h_find_peer(dp_pdev->dp, rx_desc, peer_id);
- 	if (!peer || !peer->mlo) {
--		spin_unlock_bh(&ab->base_lock);
- 		return;
- 	}
- 	ether_addr_copy(hdr->addr2, peer->ml_addr);
--	spin_unlock_bh(&ab->base_lock);
- }
- 
- void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *msdu,
-@@ -944,15 +940,12 @@ ath12k_dp_rx_h_find_peer(struct ath12k_dp *dp, struct hal_rx_desc *rx_desc, u16
+@@ -944,15 +943,12 @@ ath12k_dp_rx_h_find_peer(struct ath12k_d
  	struct ath12k_dp_link_peer *peer = NULL;
  	void *peer_mac;
  
@@ -54,7 +41,7 @@ index bca0e9d..04d7b87 100644
  	if (peer_mac)
  		peer = ath12k_dp_link_peer_find_by_addr(dp, peer_mac);
  
-@@ -972,7 +965,7 @@ void ath12k_dp_rx_deliver_msdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -972,7 +968,7 @@ void ath12k_dp_rx_deliver_msdu(struct at
  	struct ath12k_dp_peer *peer;
  
  	rcu_read_lock();
@@ -63,7 +50,13 @@ index bca0e9d..04d7b87 100644
  	peer = ath12k_dp_peer_find_by_peerid_index(dp, dp_pdev, peer_id);
  
  	pubsta = peer ? peer->sta : NULL;
-@@ -996,7 +989,6 @@ void ath12k_dp_rx_deliver_msdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -990,13 +986,11 @@ void ath12k_dp_rx_deliver_msdu(struct at
+ 			ath12k_dbg(ab, ATH12K_DBG_DATA,
+ 				   "Packet received on bridge peer link_id %d, drop it\n",
+ 				   link_peer->link_id);
+-			spin_unlock_bh(&dp->dp_lock);
+ 			rcu_read_unlock();
+ 			return;
  		}
  	}
  
@@ -71,11 +64,9 @@ index bca0e9d..04d7b87 100644
  	rcu_read_unlock();
  
  	ath12k_dbg(ab, ATH12K_DBG_DATA,
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-index a56f1a8..e0fbe24 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-@@ -893,7 +893,7 @@ static int ath12k_wifi7_dp_rx_h_mpdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -893,7 +893,7 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
  	ath12k_wifi7_dp_rx_h_csum_offload(msdu, rx_msdu_info);
  
  	rcu_read_lock();
@@ -84,7 +75,7 @@ index a56f1a8..e0fbe24 100644
  	peer = ath12k_dp_peer_find_by_peerid_index(dp, dp_pdev, peer_id);
  	if (peer) {
  		/* restting 4addr da mcbc packets as in 4addr mcbc packets are
-@@ -909,7 +909,6 @@ static int ath12k_wifi7_dp_rx_h_mpdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -909,7 +909,6 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
  			ath12k_wifi7_dp_rx_check_fast_rx(dp->ab, msdu, rx_msdu_info,
  							 tlv_info, link_peer)) {
  			msdu->protocol = eth_type_trans(msdu, peer->dev);
@@ -92,7 +83,7 @@ index a56f1a8..e0fbe24 100644
  			rcu_read_unlock();
  			netif_receive_skb(msdu);
  			return ret;
-@@ -931,7 +930,6 @@ static int ath12k_wifi7_dp_rx_h_mpdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -931,7 +930,6 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
  		enctype = HAL_ENCRYPT_TYPE_OPEN;
  	}
  
@@ -100,6 +91,3 @@ index a56f1a8..e0fbe24 100644
  	rcu_read_unlock();
  
  	*fast_rx = false;
--- 
-2.34.1
-

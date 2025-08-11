@@ -1,0 +1,41 @@
+From abe61114a58ab3d662e66e5c9ad019cfe9c0a18a Mon Sep 17 00:00:00 2001
+From: Avula Sri Charan <asrichar@qti.qualcomm.com>
+Date: Wed, 6 Aug 2025 07:55:51 +0530
+Subject: UPSTREAM:CP:wifi:mac80211: Fix the AP-VLAN update when netdev
+ is reused.
+
+Currently whenever an AP-VLAN netdev is reused we are trying to use the
+sta->valid_links bmap to fetch the mac address from vlansdata's
+vif->link_conf[link_id] and update it in wdev->link[link_id].bssid
+but in some cases where the previous APVLAN interfaces sdata's
+vif.valid_links is not same as current STA associated we will end
+up accessing link that dosent exist.
+
+To fix this update the links first so that AP-VLAN links are updated as per
+the STA valid_links and later copy the mac address to avoid such mismatch.
+
+Signed-off-by: Avula Sri Charan <asrichar@qti.qualcomm.com>
+---
+ net/mac80211/cfg.c | 15 ---------------
+ 1 file changed, 15 deletions(-)
+
+--- a/net/mac80211/cfg.c
++++ b/net/mac80211/cfg.c
+@@ -2583,6 +2583,8 @@ static int ieee80211_change_station(stru
+ 				u16 new_links = master->vif.valid_links &
+ 						sta->sta.valid_links;
+ 
++				ieee80211_vif_set_links(vlansdata, new_links, 0);
++
+ 				for_each_set_bit(link_id, &master_iter,
+ 						 IEEE80211_MLD_MAX_NUM_LINKS) {
+ 					if (!(sta->sta.valid_links & BIT(link_id))) {
+@@ -2597,8 +2599,6 @@ static int ieee80211_change_station(stru
+ 						wdev->valid_links |= BIT(link_id);
+ 					}
+ 				}
+-
+-				ieee80211_vif_set_links(vlansdata, new_links, 0);
+ 			}
+ 		}
+ 

@@ -24,11 +24,9 @@ Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
  drivers/net/wireless/ath/ath12k/wmi.c | 52 +++++++++++++++------------
  1 file changed, 30 insertions(+), 22 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
-index e2aa1acbbfdb..14b5a1793f86 100644
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -7975,9 +7975,7 @@ static int ath12k_pull_reg_chan_list_ext_update_ev(struct ath12k_base *ab,
+@@ -7976,9 +7976,7 @@ static int ath12k_pull_reg_chan_list_ext
  	u32 total_reg_rules = 0;
  	int ret, i, j, skip_6g_rules_in_5g_rules = 0;
  
@@ -39,7 +37,7 @@ index e2aa1acbbfdb..14b5a1793f86 100644
  
  	tb = ath12k_wmi_tlv_parse_alloc(ab, skb, GFP_ATOMIC);
  	if (IS_ERR(tb)) {
-@@ -8079,21 +8077,6 @@ static int ath12k_pull_reg_chan_list_ext_update_ev(struct ath12k_base *ab,
+@@ -8080,21 +8078,6 @@ static int ath12k_pull_reg_chan_list_ext
  		}
  	}
  
@@ -61,7 +59,7 @@ index e2aa1acbbfdb..14b5a1793f86 100644
  	switch (le32_to_cpu(ev->status_code)) {
  	case WMI_REG_SET_CC_STATUS_PASS:
  		reg_info->status_code = REG_SET_CC_STATUS_PASS;
-@@ -8115,6 +8098,31 @@ static int ath12k_pull_reg_chan_list_ext_update_ev(struct ath12k_base *ab,
+@@ -8116,6 +8099,31 @@ static int ath12k_pull_reg_chan_list_ext
  		break;
  	}
  
@@ -93,7 +91,7 @@ index e2aa1acbbfdb..14b5a1793f86 100644
  	reg_info->is_ext_reg_event = true;
  
  	reg_info->min_bw_2g = le32_to_cpu(ev->min_bw_2g);
-@@ -9431,7 +9439,7 @@ static int ath12k_reg_handle_chan_list(struct ath12k_base *ab,
+@@ -9432,7 +9440,7 @@ static int ath12k_reg_handle_chan_list(s
  		spin_unlock_bh(&ar->data_lock);
  	}
  
@@ -102,7 +100,7 @@ index e2aa1acbbfdb..14b5a1793f86 100644
  	if (test_bit(ATH12K_FLAG_REGISTERED, &ab->dev_flags)) {
  		/* Once mac is registered, ar is valid and all CC events from
  		 * fw is considered to be received due to user requests
-@@ -9456,7 +9464,7 @@ static int ath12k_reg_handle_chan_list(struct ath12k_base *ab,
+@@ -9457,7 +9465,7 @@ static int ath12k_reg_handle_chan_list(s
  
  	ab->regd_freed = false;
  	ab->dfs_region = reg_info->dfs_region;
@@ -111,24 +109,3 @@ index e2aa1acbbfdb..14b5a1793f86 100644
  
  	return 0;
  
-@@ -14245,7 +14253,7 @@ static void ath12k_wmi_peer_migration_event(struct ath12k_base *ab,
- 		   "MLO Peer Migration event received for vdev %d, num_peers %d\n",
- 		   vdev_id, num_peers);
- 
--	spin_lock(&ab->base_lock);
-+	spin_lock_bh(&ab->base_lock);
- 
- 	for (i = 0; i < num_peers; i++) {
- 		ml_peer_id = le32_get_bits(parse.peer_info[i]->status_info,
-@@ -14306,7 +14314,7 @@ static void ath12k_wmi_peer_migration_event(struct ath12k_base *ab,
- 	}
- 
- exit_pri_link_mig_event:
--	spin_unlock(&ab->base_lock);
-+	spin_unlock_bh(&ab->base_lock);
- 	rcu_read_unlock();
- 
- 	/* Event is received for all queued ML peers in this arvif */
--- 
-2.25.1
-

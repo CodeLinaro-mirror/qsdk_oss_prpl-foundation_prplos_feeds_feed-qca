@@ -23,11 +23,9 @@ Signed-off-by: Pavankumar Nandeshwar <pnandesh@qti.qualcomm.com>
  .../wireless/ath/ath12k/wifi7/hal_wcn7850.h   |   3 +-
  9 files changed, 92 insertions(+), 85 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index 22290f4..d79d8b3 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -204,14 +204,14 @@ EXPORT_SYMBOL(ath12k_dp_rx_h_michael_mic);
+@@ -204,14 +204,14 @@ EXPORT_SYMBOL(ath12k_dp_rx_h_michael_mic
  
  static void ath12k_dp_rx_mld_addr_conv(struct ath12k_pdev_dp *dp_pdev,
  				       struct sk_buff *msdu,
@@ -38,13 +36,13 @@ index 22290f4..d79d8b3 100644
  	struct ath12k_dp_link_peer *peer;
  	struct ieee80211_hdr *hdr = (void *)msdu->data;
  
- 	spin_lock_bh(&ab->base_lock);
+ 	spin_lock_bh(&dp_pdev->dp->dp_lock);
 -	peer = ath12k_dp_rx_h_find_peer(dp_pdev->dp, msdu, rx_desc_data);
 +	peer = ath12k_dp_rx_h_find_peer(dp_pdev->dp, msdu, rx_desc);
  	if (!peer || !peer->mlo) {
- 		spin_unlock_bh(&ab->base_lock);
+ 		spin_unlock_bh(&dp_pdev->dp->dp_lock);
  		return;
-@@ -221,9 +221,9 @@ static void ath12k_dp_rx_mld_addr_conv(struct ath12k_pdev_dp *dp_pdev,
+@@ -221,9 +221,9 @@ static void ath12k_dp_rx_mld_addr_conv(s
  }
  
  void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *msdu,
@@ -56,7 +54,7 @@ index 22290f4..d79d8b3 100644
  {
  	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
  	struct ieee80211_hdr *hdr;
-@@ -242,7 +242,7 @@ void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *
+@@ -242,7 +242,7 @@ void ath12k_dp_rx_h_undecap_raw(struct a
  	if (!decrypted)
  		return;
  
@@ -65,7 +63,7 @@ index 22290f4..d79d8b3 100644
  
  	hdr = (void *)msdu->data;
  
-@@ -958,10 +958,11 @@ EXPORT_SYMBOL(ath12k_dp_rx_h_find_peer_by_peerid_index);
+@@ -958,10 +958,11 @@ EXPORT_SYMBOL(ath12k_dp_rx_h_find_peer_b
  
  struct ath12k_dp_link_peer *
  ath12k_dp_rx_h_find_peer(struct ath12k_dp *dp, struct sk_buff *msdu,
@@ -78,7 +76,7 @@ index 22290f4..d79d8b3 100644
  
  	lockdep_assert_held(&dp->dp_lock);
  
-@@ -971,8 +972,10 @@ ath12k_dp_rx_h_find_peer(struct ath12k_dp *dp, struct sk_buff *msdu,
+@@ -971,8 +972,10 @@ ath12k_dp_rx_h_find_peer(struct ath12k_d
  	if (peer)
  		return peer;
  
@@ -91,7 +89,7 @@ index 22290f4..d79d8b3 100644
  
  	return peer;
  }
-@@ -990,7 +993,6 @@ void ath12k_dp_rx_deliver_msdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -990,7 +993,6 @@ void ath12k_dp_rx_deliver_msdu(struct at
  	struct ath12k_dp_peer *peer;
  	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
  	struct ath12k_dp_link_peer *link_peer = NULL;
@@ -99,7 +97,7 @@ index 22290f4..d79d8b3 100644
  	bool is_mcbc = rxcb->is_mcbc;
  
  	rcu_read_lock();
-@@ -1053,14 +1055,6 @@ void ath12k_dp_rx_deliver_msdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -1053,14 +1055,6 @@ void ath12k_dp_rx_deliver_msdu(struct at
  
  	/* TODO: trace rx packet */
  
@@ -114,11 +112,9 @@ index 22290f4..d79d8b3 100644
  	ieee80211_rx_napi(ath12k_dp_pdev_to_hw(dp_pdev), pubsta, msdu, napi);
  }
  EXPORT_SYMBOL(ath12k_dp_rx_deliver_msdu);
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.h b/drivers/net/wireless/ath/ath12k/dp_rx.h
-index 64246f7..b67b329 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
-@@ -196,7 +196,7 @@ u8 ath12k_dp_rx_h_l3pad(struct ath12k_base *ab,
+@@ -196,7 +196,7 @@ u8 ath12k_dp_rx_h_l3pad(struct ath12k_ba
  			struct hal_rx_desc *desc);
  struct ath12k_dp_link_peer *
  ath12k_dp_rx_h_find_peer(struct ath12k_dp *dp, struct sk_buff *msdu,
@@ -127,7 +123,7 @@ index 64246f7..b67b329 100644
  u8 ath12k_dp_rx_h_decap_type(struct ath12k_base *ab,
  			     struct hal_rx_desc *desc);
  u32 ath12k_dp_rx_h_mpdu_err(struct ath12k_base *ab,
-@@ -226,9 +226,9 @@ int ath12k_dp_rx_h_michael_mic(struct crypto_shash *tfm, u8 *key,
+@@ -226,9 +226,9 @@ int ath12k_dp_rx_h_michael_mic(struct cr
  			       struct ieee80211_hdr *hdr, u8 *data,
  			       size_t data_len, u8 *mic);
  void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *msdu,
@@ -139,11 +135,9 @@ index 64246f7..b67b329 100644
  struct ath12k_dp_peer *
  ath12k_dp_rx_h_find_peer_by_peerid_index(struct ath12k_dp *dp,
  					 struct ath12k_pdev_dp *dp_pdev,
-diff --git a/drivers/net/wireless/ath/ath12k/hal.c b/drivers/net/wireless/ath/ath12k/hal.c
-index bcf5ccb..e4687ce 100644
 --- a/drivers/net/wireless/ath/ath12k/hal.c
 +++ b/drivers/net/wireless/ath/ath12k/hal.c
-@@ -143,6 +143,12 @@ void ath12k_hal_reo_shared_qaddr_cache_clear(struct ath12k_base *ab)
+@@ -143,6 +143,12 @@ void ath12k_hal_reo_shared_qaddr_cache_c
  	ab->hal.hal_ops->reo_shared_qaddr_cache_clear(ab);
  }
  
@@ -156,11 +150,9 @@ index bcf5ccb..e4687ce 100644
  static int ath12k_hal_alloc_cont_rdp(struct ath12k_hal *hal)
  {
  	size_t size;
-diff --git a/drivers/net/wireless/ath/ath12k/hal.h b/drivers/net/wireless/ath/ath12k/hal.h
-index 138e1c5..4701d3a 100644
 --- a/drivers/net/wireless/ath/ath12k/hal.h
 +++ b/drivers/net/wireless/ath/ath12k/hal.h
-@@ -706,7 +706,6 @@ struct hal_rx_desc_data {
+@@ -708,7 +708,6 @@ struct hal_rx_desc_data {
  	    is_first_msdu:1,
  	    is_last_msdu:1,
  	    mesh_ctrl_present:1,
@@ -168,7 +160,7 @@ index 138e1c5..4701d3a 100644
  	    fill_crypto_hdr:1,
  	    seq_ctl_valid:1,
  	    fc_valid:1,
-@@ -714,7 +713,6 @@ struct hal_rx_desc_data {
+@@ -716,7 +715,6 @@ struct hal_rx_desc_data {
  	u16 msdu_len;
  	u16 peer_id;
  	u16 seq_no;
@@ -176,7 +168,7 @@ index 138e1c5..4701d3a 100644
  	u8 pkt_type;
  	u8 l3_pad_bytes;
  	u8 decap;
-@@ -724,11 +722,8 @@ struct hal_rx_desc_data {
+@@ -726,11 +724,8 @@ struct hal_rx_desc_data {
  	u8 sgi;
  	u8 tid;
  	bool is_mcbc;
@@ -188,7 +180,7 @@ index 138e1c5..4701d3a 100644
  	bool is_invalid_rate_drop;
  };
  
-@@ -1270,6 +1265,7 @@ struct hal_ops {
+@@ -1272,6 +1267,7 @@ struct hal_ops {
  	enum hal_rx_buf_return_buf_manager
          (*get_idle_link_rbm)(struct ath12k_hal *hal, u8 device_id);
  	void (*reo_shared_qaddr_cache_clear)(struct ath12k_base *ab);
@@ -196,7 +188,7 @@ index 138e1c5..4701d3a 100644
  };
  
  static inline
-@@ -1408,6 +1404,8 @@ ath12k_hal_get_idle_link_rbm(struct ath12k_hal *hal, u8 device_id);
+@@ -1410,6 +1406,8 @@ ath12k_hal_get_idle_link_rbm(struct ath1
  void ath12k_hal_vdev_mcast_ctrl_set(struct ath12k_base *ab, u32 vdev_id,
  				    u8 mcast_ctrl_val);
  void ath12k_hal_reo_shared_qaddr_cache_clear(struct ath12k_base *ab);
@@ -205,11 +197,9 @@ index 138e1c5..4701d3a 100644
  #ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
  void ath12k_hal_srng_ppeds_dst_inv_entry(struct ath12k_base *ab,
  					 struct hal_srng *srng, int entries);
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-index b6e6186..5a7ad25 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-@@ -747,13 +747,12 @@ static void ath12k_wifi7_dp_rx_h_undecap_eth(struct ath12k_pdev_dp *dp_pdev,
+@@ -747,13 +747,12 @@ static void ath12k_wifi7_dp_rx_h_undecap
  					     struct sk_buff *msdu,
  					     enum hal_encrypt_type enctype,
  					     struct ieee80211_rx_status *status,
@@ -224,7 +214,7 @@ index b6e6186..5a7ad25 100644
  	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
  	struct ath12k_dp_rx_rfc1042_hdr rfc = {0xaa, 0xaa, 0x03, {0x00, 0x00, 0x00}};
  
-@@ -773,17 +772,17 @@ static void ath12k_wifi7_dp_rx_h_undecap_eth(struct ath12k_pdev_dp *dp_pdev,
+@@ -773,17 +772,17 @@ static void ath12k_wifi7_dp_rx_h_undecap
  	hdr = (struct ieee80211_hdr *)msdu->data;
  	ether_addr_copy(ieee80211_get_DA(hdr), da);
  	ether_addr_copy(ieee80211_get_SA(hdr), sa);
@@ -251,7 +241,7 @@ index b6e6186..5a7ad25 100644
  {
  	struct ethhdr *ehdr;
  
-@@ -793,33 +792,40 @@ static void ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+@@ -793,33 +792,40 @@ static void ath12k_wifi7_dp_rx_h_undecap
  						   rx_desc_data->mesh_ctrl_present);
  		break;
  	case DP_RX_DECAP_TYPE_RAW:
@@ -300,7 +290,7 @@ index b6e6186..5a7ad25 100644
  			break;
  		}
  
-@@ -829,7 +835,7 @@ static void ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+@@ -829,7 +835,7 @@ static void ath12k_wifi7_dp_rx_h_undecap
  		 */
  		if (ATH12K_SKB_RXCB(msdu)->is_mcbc && decrypted)
  			ath12k_wifi7_dp_rx_h_undecap_eth(dp_pdev, msdu, enctype,
@@ -309,7 +299,7 @@ index b6e6186..5a7ad25 100644
  
  		break;
  	case DP_RX_DECAP_TYPE_8023:
-@@ -837,25 +843,29 @@ static void ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+@@ -837,25 +843,29 @@ static void ath12k_wifi7_dp_rx_h_undecap
  		break;
  	}
  	dp_pdev->wmm_stats.total_wmm_rx_pkts[dp_pdev->wmm_stats.rx_type]++;
@@ -345,7 +335,7 @@ index b6e6186..5a7ad25 100644
  
  	tid = rx_desc_data->tid;
  	/* PN for multicast packets will be checked in mac80211 */
-@@ -884,10 +894,10 @@ static void ath12k_wifi7_dp_rx_h_mpdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -884,10 +894,10 @@ static void ath12k_wifi7_dp_rx_h_mpdu(st
  			spin_unlock_bh(&dp->dp_lock);
  			rcu_read_unlock();
  			netif_receive_skb(msdu);
@@ -358,7 +348,7 @@ index b6e6186..5a7ad25 100644
  		if (rxcb->is_mcbc)
  			enctype = peer->sec_type_grp;
  		else
-@@ -935,16 +945,19 @@ static void ath12k_wifi7_dp_rx_h_mpdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -935,16 +945,19 @@ static void ath12k_wifi7_dp_rx_h_mpdu(st
  					   RX_FLAG_PN_VALIDATED;
  	}
  
@@ -381,7 +371,7 @@ index b6e6186..5a7ad25 100644
  }
  
  static void ath12k_wifi7_dp_rx_h_rate(struct ath12k_pdev_dp *dp_pdev,
-@@ -1208,21 +1221,16 @@ static int ath12k_wifi7_dp_rx_process_msdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -1208,21 +1221,16 @@ static int ath12k_wifi7_dp_rx_process_ms
  		goto free_out;
  	}
  
@@ -422,7 +412,7 @@ index b6e6186..5a7ad25 100644
  		return -EINVAL;
  
  	ieee80211_rx(ath12k_dp_pdev_to_hw(dp_pdev), msdu);
-@@ -2332,6 +2341,7 @@ static int ath12k_wifi7_dp_rx_h_null_q_desc(struct ath12k_pdev_dp *dp_pdev,
+@@ -2332,6 +2341,7 @@ static int ath12k_wifi7_dp_rx_h_null_q_d
  	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
  	u32 hal_rx_desc_sz = dp->ab->hal.hal_desc_sz;
  	bool fast_rx = false;
@@ -430,7 +420,7 @@ index b6e6186..5a7ad25 100644
  
  	if (!rxcb->is_frag && ((msdu_len + hal_rx_desc_sz) > DP_RX_BUFFER_SIZE)) {
  		/* First buffer will be freed by the caller, so deduct it's length */
-@@ -2379,8 +2389,8 @@ static int ath12k_wifi7_dp_rx_h_null_q_desc(struct ath12k_pdev_dp *dp_pdev,
+@@ -2379,8 +2389,8 @@ static int ath12k_wifi7_dp_rx_h_null_q_d
  	if (unlikely(rx_desc_data->is_invalid_rate_drop))
  		return -EINVAL;
  
@@ -441,7 +431,7 @@ index b6e6186..5a7ad25 100644
  		return -EINVAL;
  
  	rxcb->tid = rx_desc_data->tid;
-@@ -2439,6 +2449,7 @@ static bool ath12k_wifi7_dp_rx_h_tkip_mic_err(struct ath12k_pdev_dp *dp_pdev,
+@@ -2439,6 +2449,7 @@ static bool ath12k_wifi7_dp_rx_h_tkip_mi
  	u8 l3pad_bytes = rx_desc_data->l3_pad_bytes;
  	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
  	u32 hal_rx_desc_sz = dp->ab->hal.hal_desc_sz;
@@ -449,7 +439,7 @@ index b6e6186..5a7ad25 100644
  
  	rxcb->is_first_msdu = rx_desc_data->is_first_msdu;
  	rxcb->is_last_msdu = rx_desc_data->is_last_msdu;
-@@ -2463,10 +2474,10 @@ static bool ath12k_wifi7_dp_rx_h_tkip_mic_err(struct ath12k_pdev_dp *dp_pdev,
+@@ -2463,10 +2474,10 @@ static bool ath12k_wifi7_dp_rx_h_tkip_mi
  	status->flag |= (RX_FLAG_MMIC_STRIPPED | RX_FLAG_MMIC_ERROR |
  				     RX_FLAG_DECRYPTED);
  
@@ -464,11 +454,9 @@ index b6e6186..5a7ad25 100644
  		return true;
  
  	return false;
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c b/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c
-index 59c1789..fb3459b 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c
-@@ -807,10 +807,6 @@ void ath12k_wifi7_hal_extract_rx_desc_data_qcn9274(struct hal_rx_desc_data *rx_d
+@@ -815,10 +815,6 @@ void ath12k_wifi7_hal_extract_rx_desc_da
  	rx_desc_data->l4_csum_fail =
  		ath12k_wifi7_hal_rx_h_l4_cksum_fail_qcn9274(rx_desc);
  	rx_desc_data->tid = ath12k_wifi7_hal_rx_h_tid_qcn9274(rx_desc);
@@ -479,18 +467,16 @@ index 59c1789..fb3459b 100644
  	rx_desc_data->mesh_ctrl_present =
  		ath12k_wifi7_hal_rx_h_mesh_ctl_present_qcn9274(rx_desc);
  	rx_desc_data->seq_ctl_valid =
-@@ -1008,4 +1004,6 @@ const struct hal_ops hal_qcn9274_ops = {
+@@ -1016,4 +1012,6 @@ const struct hal_ops hal_qcn9274_ops = {
  	.reset_rx_reo_tid_q = ath12k_wifi7_hal_reset_rx_reo_tid_q,
  	.get_idle_link_rbm = ath12k_wifi7_hal_get_idle_link_rbm,
  	.reo_shared_qaddr_cache_clear = ath12k_wifi7_hal_reo_shared_qaddr_cache_clear,
 +	.rxdesc_get_mpdu_start_addr2 =
 +			ath12k_wifi7_hal_rxdesc_get_mpdu_start_addr2_qcn9274,
  };
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.h b/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.h
-index 94c554f..18dd992 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.h
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.h
-@@ -230,7 +230,8 @@ bool ath12k_wifi7_hal_rxdesc_mac_addr2_valid_qcn9274(struct hal_rx_desc *desc)
+@@ -230,7 +230,8 @@ bool ath12k_wifi7_hal_rxdesc_mac_addr2_v
  static inline u8 *
  ath12k_wifi7_hal_rxdesc_get_mpdu_start_addr2_qcn9274(struct hal_rx_desc *desc)
  {
@@ -500,11 +486,9 @@ index 94c554f..18dd992 100644
  }
  
  static inline
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.c b/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.c
-index 19dc4dc..cd70883 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.c
-@@ -411,10 +411,6 @@ void ath12k_wifi7_hal_extract_rx_desc_data_wcn7850(struct hal_rx_desc_data *rx_d
+@@ -411,10 +411,6 @@ void ath12k_wifi7_hal_extract_rx_desc_da
  	rx_desc_data->l4_csum_fail =
  		ath12k_wifi7_hal_rx_h_l4_cksum_fail_wcn7850(rx_desc);
  	rx_desc_data->tid = ath12k_wifi7_hal_rx_h_tid_wcn7850(rx_desc);
@@ -522,11 +506,9 @@ index 19dc4dc..cd70883 100644
 +	.rxdesc_get_mpdu_start_addr2 =
 +			ath12k_wifi7_hal_rxdesc_get_mpdu_start_addr2_wcn7850,
  };
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.h b/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.h
-index d7f68c6..1569656 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.h
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/hal_wcn7850.h
-@@ -213,7 +213,8 @@ bool ath12k_wifi7_hal_rxdesc_mac_addr2_valid_wcn7850(struct hal_rx_desc *desc)
+@@ -213,7 +213,8 @@ bool ath12k_wifi7_hal_rxdesc_mac_addr2_v
  static inline u8 *
  ath12k_wifi7_hal_rxdesc_get_mpdu_start_addr2_wcn7850(struct hal_rx_desc *desc)
  {
@@ -536,6 +518,3 @@ index d7f68c6..1569656 100644
  }
  
  static inline
--- 
-2.34.1
-

@@ -44,9 +44,9 @@ index 2a1ac68..7d9f616 100644
  static const struct netlink_range_validation nl80211_punct_bitmap_range = {
  	.min = 0,
 @@ -918,6 +937,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
- 			{ .type = NLA_BINARY,
- 			  .len = NL80211_EHT240_MAX_CAPABILITY_LEN },
- #endif
+ 	[NL80211_ATTR_RADAR_BITMAP] = { .type = NLA_U16 },
+ 	[NL80211_ATTR_EML_CAPABILITY] = { .type = NLA_U16 },
+ 	[NL80211_ATTR_MLD_CAPA_AND_OPS] = { .type = NLA_U16 },
 +	[NL80211_ATTR_RXMGMT_CRITICAL_UPDATE] = NLA_POLICY_NESTED(cu_policy),
  };
  

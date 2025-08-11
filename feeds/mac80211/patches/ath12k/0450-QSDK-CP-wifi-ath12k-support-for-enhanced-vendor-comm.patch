@@ -45,7 +45,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  	ATH12K_DBG_ANY		= 0xffffffff,
 --- a/drivers/net/wireless/ath/ath12k/vendor.c
 +++ b/drivers/net/wireless/ath/ath12k/vendor.c
-@@ -24,6 +24,7 @@ ath12k_wifi_config_policy[QCA_WLAN_VENDO
+@@ -25,6 +25,7 @@ ath12k_wifi_config_policy[QCA_WLAN_VENDO
  	[QCA_WLAN_VENDOR_ATTR_CONFIG_IFINDEX] = {.type = NLA_U32 },
  	[QCA_WLAN_VENDOR_ATTR_CONFIG_MLO_LINK_ID] = {.type = NLA_U8 },
  	[QCA_WLAN_VENDOR_ATTR_IF_OFFLOAD_TYPE] = {.type = NLA_U8},
@@ -53,7 +53,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  };
  
  static const struct nla_policy
-@@ -3070,11 +3071,371 @@ static int ath12k_vendor_wlan_telemetry_
+@@ -3076,11 +3077,371 @@ static int ath12k_vendor_wlan_telemetry_
  	return ret;
  }
  
@@ -425,7 +425,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  	struct ieee80211_vif *vif = NULL;
  	struct ath12k_vif *ahvif = NULL;
  	int ppe_vp_type = 0;
-@@ -3085,10 +3446,39 @@ static int ath12k_vendor_wifi_config_han
+@@ -3091,10 +3452,39 @@ static int ath12k_vendor_wifi_config_han
  			ath12k_wifi_config_policy, NULL);
  
  	if (ret) {
@@ -466,7 +466,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  	if (tb[QCA_WLAN_VENDOR_ATTR_IF_OFFLOAD_TYPE]) {
  		ppe_vp_type = nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_IF_OFFLOAD_TYPE]);
  
-@@ -3157,50 +3547,216 @@ static int ath12k_vendor_wifi_config_han
+@@ -3163,50 +3553,216 @@ static int ath12k_vendor_wifi_config_han
  	return 0;
  }
  
@@ -700,7 +700,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  	kfree_skb(skb);
  	return ret;
  }
-@@ -4673,6 +5229,20 @@ static struct wiphy_vendor_command ath12
+@@ -4731,6 +5287,20 @@ static struct wiphy_vendor_command ath12
  		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
  			WIPHY_VENDOR_CMD_NEED_RUNNING,
  	},
@@ -721,7 +721,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  };
  
  static const struct nl80211_vendor_cmd_info ath12k_vendor_events[] = {
-@@ -4692,6 +5262,10 @@ static const struct nl80211_vendor_cmd_i
+@@ -4754,6 +5324,10 @@ static const struct nl80211_vendor_cmd_i
  		.vendor_id = QCA_NL80211_VENDOR_ID,
  		.subcmd = QCA_NL80211_VENDOR_SUBCMD_WLAN_TELEMETRY_WDEV,
  	},
@@ -753,7 +753,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  };
  
  enum qca_nl80211_vendor_subcmds {
-@@ -42,6 +47,9 @@ enum qca_nl80211_vendor_subcmds {
+@@ -43,6 +48,9 @@ enum qca_nl80211_vendor_subcmds {
  	QCA_NL80211_VENDOR_SUBCMD_WLAN_TELEMETRY_WDEV = 263,
  	QCA_NL80211_VENDOR_SUBCMD_AFC_CLEAR_PAYLOAD = 264,
  	QCA_NL80211_VENDOR_SUBCMD_AFC_RESET = 265,
@@ -763,15 +763,15 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  };
  
  enum qca_nl80211_vendor_events {
-@@ -49,6 +57,7 @@ enum qca_nl80211_vendor_events {
- 	QCA_NL80211_VENDOR_SUBCMD_6GHZ_PWR_MODE_EVT_IDX = 1,
- 	QCA_NL80211_VENDOR_SUBCMD_WLAN_WIPHY_TELEMETRY_EVENT = 2,
- 	QCA_NL80211_VENDOR_SUBCMD_WLAN_WDEV_TELEMETRY_EVENT = 3,
-+	QCA_NL80211_VENDOR_SUBCMD_IFACE_RELOAD_INDEX = 4,
+@@ -51,6 +59,7 @@ enum qca_nl80211_vendor_events {
+ 	QCA_NL80211_VENDOR_SUBCMD_RM_GENERIC_INDEX = 2,
+ 	QCA_NL80211_VENDOR_SUBCMD_WLAN_WIPHY_TELEMETRY_EVENT = 3,
+ 	QCA_NL80211_VENDOR_SUBCMD_WLAN_WDEV_TELEMETRY_EVENT = 4,
++	QCA_NL80211_VENDOR_SUBCMD_IFACE_RELOAD_INDEX = 5,
  };
  
  /**
-@@ -495,6 +504,13 @@ enum qca_wlan_vendor_attr_config {
+@@ -497,6 +506,13 @@ enum qca_wlan_vendor_attr_config {
  	 * Uses enum qca_wlan_intf_offload_type for values.
  	 */
  	QCA_WLAN_VENDOR_ATTR_IF_OFFLOAD_TYPE = 120,
@@ -785,7 +785,7 @@ Signed-off-by: Vinay Adella <vadella@qti.qualcomm.com>
  	/* Keep last */
  	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,
  	QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
-@@ -1156,5 +1172,55 @@ enum qca_vendor_wlan_telemetry_tx_ingres
+@@ -1272,5 +1288,55 @@ enum qca_vendor_wlan_telemetry_tx_ingres
  		QCA_VENDOR_ATTR_TX_INGRESS_ENQ_AFTER_LAST - 1,
  };
  

@@ -29,7 +29,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -695,6 +695,15 @@ struct ath12k_link_sta {
+@@ -694,6 +694,15 @@ struct ath12k_link_sta {
  	bool disable_fixed_rate;
  };
  
@@ -45,7 +45,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  struct ath12k_sta {
  	struct ath12k_vif *ahvif;
  	enum hal_pn_type pn_type;
-@@ -723,6 +732,9 @@ struct ath12k_sta {
+@@ -722,6 +731,9 @@ struct ath12k_sta {
  #endif
  	bool low_ack_sent;
  	bool is_migration_in_progress;
@@ -57,7 +57,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  #define ATH12K_INVALID_RSSI_FULL -1
 --- a/drivers/net/wireless/ath/ath12k/dp_htt.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_htt.c
-@@ -934,6 +934,103 @@ exit:
+@@ -943,6 +943,105 @@ exit:
  	rcu_read_unlock();
  }
  
@@ -71,6 +71,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +	struct ath12k_dp_link_peer *peer;
 +	struct ath12k_link_vif *arvif;
 +	struct ath12k_base *pri_ab;
++	struct ath12k_dp *dp;
 +	struct ath12k_sta *ahsta;
 +	u8 pdev_id, chip_id;
 +	int ret = -EINVAL;
@@ -114,10 +115,11 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +	}
 +	rcu_read_unlock();
 +
-+	spin_lock_bh(&pri_ab->base_lock);
++	dp = ath12k_ab_to_dp(pri_ab);
 +
-+	peer = ath12k_dp_link_peer_find_by_id(ath12k_ab_to_dp(pri_ab),
-+					      peer_id);
++	spin_lock_bh(&dp->dp_lock);
++
++	peer = ath12k_dp_link_peer_find_by_id(dp, peer_id);
 +	if (!peer) {
 +		ath12k_warn(pri_ab, "htt can not find peer fo peer id %d\n",
 +			    peer_id);
@@ -152,7 +154,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +		ath12k_warn(pri_ab, "htt ML peer failed to migrate (%d)\n", ret);
 +
 +exit_pri_link_migr_ind:
-+	spin_unlock_bh(&pri_ab->base_lock);
++	spin_unlock_bh(&dp->dp_lock);
 +err_pri_link_migr_ind:
 +	ieee80211_queue_work(arvif->ar->ah->hw, &ahsta->migration_wk);
 +}
@@ -161,7 +163,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  void ath12k_dp_htt_htc_t2h_msg_handler(struct ath12k_base *ab,
  				       struct sk_buff *skb)
  {
-@@ -1027,6 +1124,9 @@ void ath12k_dp_htt_htc_t2h_msg_handler(s
+@@ -1036,6 +1135,9 @@ void ath12k_dp_htt_htc_t2h_msg_handler(s
  	case HTT_T2H_MSG_TYPE_MLO_RX_PEER_UNMAP:
  		ath12k_peer_mlo_unmap_event(ab, skb);
  		break;
@@ -299,7 +301,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +}
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -8919,6 +8919,52 @@ static void ath12k_mac_ml_station_remove
+@@ -8928,6 +8928,52 @@ static void ath12k_mac_ml_station_remove
  	}
  }
  
@@ -352,7 +354,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  static int ath12k_mac_handle_link_sta_state(struct ieee80211_hw *hw,
  					    struct ath12k_link_vif *arvif,
  					    struct ath12k_link_sta *arsta,
-@@ -9138,6 +9184,10 @@ int ath12k_mac_op_sta_state(struct ieee8
+@@ -9148,6 +9194,10 @@ int ath12k_mac_op_sta_state(struct ieee8
  			arsta->is_assoc_link = true;
  			ahsta->assoc_link_id = link_id;
  			ahsta->primary_link_id = link_id;
@@ -363,7 +365,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  			ath12k_dbg(NULL, ATH12K_DBG_MAC,
  				   "mac ML STA %pM primary link (reconfig) set to %u\n",
  				   sta->addr, ahsta->primary_link_id);
-@@ -9212,8 +9262,10 @@ int ath12k_mac_op_sta_state(struct ieee8
+@@ -9222,8 +9272,10 @@ int ath12k_mac_op_sta_state(struct ieee8
  	 * handler below
  	 */
  	if (old_state == IEEE80211_STA_NONE &&

@@ -95,7 +95,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  				int ast_hash)
 --- a/drivers/net/wireless/ath/ath12k/dp_peer.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_peer.h
-@@ -193,6 +193,10 @@ ath12k_dp_link_peer_find_by_peerid_index
+@@ -197,6 +197,10 @@ ath12k_dp_link_peer_find_by_peerid_index
  struct ath12k_dp_link_peer *
  ath12k_dp_link_peer_find_by_ast(struct ath12k_dp *dp,
  				int ast_hash);
@@ -116,7 +116,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  static const char *ath12k_mac_phymode_str(enum wmi_phy_mode mode)
  {
  	switch (mode) {
-@@ -1822,6 +1823,42 @@ static void ath12k_mac_set_arvif_ies(str
+@@ -1830,6 +1831,42 @@ static void ath12k_mac_set_arvif_ies(str
  	}
  }
  
@@ -159,7 +159,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  static int ath12k_mac_setup_bcn_tmpl_ema(struct ath12k_link_vif *arvif,
  					 struct ath12k_link_vif *tx_arvif,
  					 u8 bssid_index)
-@@ -4610,6 +4647,12 @@ static void ath12k_mac_init_arvif(struct
+@@ -4620,6 +4657,12 @@ static void ath12k_mac_init_arvif(struct
  	wiphy_work_init(&arvif->peer_ch_width_switch_work,
  		  ath12k_wmi_peer_chan_width_switch_work);
  
@@ -172,7 +172,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  	for (i = 0; i < ARRAY_SIZE(arvif->bitrate_mask.control); i++) {
  		arvif->bitrate_mask.control[i].legacy = 0xffffffff;
  		arvif->bitrate_mask.control[i].gi = NL80211_TXRATE_DEFAULT_GI;
-@@ -4694,6 +4737,7 @@ static void ath12k_mac_remove_link_inter
+@@ -4704,6 +4747,7 @@ static void ath12k_mac_remove_link_inter
  	}
  	wiphy_work_cancel(ah->hw->wiphy,
  			  &arvif->peer_ch_width_switch_work);
@@ -180,7 +180,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  
  	ath12k_dbg(ar->ab, ATH12K_DBG_MAC, "mac remove link interface (vdev %d link id %d)",
  		   arvif->vdev_id, arvif->link_id);
-@@ -9800,6 +9844,10 @@ ath12k_mac_free_link_migr_peer_list(stru
+@@ -9818,6 +9862,10 @@ ath12k_mac_free_link_migr_peer_list(stru
  	 * peers later as per the requirement
  	 */
  	list_for_each_entry_safe(peer_node, tmp_peer, peer_migr_list, list) {
@@ -191,7 +191,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  		rcu_read_lock();
  		/* TODO: Need to check if we ml_peer_id validation
  		 */
-@@ -9895,7 +9943,7 @@ ath12k_mac_process_link_migrate_req(stru
+@@ -9913,7 +9961,7 @@ ath12k_mac_process_link_migrate_req(stru
  	struct list_head peer_migr_list;
  	struct ath12k_dp_peer *ml_peer;
  	struct ath12k_link_sta *arsta;
@@ -200,7 +200,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  	struct ath12k_sta *ahsta;
  	int ret, num_peers = 0;
  	struct ath12k *ar;
-@@ -9906,6 +9954,19 @@ ath12k_mac_process_link_migrate_req(stru
+@@ -9924,6 +9972,19 @@ ath12k_mac_process_link_migrate_req(stru
  
  	lockdep_assert_held(&ah->hw_mutex);
  
@@ -220,7 +220,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  	spin_lock_bh(&ah->dp_hw.peer_lock);
  
  	/* Request for single MLD peer */
-@@ -10011,6 +10072,19 @@ send_link_mig_cmd:
+@@ -10029,6 +10090,19 @@ send_link_mig_cmd:
  		   "pri link migrate: got num peers %d for vdev_id %d\n",
  		   num_peers, arvif->vdev_id);
  
@@ -239,10 +239,10 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +
  exit_link_migrate_req:
  	ath12k_mac_free_link_migr_peer_list(ah, &peer_migr_list);
- 	spin_unlock(&ah->dp_hw.peer_lock);
+ 	spin_unlock_bh(&ah->dp_hw.peer_lock);
 --- a/drivers/net/wireless/ath/ath12k/wmi.c
 +++ b/drivers/net/wireless/ath/ath12k/wmi.c
-@@ -12263,6 +12263,156 @@ static void ath12k_wmi_event_mlo_reconfi
+@@ -12283,6 +12283,156 @@ static void ath12k_wmi_event_mlo_reconfi
  	rcu_read_unlock();
  }
  
@@ -329,7 +329,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +		   "MLO Peer Migration event received for vdev %d, num_peers %d\n",
 +		   vdev_id, num_peers);
 +
-+	spin_lock(&ab->base_lock);
++	spin_lock_bh(&ab->dp->dp_lock);
 +
 +	for (i = 0; i < num_peers; i++) {
 +		ml_peer_id = le32_get_bits(parse.peer_info[i]->status_info,
@@ -384,7 +384,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
 +	}
 +
 +exit_pri_link_mig_event:
-+	spin_unlock(&ab->base_lock);
++	spin_unlock_bh(&ab->dp->dp_lock);
 +	rcu_read_unlock();
 +
 +	/* Event is received for all queued ML peers in this arvif */
@@ -399,7 +399,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  static void ath12k_wmi_op_rx(struct ath12k_base *ab, struct sk_buff *skb)
  {
  	struct ath12k_skb_cb *skb_cb = ATH12K_SKB_CB(skb);
-@@ -12471,6 +12621,9 @@ static void ath12k_wmi_op_rx(struct ath1
+@@ -12491,6 +12641,9 @@ static void ath12k_wmi_op_rx(struct ath1
  	case WMI_MLO_LINK_REMOVAL_EVENTID:
  		ath12k_wmi_event_mlo_reconfig_link_removal(ab, skb);
  		break;
@@ -409,7 +409,7 @@ Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
  	default:
  		ath12k_dbg(ab, ATH12K_DBG_WMI, "Unknown eventid: 0x%x\n", id);
  		break;
-@@ -13729,6 +13882,120 @@ int ath12k_wmi_mlo_reconfig_link_removal
+@@ -13749,6 +13902,120 @@ int ath12k_wmi_mlo_reconfig_link_removal
  	}
  
  	return ret;

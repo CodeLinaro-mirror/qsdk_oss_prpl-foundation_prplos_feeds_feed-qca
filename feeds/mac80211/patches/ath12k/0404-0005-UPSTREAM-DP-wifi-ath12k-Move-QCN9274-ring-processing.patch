@@ -21,8 +21,6 @@ Signed-off-by: Sushant Butta <sbutta@qti.qualcomm.com>
  .../net/wireless/ath/ath12k/wifi7/dp_mon2.c   | 392 +++++++++++++++++
  4 files changed, 436 insertions(+), 404 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_mon.c b/drivers/net/wireless/ath/ath12k/dp_mon.c
-index ebb3407..a334260 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.c
 @@ -12,14 +12,6 @@
@@ -49,7 +47,7 @@ index ebb3407..a334260 100644
  {
  	if (skb->len > len) {
  		skb_trim(skb, len);
-@@ -619,194 +611,7 @@ int ath12k_dp_pkt_set_pktlen(struct sk_buff *skb, u32 len)
+@@ -619,194 +611,7 @@ int ath12k_dp_pkt_set_pktlen(struct sk_b
  
  	return 0;
  }
@@ -253,7 +251,7 @@ index ebb3407..a334260 100644
  
  static struct dp_mon_tx_ppdu_info *
  ath12k_dp_mon_tx_get_ppdu_info(struct ath12k_mon_data *pmon,
-@@ -1291,9 +1097,9 @@ ath12k_dp_mon_rx_update_peer_rate_table_stats(struct ath12k_rx_peer_stats *rx_st
+@@ -1291,9 +1097,9 @@ ath12k_dp_mon_rx_update_peer_rate_table_
  	stats->rx_rate[bw_idx][gi_idx][nss_idx][mcs_idx] += len;
  }
  
@@ -266,7 +264,7 @@ index ebb3407..a334260 100644
  {
  	struct ath12k_rx_peer_stats *rx_stats = peer->peer_stats.rx_stats;
  	u32 num_msdu;
-@@ -1402,8 +1208,9 @@ static void ath12k_dp_mon_rx_update_peer_su_stats(struct ath12k_pdev_dp *pdev_dp
+@@ -1402,8 +1208,9 @@ static void ath12k_dp_mon_rx_update_peer
  	ath12k_dp_mon_rx_update_peer_rate_table_stats(rx_stats, ppdu_info,
  						      NULL, num_msdu);
  }
@@ -277,7 +275,7 @@ index ebb3407..a334260 100644
  {
  	struct hal_rx_user_status *rx_user_status;
  	u32 num_users, i, mu_ul_user_v0_word0, mu_ul_user_v0_word1, ru_size;
-@@ -1454,6 +1261,7 @@ void ath12k_dp_mon_rx_process_ulofdma(struct hal_rx_mon_ppdu_info *ppdu_info)
+@@ -1454,6 +1261,7 @@ void ath12k_dp_mon_rx_process_ulofdma(st
  	}
  	ppdu_info->ldpc = 1;
  }
@@ -285,7 +283,7 @@ index ebb3407..a334260 100644
  
  static void
  ath12k_dp_mon_rx_update_user_stats(struct ath12k_pdev_dp *pdev_dp,
-@@ -1571,7 +1379,7 @@ ath12k_dp_mon_rx_update_user_stats(struct ath12k_pdev_dp *pdev_dp,
+@@ -1571,7 +1379,7 @@ ath12k_dp_mon_rx_update_user_stats(struc
  						      user_stats, num_msdu);
  }
  
@@ -294,7 +292,7 @@ index ebb3407..a334260 100644
  ath12k_dp_mon_rx_update_peer_mu_stats(struct ath12k_pdev_dp *pdev_dp,
  				      struct hal_rx_mon_ppdu_info *ppdu_info)
  {
-@@ -1587,6 +1395,7 @@ ath12k_dp_mon_rx_update_peer_mu_stats(struct ath12k_pdev_dp *pdev_dp,
+@@ -1587,6 +1395,7 @@ ath12k_dp_mon_rx_update_peer_mu_stats(st
  	for (i = 0; i < num_users; i++)
  		ath12k_dp_mon_rx_update_user_stats(pdev_dp, ppdu_info, i);
  }
@@ -302,8 +300,8 @@ index ebb3407..a334260 100644
  
  static void
  ath12k_dp_mon_ppdu_per_user_rx_time_update(struct ath12k_pdev_dp *dp_pdev,
-@@ -1647,9 +1456,9 @@ ath12k_dp_mon_ppdu_per_user_rx_time_update(struct ath12k_pdev_dp *dp_pdev,
-                   stats->dp_mon_stats.mon_stats.rx_airtime_consumption[ac].consumption);
+@@ -1648,9 +1457,9 @@ ath12k_dp_mon_ppdu_per_user_rx_time_upda
+ 	spin_unlock_bh(&dp_pdev->dp->dp_lock);
  }
  
 -static void ath12k_dp_mon_ppdu_rx_time_update(struct ath12k_pdev_dp *dp_pdev,
@@ -315,7 +313,7 @@ index ebb3407..a334260 100644
  {
         u32 num_users, uid;
  
-@@ -1660,196 +1469,7 @@ static void ath12k_dp_mon_ppdu_rx_time_update(struct ath12k_pdev_dp *dp_pdev,
+@@ -1661,196 +1470,7 @@ static void ath12k_dp_mon_ppdu_rx_time_u
         for (uid = 0; uid < num_users; uid++)
                 ath12k_dp_mon_ppdu_per_user_rx_time_update(dp_pdev, ppdu_info, uid);
  }
@@ -513,7 +511,7 @@ index ebb3407..a334260 100644
  
  void ath12k_dp_rxdma_mon_buf_ring_free(struct ath12k_base *ab,
  				       struct dp_rxdma_mon_ring *rx_ring)
-@@ -2251,6 +1871,7 @@ static void ath12k_dp_mon_peer_telemetry_stats(const struct ath12k_dp_link_peer
+@@ -2252,6 +1872,7 @@ static void ath12k_dp_mon_peer_telemetry
         }
         stats->snr = 0;
  }
@@ -521,8 +519,6 @@ index ebb3407..a334260 100644
  
  int ath12k_dp_get_peer_telemetry_stats(struct ath12k_base *ab,
                                        const u8 *peer_addr,
-diff --git a/drivers/net/wireless/ath/ath12k/dp_mon.h b/drivers/net/wireless/ath/ath12k/dp_mon.h
-index adef21b..73a07fa 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_mon.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_mon.h
 @@ -74,6 +74,8 @@ struct ath12k_dp_arch_mon_ops {
@@ -534,7 +530,7 @@ index adef21b..73a07fa 100644
  };
  
  struct ath12k_dp_mon {
-@@ -216,11 +218,6 @@ const struct ath12k_dp_arch_mon_ops *ath12k_dp_mon_ops_get(struct ath12k_dp *dp)
+@@ -216,11 +218,6 @@ const struct ath12k_dp_arch_mon_ops *ath
  	return NULL;
  }
  
@@ -546,7 +542,7 @@ index adef21b..73a07fa 100644
  int ath12k_dp_mon_buf_replenish(struct ath12k_base *ab,
  				struct dp_rxdma_mon_ring *buf_ring,
  				int req_entries);
-@@ -231,7 +228,7 @@ ath12k_dp_mon_tx_parse_mon_status(struct ath12k_pdev_dp *dp_pdev,
+@@ -231,7 +228,7 @@ ath12k_dp_mon_tx_parse_mon_status(struct
  				  struct sk_buff *skb,
  				  struct napi_struct *napi,
  				  u32 ppdu_id);
@@ -555,7 +551,7 @@ index adef21b..73a07fa 100644
  int ath12k_dp_mon_rx_dual_ring_process(struct ath12k_pdev_dp *pdev_dp, int mac_id,
  				       struct napi_struct *napi, int *budget);
  int ath12k_dp_get_peer_telemetry_stats(struct ath12k_base *ab,
-@@ -259,11 +256,19 @@ void ath12k_dp_mon_pdev_rx_attach(struct ath12k_pdev_dp *dp_pdev);
+@@ -259,11 +256,19 @@ void ath12k_dp_mon_pdev_rx_attach(struct
  void ath12k_dp_mon_pdev_rx_mpdu_list_init(struct ath12k_mon_data *pmon);
  void ath12k_dp_rx_mon_dest_process(struct ath12k *ar, int mac_id,
  				   u32 quota, struct napi_struct *napi);
@@ -576,7 +572,7 @@ index adef21b..73a07fa 100644
  
  static inline
  int ath12k_dp_mon_rx_alloc(struct ath12k_dp *dp)
-@@ -406,4 +411,17 @@ void ath12k_dp_mon_pdev_rx_free(struct ath12k_pdev_dp *dp_pdev)
+@@ -406,4 +411,17 @@ void ath12k_dp_mon_pdev_rx_free(struct a
  	if (mon_ops && mon_ops->mon_pdev_rx_srng_cleanup)
  		mon_ops->mon_pdev_rx_srng_cleanup(dp_pdev);
  }
@@ -594,11 +590,9 @@ index adef21b..73a07fa 100644
 +		mon_ops->update_telemetry_stats(ab, pdev_id);
 +}
  #endif
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_mon1.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_mon1.c
-index f63018d..58295b0 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_mon1.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_mon1.c
-@@ -27,6 +27,7 @@ struct ath12k_dp_arch_mon_ops ath12k_wifi7_dp_arch_mon_quad_ring_ops = {
+@@ -27,6 +27,7 @@ struct ath12k_dp_arch_mon_ops ath12k_wif
  	.mon_pdev_rx_attach = ath12k_dp_mon_pdev_rx_attach,
  	.mon_pdev_rx_mpdu_list_init = NULL,
  	.mon_rx_srng_process = ath12k_wifi7_dp_mon_rx_quad_ring_process,
@@ -606,7 +600,7 @@ index f63018d..58295b0 100644
  };
  
  int ath12k_wifi7_dp_mon_rx_srng_setup(struct ath12k_dp *dp)
-@@ -410,7 +411,7 @@ static int ath12k_wifi7_dp_mon_rx_reap_status_ring(struct ath12k_base *ab, int m
+@@ -410,7 +411,7 @@ static int ath12k_wifi7_dp_mon_rx_reap_s
  					 skb->len + skb_tailroom(skb),
  					 DMA_FROM_DEVICE);
  
@@ -615,7 +609,7 @@ index f63018d..58295b0 100644
  				dev_kfree_skb_any(skb);
  				goto move_next;
  			}
-@@ -716,7 +717,7 @@ ath12k_wifi7_dp_mon_rx_mpdu_pop(struct ath12k *ar, int mac_id,
+@@ -716,7 +717,7 @@ ath12k_wifi7_dp_mon_rx_mpdu_pop(struct a
  							   &frag_len, &msdu_cnt);
  			rx_buf_size = rx_pkt_offset + l2_hdr_offset + frag_len;
  
@@ -624,8 +618,6 @@ index f63018d..58295b0 100644
  				dev_kfree_skb_any(msdu);
  				goto next_msdu;
  			}
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_mon2.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_mon2.c
-index 76b4233..501e9e2 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_mon2.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_mon2.c
 @@ -7,6 +7,11 @@
@@ -640,7 +632,7 @@ index 76b4233..501e9e2 100644
  
  const struct ath12k_dp_arch_mon_ops ath12k_wifi7_dp_arch_mon_dual_ring_ops = {
  	.rx_srng_setup = ath12k_dp_mon_rx_srng_setup,
-@@ -22,4 +27,391 @@ const struct ath12k_dp_arch_mon_ops ath12k_wifi7_dp_arch_mon_dual_ring_ops = {
+@@ -22,4 +27,391 @@ const struct ath12k_dp_arch_mon_ops ath1
  	.mon_pdev_rx_attach = ath12k_dp_mon_pdev_rx_attach,
  	.mon_pdev_rx_mpdu_list_init = ath12k_dp_mon_pdev_rx_mpdu_list_init,
  	.mon_rx_srng_process = ath12k_dp_mon_rx_dual_ring_process,
@@ -1007,7 +999,7 @@ index 76b4233..501e9e2 100644
 +			if (!arsta) {
 +				ath12k_warn(ab, "link sta not found on peer %pM id %d\n",
 +					    peer->addr, peer->peer_id);
-+				spin_unlock_bh(&ab->base_lock);
++				spin_unlock_bh(&dp->dp_lock);
 +				rcu_read_unlock();
 +				dev_kfree_skb_any(skb);
 +				continue;
@@ -1032,6 +1024,3 @@ index 76b4233..501e9e2 100644
 +
 +	return num_buffs_reaped;
 +}
--- 
-2.34.1
-

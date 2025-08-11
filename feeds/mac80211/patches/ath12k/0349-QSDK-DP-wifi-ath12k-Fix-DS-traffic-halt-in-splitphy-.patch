@@ -68,7 +68,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  	for (tid = 0; tid <= IEEE80211_NUM_TIDS; tid++) {
  		ret = ath12k_wifi7_dp_rx_peer_tid_setup(ar, addr, vdev_id, tid, 1, 0,
  							HAL_PN_TYPE_NONE);
-@@ -460,7 +466,7 @@ int ath12k_dp_srng_setup(struct ath12k_b
+@@ -500,7 +506,7 @@ skip_dma_alloc:
  
  int ath12k_dp_tx_get_bank_profile(struct ath12k_base *ab,
  				  struct ath12k_link_vif *arvif,
@@ -77,7 +77,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  {
  	int bank_id = DP_INVALID_BANK_ID;
  	int i;
-@@ -469,7 +475,7 @@ int ath12k_dp_tx_get_bank_profile(struct
+@@ -509,7 +515,7 @@ int ath12k_dp_tx_get_bank_profile(struct
  
  
  	/* convert vdev params into hal_tx_bank_config */
@@ -86,7 +86,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  
  	spin_lock_bh(&dp->tx_bank_lock);
  	/* TODO: implement using idr kernel framework*/
-@@ -526,8 +532,13 @@ void ath12k_dp_tx_update_bank_profile(st
+@@ -566,8 +572,13 @@ void ath12k_dp_tx_update_bank_profile(st
  	u8 link_id = arvif->link_id;
  	struct ath12k_dp_link_vif *dp_link_vif = &ahvif->dp_vif.dp_link_vif[link_id];
  
@@ -101,7 +101,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  
  	ath12k_dp_ppeds_update_vp_entry(arvif->ar, arvif);
  }
-@@ -1137,8 +1148,10 @@ void ath12k_dp_vdev_tx_attach(struct ath
+@@ -1185,8 +1196,10 @@ void ath12k_dp_vdev_tx_attach(struct ath
  
  	ath12k_dp_update_vdev_search(arvif);
  	dp_link_vif->vdev_id_check_en = true;
@@ -124,7 +124,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  	int (*dp_reo_cmd_send)(struct ath12k_base *ab,
  			       struct ath12k_dp_rx_tid *rx_tid,
  			       enum hal_reo_cmd_type type,
-@@ -737,9 +737,10 @@ static inline void ath12k_dp_arch_op_dev
+@@ -780,9 +780,10 @@ static inline void ath12k_dp_arch_op_dev
  }
  
  static inline u32 ath12k_dp_arch_tx_get_vdev_bank_config(struct ath12k_dp *dp,
@@ -137,7 +137,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  }
  
  static inline int ath12k_dp_arch_reo_cmd_send(struct ath12k_dp *dp,
-@@ -897,7 +898,7 @@ void ath12k_dp_pdev_pre_alloc(struct ath
+@@ -940,7 +941,7 @@ void ath12k_dp_pdev_pre_alloc(struct ath
  void ath12k_dp_pdev_free(struct ath12k_base *ab);
  int ath12k_dp_tx_htt_srng_setup(struct ath12k_base *ab, u32 ring_id,
  				int mac_id, enum hal_ring_type ring_type);
@@ -146,7 +146,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  void ath12k_dp_peer_cleanup(struct ath12k *ar, int vdev_id, const u8 *addr);
  void ath12k_dp_srng_cleanup(struct ath12k_base *ab, struct dp_srng *ring);
  int ath12k_dp_srng_setup(struct ath12k_base *ab, struct dp_srng *ring,
-@@ -920,7 +921,7 @@ void ath12k_dp_reoq_lut_addr_reset(struc
+@@ -971,7 +972,7 @@ void ath12k_dp_srng_msi_setup(struct ath
  
  #ifdef CPTCFG_ATH12K_PPE_DS_SUPPORT
  int ath12k_dp_tx_get_bank_profile(struct ath12k_base *ab, struct ath12k_link_vif *arvif,
@@ -157,15 +157,23 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  int ath12k_dp_cc_ppeds_desc_init(struct ath12k_base *ab);
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
-@@ -1751,6 +1751,7 @@ ath12k_dp_primary_peer_migrate_setup(str
+@@ -1824,6 +1824,7 @@ ath12k_dp_primary_peer_migrate_setup(str
  	}
  
- migration_success:
+ 	if (peer->dp_peer->primary_link_frag_setup) {
++		arsta->arvif->primary_sta_link = true;
+ 		peer->primary_link = true;
+ 		ath12k_warn(mig_ab, "peer tid setup is already done for the peer_id %x in migration event\n",
+ 			    peer->peer_id);
+@@ -1834,6 +1835,7 @@ ath12k_dp_primary_peer_migrate_setup(str
+ 	memcpy(addr, peer->addr, sizeof(peer->addr));
+ 	vdev_id = peer->vdev_id;
+ 
 +	arsta->arvif->primary_sta_link = true;
  	peer->primary_link = true;
- 	complete(&ahsta->dp_migration_event);
- 	return;
-@@ -1802,6 +1803,7 @@ ath12k_dp_peer_migrate(struct ath12k_sta
+ 
+ 	spin_unlock_bh(&mig_dp->dp_lock);
+@@ -1927,6 +1929,7 @@ ath12k_dp_peer_migrate(struct ath12k_sta
  		    peer->addr, peer->peer_id, peer->ml_id, peer->link_id);
  
  	peer->primary_link = false;
@@ -175,7 +183,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  						  chip_id);
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -9009,7 +9009,7 @@ static int ath12k_mac_handle_link_sta_st
+@@ -9204,7 +9204,7 @@ static int ath12k_mac_handle_link_sta_st
  	} else if (old_state == IEEE80211_STA_AUTH &&
  		   new_state == IEEE80211_STA_ASSOC) {
  
@@ -186,7 +194,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  					arsta->addr, arvif->vdev_id, ret);
 --- a/drivers/net/wireless/ath/ath12k/ppe.c
 +++ b/drivers/net/wireless/ath/ath12k/ppe.c
-@@ -896,12 +896,12 @@ static int ath12k_ppeds_attach_link_apvl
+@@ -919,12 +919,12 @@ static int ath12k_ppeds_attach_link_apvl
  	} else {
  		int link_idx;
  		struct ath12k_link_vif *iter_arvif;
@@ -199,9 +207,9 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
 -			ath12k_dp_tx_get_bank_profile(ab, arvif, ab->dp);
 +			ath12k_dp_tx_get_bank_profile(ab, arvif, ab->dp, vdev_id_check_en);
  
- 		for_each_set_bit(link_idx, &ahvif->links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
- 			iter_arvif = ahvif->link[link_idx];
-@@ -1039,6 +1039,7 @@ int ath12k_ppeds_attach_link_vif(struct
+ 		links_map = ahvif->links_map;
+ 		for_each_set_bit(link_idx, &links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
+@@ -1066,6 +1066,7 @@ int ath12k_ppeds_attach_link_vif(struct
  	} else {
  		int link_idx;
  		struct ath12k_link_vif *iter_arvif;
@@ -209,7 +217,7 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
  
  		if (arvif->ahvif->links_map &&
  		    arvif->ahvif->vif->type == NL80211_IFTYPE_STATION) {
-@@ -1074,9 +1075,7 @@ int ath12k_ppeds_attach_link_vif(struct
+@@ -1101,9 +1102,7 @@ int ath12k_ppeds_attach_link_vif(struct
  		}
  
  		*link_ppe_vp_profile_idx = ppe_vp_profile_idx;
@@ -218,8 +226,8 @@ Signed-off-by: Tamizh Chelvam Raja <tamizh.raja@oss.qualcomm.com>
 -		arvif->splitphy_ds_bank_id = ath12k_dp_tx_get_bank_profile(ab, arvif, ab->dp);
 +		arvif->splitphy_ds_bank_id = ath12k_dp_tx_get_bank_profile(ab, arvif, ab->dp, vdev_id_check_en);
  
- 		for_each_set_bit(link_idx, &ahvif->links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
- 			iter_arvif = ahvif->link[link_idx];
+ 		links_map = ahvif->links_map;
+ 		for_each_set_bit(link_idx, &links_map, IEEE80211_MLD_MAX_NUM_LINKS) {
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
 @@ -1024,7 +1024,8 @@ tx_release:

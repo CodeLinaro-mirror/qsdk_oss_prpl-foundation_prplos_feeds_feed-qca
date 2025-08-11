@@ -23,8 +23,6 @@ Signed-off-by: Sarika Sharma <sarishar@qti.qualcomm.com>
  drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c |  2 +-
  3 files changed, 23 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.c b/drivers/net/wireless/ath/ath12k/dp_rx.c
-index 3c40240..91fab11 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
 @@ -202,10 +202,28 @@ out:
@@ -39,14 +37,14 @@ index 3c40240..91fab11 100644
 +	struct ath12k_dp_link_peer *peer;
 +	struct ieee80211_hdr *hdr = (void *)msdu->data;
 +
-+	spin_lock_bh(&ab->base_lock);
++	spin_lock_bh(&dp_pdev->dp->dp_lock);
 +	peer = ath12k_dp_rx_h_find_peer(dp_pdev->dp, msdu, rx_desc_data);
 +	if (!peer || !peer->mlo) {
-+		spin_unlock_bh(&ab->base_lock);
++		spin_unlock_bh(&dp_pdev->dp->dp_lock);
 +		return;
 +	}
 +	ether_addr_copy(hdr->addr2, peer->ml_addr);
-+	spin_unlock_bh(&ab->base_lock);
++	spin_unlock_bh(&dp_pdev->dp->dp_lock);
 +}
 +
  void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *msdu,
@@ -57,7 +55,7 @@ index 3c40240..91fab11 100644
  {
  	struct ath12k_skb_rxcb *rxcb = ATH12K_SKB_RXCB(msdu);
  	struct ieee80211_hdr *hdr;
-@@ -223,6 +241,8 @@ void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *
+@@ -223,6 +241,8 @@ void ath12k_dp_rx_h_undecap_raw(struct a
  	if (!decrypted)
  		return;
  
@@ -66,11 +64,9 @@ index 3c40240..91fab11 100644
  	hdr = (void *)msdu->data;
  
  	/* Tail */
-diff --git a/drivers/net/wireless/ath/ath12k/dp_rx.h b/drivers/net/wireless/ath/ath12k/dp_rx.h
-index bee53fb..35258f9 100644
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.h
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.h
-@@ -183,7 +183,7 @@ int ath12k_dp_rx_h_michael_mic(struct crypto_shash *tfm, u8 *key,
+@@ -183,7 +183,7 @@ int ath12k_dp_rx_h_michael_mic(struct cr
  void ath12k_dp_rx_h_undecap_raw(struct ath12k_pdev_dp *dp_pdev, struct sk_buff *msdu,
  				enum hal_encrypt_type enctype,
  				struct ieee80211_rx_status *status,
@@ -79,11 +75,9 @@ index bee53fb..35258f9 100644
  struct ath12k_dp_peer *
  ath12k_dp_rx_h_find_peer_by_peerid_index(struct ath12k_dp *dp,
  					 struct ath12k_pdev_dp *dp_pdev,
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-index ab7341a..543e272 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-@@ -608,7 +608,7 @@ static void ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+@@ -611,7 +611,7 @@ static void ath12k_wifi7_dp_rx_h_undecap
  		break;
  	case DP_RX_DECAP_TYPE_RAW:
  		ath12k_dp_rx_h_undecap_raw(dp_pdev, msdu, enctype, status,
@@ -92,6 +86,3 @@ index ab7341a..543e272 100644
  		break;
  	case DP_RX_DECAP_TYPE_ETHERNET2_DIX:
  		ehdr = (struct ethhdr *)msdu->data;
--- 
-2.34.1
-
