@@ -8,7 +8,7 @@ PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=8faef225c9f62ac34bb1e097cd8aebaa5f0b89e5
+PKG_VERSION:=ed2e94a1fcc1d195440f5ae3f5a47cab5c62158c
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -57,19 +57,6 @@ define KernelPackage/qca-nss-ppe-vlan-mgr/Description
 Kernel modules for NSS PPE vlan manager
 endef
 
-define KernelPackage/qca-nss-ppe-pppoe-mgr
-  SECTION:=kernel
-  CATEGORY:=Kernel modules
-  SUBMENU:=Network Devices
-  TITLE:=Kernel driver for NSS PPE PPPoE manager
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
-		+kmod-qca-nss-ppe \
-		+kmod-pppoe @!LINUX_3_18 \
-		+PACKAGE_kmod-bonding:kmod-bonding
-  FILES:=$(PKG_BUILD_DIR)/clients/pppoe/qca-nss-ppe-pppoe-mgr.ko
-  AUTOLOAD:=$(call AutoLoad,51,qca-nss-ppe-pppoe-mgr)
-endef
-
 define KernelPackage/qca-nss-pppoe-mgr
   SECTION:=kernel
   CATEGORY:=Kernel modules
@@ -83,10 +70,6 @@ define KernelPackage/qca-nss-pppoe-mgr
 		+TARGET_ipq54xx:kmod-qca-nss-ppe
   FILES:=$(PKG_BUILD_DIR)/clients/pppoe/qca-nss-pppoe-mgr.ko
   AUTOLOAD:=$(call AutoLoad,51,qca-nss-pppoe-mgr)
-endef
-
-define KernelPackage/qca-nss-ppe-pppoe-mgr/Description
-Kernel modules for NSS PPE PPPoE manager
 endef
 
 define KernelPackage/qca-nss-pppoe-mgr/Description
@@ -132,10 +115,9 @@ define KernelPackage/qca-nss-ppe-ath-clients
   SUBMENU:=Network Devices
   TITLE:=Kernel driver for NSS PPE ath clients
   DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
-		+kmod-qca-nss-ppe \
 		+kmod-qca-nss-ppe-vp \
-		+kmod-qca-nss-ppe-ds \
-  FILES:=$(PKG_BUILD_DIR)/clients/ath_client/qca-nss-ppe-ath-client.ko
+		+PACKAGE_kmod-ath12k:kmod-ath12k
+  FILES:=$(PKG_BUILD_DIR)/clients/ath_client/qca-nss-ppe-ath-clients.ko
   AUTOLOAD:=$(call AutoLoad,52,qca-nss-ppe-ath-clients)
 endef
 
@@ -164,10 +146,6 @@ EXTRA_CFLAGS+= -DNSS_VLAN_MGR_WLANIF_DST_XLATE_SUPPORT
 endif
 
 MAKE_OPTS+=vlan-mgr=y
-endif
-
-ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ppe-pppoe-mgr),)
-MAKE_OPTS+=pppoe-mgr=y
 endif
 
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-pppoe-mgr),)
@@ -203,7 +181,6 @@ endef
 
 $(eval $(call KernelPackage,qca-nss-ppe-bridge-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-vlan-mgr))
-$(eval $(call KernelPackage,qca-nss-ppe-pppoe-mgr))
 $(eval $(call KernelPackage,qca-nss-pppoe-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-lag-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-dsa-mgr))

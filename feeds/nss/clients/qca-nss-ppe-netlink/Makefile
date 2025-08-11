@@ -8,7 +8,7 @@ PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=8faef225c9f62ac34bb1e097cd8aebaa5f0b89e5
+PKG_VERSION:=ed2e94a1fcc1d195440f5ae3f5a47cab5c62158c
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

@@ -8,7 +8,7 @@ PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-netfn
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=d721906d730dd4b8c046d834b72a56b2b5754d71
+PKG_VERSION:=408a028d887974ab59ba7845b27d6fe9f6cb1b06
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -71,6 +71,7 @@ endef
 
 define KernelPackage/qca-nss-netfn-sk-offload/install
         $(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) files/iperf3_load_balance.sh $(1)/usr/bin/
 endef
 
 define KernelPackage/qca-nss-netfn-capwap

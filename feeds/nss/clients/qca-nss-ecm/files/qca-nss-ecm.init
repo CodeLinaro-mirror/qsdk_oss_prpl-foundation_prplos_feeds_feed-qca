@@ -149,6 +149,11 @@ load_ecm() {
 		[ -f /lib/modules/$kernel_version/ath.ko ] && insmod ecm-wifi-plugin
 	}
 
+	[ -e "/lib/modules/$kernel_version/qca-wifi-nss-plugins.ko" ] && {
+		[ -d /sys/module/qca_wifi_nss_plugins ] || [ -f /tmp/.wifi-config-done ] ||
+		[ -f /lib/modules/$kernel_version/ath.ko ] && insmod qca-wifi-nss-plugins
+	}
+
 	support_bridge && {
 		sysctl -w net.bridge.bridge-nf-call-ip6tables=1
 		sysctl -w net.bridge.bridge-nf-call-iptables=1
@@ -183,6 +188,13 @@ unload_ecm() {
 		#
 		if [ -d /sys/module/ecm_wifi_plugin ]; then
 			rmmod ecm-wifi-plugin
+		fi
+
+		#
+		# unload qca-wifi-nss-plugins
+		#
+		if [ -d /sys/module/qca_wifi_nss_plugins ]; then
+			rmmod qca-wifi-nss-plugins
 		fi
 
 		if [ -d /sys/module/ecm_ae_select ]; then
