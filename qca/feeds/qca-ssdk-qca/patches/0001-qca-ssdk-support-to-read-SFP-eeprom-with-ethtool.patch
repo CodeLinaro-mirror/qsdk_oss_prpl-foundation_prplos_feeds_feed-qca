@@ -1,0 +1,132 @@
+diff --git a/src/hsl/phy/sfp_phy.c b/src/hsl/phy/sfp_phy.c
+index bb23c4c..e2ed663 100644
+--- a/src/hsl/phy/sfp_phy.c
++++ b/src/hsl/phy/sfp_phy.c
+@@ -23,9 +23,118 @@
+ #include "hppe_uniphy_reg.h"
+ #include "hppe_uniphy.h"
+ #include "hsl_port_prop.h"
++#include <linux/mdio/mdio-i2c.h>
++#include <linux/i2c.h>
+ 
+ static a_bool_t sfp_phy_drv_registered = A_FALSE;
+ 
++static int sfp_eeprom_i2c_read(struct phy_device *phydev, u32 bus_addr,
++	u8 dev_addr, void *buf, size_t len)
++{
++	struct mii_bus *miibus;
++	struct qcom_mdio_i2c_data *bus_priv;
++	struct i2c_msg msgs[2];
++	size_t this_len;
++	int ret;
++
++	if (!phydev)
++		return -EINVAL;
++	miibus = phydev->mdio.bus;
++	if (!miibus)
++		return -EINVAL;
++
++	if(!strstr(phydev->mdio.bus->id, "i2c")) {
++		struct qca_phy_priv *priv = phydev->priv;
++		return qca_i2c_data_get(priv->device_id, bus_addr, dev_addr, buf, len);
++	}
++
++	msgs[0].addr = bus_addr;
++	msgs[0].flags = 0;
++	msgs[0].len = 1;
++	msgs[0].buf = &dev_addr;
++	msgs[1].addr = bus_addr;
++	msgs[1].flags = I2C_M_RD;
++	msgs[1].len = len;
++	msgs[1].buf = buf;
++
++	bus_priv = miibus->priv;
++	while (len) {
++		this_len = len;
++		msgs[1].len = this_len;
++		ret = i2c_transfer(bus_priv->i2c, msgs, ARRAY_SIZE(msgs));
++		if (ret < 0)
++			return ret;
++
++		if (ret != ARRAY_SIZE(msgs))
++			break;
++
++		msgs[1].buf += this_len;
++		dev_addr += this_len;
++		len -= this_len;
++	}
++
++	return msgs[1].buf - (u8 *)buf;
++}
++
++static int
++sfp_module_info(struct phy_device *phydev, struct ethtool_modinfo *modinfo)
++{
++	a_uint8_t mod_compliance, addrmode;
++	int ret;
++
++	ret  = sfp_eeprom_i2c_read(phydev, 0x50, 0x5e, &mod_compliance, 1);
++	if (ret < 0)
++		return ret;
++	ret = sfp_eeprom_i2c_read(phydev, 0x50, 0x5c, &addrmode, 1);
++	if (ret < 0)
++		return ret;
++	if ((mod_compliance != 0) && !(addrmode & BIT(2))) {
++		modinfo->type = ETH_MODULE_SFF_8472;
++		modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN;
++	} else {
++		modinfo->type = ETH_MODULE_SFF_8079;
++		modinfo->eeprom_len = ETH_MODULE_SFF_8079_LEN;
++	}
++
++	return 0;
++}
++
++static int
++sfp_module_eeprom(struct phy_device *phydev, struct ethtool_eeprom *ee, u8 *data)
++{
++	a_uint32_t f, l, len;
++	int ret;
++
++	if (ee->len == 0)
++		return -EINVAL;
++
++	/* the first byte is ee->offset, and the last byte is ee->offset + ee->len */
++	f = ee->offset;
++	l = ee->offset + ee->len;
++	/* read the information of 0x50 */
++	if (f < ETH_MODULE_SFF_8079_LEN) {
++		len = (l > ETH_MODULE_SFF_8079_LEN) ? ETH_MODULE_SFF_8079_LEN : l;
++		len -= f;
++		ret = sfp_eeprom_i2c_read(phydev, 0x50, f, data, len);
++		if (ret < 0)
++			return ret;
++		f += len;
++		data += len;
++	}
++	/* read the information of 0x51 */
++	if (f < ETH_MODULE_SFF_8472_LEN && l > ETH_MODULE_SFF_8079_LEN) {
++		len = (l > ETH_MODULE_SFF_8472_LEN) ? ETH_MODULE_SFF_8472_LEN : l;
++		len -= f;
++		f -= ETH_MODULE_SFF_8079_LEN;
++
++		ret = sfp_eeprom_i2c_read(phydev, 0x51, f, data, len);
++		if (ret < 0)
++			return ret;
++	}
++
++	return 0;
++}
++
+ static int
+ sfp_phy_probe(struct phy_device *pdev)
+ {
+@@ -276,6 +385,8 @@
+ 	.aneg_done	= sfp_phy_aneg_done,
+ 	.read_status	= sfp_read_status,
+ 	.get_features	= sfp_phy_read_abilities,
++	.module_info	= sfp_module_info,
++	.module_eeprom	= sfp_module_eeprom,
+ 	.mdiodrv.driver	= { .owner = THIS_MODULE },
+ };
+ 
