@@ -62,9 +62,8 @@
 				fixup;
 			};
 
-			phy4: ethernet-phy@4 {
-				reg = <0x1e>;
-			};
+			/delete-node/ ethernet-phy@4;
+
 			phy5: ethernet-phy@5 {
 				compatible ="ethernet-phy-ieee802.3-c45";
 				reg = <8>;
@@ -74,6 +73,8 @@
 		ess-instance {
 			num_devices = <0x1>;
 			ess-switch@3a000000 {
+				pinctrl-0 = <&sfp_pins_pinmux>;
+				pinctrl-names = "default";
 				switch_cpu_bmp = <0x1>;  /* cpu port bitmap */
 				switch_lan_bmp = <0x1e>; /* lan port bitmap */
 				switch_wan_bmp = <0x60>; /* wan port bitmap */
@@ -102,10 +103,8 @@
 					};
 					port@4 {
 						port_id = <5>;
-						phy_address = <30>;
-						phy_i2c_address = <30>;
-						phy-i2c-mode;
 						media-type = "sfp";
+						i2c-bus = <&blsp1_i2c3>;
 					};
 					port@5 {
 						port_id = <6>;
@@ -211,12 +210,16 @@
 		};
 
 		dp5 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <5>;
 			reg = <0x3a510000 0x4000>;
 			qcom,mactype = <1>;
 			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <30>;
-			phy-mode = "sgmii";
+			i2c-bus = <&blsp1_i2c3>;
+			label = "sfp";
+			phy-mode = "usxgmii";
 		};
 
 		dp6 {
@@ -537,6 +540,21 @@
 };
 
 &tlmm {
+	sfp_pins_pinmux: sfp_pinmux {
+		sfp_rx {
+			pins = "gpio46";
+			function = "rx1";
+			bias-disable;
+		};
+		sfp_tx {
+			pins = "gpio45";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-down;
+			output-low;
+		};
+	};
+
 	audio_pins_pri: audio_pinmux_pri {
 		mux_1 {
 			pins = "gpio41";
