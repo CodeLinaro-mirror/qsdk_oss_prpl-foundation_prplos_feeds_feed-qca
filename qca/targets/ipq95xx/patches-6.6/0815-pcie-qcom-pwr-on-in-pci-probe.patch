@@ -1,0 +1,23 @@
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.
+@@ -312,6 +312,7 @@ struct qcom_pcie {
+ 	uint32_t num_lanes;
+ 	int global_irq;
+ 	bool enable_vc;
++	struct gpio_desc *pwr_on;
+ };
+ 
+ #define to_qcom_pcie(x)		dev_get_drvdata((x)->dev)
+@@ -1764,6 +1765,12 @@ static int qcom_pcie_probe(struct platform_device *pdev)
+ 		goto err_pm_runtime_put;
+ 	}
+ 
++	pcie->pwr_on = devm_gpiod_get_optional(dev, "pwr_on", GPIOD_OUT_HIGH);
++	if (!IS_ERR(pcie->pwr_on)) {
++		gpiod_set_value(pcie->pwr_on, 1);
++		msleep(1000);
++	}
++
+ 	pcie->parf = devm_platform_ioremap_resource_byname(pdev, "parf");
+ 	if (IS_ERR(pcie->parf)) {
+ 		ret = PTR_ERR(pcie->parf);
