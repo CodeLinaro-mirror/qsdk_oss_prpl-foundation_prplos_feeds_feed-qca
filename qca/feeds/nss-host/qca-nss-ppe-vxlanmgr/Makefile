@@ -45,6 +45,7 @@ endef
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/qca-nss-ppe
 	$(CP) $(PKG_BUILD_DIR)/exports/* $(1)/usr/include/qca-nss-ppe
+	rm $(1)/usr/include/qca-nss-ppe/nss_ppe_*.h
 endef
 
 EXTRA_CFLAGS+= \
