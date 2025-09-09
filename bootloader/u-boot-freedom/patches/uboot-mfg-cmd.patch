@@ -1,0 +1,235 @@
+diff --git a/cmd/Kconfig b/cmd/Kconfig
+--- a/cmd/Kconfig
++++ b/cmd/Kconfig
+@@ -1577,6 +1577,14 @@
+ 	  Interface) busses, a on-chip interconnect specification for managing
+ 	  functional blocks in SoC designs, which is also often used in designs
+ 	  involving FPGAs (e.g.  communication with IP cores in Xilinx FPGAs).
++
++config CMD_MFG
++	bool "Enable readmfg command"
++	default y
++	select PARTITION_TYPE_GUID
++	select CMD_PART
++	help
++	  Enable MFG support command
+ endmenu
+ 
+ 
+diff --git a/cmd/Makefile b/cmd/Makefile
+--- a/cmd/Makefile
++++ b/cmd/Makefile
+@@ -209,6 +209,9 @@
+ obj-$(CONFIG_CMD_PVBLOCK) += pvblock.o
+ obj-$(CONFIG_CMD_UNTAR) += untar.o
+ 
++# MFG support
++obj-$(CONFIG_CMD_MFG) += mfg.o
++
+ # Power
+ obj-$(CONFIG_CMD_PMIC) += pmic.o
+ obj-$(CONFIG_CMD_REGULATOR) += regulator.o
+diff --git a/cmd/mfg.c b/cmd/mfg.c
+--- /dev/null 
++++ b/cmd/mfg.c
+@@ -0,0 +1,200 @@
++#include <common.h>
++#include <command.h>
++#include <dm.h>
++#include <errno.h>
++#include <image.h>
++#include <fdt_support.h>
++#include <linux/libfdt.h>
++#include <part.h>
++#include <blk.h>
++#include <u-boot/sha256.h>
++
++#define MFG_DTB_LOAD_ADDR 0x83000000
++#define MFG_DTB_IS_SIGNED 0
++#define MFG_DATA_NODE "/MFG_DATA"
++
++// Dummy signature verification placeholder
++static int check_dtb_signature(const void *dtb, int size) {
++#if MFG_DTB_IS_SIGNED
++    printf("Authenticating signed DTB... ");
++    const u8 *sig = dtb + size - 256;  // Simulated signature at the end
++    u8 hash[32];
++    sha256_csum_wd((const unsigned char *)dtb, size - 256, hash, CHUNKSZ_SHA256);
++    bool valid = true; // Replace with actual crypto check
++    printf(valid ? "OK\n" : "FAILED\n");
++    return valid ? 0 : -EINVAL;
++#else
++    return 0;
++#endif
++}
++
++static void print_mfg_property(const void *fdt, int node, const char *name) {
++    const void *prop;
++    int len;
++
++    prop = fdt_getprop(fdt, node, "value", &len);
++    if (!prop) {
++        printf("No 'value' in node %s\n", name);
++        return;
++    }
++
++    const char *type = fdt_getprop(fdt, node, "type", NULL);
++    if (type && strcmp(type, "string") == 0) {
++        printf("%s: %s\n", name, (const char *)prop);
++    } else {
++        printf("%s: ", name);
++        for (int i = 0; i < len; i++)
++            printf("%02x ", ((const u8 *)prop)[i]);
++        printf("\n");
++    }
++}
++
++static void print_by_name(const void *fdt, const char *name) {
++    int mfg_data = fdt_path_offset(fdt, MFG_DATA_NODE);
++    if (mfg_data < 0) {
++        printf("No MFG DATA found\n");
++        return;
++    }
++
++    int subnode = fdt_subnode_offset(fdt, mfg_data, name);
++    if (subnode < 0) {
++        printf("Entry '%s' not found\n", name);
++        return;
++    }
++
++    print_mfg_property(fdt, subnode, name);
++}
++
++static void print_by_id(const void *fdt, int target_id) {
++    int mfg_data = fdt_path_offset(fdt, MFG_DATA_NODE);
++    if (mfg_data < 0) {
++        printf("No MFG DATA found\n");
++        return;
++    }
++
++    int offset;
++    bool found = false;
++
++    fdt_for_each_subnode(offset, fdt, mfg_data) {
++        const char *name = fdt_get_name(fdt, offset, NULL);
++        const fdt32_t *id_prop = fdt_getprop(fdt, offset, "id", NULL);
++        if (!id_prop)
++            continue;
++
++        int id = fdt32_to_cpu(*id_prop);
++        if (id == target_id) {
++            print_mfg_property(fdt, offset, name);
++            found = true;
++            break;
++        }
++    }
++
++    if (!found)
++        printf("No entry with id %d found\n", target_id);
++}
++
++static void list_all(const void *fdt) {
++    int mfg_data = fdt_path_offset(fdt, MFG_DATA_NODE);
++    if (mfg_data < 0) {
++        printf("No MFG DATA found\n");
++        return;
++    }
++
++    int offset;
++    fdt_for_each_subnode(offset, fdt, mfg_data) {
++        const char *name = fdt_get_name(fdt, offset, NULL);
++        if (!name)
++            continue;
++        print_mfg_property(fdt, offset, name);
++    }
++}
++
++// Lookup partition by name and return block start and size
++static int find_partition(const char *part_name, lbaint_t *start, lbaint_t *size) {
++    struct blk_desc *dev_desc;
++    int ret = blk_get_device_by_str("mmc", "0", &dev_desc); 
++    if (ret < 0) {
++	printf("Error: MMC device %d not found!\n", 0);
++	return CMD_RET_FAILURE;
++    }
++
++    struct disk_partition info;
++    ret = part_get_info_by_name(dev_desc, part_name, &info);
++    if (ret < 0) {
++	char cmd[64];
++	snprintf(cmd, sizeof(cmd), "gpt setenv mmc %d %s", 0, part_name);
++	if (run_command(cmd, 0) == 0) {
++	    const char *start_str = env_get("gpt_partition_addr");
++	    const char *size_str  = env_get("gpt_partition_size");
++	    if (start_str && size_str) {
++               info.start = simple_strtoul(start_str, NULL, 16);
++		info.size  = simple_strtoul(size_str, NULL, 16);
++		printf("Found via GPT fallback: start=0x%lx, size=0x%lx\n", info.start, info.size);
++	    } else {
++	        printf("gpt setenv succeeded, but env vars not set\n");
++	        return CMD_RET_FAILURE;
++           }
++	}
++    }
++
++    *start = info.start;
++    *size  = info.size;
++    return 0;
++}
++
++static int do_readmfg(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[]) {
++    if (argc < 2) {
++        printf("Usage: readmfg <partition> [name|id]\n");
++        return CMD_RET_USAGE;
++    }
++
++    const char *partition = argv[1];
++    char *arg = argc > 2 ? argv[2] : NULL;
++
++    lbaint_t part_start, part_size;
++    if (find_partition(partition, &part_start, &part_size) != 0)
++        return CMD_RET_FAILURE;
++
++    char read_cmd[128];
++    snprintf(read_cmd, sizeof(read_cmd),
++             "mmc dev 0; mmc read 0x%x 0x%llx 0x%llx",
++             MFG_DTB_LOAD_ADDR, (u64)part_start, (u64)part_size);
++
++    if (run_command(read_cmd, 0)) {
++        printf("Failed to read DTB\n");
++        return CMD_RET_FAILURE;
++    }
++
++    void *dtb = (void *)MFG_DTB_LOAD_ADDR;
++
++    if (fdt_check_header(dtb)) {
++        printf("Invalid DTB header\n");
++        return CMD_RET_FAILURE;
++    }
++
++    int size = fdt_totalsize(dtb);
++    if (check_dtb_signature(dtb, size) < 0) {
++        printf("DTB signature check failed\n");
++        return CMD_RET_FAILURE;
++    }
++
++    if (!arg) {
++        list_all(dtb);
++    } else {
++        char *endptr;
++        long id = simple_strtol(arg, &endptr, 10);
++        if (*endptr == '\0') {
++            print_by_id(dtb, id);
++        } else {
++            print_by_name(dtb, arg);
++        }
++    }
++
++    return CMD_RET_SUCCESS;
++}
++
++U_BOOT_CMD(
++    readmfg, 3, 0, do_readmfg,
++    "Read and print MFG data from a named partition",
++    "<partition> [name|id] - Read from partition (e.g. mfgdata), list all or query specific field"
++);
