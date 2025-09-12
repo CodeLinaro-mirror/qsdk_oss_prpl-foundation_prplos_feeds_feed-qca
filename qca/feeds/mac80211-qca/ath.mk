@@ -260,7 +260,7 @@ define KernelPackage/ath9k-qca-htc
   $(call KernelPackage/mac80211-qca/Default)
   TITLE:=Atheros 802.11n USB device support
   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath9k
-  DEPENDS+= @USB_SUPPORT +kmod-ath9k-qca-common +kmod-usb-core +ath9k-qca-htc-firmware
+  DEPENDS+= @USB_SUPPORT +kmod-ath9k-qca-common +kmod-usb-core
   FILES:= \
 	$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath9k/ath9k_htc.ko
   AUTOLOAD:=$(call AutoProbe,ath9k_htc)
