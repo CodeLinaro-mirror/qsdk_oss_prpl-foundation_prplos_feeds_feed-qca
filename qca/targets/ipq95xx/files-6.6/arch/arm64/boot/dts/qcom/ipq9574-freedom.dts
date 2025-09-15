@@ -339,9 +339,9 @@
 };
 
 &blsp1_uart4 {
-	pinctrl-0 = <&QCC710_pins &pta_QCC710>;
+	pinctrl-0 = <&EFC32_UART_pins>;
 	pinctrl-names = "default";
-	status = "disabled";
+	status = "okay";
 };
 
 &pcie0_x1 {
@@ -515,6 +515,32 @@
 	pinctrl-0 = <&i2c_3_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	i2c-mux@71 {
+		compatible = "nxp,pca9548";
+		reg = <0x71>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c@5 {
+			reg = <5>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			tca6416: gpio@20 {
+				pinctrl-0 = <&io_expander_pins>;
+				pinctrl-names = "default";
+				compatible = "ti,tca6416";
+				reg = <0x20>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				gpio-line-names = "M2_RST", "N79_TX_EN", "FULL_CARD_POWER_OFF", "W_DISABLE_1",
+						  "W_DISABLE_2", "WL_LED_ORANGE", "EFR32_PWR_EN", "TMP1075_INT",
+						  "TMP1075_1_INT", "X_WK_6G_RST", "QB_WK_RST_L", "A_WK_5G_RST",
+						  "Q_WK_2G_RST", "LED_LP5562_EN", "CPU_USB_SW_EN", "HUB_RST";
+			};
+		};
+	};
 };
 
 &sleep_clk {
@@ -570,6 +596,23 @@
 			drive-strength = <8>;
 			bias-pull-up;
 			output-high;
+		};
+	};
+
+	io_expander_pins: io_expander_pins{
+		reset_gpio {
+			pins = "gpio18";
+			function = "gpio";
+			drive-strength = <8>;
+			output-high;
+		};
+
+		interrupt_gpio {
+			pins = "gpio17";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-up;
+			input;
 		};
 	};
 
@@ -686,26 +729,13 @@
 		};
 	};
 
-	QCC710_pins: QCC710_pins {
+	EFC32_UART_pins: EFC32_UART_pins {
 		uart4_pins: uart4-pins {
 			pins = "gpio50", "gpio51", "gpio52", "gpio53";
 			function = "blsp4_uart";
 			drive-strength = <8>;
 			bias-disable;
 		};
-		QCC710_reset {
-			pins = "gpio19";
-			function = "gpio";
-			drive-strength = <8>;
-			bias-pull-down;
-		};
-	};
-
-	pta_QCC710: pta_QCC710 {
-		pins = "gpio54", "gpio55", "gpio56";
-		function = "pta";
-		drive-strength = <8>;
-		bias-disable;
 	};
 
 	pwm_pins: pwm-state {
