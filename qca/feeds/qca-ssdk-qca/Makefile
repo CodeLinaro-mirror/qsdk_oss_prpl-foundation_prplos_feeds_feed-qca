@@ -65,7 +65,7 @@ endef
 define KernelPackage/qca-ssdk-qca-hnat
 $(call KernelPackage/qca-ssdk-qca/default-nohnat)
   DEPENDS:=@TARGET_ipq_ipq40xx||TARGET_ipq40xx||TARGET_ar71xx||TARGET_ipq806x +kmod-ipt-extra \
-	  +kmod-ipt-filter +(TARGET_ipq806x||TARGET_ipq):kmod-qca-rfs +kmod-ppp
+	  +kmod-ppp
   TITLE+= (hnat)
   VARIANT:=hnat
 endef

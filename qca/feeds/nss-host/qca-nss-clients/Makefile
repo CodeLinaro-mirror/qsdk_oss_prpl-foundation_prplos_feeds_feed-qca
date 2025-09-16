@@ -14,7 +14,6 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
-PKG_BUILD_DEPENDS := PACKAGE_kmod-qca-nss-crypto:kmod-qca-nss-crypto
 MAKE_OPTS:=
 
 include $(INCLUDE_DIR)/package.mk
@@ -449,7 +448,7 @@ define KernelPackage/qca-nss-drv-mscs
  CATEGORY:=Kernel modules
  SUBMENU:=Network Support
  TITLE:=NSS Module to interface between wlan host driver and ECM MSCS classifier.
- DEPENDS:=@!TARGET_ipq95xx +kmod-qca-nss-drv kmod-qca-nss-ecm-premium kmod-qca-wifi @!LINUX_3_18
+ DEPENDS:=@!TARGET_ipq95xx +kmod-qca-nss-drv kmod-qca-nss-ecm-premium @!LINUX_3_18
  FILES:=$(PKG_BUILD_DIR)/mscs/qca-nss-mscs.ko
 endef
 

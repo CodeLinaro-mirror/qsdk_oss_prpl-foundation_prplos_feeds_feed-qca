@@ -141,7 +141,7 @@ CRYPTO_MENU:=Cryptographic API modules
 
 define AddPlatformDepends/crypto
   SUBMENU:=$(CRYPTO_MENU)
-  DEPENDS+=+LINUX_4_4:kmod-crypto-core $(1)
+  DEPENDS+= $(1)
 endef
 
 define KernelPackage/crypto-aes-internal
@@ -164,7 +164,7 @@ define KernelPackage/crypto-qcrypto
 	$(LINUX_DIR)/drivers/crypto/msm/qcrypto.ko \
 	$(LINUX_DIR)/drivers/crypto/msm/qcedev.ko
   AUTOLOAD:=$(call AutoLoad,09,qcrypto)
-  DEPENDS:=@TARGET_ipq806x||TARGET_ipq40xx||TARGET_ipq_ipq40xx +kmod-crypto-manager +kmod-crypto-aes +kmod-crypto-hash +kmod-crypto-des
+  DEPENDS:=@TARGET_ipq806x||TARGET_ipq40xx||TARGET_ipq_ipq40xx +kmod-crypto-manager +kmod-crypto-hash +kmod-crypto-des
   $(call AddPlatformDepends/crypto)
 endef
 
@@ -474,7 +474,7 @@ LEDS_MENU:=LED modules
 define KernelPackage/leds-tlc591xx
   SUBMENU:=$(LEDS_MENU)
   TITLE:=TLC591XX LED support
-  DEPENDS:=+kmod-i2c-core +kmod-regmap
+  DEPENDS:=+kmod-i2c-core
   KCONFIG:=CONFIG_LEDS_TLC591XX
   FILES:=$(LINUX_DIR)/drivers/leds/leds-tlc591xx.ko
   AUTOLOAD:=$(call AutoLoad,60,leds-tlc591xx)

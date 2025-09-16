@@ -38,7 +38,6 @@ define KernelPackage/qca-nss-eip
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
-		+TARGET_ipq95xx:qca-nss-fw-eip-al \
 		+TARGET_ipq95xx:kmod-qca-nss-ppe
   TITLE:=Kernel driver for NSS EIP driver
   FILES:=$(PKG_BUILD_DIR)/driver/$(NSS_EIP_DIR)/qca-nss-eip.ko
