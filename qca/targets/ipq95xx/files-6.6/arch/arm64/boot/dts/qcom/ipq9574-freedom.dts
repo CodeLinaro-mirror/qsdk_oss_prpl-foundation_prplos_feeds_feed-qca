@@ -34,6 +34,10 @@
 		lan4 = "/soc@0/dp4";
 		sfp = "/soc@0/dp5";
 		wan = "/soc@0/dp6";
+		led-boot = &led_system_blue;
+		led-failsafe = &led_system_red;
+		led-running = &led_system_green;
+		led-upgrade = &led_system_blue;
 	};
 
 	chosen {
@@ -557,6 +561,47 @@
 						  "TMP1075_1_INT", "X_WK_6G_RST", "QB_WK_RST_L", "A_WK_5G_RST",
 						  "Q_WK_2G_RST", "LED_LP5562_EN", "CPU_USB_SW_EN", "HUB_RST";
 			};
+		};
+	};
+
+	led-controller@30 {
+		compatible = "ti,lp5562";
+		reg = <0x30>;
+		clock-mode = /bits/ 8 <2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		enable-gpios = <&tca6416 13 GPIO_ACTIVE_HIGH>;
+
+		led_system_red: chan@0 {
+			chan-name = "red";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_RED>;
+			reg = <0>;
+		};
+
+		led_system_green: chan@1 {
+			chan-name = "green";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_GREEN>;
+			reg = <1>;
+		};
+
+		led_system_blue: chan@2 {
+			chan-name = "blue";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_BLUE>;
+			reg = <2>;
+		};
+
+		led_system_white: chan@3 {
+			chan-name = "white";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_WHITE>;
+			reg = <3>;
 		};
 	};
 };
