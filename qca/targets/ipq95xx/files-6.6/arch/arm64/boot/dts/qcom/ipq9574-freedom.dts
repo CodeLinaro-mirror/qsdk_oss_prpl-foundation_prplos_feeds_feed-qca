@@ -28,7 +28,10 @@
 		ethernet3 = "/soc/dp4";
 		ethernet4 = "/soc/dp5";
 		ethernet5 = "/soc/dp6";
-
+		led-boot = &led_system_blue;
+		led-failsafe = &led_system_red;
+		led-running = &led_system_green;
+		led-upgrade = &led_system_blue;
 	};
 
 	chosen {
@@ -515,6 +518,73 @@
 	pinctrl-0 = <&i2c_3_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	i2c-mux@71 {
+		compatible = "nxp,pca9548";
+		reg = <0x71>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c@5 {
+			reg = <5>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			tca6416: gpio@20 {
+				pinctrl-0 = <&io_expander_pins>;
+				pinctrl-names = "default";
+				compatible = "ti,tca6416";
+				reg = <0x20>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				gpio-line-names = "M2_RST", "N79_TX_EN", "FULL_CARD_POWER_OFF", "W_DISABLE_1",
+						  "W_DISABLE_2", "WL_LED_ORANGE", "BLE_RST_L", "TMP1075_INT",
+						  "TMP1075_1_INT", "X_WK_6G_RST", "QB_WK_RST_L", "A_WK_5G_RST",
+						  "Q_WK_2G_RST", "LED_LP5562_EN", "CPU_USB_SW_EN", "HUB_RST";
+			};
+		};
+	};
+
+	led-controller@30 {
+		compatible = "ti,lp5562";
+		reg = <0x30>;
+		clock-mode = /bits/ 8 <2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		enable-gpios = <&tca6416 13 GPIO_ACTIVE_HIGH>;
+
+		led_system_red: chan@0 {
+			chan-name = "red";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_RED>;
+			reg = <0>;
+		};
+
+		led_system_green: chan@1 {
+			chan-name = "green";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_GREEN>;
+			reg = <1>;
+		};
+
+		led_system_blue: chan@2 {
+			chan-name = "blue";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_BLUE>;
+			reg = <2>;
+		};
+
+		led_system_white: chan@3 {
+			chan-name = "white";
+			led-cur = /bits/ 8 <0x10>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_WHITE>;
+			reg = <3>;
+		};
+	};
 };
 
 &sleep_clk {
@@ -570,6 +640,23 @@
 			drive-strength = <8>;
 			bias-pull-up;
 			output-high;
+		};
+	};
+
+	io_expander_pins: io_expander_pins{
+		reset_gpio {
+			pins = "gpio18";
+			function = "gpio";
+			drive-strength = <8>;
+			output-high;
+		};
+
+		interrupt_gpio {
+			pins = "gpio17";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-up;
+			input;
 		};
 	};
 
