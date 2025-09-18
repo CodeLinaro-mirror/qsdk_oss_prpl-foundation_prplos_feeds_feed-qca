@@ -40,6 +40,19 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		no-map;
+
+		ramoops@7db80000 {
+			compatible = "ramoops";
+			reg = <0x0 0x7db80000 0x0 0x10000>;
+			record-size = <0x1000>;
+			console-size = <0x1000>;
+		};
+	};
+
 	soc@0 {
 		mdio@90000 {
 			pinctrl-0 = <&mdio_pins>;
