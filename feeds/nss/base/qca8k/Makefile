@@ -2,15 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca8k
-PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=master
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
-
-include $(INCLUDE_DIR)/local-development.mk
-ifeq ($(DUMP)$(PKG_VERSION),)
-	PKG_VERSION:=$(shell git ls-remote $(PKG_SOURCE_URL) $(PKG_BRANCH) | cut -b -7)
-endif
 
 include $(INCLUDE_DIR)/package.mk
 
