@@ -7,7 +7,7 @@ PKG_BRANCH:=win.nss.1.0.r29
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-macsec
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=5affd1027b73f8a59c13f498675d61d216fbdad2cc6a7070cadaf5e64a803323
 PKG_VERSION:=7b9dc40e93c557f791a2c8f92239d544ed999d6d
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

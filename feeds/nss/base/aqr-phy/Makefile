@@ -8,6 +8,7 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/Aquantia/linux-aqr-phy-only.git
 PKG_SOURCE_VERSION:=5e182fbacb112c7adc366621d0097f89247d4265
 PKG_SOURCE_SUBMODULES:=skip
+PKG_MIRROR_HASH:=78c3471a5c902b60024c54d4b5b686586befcce46c86d431ae7e2478162b5f7c
 
 include $(INCLUDE_DIR)/package.mk
 
