@@ -12,19 +12,16 @@ PKG_NAME:=mac80211
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=COPYING
 
-PKG_BACKPORTS_VERSION:=965f73fc
-PKG_BACKPORTS_SOURCE_URL:=git://git.kernel.org/pub/scm/linux/kernel/git/backports/backports.git
-PKG_BACKPORTS_BRANCH:=master
-
 PKG_KERNEL_VERSION:=9a0dddfb30f1
-PKG_KERNEL_SOURCE_URL:=http://git.codelinaro.org/clo/qsdk/kvalo/ath.git
-PKG_KERNEL_BRANCH:=korg-kvalo/master
 
 PKG_VERSION:=20250213
 PKG_SOURCE:=backports-$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION).tar.bz2
 PKG_SUBDIR:=backports-$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION)
 PKG_RELEASE:=1
 PKG_BUILD_ID:=1
+
+PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/platform/qualcomm/backports/-/archive/$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION)
+PKG_HASH:=ac7e8e88e8c5d304be6f6934c229d0234033a75fa74289ccb94e3854fd2693be
 
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_SUBDIR)-$(BUILD_VARIANT)/$(PKG_SUBDIR)
 PKG_BUILD_PARALLEL:=1
@@ -459,105 +456,6 @@ define KernelPackage/ath/install
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_dp_accel_cfg.h $(STAGING_DIR)/usr/include/
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ppe_public.h $(STAGING_DIR)/usr/include/
 endef
-
-$(eval EXT_KERNEL_DIR:=$(CONFIG_EXTERNAL_KERNEL_TREE))
-IS_EXT_KERNEL_TREE_GIT:=$(shell cd $(EXT_KERNEL_DIR) && git rev-parse --is-inside-work-tree)
-
-ifeq ($(IS_EXT_KERNEL_TREE_GIT), true)
-  $(eval _LINUX_SRC:=$(CONFIG_EXTERNAL_KERNEL_TREE))
-else
-  _LINUX_SRC=$(CONFIG_KERNEL_GIT_CLONE_URI)
-endif
-
-ifneq ($(call qstrip,$(_LINUX_SRC)),)
-# --reference option doesn't work on git trees synced with "repo", so instead
-# we're manually using clone & fetch to speed up sync time
-  define FastCloneKernel
-	git clone file://$(_LINUX_SRC) $(2) || \
-	(rm -rf $(2) && \
-	git clone file://$(_LINUX_SRC) $(2))
-	(cd $(2); git remote add src $(1); git fetch src)
-  endef
-else
-  define FastCloneKernel
-	GIT_NAME=$$$$(echo $(1) | sed -e 's:.*//[^/]*.::g'); \
-	git clone $(1) $(2) || \
-	([ -n "${CONFIG_GIT_MIRROR}" ] && \
-	rm -rf $(2) && \
-	git clone $(CONFIG_GIT_MIRROR)$$$$GIT_NAME $(2))
-  endef
-endif
-
-getLocalBackport ?= $(shell wget $(SERVER_PATH)/$(PKG_SOURCE) -P $(TOPDIR)/dl/);
-ifeq ($(FORCED_BACKPORTS),false)
-$(if $(wildcard $(DL_DIR)/$(PKG_SOURCE)),,$(call getLocalBackport))
-endif
-
-ifeq ($(PKG_BUILD_MLO_SUPPORT),1)
-  define backports_mlo_support
-        $(info Backports mlo support enabled)
-        sed -i 's/struct ieee80211_tx_info \*info;/ktime_t ack_hwtstamp;/' \
-                        $(1)/patches/0097-skb-list/mac80211-status.patch
-        sed -i 's/struct sk_buff \*skb;/u8 n_rates;/' \
-                        $(1)/patches/0097-skb-list/mac80211-status.patch
-        sed -i '13s/.*/ /' \
-                        $(1)/patches/0097-skb-list/mac80211-status.patch
-        sed -i '58,75d' $(1)/patches/0099-netlink-range/mac80211.patch
-  endef
-else
-  define backports_mlo_support
-        $(info Backports mlo support disabled)
-  endef
-endif
-
-define DownloadBackports
-  $(eval $(Download/Defaults))
-  $(eval $(Download/backports))
-
-  $(foreach dep,$(DOWNLOAD_RDEP),
-    $(dep): $(DL_DIR)/$(FILE)
-  )
-  download: $(DL_DIR)/$(FILE)
-
-  $(DL_DIR)/$(FILE):
-	mkdir -p $(TMP_DIR)/dl/$(PKG_NAME)-$(PKG_VERSION)
-	$(call FastCloneKernel,$(PKG_KERNEL_SOURCE_URL),$(TMP_DIR)/dl/$(PKG_NAME)-kernel)
-	(cd $(TMP_DIR)/dl/$(PKG_NAME)-kernel && git checkout $(PKG_KERNEL_VERSION))
-
-	git clone $(PKG_BACKPORTS_SOURCE_URL) $(TMP_DIR)/dl/$(PKG_NAME)-source || \
-	(rm -rf $(TMP_DIR)/dl/$(PKG_NAME)-source && \
-	git clone $(PKG_BACKPORTS_SOURCE_URL) $(TMP_DIR)/dl/$(PKG_NAME)-source)
-	cp files/copy-list.ath $(TMP_DIR)/dl/$(PKG_NAME)-source
-	(cd $(TMP_DIR)/dl/$(PKG_NAME)-source && git checkout $(PKG_BACKPORTS_VERSION) && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0073-netdevice-mtu-range.cocci && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0075-ndo-stats-64.cocci && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0105-remove-const-from-rchan_callbacks.patch) && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0004-disable-wext-kconfig.patch && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0013-fix-makefile-includes/wireless.patch && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0028-select_queue/mac80211.patch && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0097-skb-list/mac80211-status.patch && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0099-netlink-range/mac80211.patch && \
-	rm -f $(TMP_DIR)/dl/$(PKG_NAME)-source/patches/0111-wireless-build-unquote.patch
-
-	$(call backports_mlo_support,$(TMP_DIR)/dl/$(PKG_NAME)-source)
-	(cd $(TMP_DIR)/dl/$(PKG_NAME)-source && \
-	python3 gentree.py --clean --copy-list ./copy-list.ath \
-	$(TMP_DIR)/dl/$(PKG_NAME)-kernel $(TMP_DIR)/dl/$(SUBDIR))
-ifeq ($(CONFIG_LINUX_4_4),y)
-	(cd $(TMP_DIR)/dl; $(call dl_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)))
-else
-	(cd $(TMP_DIR)/dl ; if [ -z "$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR))" ]; then $(call dl_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)); else : ; fi; \
-	$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)) )
-endif
-	mv $(TMP_DIR)/dl/$(FILE) $(DL_DIR)
-	rm -rf $(TMP_DIR)/dl
-endef
-
-define Download/backports
-  FILE:=$(PKG_SOURCE)
-  SUBDIR:=$(PKG_SUBDIR)
-endef
-$(if $(wildcard $(DL_DIR)/$(PKG_SOURCE)),,$(eval $(call DownloadBackports,backports)))
 
 $(eval $(foreach drv,$(PKG_DRIVERS),$(call KernelPackage,$(drv))))
 $(eval $(call KernelPackage,cfg80211))
