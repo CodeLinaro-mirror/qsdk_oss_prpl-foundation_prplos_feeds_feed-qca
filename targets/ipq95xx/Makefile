@@ -53,8 +53,6 @@ DEFAULT_PACKAGES += \
 	ftm myftm diag cnssdiag \
 	libubox ubus udebug netifd-scripts kmod-qca-nss-netfn-tcpst  nss-tcp-st-cli nss-udp-st netstandby-drv
 
-GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
-
 define Kernel/Prepare
 	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)
 
