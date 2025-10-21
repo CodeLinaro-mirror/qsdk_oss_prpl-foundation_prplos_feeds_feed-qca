@@ -1,0 +1,41 @@
+From 73d9afcb011496fd8a1eb8c723f59c6791362411 Mon Sep 17 00:00:00 2001
+From: Nefi Guclu <nefi.guclu@airties.com>
+Date: Tue, 21 Oct 2025 13:43:44 +0300
+Subject: [PATCH] change log level for ACL reject messages to MSG_INFO
+
+Issue: PPM-3384
+Signed-off-by: Nefi Guclu <nefi.guclu@airties.com>
+---
+ src/ap/beacon.c     | 2 +-
+ src/ap/ieee802_11.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index 2e3d90466..de0809c9b 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -1433,7 +1433,7 @@ void handle_probe_req(struct hostapd_data *hapd,
+ 	ret = hostapd_allowed_address(hapd, mgmt->sa, (const u8 *) mgmt, len,
+ 				      &rad_info, 1);
+ 	if (ret == HOSTAPD_ACL_REJECT) {
+-		wpa_msg(hapd->msg_ctx, MSG_DEBUG,
++		wpa_msg(hapd->msg_ctx, MSG_INFO,
+ 			"Ignore Probe Request frame from " MACSTR
+ 			" due to ACL reject ", MAC2STR(mgmt->sa));
+ 		return;
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index d4552f2f4..a6f14f8f9 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -3097,7 +3097,7 @@ static void handle_auth(struct hostapd_data *hapd,
+ 	res = ieee802_11_allowed_address(hapd, sa, (const u8 *) mgmt, len,
+ 					 &rad_info);
+ 	if (res == HOSTAPD_ACL_REJECT) {
+-		wpa_msg(hapd->msg_ctx, MSG_DEBUG,
++		wpa_msg(hapd->msg_ctx, MSG_INFO,
+ 			"Ignore Authentication frame from " MACSTR
+ 			" due to ACL reject", MAC2STR(sa));
+ 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+-- 
+2.25.1
+
