@@ -13,6 +13,10 @@ KERNELNAME:=Image dtbs
 
 KERNEL_PATCHVER:=6.6
 
+$(eval $(call TestHostCommand,coccinelle-spatch, \
+  Please install the spatch from coccinelle as its temporarily needed for mac80211 build (PCF-2142), \
+  spatch --version))
+
 include $(INCLUDE_DIR)/target.mk
 DEFAULT_PACKAGES += \
 	e2fsprogs uboot-envtools kmod-leds-gpio \
