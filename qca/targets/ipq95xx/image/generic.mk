@@ -13,6 +13,25 @@ define Device/EmmcImage
 	IMAGE/sysupgrade.bin/squashfs := append-rootfs | pad-to 64k | sysupgrade-tar rootfs=$$$$@ | append-metadata
 endef
 
+define Build/swuimage
+	@echo "copy files to build itb ans swu image"
+	mkdir -p $(STAGING_DIR_HOST)/imagegenerator/build
+	gzip -f -9n -c $(KDIR)/vmlinux > $(STAGING_DIR_HOST)/imagegenerator/vmlinux.gz
+	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/u-boot-nodtb.bin $(STAGING_DIR_HOST)/imagegenerator/
+	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/dts/dt.dtb $(STAGING_DIR_HOST)/imagegenerator/u-boot.dtb
+	cp $(KDIR)/root.squashfs $(STAGING_DIR_HOST)/imagegenerator/
+	cp $(KDIR)/image-ipq9574-freedom.dtb $(STAGING_DIR_HOST)/imagegenerator/kernel.dtb
+	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_binman.sh
+	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_swu.sh
+	cp $(STAGING_DIR_HOST)/imagegenerator/build/image.swu $(BIN_DIR)/prplos-$(CONFIG_TARGET_BOARD)-$(CONFIG_TARGET_SUBTARGET)-image.swu
+endef
+
+define Device/SwuImage
+	IMAGES += image.swu
+	IMAGE/image.swu := swuimage
+endef
+
+
 define Device/qcom_alxx
 	$(call Device/MultiDTBFitImage)
 	DEVICE_VENDOR := Qualcomm Technologies, Inc.
@@ -78,6 +97,7 @@ endef
 define Device/prpl_freedom
 	$(call Device/FitImage)
 	$(call Device/EmmcImage)
+	$(call Device/SwuImage)
 	DEVICE_VENDOR := Prpl
 	DEVICE_MODEL := Freedom
 	DEVICE_DTS := ipq9574-freedom
