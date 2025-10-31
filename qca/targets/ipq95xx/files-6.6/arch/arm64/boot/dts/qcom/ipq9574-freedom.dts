@@ -97,10 +97,10 @@
 			num_devices = <0x1>;
 			ess-switch@3a000000 {
 				switch_cpu_bmp = <0x1>;  /* cpu port bitmap */
-				switch_lan_bmp = <0x1e>; /* lan port bitmap */
-				switch_wan_bmp = <0x60>; /* wan port bitmap */
+				switch_lan_bmp = <0x3e>; /* lan port bitmap */
+				switch_wan_bmp = <0x40>; /* wan port bitmap */
 				switch_mac_mode = <0x15>; /* mac mode for uniphy instance0*/
-				switch_mac_mode1 = <0xe>; /* mac mode for uniphy instance1*/
+				switch_mac_mode1 = <0xd>; /* mac mode for uniphy instance1*/
 				switch_mac_mode2 = <0xd>; /* mac mode for uniphy instance2*/
 				bm_tick_mode = <0>; /* bm tick mode */
 				tm_tick_mode = <0>; /* tm tick mode */
@@ -186,7 +186,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <1>;
 			label = "lan1";
-			phy-mode = "sgmii";
+			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -200,7 +200,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <2>;
 			label = "lan2";
-			phy-mode = "sgmii";
+			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -214,7 +214,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <3>;
 			label = "lan3";
-			phy-mode = "sgmii";
+			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -228,7 +228,7 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <4>;
 			label = "lan4";
-			phy-mode = "sgmii";
+			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
