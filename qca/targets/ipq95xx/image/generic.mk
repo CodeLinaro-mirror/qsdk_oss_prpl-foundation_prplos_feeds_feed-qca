@@ -21,6 +21,9 @@ define Build/swuimage
 	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/dts/dt.dtb $(STAGING_DIR_HOST)/imagegenerator/u-boot.dtb
 	cp $(KDIR)/root.squashfs $(STAGING_DIR_HOST)/imagegenerator/
 	cp $(KDIR)/image-ipq9574-freedom.dtb $(STAGING_DIR_HOST)/imagegenerator/kernel.dtb
+	if [ -f $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) ] ; then \
+		cp $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) $(STAGING_DIR_HOST)/imagegenerator/initramfs.cpio.gz ; \
+	fi
 	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_binman.sh
 	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_swu.sh
 	cp $(STAGING_DIR_HOST)/imagegenerator/build/image.swu $(BIN_DIR)/prplos-$(CONFIG_TARGET_BOARD)-$(CONFIG_TARGET_SUBTARGET)-image.swu
