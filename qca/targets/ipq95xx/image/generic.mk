@@ -24,7 +24,11 @@ define Build/swuimage
 	cp $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) $(STAGING_DIR_HOST)/imagegenerator/initramfs.cpio.gz
 	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_binman.sh
 	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_swu.sh
-	cp $(STAGING_DIR_HOST)/imagegenerator/build/image.swu $(BIN_DIR)/prplos-$(CONFIG_TARGET_BOARD)-$(CONFIG_TARGET_SUBTARGET)-image.swu
+	for image in u-boot.itb kernel.itb rootfs.itb image.swu ; do \
+		if [ -f $(STAGING_DIR_HOST)/imagegenerator/build/$${image} ] ; then \
+			cp $(STAGING_DIR_HOST)/imagegenerator/build/$${image} $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$${image} ; \
+		fi ; \
+	done
 endef
 
 define Device/SwuImage
