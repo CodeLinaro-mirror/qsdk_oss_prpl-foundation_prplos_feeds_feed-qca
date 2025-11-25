@@ -1,0 +1,69 @@
+From f4938ab6e706d97c39319ecc322d821e6fac3858 Mon Sep 17 00:00:00 2001
+From: Ayush Aggarwal <ayusagga@qti.qualcomm.com>
+Date: Mon, 01 Dec 2025 12:21:03 +0530
+Subject: [PATCH] [qca-nss-ppe] Fix for unused variable
+
+Change-Id: I7413695d443e6a2e3f64db278cd526fb3fa09db7
+Signed-off-by: Ayush Aggarwal <ayusagga@qti.qualcomm.com>
+---
+
+diff --git a/clients/dsa/nss_ppe_dsa_mgr.c b/clients/dsa/nss_ppe_dsa_mgr.c
+index 350cb65..0eab4bd 100644
+--- a/clients/dsa/nss_ppe_dsa_mgr.c
++++ b/clients/dsa/nss_ppe_dsa_mgr.c
+@@ -449,7 +449,7 @@
+  */
+ static int nss_ppe_dsa_mgr_changeaddr_event(struct netdev_notifier_info *info, struct dsa_port *dp)
+ {
+-	struct net_device *slave = dp->slave;
++	struct net_device *slave __maybe_unused = dp->slave;
+ 
+ 	nss_ppe_dsa_mgr_trace("slave:%s, proto: %d, MAC Addr change requested.\n", slave->name,
+ 		dp->cpu_dp->tag_ops->proto);
+@@ -472,7 +472,7 @@
+  */
+ static int nss_ppe_dsa_mgr_changemtu_event(struct netdev_notifier_info *info, struct dsa_port *dp)
+ {
+-	struct net_device *slave = dp->slave;
++	struct net_device *slave __maybe_unused = dp->slave;
+ 
+ 	nss_ppe_dsa_mgr_trace("slave:%s, idx:%u, proto:%d. \n", slave->name,
+ 		dp->index, dp->cpu_dp->tag_ops->proto);
+diff --git a/clients/gre/gre_mgr.h b/clients/gre/gre_mgr.h
+index b2882ad..889f3ac 100644
+--- a/clients/gre/gre_mgr.h
++++ b/clients/gre/gre_mgr.h
+@@ -6,6 +6,7 @@
+ #ifndef __GRE_MGR_PRIV_H_
+ #define __GRE_MGR_PRIV_H_
+ 
++#include <linux/netdevice.h>
+ #include <nss_client_mgr.h>
+ 
+ /*
+diff --git a/clients/pppoe/frontends/ppe/ppe_pppoe_mgr.c b/clients/pppoe/frontends/ppe/ppe_pppoe_mgr.c
+index 0690e33..273b95a 100644
+--- a/clients/pppoe/frontends/ppe/ppe_pppoe_mgr.c
++++ b/clients/pppoe/frontends/ppe/ppe_pppoe_mgr.c
+@@ -60,7 +60,7 @@
+ {
+ 	struct pppoe_stats_ctx *ctx = &ctx_gbl;
+ 	struct pppoe_mgr_session_entry *entry = &ppe_entry->pppoe_pvt;
+-	struct pppoe_mgr_session_info *info = &entry->info;
++	struct pppoe_mgr_session_info *info __maybe_unused = &entry->info;
+ 
+ 	pppoe_mgr_info("%px: Remove PPPoE session with session_id=%u server_mac=%pM local_mac %pM\n",
+ 				   entry, info->session_id, info->server_mac, info->local_mac);
+diff --git a/drv/ppe_drv/tun/ppe_drv_tun.c b/drv/ppe_drv/tun/ppe_drv_tun.c
+index f6ef5e2..34f9709 100644
+--- a/drv/ppe_drv/tun/ppe_drv_tun.c
++++ b/drv/ppe_drv/tun/ppe_drv_tun.c
+@@ -234,7 +234,7 @@
+ ppe_drv_ret_t ppe_drv_tun_gretap_to_mapt_sc(struct ppe_drv_port *tx_port, struct ppe_drv_port *rx_port,
+ 						ppe_drv_sc_t *service_code)
+ {
+-	struct net_device *tx_dev, *rx_dev;
++	struct net_device *tx_dev __maybe_unused, *rx_dev __maybe_unused;
+ 	struct ppe_drv *p = ppe_drv_gbl;
+ 	uint32_t serv_code;
+ 
