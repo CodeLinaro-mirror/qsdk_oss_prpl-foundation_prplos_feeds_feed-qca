@@ -1,0 +1,51 @@
+From 3bd8c88086ae178447854bd54e7e1617517b5a0a Mon Sep 17 00:00:00 2001
+From: Nikhil Gurram <nikhgurr@qti.qualcomm.com>
+Date: Tue, 07 Oct 2025 12:24:57 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL: wifi: nl80211: Fix update ssid during update AP operation
+
+Currently, the AP update operation is not correctly updating new SSID.
+This issue arises because the NL80211_CMD_UPDATE_AP command does not
+process its NL80211_ATTR_SSID attribute. Resolve this issue by ensuring
+that the SSID is updated if it is provided with the
+NL80211_CMD_UPDATE_AP command.
+
+Change-Id: I6d24aded1791d30f16e5f2667518971523152635
+Signed-off-by: Nikhil Gurram <nikhgurr@qti.qualcomm.com>
+(cherry picked from commit c9b1e00ba65fd4916a352cf0fa7f6016f1c5927a)
+---
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 2e9ad6b..d2ac5ae 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -7552,6 +7552,16 @@ static int nl80211_update_ap(struct sk_buff *skb, struct genl_info *info)
+ 		haveinfo = true;
+ 	}
+ 
++	if (info->attrs[NL80211_ATTR_SSID]) {
++		params->ssid_len =
++		    nla_len(info->attrs[NL80211_ATTR_SSID]);
++		if (params->ssid_len > IEEE80211_MAX_SSID_LEN)
++			return -EINVAL;
++		if (params->ssid_len > 0)
++			params->ssid =
++			    nla_data(info->attrs[NL80211_ATTR_SSID]);
++	}
++
+ 	if (info->attrs[NL80211_ATTR_INTERFERENCE_TYPE]) {
+ 		params->intf_detect_bitmap = nla_get_u8(info->attrs[NL80211_ATTR_INTERFERENCE_TYPE]);
+ 		haveinfo = true;
+@@ -7598,6 +7608,13 @@ static int nl80211_update_ap(struct sk_buff *skb, struct genl_info *info)
+ 	}
+ 
+ 	err = rdev_update_ap(rdev, dev, params);
++	if (!err && params->ssid && params->ssid_len > 0) {
++		wdev->u.ap.ssid_len = params->ssid_len;
++		memcpy(wdev->u.ap.ssid, params->ssid,
++		       params->ssid_len);
++		wdev->u.ap.ssid[params->ssid_len] = '\0';
++	}
++
+ 
+ out:
+ 	kfree(params->beacon.mbssid_ies);
