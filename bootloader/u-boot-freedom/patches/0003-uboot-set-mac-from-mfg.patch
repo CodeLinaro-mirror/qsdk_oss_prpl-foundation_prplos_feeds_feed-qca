@@ -1,0 +1,44 @@
+diff --git a/board/qti/common/board_init.c b/board/qti/common/board_init.c
+--- a/board/qti/common/board_init.c
++++ b/board/qti/common/board_init.c
+@@ -73,6 +73,8 @@
+
+ #include "ipq_board.h"
+
++#include "prpl/mfg.h"
++
+ DECLARE_GLOBAL_DATA_PTR;
+
+ #if CONFIG_MMC
+@@ -911,7 +913,30 @@ int board_late_init(void)
+ 	/*
+ 	 * setup mac address
+ 	 */
+-	set_ethmac_addr();
++	/* set_ethmac_addr(); */
++	if (IS_ENABLED(CONFIG_PRPL_MFG)) {
++		/* Set MAC address from SMD */
++		const mfg_entry_t *mfg_entry;
++		char macaddr[32];
++
++		if (prpl_mfg_init())
++			printf("%s: prpl_mfg_init failed.\n", __func__);
++
++		mfg_entry = prpl_mfg_get_entry_by_name("BASE_MAC_ADDRESS");
++		if (!mfg_entry || !mfg_entry->data) {
++			printf("%s: can't find BASE_MAC_ADDRESS in MFG\n", __func__);
++		} else {
++			if (!is_valid_ethaddr(mfg_entry->data)) {
++				printf("%s: invalid mac address (%s)\n", __func__, macaddr);
++			} else {
++				sprintf(macaddr, "%pM", mfg_entry->data);
++				env_set("ethaddr", macaddr);
++				printf("Set ethaddr to %s\n", macaddr);
++			}
++		}
++	} else {
++		set_ethmac_addr();
++	}
+
+ 	/*
+ 	 * setup default env
