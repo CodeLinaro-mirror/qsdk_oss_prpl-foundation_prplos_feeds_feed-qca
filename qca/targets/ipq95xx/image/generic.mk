@@ -1,6 +1,8 @@
 
 DTS_CPPFLAGS:=-D __CPU_THERMAL__
 
+IMG_GEN_DIR := $(wildcard $(BUILD_DIR_BASE)/hostpkg/imagegenerator-*)
+
 define Device/FitImage
 	KERNEL_SUFFIX := -uImage.itb
 	KERNEL = kernel-bin | libdeflate-gzip | fit gzip $$(KDIR)/image-$$(DEVICE_DTS).dtb
@@ -15,18 +17,17 @@ endef
 
 define Build/swuimage
 	@echo "copy files to build itb ans swu image"
-	mkdir -p $(STAGING_DIR_HOST)/imagegenerator/build
-	gzip -f -9n -c $(KDIR)/vmlinux > $(STAGING_DIR_HOST)/imagegenerator/vmlinux.gz
-	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/u-boot-nodtb.bin $(STAGING_DIR_HOST)/imagegenerator/
-	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/dts/dt.dtb $(STAGING_DIR_HOST)/imagegenerator/u-boot.dtb
-	cp $(KDIR)/root.squashfs $(STAGING_DIR_HOST)/imagegenerator/
-	cp $(KDIR)/image-ipq9574-freedom.dtb $(STAGING_DIR_HOST)/imagegenerator/kernel.dtb
-	cp $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) $(STAGING_DIR_HOST)/imagegenerator/initramfs.cpio.gz
-	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_binman.sh
-	cd $(STAGING_DIR_HOST)/imagegenerator && ./scripts/gen_swu.sh
+	gzip -f -9n -c $(KDIR)/vmlinux > $(IMG_GEN_DIR)/build/vmlinux.gz
+	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/u-boot-nodtb.bin $(IMG_GEN_DIR)/build/
+	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/dts/dt.dtb $(IMG_GEN_DIR)/build/u-boot.dtb
+	cp $(KDIR)/root.squashfs $(IMG_GEN_DIR)/build/
+	cp $(KDIR)/image-ipq9574-freedom.dtb $(IMG_GEN_DIR)/build/kernel.dtb
+	cp $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) $(IMG_GEN_DIR)/build/initramfs.cpio.gz
+	cd $(IMG_GEN_DIR) && ./scripts/gen_binman.sh
+	cd $(IMG_GEN_DIR) && ./scripts/gen_swu.sh
 	for image in u-boot.itb kernel.itb rootfs.itb image.swu ; do \
-		if [ -f $(STAGING_DIR_HOST)/imagegenerator/build/$${image} ] ; then \
-			cp $(STAGING_DIR_HOST)/imagegenerator/build/$${image} $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$${image} ; \
+		if [ -f $(IMG_GEN_DIR)/build/$${image} ] ; then \
+			cp $(IMG_GEN_DIR)/build/$${image} $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$${image} ; \
 		fi ; \
 	done
 endef
