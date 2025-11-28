@@ -24,7 +24,7 @@ DEFAULT_PACKAGES += \
 	iwinfo kmod-ath12k-qca \
 	kmod-leds-gpio swconfig kmod-fs-ext4 losetup \
 	libudebug libustream-mbedtls libubus-lua \
-	wififw_mount_script qca-wifi-scripts ath-wifi-scripts ath-legacy-wifi-scripts \
+	wififw_mount_script qca-wifi-scripts ath-wifi-scripts \
 	kmod-bonding wpad-qca-mesh-openssl \
 	kmod-qca-nss-drv kmod-qca-nss-drv-bridge-mgr kmod-qca-nss-drv-gre \
 	kmod-qca-nss-drv-igs kmod-qca-nss-drv-l2tpv2 kmod-qca-nss-drv-lag-mgr kmod-qca-nss-drv-map-t \
@@ -50,7 +50,8 @@ DEFAULT_PACKAGES += \
 	kmod-nss-udp-st-drv kmod-qca-nss-dscpstats kmod-qca-nss-nsm \
 	kmod-qca8084 kmod-qca81xx kmod-aqr-phy kmod-qca8xxx-phc kmod-qca8k \
 	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
-	ftm myftm diag cnssdiag
+	ftm myftm diag cnssdiag qca-ssdk-shell wifi-helper-scripts kmod-telemetry-agent wifi-scripts ethtool tcpdump \
+	kmod-usb-storage kmod-usb-storage-extras kmod-usb-storage-uas kmod-fs-vfat hostapd-qca-utils wpa-qca-cli
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
 

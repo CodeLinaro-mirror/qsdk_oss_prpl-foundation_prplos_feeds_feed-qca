@@ -13,6 +13,12 @@ define Device/EmmcImage
 	IMAGE/sysupgrade.bin/squashfs := append-rootfs | pad-to 64k | sysupgrade-tar rootfs=$$$$@ | append-metadata
 endef
 
+define Device/FitImageLzma
+	KERNEL_SUFFIX := -fit-uImage.itb
+	KERNEL = kernel-bin | lzma | fit lzma $$(DTS_DIR)/$$(DEVICE_DTS).dtb
+	KERNEL_NAME := Image
+endef
+
 define Device/qcom_maxx
 	$(call Device/MultiDTBFitImage)
 	DEVICE_VENDOR := Qualcomm Technologies, Inc.
@@ -27,12 +33,14 @@ define Device/qcom_maxx
 endef
 	TARGET_DEVICES += qcom_maxx
 define Device/qcom_rdp466
-	$(call Device/FitImage)
+	$(call Device/FitImageLzma)
 	$(call Device/EmmcImage)
 	DEVICE_VENDOR := Qualcomm Technologies, Inc.
 	DEVICE_MODEL := IPQ5424-RDP466
+	DEVICE_DTS := ipq5424-rdp466
 	DEVICE_DTS_CONFIG := config-rdp466
 	SOC := ipq5424
+	KERNEL_INSTALL := 1
 endef
 TARGET_DEVICES += qcom_rdp466
 
