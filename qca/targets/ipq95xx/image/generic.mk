@@ -18,10 +18,10 @@ endef
 define Build/swuimage
 	@echo "copy files to build itb ans swu image"
 	gzip -f -9n -c $(KDIR)/vmlinux > $(IMG_GEN_DIR)/build/vmlinux.gz
-	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/u-boot-nodtb.bin $(IMG_GEN_DIR)/build/
-	cp $(BUILD_DIR)/u-boot-freedom-2023.04.02-prpl/dts/dt.dtb $(IMG_GEN_DIR)/build/u-boot.dtb
+	cp $(BUILD_DIR)/u-boot-freedom-*/u-boot-nodtb.bin $(IMG_GEN_DIR)/build/
+	cp $(BUILD_DIR)/u-boot-freedom-*/dts/dt.dtb $(IMG_GEN_DIR)/build/u-boot.dtb
 	cp $(KDIR)/root.squashfs $(IMG_GEN_DIR)/build/
-	cp $(KDIR)/image-ipq9574-freedom.dtb $(IMG_GEN_DIR)/build/kernel.dtb
+	cp $(KDIR)/image-$(DEVICE_DTS).dtb $(IMG_GEN_DIR)/build/kernel.dtb
 	cp $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) $(IMG_GEN_DIR)/build/initramfs.cpio.gz
 	cd $(IMG_GEN_DIR) && ./scripts/gen_binman.sh
 	cd $(IMG_GEN_DIR) && ./scripts/gen_swu.sh
