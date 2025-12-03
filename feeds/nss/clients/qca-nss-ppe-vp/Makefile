@@ -39,7 +39,6 @@ endef
 
 define Build/InstallDev/qca-nss-ppe-vp
 	$(INSTALL_DIR) $(1)/usr/include/qca-nss-ppe
-	$(CP) $(PKG_BUILD_DIR)/drv/exports/* $(1)/usr/include/qca-nss-ppe/
 endef
 
 define Build/InstallDev

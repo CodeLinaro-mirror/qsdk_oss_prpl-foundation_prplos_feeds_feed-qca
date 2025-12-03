@@ -41,7 +41,6 @@ endef
 
 define Build/InstallDev/qca-nss-ppe-mirror-test
 	$(INSTALL_DIR) $(1)/usr/include/qca-nss-ppe
-	$(CP) $(PKG_BUILD_DIR)/drv/exports/* $(1)/usr/include/qca-nss-ppe/
 endef
 
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ppe-rule),)
