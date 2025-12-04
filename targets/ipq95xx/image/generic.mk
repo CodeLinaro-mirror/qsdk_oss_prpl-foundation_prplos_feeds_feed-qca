@@ -19,6 +19,13 @@ define Device/Image
 	KERNEL_NAME := Image
 endef
 
+define Build/update-script
+	@echo "Running Build/update-script"
+	mkimage -A x86_64 \
+		-O linux -T script -C none -a 0 -e 0 -n "update" -d update_script.txt \
+		$(KDIR)/tmp/$(DEVICE_IMG_PREFIX)-update_script.scr
+endef
+
 define Device/qcom_alxx
         $(call Device/MultiDTBFitImage)
 	DEVICE_VENDOR := Qualcomm Technologies, Inc.
@@ -103,6 +110,8 @@ define Device/prpl_freedom
 				binman binman_qca_ipq95xx_freedom.dts | \
 				swugenerator sw-description_qca_ipq95xx_freedom
 
-	ARTIFACTS := image.swu
+	ARTIFACT/update_script.scr := update-script
+
+	ARTIFACTS := image.swu update_script.scr
 endef
 TARGET_DEVICES += prpl_freedom
