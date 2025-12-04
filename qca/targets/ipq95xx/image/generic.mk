@@ -30,6 +30,13 @@ define Build/swuimage
 			cp $(IMG_GEN_DIR)/build/$${image} $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$${image} ; \
 		fi ; \
 	done
+	$(call Build/migration-script)
+endef
+
+define Build/migration-script
+    mkimage -A x86_64 \
+        -O linux -T script -C none -a 0 -e 0 -n "update" -d migration_script.sh update.scr
+    cp update.scr $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-migration_script.scr
 endef
 
 define Device/SwuImage

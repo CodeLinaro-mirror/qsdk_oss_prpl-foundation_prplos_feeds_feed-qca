@@ -1,0 +1,301 @@
+echo "=== prplOS Freedom-QCA95xx UPDATE ==="
+echo "Defining helper commands..."
+
+setenv kernel-active_block_start     0x00091422
+setenv kernel-active_block_size      0x00010000
+
+setenv kernel-inactive_block_start   0x000A1422
+setenv kernel-inactive_block_size    0x00010000
+
+setenv rootfs-active_block_start     0x000B1422
+setenv rootfs-active_block_size      0x00080000
+
+setenv rootfs-inactive_block_start   0x00131422
+setenv rootfs-inactive_block_size    0x00080000
+
+setenv mfgdata_block_start           0x001B1422
+setenv mfgdata_block_size            0x00000800
+
+# setenv u_boot_active_block_start    0x00001422
+# setenv u_boot_active_block_size     0x00008000
+# setenv u_boot_inactive_block_start  0x00009422
+# setenv u_boot_inactive_block_size   0x00008000
+
+# ---------------------------------------------------------------------------
+# Generic helpers (functions) for flashing
+# ---------------------------------------------------------------------------
+
+# Compute block count from ${filesize} into ${cur_blocks}
+setenv prpl_calc_blocks '
+setexpr cur_blocks ${filesize} + 0x1ff
+setexpr cur_blocks ${cur_blocks} / 0x200
+'
+
+# TFTP load: expects:
+#   cur_img  : image file name
+#   cur_desc : description (for logs)
+setenv prpl_tftp_load '
+echo "== Loading ${cur_desc} via TFTP: ${cur_img} =="
+tftpboot ${loadaddr} ${tftppath}${cur_img}
+if test $? -ne 0; then
+    echo "ERROR: TFTP failed for ${cur_img}"
+    setenv last_status tftp_failed
+    setenv tftp_ok no
+else
+    run prpl_calc_blocks
+    echo "${cur_desc} size: ${filesize} bytes (${cur_blocks} blocks)"
+    setenv tftp_ok yes
+fi
+'
+
+# Flash active bank: expects:
+#   cur_desc               : description
+#   cur_active_name        : name for logs (e.g. kernel-active)
+#   cur_active_block_start : block start
+#   cur_active_block_size  : block size
+#   cur_blocks             : number of blocks to write
+#
+# Sets:
+#   last_status : flashed | too_big | mmc_error
+setenv prpl_flash_active '
+setenv flash_ok no
+if test ${cur_blocks} -gt ${cur_active_block_size}; then
+    echo "ERROR: ${cur_desc} image too large for ${cur_active_name} (need ${cur_blocks}, max ${cur_active_block_size})"
+    setenv last_status too_big
+else
+    mmc dev 0 0
+    if test $? -ne 0; then
+        echo "ERROR: mmc dev 0 0"
+        setenv last_status mmc_error
+    else
+        mmc erase ${cur_active_block_start} ${cur_active_block_size}
+        if test $? -ne 0; then
+            echo "ERROR: erase ${cur_active_name}"
+            setenv last_status mmc_error
+        else
+            mmc write ${loadaddr} ${cur_active_block_start} ${cur_blocks}
+            if test $? -ne 0; then
+                echo "ERROR: write ${cur_active_name}"
+                setenv last_status mmc_error
+            else
+                echo "${cur_desc} written successfully to ${cur_active_name}."
+                setenv last_status flashed
+                setenv flash_ok yes
+            fi
+        fi
+    fi
+fi
+'
+
+# Flash rescue/inactive bank: expects:
+#   cur_desc                  : description
+#   cur_inactive_name         : name for logs (e.g. kernel-inactive)
+#   cur_inactive_block_start  : block start
+#   cur_inactive_block_size   : block size
+#   cur_blocks                : number of blocks to write
+setenv prpl_flash_rescue '
+echo "update_rescue_bank=${update_rescue_bank} → also updating ${cur_inactive_name}..."
+if test ${cur_blocks} -gt ${cur_inactive_block_size}; then
+    echo "WARNING: ${cur_desc} image too large for ${cur_inactive_name} (need ${cur_blocks}, max ${cur_inactive_block_size}), skipping rescue bank."
+else
+    mmc erase ${cur_inactive_block_start} ${cur_inactive_block_size}
+    if test $? -ne 0; then
+        echo "WARNING: erase ${cur_inactive_name} failed (rescue bank not updated)."
+    else
+        mmc write ${loadaddr} ${cur_inactive_block_start} ${cur_blocks}
+        if test $? -ne 0; then
+            echo "WARNING: write ${cur_inactive_name} failed (rescue bank not updated)."
+        else
+            echo "${cur_desc} written successfully to ${cur_inactive_name} (rescue bank)."
+        fi
+    fi
+fi
+'
+
+echo "Defining update_prpl command..."
+
+setenv update_prpl '
+echo "=== prplOS Freedom-QCA95xx UPDATE ==="
+
+# ---------------------------------------------------------------------------
+# 0. TFTP path default + status flags
+# ---------------------------------------------------------------------------
+
+# If tftppath is not set, default to empty (TFTP root)
+if test -z "${tftppath}"; then
+    setenv tftppath
+fi
+
+# If update_rescue_bank is not set, default to "no"
+if test -z "${update_rescue_bank}"; then
+    setenv update_rescue_bank no
+fi
+
+# Status flags for final summary
+setenv kernel_status skipped
+setenv rootfs_status skipped
+setenv uboot_status  skipped
+setenv smd_status    skipped
+
+echo "--------------------------------------------------"
+echo "TFTP path          : ${tftppath}"
+echo "Kernel             : ${img_kernel}"
+echo "rootfs             : ${img_rootfs}"
+echo "U-Boot             : ${img_uboot}"
+echo "SMD image          : ${img_smd}"
+echo "Update rescue bank : ${update_rescue_bank}"
+echo "--------------------------------------------------"
+echo "Hint: set img_kernel / img_rootfs / img_uboot / img_smd before running to flash them."
+echo "      Leave a variable unset/empty to skip that component."
+echo "      Set update_rescue_bank=yes to also update inactive banks."
+echo ""
+
+# ---------------------------------------------------------------------------
+# 1. Flash kernel.itb (optional)
+# ---------------------------------------------------------------------------
+if test -n "${img_kernel}"; then
+    setenv cur_img  ${img_kernel}
+    setenv cur_desc kernel.itb
+
+    setenv cur_active_name        kernel-active
+    setenv cur_active_block_start ${kernel-active_block_start}
+    setenv cur_active_block_size  ${kernel-active_block_size}
+
+    setenv cur_inactive_name         kernel-inactive
+    setenv cur_inactive_block_start  ${kernel-inactive_block_start}
+    setenv cur_inactive_block_size   ${kernel-inactive_block_size}
+
+    run prpl_tftp_load
+    if test "${tftp_ok}" = "yes"; then
+        run prpl_flash_active
+        setenv kernel_status ${last_status}
+
+        if test "${update_rescue_bank}" = "yes" -a "${flash_ok}" = "yes"; then
+            run prpl_flash_rescue
+        fi
+    else
+        setenv kernel_status ${last_status}
+    fi
+else
+    echo "Skipping kernel update (img_kernel not set)."
+fi
+
+# ---------------------------------------------------------------------------
+# 2. Flash rootfs.itb (optional)
+# ---------------------------------------------------------------------------
+if test -n "${img_rootfs}"; then
+    setenv cur_img  ${img_rootfs}
+    setenv cur_desc rootfs.itb
+
+    setenv cur_active_name        rootfs-active
+    setenv cur_active_block_start ${rootfs-active_block_start}
+    setenv cur_active_block_size  ${rootfs-active_block_size}
+
+    setenv cur_inactive_name         rootfs-inactive
+    setenv cur_inactive_block_start  ${rootfs-inactive_block_start}
+    setenv cur_inactive_block_size   ${rootfs-inactive_block_size}
+
+    run prpl_tftp_load
+    if test "${tftp_ok}" = "yes"; then
+        run prpl_flash_active
+        setenv rootfs_status ${last_status}
+
+        if test "${update_rescue_bank}" = "yes" -a "${flash_ok}" = "yes"; then
+            run prpl_flash_rescue
+        fi
+    else
+        setenv rootfs_status ${last_status}
+    fi
+else
+    echo "Skipping rootfs update (img_rootfs not set)."
+fi
+
+# ---------------------------------------------------------------------------
+# 3. Flash U-Boot → u-boot-active (optional)
+# ---------------------------------------------------------------------------
+if test -n "${img_uboot}"; then
+    setenv cur_img  ${img_uboot}
+    setenv cur_desc U-Boot
+
+    setenv cur_active_name        u-boot-active
+    setenv cur_active_block_start ${u_boot_active_block_start}
+    setenv cur_active_block_size  ${u_boot_active_block_size}
+
+    setenv cur_inactive_name         u-boot-inactive
+    setenv cur_inactive_block_start  ${u_boot_inactive_block_start}
+    setenv cur_inactive_block_size   ${u_boot_inactive_block_size}
+
+    run prpl_tftp_load
+    if test "${tftp_ok}" = "yes"; then
+        run prpl_flash_active
+        setenv uboot_status ${last_status}
+
+        if test "${update_rescue_bank}" = "yes" -a "${flash_ok}" = "yes"; then
+            run prpl_flash_rescue
+        fi
+    else
+        setenv uboot_status ${last_status}
+    fi
+else
+    echo "Skipping U-Boot update (img_uboot not set)."
+fi
+
+# ---------------------------------------------------------------------------
+# 4. Flash SMD → mfgdata (optional, no rescue bank)
+# ---------------------------------------------------------------------------
+if test -n "${img_smd}"; then
+    setenv cur_img  ${img_smd}
+    setenv cur_desc SMD
+
+    setenv cur_active_name        mfgdata
+    setenv cur_active_block_start ${mfgdata_block_start}
+    setenv cur_active_block_size  ${mfgdata_block_size}
+
+    run prpl_tftp_load
+    if test "${tftp_ok}" = "yes"; then
+        run prpl_flash_active
+        setenv smd_status ${last_status}
+    else
+        setenv smd_status ${last_status}
+    fi
+else
+    echo "Skipping SMD/mfgdata update (img_smd not set)."
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Final summary
+# ---------------------------------------------------------------------------
+echo "============================================"
+echo "          prplOS UPDATE SUMMARY             "
+echo "--------------------------------------------"
+echo "kernel (kernel-active) : ${kernel_status}"
+echo "rootfs (rootfs-active) : ${rootfs_status}"
+echo "U-Boot (u-boot-active) : ${uboot_status}"
+echo "SMD (mfgdata)          : ${smd_status}"
+echo "Update rescue bank     : ${update_rescue_bank}"
+echo "============================================"
+echo "Done. You can reset to reboot using the new FIT boot path."
+'
+
+echo "========================================================"
+echo "update_prpl command has been defined."
+echo ""
+echo "Before running, you may set:"
+echo "  - tftppath            : TFTP directory (optional, default: root)"
+echo "  - img_uboot           : U-Boot image (optional)"
+echo "  - img_kernel          : itb file of the kernel (optional)"
+echo "  - img_rootfs          : itb file of the rootfs (optional)"
+echo "  - img_smd             : SMD/mfgdata image (optional)"
+echo "  - update_rescue_bank  : yes | no   (default: no)"
+echo ""
+echo "Example:"
+echo "  setenv tftppath /images/"
+echo "  setenv img_uboot u-boot.itb"
+echo "  setenv img_kernel kernel.itb"
+echo "  setenv img_rootfs rootfs.itb"
+echo "  setenv img_smd smd.bin"
+echo "  setenv update_rescue_bank yes"
+echo ""
+echo "Then run:"
+echo "  run update_prpl"
+echo "========================================================"
