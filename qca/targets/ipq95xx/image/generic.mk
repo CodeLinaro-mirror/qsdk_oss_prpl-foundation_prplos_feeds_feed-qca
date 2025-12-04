@@ -30,6 +30,13 @@ define Build/swuimage
 			cp $(IMG_GEN_DIR)/build/$${image} $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$${image} ; \
 		fi ; \
 	done
+	$(call Build/update-script)
+endef
+
+define Build/update-script
+    mkimage -A arm64 \
+        -O linux -T script -C none -a 0 -e 0 -n "update" -d update_script.txt update_script.scr
+    cp update_script.scr $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-update_script.scr
 endef
 
 define Device/SwuImage
