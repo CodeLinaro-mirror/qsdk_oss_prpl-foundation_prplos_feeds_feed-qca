@@ -13,6 +13,13 @@ define Device/EmmcImage
 	IMAGE/sysupgrade.bin/squashfs := append-rootfs | pad-to 64k | sysupgrade-tar rootfs=$$$$@ | append-metadata
 endef
 
+define Build/update-script
+	@echo "Running Build/update-script"
+	mkimage -A x86_64 \
+		-O linux -T script -C none -a 0 -e 0 -n "update" -d update_script.txt \
+		$(KDIR)/tmp/$(DEVICE_IMG_PREFIX)-update_script.scr
+endef
+
 define Device/qcom_alxx
 	$(call Device/MultiDTBFitImage)
 	DEVICE_VENDOR := Qualcomm Technologies, Inc.
@@ -99,6 +106,8 @@ define Device/prpl_freedom
 				binman binman_qca_ipq95xx_freedom.dts | \
 				swugenerator sw-description_qca_ipq95xx_freedom
 
-	ARTIFACTS := Image.gz image.swu
+	ARTIFACT/update_script.scr := update-script
+
+	ARTIFACTS := Image.gz image.swu update_script.scr
 endef
 TARGET_DEVICES += prpl_freedom
