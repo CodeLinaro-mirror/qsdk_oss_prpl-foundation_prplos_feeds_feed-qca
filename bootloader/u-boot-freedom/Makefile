@@ -57,12 +57,7 @@ OBJCOPY:=$(TARGET_CROSS)objcopy
 
 define Package/u-boot-freedom/install
 	$(INSTALL_DIR) $(BIN_DIR)
-	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
-	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-u-boot.img
+	$(CP) $(PKG_BUILD_DIR)/u-boot.elfmbn $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-u-boot.elfmbn
 endef
 
 $(eval $(call BuildPackage,u-boot-freedom))
