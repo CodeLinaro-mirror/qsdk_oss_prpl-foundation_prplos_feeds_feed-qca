@@ -1,0 +1,110 @@
+From 0a915dfb6f885628f4a23bad3395550598b97f8f Mon Sep 17 00:00:00 2001
+From: Mohamed-nour Toumi <mohamed.toumi_ext@softathome.com>
+Date: Thu, 11 Dec 2025 15:26:35 +0100
+Subject: [PATCH] QCA - U-Boot: Boot and authenticate the kernel from the right
+ bank
+
+Read the information of which bank A/B to boot from device tree and pass it to kernel cmdline while selecting the kernel to boot
+
+Implements: PCF-1870
+Tracked-by: FEAT-29
+
+Signed-off-by: Mohamed-nour Toumi <mohamed.toumi_ext@softathome.com>
+---
+ arch/arm/dts/ipq9574-default.dts          | 12 ++++++
+ configs/ipq9574_wnc_freedom_mmc_defconfig |  2 +-
+ include/configs/ipq9574.h                 | 45 +++++++++++++++++++++++
+ 3 files changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/ipq9574-default.dts b/arch/arm/dts/ipq9574-default.dts
+index 8be25e0895..8d1b31d34e 100644
+--- a/arch/arm/dts/ipq9574-default.dts
++++ b/arch/arm/dts/ipq9574-default.dts
+@@ -16,6 +16,18 @@
+ 		sdhci = &mmc;
+ 	};
+ 
++	chosen {
++		/*
++		 * Bank selected by early boot (SPL/ROM/etc.)
++		 * booted-bank="active"
++		 * booted-bank="inactive"
++		 * booted-bank="inactive,forced"
++		 */
++		u-boot {
++			booted-bank = "active";
++		};
++	};
++
+ 	soc: soc {
+ 		tlmm: pinctrl@1000000 {
+ 
+diff --git a/configs/ipq9574_wnc_freedom_mmc_defconfig b/configs/ipq9574_wnc_freedom_mmc_defconfig
+index 0ddea72353..89ec4e1af9 100644
+--- a/configs/ipq9574_wnc_freedom_mmc_defconfig
++++ b/configs/ipq9574_wnc_freedom_mmc_defconfig
+@@ -46,7 +46,7 @@ CONFIG_PREBOOT="crashdump"
+ CONFIG_BOOTDELAY=5
+ CONFIG_USE_BOOTARGS=y
+ CONFIG_USE_BOOTCOMMAND=y
+-CONFIG_BOOTCOMMAND="bootipq"
++CONFIG_BOOTCOMMAND="run select_bank; run boot_from_bank"
+ CONFIG_BOOTARGS="console=ttyMSM0,115200n8"
+ # CONFIG_BOOTSTD is not set
+ CONFIG_HUSH_PARSER=y
+diff --git a/include/configs/ipq9574.h b/include/configs/ipq9574.h
+index a0cbede3b4..6c258c4d61 100644
+--- a/include/configs/ipq9574.h
++++ b/include/configs/ipq9574.h
+@@ -113,3 +113,48 @@ extern uint32_t g_load_addr;
+ #undef CONFIG_NET_RETRY_COUNT
+ #define CONFIG_NET_RETRY_COUNT			500
+ #endif
++
++#define CFG_EXTRA_ENV_SETTINGS \
++    "select_bank=" \
++        "echo Selecting bank from DT...; " \
++        "fdt addr ${fdtcontroladdr}; " \
++        "setenv boot_bank active; " \
++        "setenv boot_bank_reason normal; " \
++        "if fdt get value boot_bank /chosen/u-boot booted-bank; then " \
++            "echo Boot bank from DT: ${boot_bank}; " \
++        "else " \
++            "echo u-boot,booted-bank not found, using default 'active'; " \
++        "fi; " \
++        "if test \"${boot_bank}\" = \"active\"; then " \
++            "echo Using Bank active; " \
++            "setenv kernel_part kernel-active; " \
++            "setenv rootfs_part rootfs-active; " \
++            "setenv boot_bank_reason normal; " \
++        "else " \
++            "echo Using Bank inactive; " \
++            "setenv kernel_part kernel-inactive; " \
++            "setenv rootfs_part rootfs-inactive; " \
++            "if test \"${boot_bank}\" = \"inactive,forced\"; then " \
++                "echo Inactive bank selected by FORCE; " \
++                "setenv boot_bank_reason forced; " \
++            "else " \
++                "setenv boot_bank_reason normal; " \
++            "fi; " \
++        "fi; " \
++    "\0" \
++    "boot_from_bank=" \
++        "echo Booting from ${kernel_part} (reason: ${boot_bank_reason})...; " \
++        "mmc dev 0; " \
++        "if test \"${kernel_part}\" = \"kernel-active\"; then " \
++            "setenv kern_start 0x00091422; " \
++            "setenv kern_size  0x00010000; " \
++        "else " \
++            "setenv kern_start 0x000a1422; " \
++            "setenv kern_size  0x00010000; " \
++        "fi; " \
++        "mmc read ${loadaddr} ${kern_start} ${kern_size}; " \
++        /* Pass bank & reason to Linux via cmdline */ \
++        "setenv bootargs ${bootargs} " \
++            "root=PARTLABEL=${rootfs_part} fstools_partname_fallback_scan=1 " \
++            "boot_bank_reason=${boot_bank_reason}; " \
++        "bootm ${loadaddr};\0 "
+-- 
+2.34.1
+
