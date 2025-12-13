@@ -24,7 +24,7 @@ DEFAULT_PACKAGES += \
 	iwinfo kmod-ath12k \
 	kmod-leds-gpio swconfig kmod-fs-ext4 losetup \
 	libudebug libustream-mbedtls libubus-lua \
-	wififw_mount_script qca-wifi-scripts ath-wifi-scripts ath-legacy-wifi-scripts \
+	wififw_mount_script qca-wifi-scripts ath-wifi-scripts \
 	kmod-bonding wpad-mesh-openssl \
 	kmod-qca-nss-drv kmod-qca-nss-drv-bridge-mgr kmod-qca-nss-drv-gre \
 	kmod-qca-nss-drv-igs kmod-qca-nss-drv-l2tpv2 kmod-qca-nss-drv-lag-mgr kmod-qca-nss-drv-map-t \
@@ -54,6 +54,11 @@ DEFAULT_PACKAGES += \
 	libubox ubus udebug netifd-scripts kmod-qca-nss-netfn-tcpst  nss-tcp-st-cli nss-udp-st netstandby-drv
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
+
+override GENERIC_BACKPORT_DIR :=
+override GENERIC_PATCH_DIR :=
+override GENERIC_HACK_DIR :=
+override GENERIC_FILES_DIR :=
 
 define Kernel/Prepare
 	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)

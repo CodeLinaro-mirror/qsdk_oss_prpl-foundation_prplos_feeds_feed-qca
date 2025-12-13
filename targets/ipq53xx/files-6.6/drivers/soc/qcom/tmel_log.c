@@ -172,7 +172,7 @@ static int list_fuse_v1(const struct tmellog_data *data, char *buf)
 	struct fuse_payload_ipq9574 *fuse __free(kfree);
 	unsigned long base_addr = data->base_addr;
 	int index = 0, next = 0;
-	int ret, n;
+	int ret, n = 0;
 
 	fuse = kzalloc((sizeof(struct fuse_payload_ipq9574) *
 			data->fuse_addr_size), GFP_KERNEL);
@@ -218,7 +218,7 @@ static int list_fuse_v2(const struct tmellog_data *data, char *buf)
 	struct fuse_payload *fuse __free(kfree);
 	unsigned long base_addr = data->base_addr;
 	int index = 0, next = 0;
-	int ret, n;
+	int ret, n = 0;
 
 	fuse = kzalloc((sizeof(struct fuse_payload) * data->fuse_addr_size),
 			GFP_KERNEL);
@@ -336,12 +336,12 @@ static int tmel_log_probe(struct platform_device *pdev)
 	}
 
 	ret = tmelcom_set_tmel_log_config(log_config,
-			(argc / 2) * sizeof(log_config));
-	if (ret) {
+					  (argc / 2) * sizeof(log_config));
+	if (ret)
 		dev_err(&pdev->dev,
 			"failed to set the config, ret = %d\n", ret);
-	}
 
+	kfree(log_config);
 	return ret;
 }
 

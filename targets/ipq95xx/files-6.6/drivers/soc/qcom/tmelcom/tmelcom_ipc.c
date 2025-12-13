@@ -316,7 +316,6 @@ int tmelcom_qwes_device_provision(u32 *req_buf, u32 req_buf_len, u32 *resp_buf,
 		goto dma_unmap_prov_req_buf;
 	}
 
-	msg.status = TMEL_ERROR_GENERIC;
 	msg.req.buf = (u32)dma_prov_req_buf;
 	msg.req.buf_len = req_buf_len;
 	msg.rsp.buf = (u32)dma_prov_rsp_buf;
@@ -366,6 +365,7 @@ int tmelcom_licensing_check(void *cbor_req, u32 req_len, void *cbor_resp,
 		return ret;
 	}
 
+	msg.status = TMEL_ERROR_GENERIC;
 	msg.request.buf = dma_cbor_req;
 	msg.request.buf_len = req_len;
 	msg.response.buf = dma_cbor_resp;
@@ -1040,6 +1040,7 @@ int tmelcomm_qwes_enforce_hw_features(void *buf, u32 size)
 		return -EINVAL;
 	}
 
+	msg.status = TMEL_ERROR_GENERIC;
 	msg.featid_buf.buf = (u32)dma_addr;
 	msg.featid_buf.buf_len = size;
 	msg.featid_buf.out_buf_len = 0;
