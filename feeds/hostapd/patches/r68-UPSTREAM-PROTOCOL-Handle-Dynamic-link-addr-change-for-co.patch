@@ -46,7 +46,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
 
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -3373,6 +3373,20 @@ static void handle_auth(struct hostapd_d
+@@ -3416,6 +3416,20 @@ static void handle_auth(struct hostapd_d
  
  	sta = ap_get_sta(hapd, sa);
  	if (sta) {
@@ -67,19 +67,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		sta->flags &= ~WLAN_STA_PENDING_FILS_ERP;
  		sta->ft_over_ds = 0;
  		if ((fc & WLAN_FC_RETRY) &&
-@@ -3606,11 +3620,6 @@ static void handle_auth(struct hostapd_d
-  fail:
- 	dst = mgmt->sa;
- 
--#ifdef CONFIG_IEEE80211BE
--	if (ap_sta_is_mld(hapd, sta))
--		dst = sta->addr;
--#endif /* CONFIG_IEEE80211BE */
--
- 	reply_res = send_auth_reply(hapd, sta, dst, auth_alg,
- 				    auth_alg == WLAN_AUTH_SAE ?
- 				    auth_transaction : auth_transaction + 1,
-@@ -6067,10 +6076,18 @@ static void handle_assoc(struct hostapd_
+@@ -6162,10 +6176,18 @@ static void handle_assoc(struct hostapd_
  		sta = handle_mlo_translate(hapd, mgmt, len, reassoc,
  					   &assoc_hapd);
  		if (sta) {
@@ -102,48 +90,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		}
  	}
  #endif /* CONFIG_IEEE80211BE */
-@@ -7163,10 +7180,16 @@ static void handle_auth_cb(struct hostap
- 
- 	sta = ap_get_sta(hapd, mgmt->da);
- 	if (!sta) {
--		wpa_printf(MSG_DEBUG, "handle_auth_cb: STA " MACSTR
--			   " not found",
--			   MAC2STR(mgmt->da));
--		return;
-+#ifdef CONFIG_IEEE80211BE
-+		if (!sta && hapd->mld)
-+			sta = ap_get_link_sta(hapd, mgmt->da);
-+#endif /* CONFIG_IEEE80211BE */
-+		if (!sta) {
-+			wpa_printf(MSG_DEBUG, "handle_auth_cb: STA " MACSTR
-+				   " not found",
-+				   MAC2STR(mgmt->da));
-+			return;
-+		}
- 	}
- 
- 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
-@@ -7359,9 +7382,16 @@ static void handle_assoc_cb(struct hosta
- 
- 	sta = ap_get_sta(hapd, mgmt->da);
- 	if (!sta) {
--		wpa_printf(MSG_INFO, "handle_assoc_cb: STA " MACSTR " not found",
--			   MAC2STR(mgmt->da));
--		return;
-+#ifdef CONFIG_IEEE80211BE
-+		if (!sta && hapd->mld)
-+			sta = ap_get_link_sta(hapd, mgmt->da);
-+#endif /* CONFIG_IEEE80211BE */
-+		if (!sta) {
-+			wpa_printf(MSG_INFO, "handle_assoc_cb: STA " MACSTR
-+				   " not found",
-+				   MAC2STR(mgmt->da));
-+			return;
-+		}
- 	}
- 
- #ifdef CONFIG_IEEE80211BE
-@@ -7437,7 +7467,7 @@ static void handle_assoc_cb(struct hosta
+@@ -7541,7 +7563,7 @@ static void handle_assoc_cb(struct hosta
  	else
  		mlme_associate_indication(hapd, sta);
  
@@ -152,7 +99,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  
  	if (sta->eapol_sm == NULL) {
  		/*
-@@ -7454,7 +7484,7 @@ static void handle_assoc_cb(struct hosta
+@@ -7558,7 +7580,7 @@ static void handle_assoc_cb(struct hosta
  	}
  
  	hostapd_set_sta_flags(hapd, sta);
@@ -163,7 +110,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		wpa_printf(MSG_DEBUG, "Enable 4-address WDS mode for STA "
 --- a/src/ap/sta_info.c
 +++ b/src/ap/sta_info.c
-@@ -1614,6 +1614,27 @@ done:
+@@ -1751,6 +1751,27 @@ done:
  }
  
  
@@ -191,7 +138,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta)
  {
  	u32 tu;
-@@ -1626,7 +1647,7 @@ int ap_check_sa_query_timeout(struct hos
+@@ -1763,7 +1784,7 @@ int ap_check_sa_query_timeout(struct hos
  			       HOSTAPD_MODULE_IEEE80211,
  			       HOSTAPD_LEVEL_DEBUG,
  			       "association SA Query timed out");
@@ -202,7 +149,7 @@ Signed-off-by: Karthik M <quic_karm@quicinc.com>
  		sta->sa_query_count = 0;
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
-@@ -423,6 +423,8 @@ int ap_sta_set_vlan(struct hostapd_data
+@@ -434,6 +434,8 @@ int ap_sta_set_vlan(struct hostapd_data
  void ap_sta_start_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
  void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
  int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta);

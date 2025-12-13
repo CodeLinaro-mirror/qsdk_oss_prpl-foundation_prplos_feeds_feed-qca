@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe-mapt
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=ed2e94a1fcc1d195440f5ae3f5a47cab5c62158c
+PKG_VERSION:=d53eff24bf257a8bb1b2f68beb3aa06332bfd567
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -30,7 +30,7 @@ define KernelPackage/qca-nss-ppe-mapt
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=Kernel driver for PPE mapt tunnel (client)
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx +kmod-qca-nss-ppe-tun +kmod-nat46 @!LINUX_3_18
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx||TARGET_ipq52xx +kmod-qca-nss-ppe-tun +kmod-nat46 @!LINUX_3_18
   FILES:=$(PKG_BUILD_DIR)/clients/mapt/qca-nss-ppe-mapt.ko
   AUTOLOAD:=$(call AutoLoad,53,qca-nss-ppe-mapt)
 endef

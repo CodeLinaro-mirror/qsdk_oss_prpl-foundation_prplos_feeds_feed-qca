@@ -23,11 +23,28 @@ Signed-off-by: Pooventhiran G <pooventh@qti.qualcomm.com>
  src/ap/wpa_auth.h       |   4 +
  5 files changed, 291 insertions(+), 34 deletions(-)
 
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index efb03f2..2fd7fda 100644
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -4321,8 +4321,8 @@ static bool check_sa_query(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4387,7 +4387,8 @@ static bool check_sa_query(struct hostap
+ 
+ #ifdef CONFIG_IEEE80211BE
+ static bool check_sa_query_partner_link(struct hostapd_data *hapd, struct sta_info *sta,
+-					int reassoc, const u8 *ies, size_t ies_len)
++					enum link_parse_type type, const u8 *ies,
++					size_t ies_len)
+ {
+ 	struct hostapd_data *bss;
+ 	struct sta_info *lsta;
+@@ -4399,7 +4400,7 @@ static bool check_sa_query_partner_link(
+ 			if (bss == hapd)
+ 				continue;
+ 			lsta = ap_get_sta(bss, sta->addr);
+-			if (lsta && check_sa_query(bss, lsta, reassoc, ies, ies_len))
++			if (lsta && check_sa_query(bss, lsta, type, ies, ies_len))
+ 				return true;
+ 		}
+ 	}
+@@ -4409,8 +4410,8 @@ static bool check_sa_query_partner_link(
  
  static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
  			     const u8 *ies, size_t ies_len,
@@ -38,7 +55,7 @@ index efb03f2..2fd7fda 100644
  {
  	int resp;
  	const u8 *wpa_ie;
-@@ -4340,9 +4340,11 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4428,9 +4429,11 @@ static int __check_assoc_ies(struct host
  			break;
  	}
  
@@ -53,7 +70,7 @@ index efb03f2..2fd7fda 100644
  
  	resp = check_wmm(hapd, sta, elems->wmm, elems->wmm_len);
  	if (resp != WLAN_STATUS_SUCCESS)
-@@ -4457,6 +4459,15 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4545,6 +4548,15 @@ static int __check_assoc_ies(struct host
  	}
  #endif /* CONFIG_P2P */
  
@@ -69,7 +86,16 @@ index efb03f2..2fd7fda 100644
  	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems->rsn_ie) {
  		wpa_ie = elems->rsn_ie;
  		wpa_ie_len = elems->rsn_ie_len;
-@@ -4602,7 +4613,7 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4598,7 +4610,7 @@ static int __check_assoc_ies(struct host
+ #endif /* CONFIG_IEEE80211BE */
+ 
+ #ifdef CONFIG_IEEE80211BE
+-		if (!link && check_sa_query_partner_link(hapd, sta, reassoc, ies, ies_len))
++		if (!link && check_sa_query_partner_link(hapd, sta, type, ies, ies_len))
+ 			return WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY;
+ #endif /* CONFIG_IEEE80211BE */
+ 
+@@ -4695,7 +4707,7 @@ static int __check_assoc_ies(struct host
  
  #ifdef CONFIG_IEEE80211R_AP
  		if (sta->auth_alg == WLAN_AUTH_FT) {
@@ -78,7 +104,7 @@ index efb03f2..2fd7fda 100644
  				wpa_printf(MSG_DEBUG, "FT: " MACSTR " tried "
  					   "to use association (not "
  					   "re-association) with FT auth_alg",
-@@ -4742,6 +4753,8 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4835,6 +4847,8 @@ static int __check_assoc_ies(struct host
  	} else
  		wpa_auth_sta_no_wpa(sta->wpa_sm);
  
@@ -87,7 +113,7 @@ index efb03f2..2fd7fda 100644
  #ifdef CONFIG_P2P
  	if (ies && ies_len)
  		p2p_group_notif_assoc(hapd->p2p_group, sta->addr, ies, ies_len);
-@@ -4796,7 +4809,8 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4889,7 +4903,8 @@ static int __check_assoc_ies(struct host
  #endif /* CONFIG_MBO */
  
  #if defined(CONFIG_FILS) && defined(CONFIG_OCV)
@@ -97,7 +123,7 @@ index efb03f2..2fd7fda 100644
  	    (sta->auth_alg == WLAN_AUTH_FILS_SK ||
  	     sta->auth_alg == WLAN_AUTH_FILS_SK_PFS ||
  	     sta->auth_alg == WLAN_AUTH_FILS_PK)) {
-@@ -4875,7 +4889,8 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4968,7 +4983,8 @@ static int __check_assoc_ies(struct host
  
  
  static int check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
@@ -107,7 +133,7 @@ index efb03f2..2fd7fda 100644
  {
  	struct ieee802_11_elems elems;
  
-@@ -4886,8 +4901,7 @@ static int check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+@@ -4979,8 +4995,7 @@ static int check_assoc_ies(struct hostap
  		return WLAN_STATUS_UNSPECIFIED_FAILURE;
  	}
  
@@ -117,7 +143,7 @@ index efb03f2..2fd7fda 100644
  }
  
  
-@@ -4977,13 +4991,13 @@ out:
+@@ -5070,13 +5085,13 @@ out:
  }
  
  
@@ -138,7 +164,7 @@ index efb03f2..2fd7fda 100644
  {
  	struct ieee802_11_elems elems;
  	struct wpabuf *mlbuf = NULL;
-@@ -5015,16 +5029,20 @@ static int ieee80211_ml_process_link(struct hostapd_data *hapd,
+@@ -5108,16 +5123,20 @@ static int ieee80211_ml_process_link(str
  		goto out;
  	}
  
@@ -168,7 +194,7 @@ index efb03f2..2fd7fda 100644
  	}
  
  	sta->flags = (origin_sta->flags & WLAN_STA_AUTH);
-@@ -5033,7 +5051,7 @@ static int ieee80211_ml_process_link(struct hostapd_data *hapd,
+@@ -5126,7 +5145,7 @@ static int ieee80211_ml_process_link(str
  	sta->wpa_sm = origin_sta->wpa_sm;
  	ap_sta_set_mld(sta, true);
  
@@ -177,7 +203,7 @@ index efb03f2..2fd7fda 100644
  	if (status != WLAN_STATUS_SUCCESS) {
  		wpa_printf(MSG_DEBUG, "MLD: link: Element check failed");
  		goto out;
-@@ -5045,6 +5063,11 @@ static int ieee80211_ml_process_link(struct hostapd_data *hapd,
+@@ -5138,6 +5157,11 @@ static int ieee80211_ml_process_link(str
  
  		li->resp_sta_profile = NULL;
  		li->resp_sta_profile_len = 0;
@@ -189,7 +215,7 @@ index efb03f2..2fd7fda 100644
  	}
  
  	if (!offload) {
-@@ -5079,13 +5102,14 @@ static int ieee80211_ml_process_link(struct hostapd_data *hapd,
+@@ -5172,13 +5196,14 @@ static int ieee80211_ml_process_link(str
  
  	/* TODO: What other processing is required? */
  
@@ -206,7 +232,7 @@ index efb03f2..2fd7fda 100644
  		ieee80211_ml_build_assoc_resp(hapd, phapd, sta, link);
  
  	wpa_printf(MSG_DEBUG, "MLD: link: status=%u", status);
-@@ -5207,7 +5231,9 @@ int hostapd_process_assoc_ml_info(struct hostapd_data *hapd,
+@@ -5300,7 +5325,9 @@ int hostapd_process_assoc_ml_info(struct
  				ieee80211_ml_build_assoc_resp(hapd, NULL, sta, link);
  		} else {
  			if (ieee80211_ml_process_link(bss, hapd, sta, link,
@@ -217,7 +243,7 @@ index efb03f2..2fd7fda 100644
  						      offload, set_beacon))
  				return -1;
  		}
-@@ -6300,7 +6326,8 @@ static void handle_assoc(struct hostapd_data *hapd,
+@@ -6414,7 +6441,8 @@ static void handle_assoc(struct hostapd_
  
  	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
  	 * is used */
@@ -227,8 +253,6 @@ index efb03f2..2fd7fda 100644
  	if (resp != WLAN_STATUS_SUCCESS)
  		goto fail;
  #ifdef CONFIG_IEEE80211R_AP
-diff --git a/src/ap/ieee802_11.h b/src/ap/ieee802_11.h
-index 1fdef42..d444a01 100644
 --- a/src/ap/ieee802_11.h
 +++ b/src/ap/ieee802_11.h
 @@ -36,6 +36,8 @@ enum link_parse_type {
@@ -240,7 +264,7 @@ index 1fdef42..d444a01 100644
  struct link_reconf_req_info {
  	struct dl_list list;
  	u16 status;
-@@ -422,6 +424,11 @@ int hostapd_process_assoc_ml_info(struct hostapd_data *hapd,
+@@ -431,6 +433,11 @@ int hostapd_process_assoc_ml_info(struct
  
  #ifdef CONFIG_IEEE80211BE
  void ml_deinit_link_reconf_req(struct link_reconf_req_list **req_list_ptr);
@@ -252,11 +276,9 @@ index 1fdef42..d444a01 100644
  
  void ieee802_11_rx_protected_eht_action(struct hostapd_data *hapd,
  					const struct ieee80211_mgmt *mgmt,
-diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
-index d9eeb1e..7006bed 100644
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
-@@ -1492,6 +1492,89 @@ void ml_deinit_link_reconf_req(struct link_reconf_req_list **req_list_ptr)
+@@ -1536,6 +1536,89 @@ void ml_deinit_link_reconf_req(struct li
  }
  
  
@@ -346,7 +368,7 @@ index d9eeb1e..7006bed 100644
  /* Returns:
   * 0 = successful parsing
   * 1 = per-STA profile (subelement) skipped or rejected
-@@ -1843,6 +1926,140 @@ fail:
+@@ -1887,6 +1970,140 @@ fail:
  }
  
  
@@ -487,7 +509,7 @@ index d9eeb1e..7006bed 100644
  static int
  hostapd_handle_link_reconf_req(struct hostapd_data *hapd, const u8 *buf,
  			       size_t len)
-@@ -1957,8 +2174,11 @@ hostapd_handle_link_reconf_req(struct hostapd_data *hapd, const u8 *buf,
+@@ -2001,8 +2218,11 @@ hostapd_handle_link_reconf_req(struct ho
  	}
  
  skip_oci_validation:
@@ -500,11 +522,9 @@ index d9eeb1e..7006bed 100644
  	ret = 0;
  
  out:
-diff --git a/src/ap/wpa_auth.c b/src/ap/wpa_auth.c
-index b6d4dc6..b3e1ee3 100644
 --- a/src/ap/wpa_auth.c
 +++ b/src/ap/wpa_auth.c
-@@ -4339,8 +4339,7 @@ static void wpa_auth_get_ml_key_info(struct wpa_authenticator *wpa_auth,
+@@ -4339,8 +4339,7 @@ static void wpa_auth_get_ml_key_info(str
  }
  
  
@@ -514,11 +534,9 @@ index b6d4dc6..b3e1ee3 100644
  {
  	struct wpa_authenticator *wpa_auth;
  	size_t kde_len = 0;
-diff --git a/src/ap/wpa_auth.h b/src/ap/wpa_auth.h
-index 0fe659a..272ea45 100644
 --- a/src/ap/wpa_auth.h
 +++ b/src/ap/wpa_auth.h
-@@ -706,6 +706,10 @@ void wpa_auth_reconfig_primary_auth(struct wpa_authenticator *wpa_auth,
+@@ -706,6 +706,10 @@ void wpa_auth_reconfig_primary_auth(stru
  int wpa_auth_reconfig_wpa_auth_sm(struct hostapd_data *rhapd,
  				  struct sta_info *lsta,
  				  void *data);
@@ -529,6 +547,3 @@ index 0fe659a..272ea45 100644
  #define for_each_sm_auth(sm, link_id) \
  	for (link_id = 0; link_id < MAX_NUM_MLD_LINKS; link_id++)	\
  		if (sm->mld_links[link_id].valid &&			\
--- 
-2.34.1
-

@@ -30,8 +30,8 @@ Signed-off-by: Aishwarya R <aisr@qti.qualcomm.com>
  create mode 100644 src/ap/dscp_policy.c
  create mode 100644 src/ap/dscp_policy.h
 
-diff --git a/hostapd/Makefile b/hostapd/Makefile
-index a920435..df39566 100644
+Index: b/hostapd/Makefile
+===================================================================
 --- a/hostapd/Makefile
 +++ b/hostapd/Makefile
 @@ -378,6 +378,8 @@ OBJS += ../src/ap/ieee802_11_eht.o
@@ -43,8 +43,8 @@ index a920435..df39566 100644
  ifdef CONFIG_IEEE80211AX
  CFLAGS += -DCONFIG_IEEE80211AX
  OBJS += ../src/ap/ieee802_11_he.o
-diff --git a/src/ap/Makefile b/src/ap/Makefile
-index 06c966b..09702b8 100644
+Index: b/src/ap/Makefile
+===================================================================
 --- a/src/ap/Makefile
 +++ b/src/ap/Makefile
 @@ -57,6 +57,7 @@ LIB_OBJS= \
@@ -56,8 +56,8 @@ index 06c966b..09702b8 100644
 +	dscp_policy.o
  
  include ../lib.rules
-diff --git a/src/ap/ap_drv_ops.c b/src/ap/ap_drv_ops.c
-index 1f5e4a9..737d176 100644
+Index: b/src/ap/ap_drv_ops.c
+===================================================================
 --- a/src/ap/ap_drv_ops.c
 +++ b/src/ap/ap_drv_ops.c
 @@ -26,6 +26,7 @@
@@ -68,7 +68,7 @@ index 1f5e4a9..737d176 100644
  
  u32 hostapd_sta_flags_to_drv(u32 flags)
  {
-@@ -79,7 +80,7 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
+@@ -79,7 +80,7 @@ int hostapd_build_ap_extra_ies(struct ho
  			       struct wpabuf **assocresp_ret)
  {
  	struct wpabuf *beacon = NULL, *proberesp = NULL, *assocresp = NULL;
@@ -77,7 +77,7 @@ index 1f5e4a9..737d176 100644
  
  	*beacon_ret = *proberesp_ret = *assocresp_ret = NULL;
  
-@@ -124,6 +125,14 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
+@@ -124,6 +125,14 @@ int hostapd_build_ap_extra_ies(struct ho
  		goto fail;
  #endif /* CONFIG_FILS */
  
@@ -92,8 +92,8 @@ index 1f5e4a9..737d176 100644
  	if (!hapd->conf->rsn_override_omit_rsnxe) {
  		pos = hostapd_eid_rsnxe(hapd, buf, sizeof(buf));
  		if (add_buf_data(&assocresp, buf, pos - buf) < 0)
-diff --git a/src/ap/beacon.c b/src/ap/beacon.c
-index 246579b..120b53c 100644
+Index: b/src/ap/beacon.c
+===================================================================
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
 @@ -34,7 +34,7 @@
@@ -105,7 +105,7 @@ index 246579b..120b53c 100644
  
  #ifdef NEED_AP_MLME
  
-@@ -852,6 +852,8 @@ static size_t hostapd_probe_resp_elems_len(struct hostapd_data *hapd,
+@@ -855,6 +855,8 @@ static size_t hostapd_probe_resp_elems_l
  	buflen += hostapd_get_rsne_override_len(hapd);
  	buflen += hostapd_get_rsne_override_2_len(hapd);
  	buflen += hostapd_get_rsnxe_override_len(hapd);
@@ -114,7 +114,7 @@ index 246579b..120b53c 100644
  
  	return buflen;
  }
-@@ -1055,6 +1057,8 @@ static u8 * hostapd_probe_resp_fill_elems(struct hostapd_data *hapd,
+@@ -1062,6 +1064,8 @@ static u8 * hostapd_probe_resp_fill_elem
  
  	/* Wi-Fi Alliance WMM */
  	pos = hostapd_eid_wmm(hapd, pos, false);
@@ -123,7 +123,7 @@ index 246579b..120b53c 100644
  
  #ifdef CONFIG_WPS
  	if (hapd->conf->wps_state && hapd->wps_probe_resp_ie) {
-@@ -2464,6 +2468,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
+@@ -2471,6 +2475,8 @@ int ieee802_11_build_ap_params(struct ho
  	tail_len += hostapd_get_rsne_override_len(hapd);
  	tail_len += hostapd_get_rsne_override_2_len(hapd);
  	tail_len += hostapd_get_rsnxe_override_len(hapd);
@@ -132,7 +132,7 @@ index 246579b..120b53c 100644
  
  	tailpos = tail = os_malloc(tail_len);
  	if (head == NULL || tail == NULL) {
-@@ -2720,6 +2726,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
+@@ -2727,6 +2733,8 @@ int ieee802_11_build_ap_params(struct ho
  		hostapd_eid_update_cu_info(hapd, &elemid_modified, startpos,
  					   tailpos-startpos, ELEMID_CU_PARAM_WMM);
  #endif
@@ -141,12 +141,11 @@ index 246579b..120b53c 100644
  #ifdef CONFIG_WPS
  	if (hapd->conf->wps_state && hapd->wps_beacon_ie) {
  		os_memcpy(tailpos, wpabuf_head(hapd->wps_beacon_ie),
-diff --git a/src/ap/dscp_policy.c b/src/ap/dscp_policy.c
-new file mode 100644
-index 0000000..6f19cd1
+Index: b/src/ap/dscp_policy.c
+===================================================================
 --- /dev/null
 +++ b/src/ap/dscp_policy.c
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,92 @@
 +/*
 + * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 + * SPDX-License-Identifier: ISC
@@ -170,6 +169,9 @@ index 0000000..6f19cd1
 +	const u8 *end = ies + ies_len;
 +
 +	sta->dscp_policy_capable = false;
++
++	if (!(sta->flags & WLAN_STA_MFP))
++		return;
 +
 +	while (pos + 1 < end) {
 +		u8 id = *pos++;
@@ -236,9 +238,8 @@ index 0000000..6f19cd1
 +	return eid;
 +}
 +
-diff --git a/src/ap/dscp_policy.h b/src/ap/dscp_policy.h
-new file mode 100644
-index 0000000..e505c27
+Index: b/src/ap/dscp_policy.h
+===================================================================
 --- /dev/null
 +++ b/src/ap/dscp_policy.h
 @@ -0,0 +1,24 @@
@@ -266,8 +267,8 @@ index 0000000..e505c27
 +				  struct sta_info *sta, u8 *eid);
 +void hostapd_check_dscp_policy_capability(struct sta_info *sta,
 +					  const u8 *ies, size_t ies_len);
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index 4e6e933..31586f8 100644
+Index: b/src/ap/ieee802_11.c
+===================================================================
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
 @@ -63,6 +63,7 @@
@@ -278,7 +279,7 @@ index 4e6e933..31586f8 100644
  
  #ifdef CONFIG_FILS
  static struct wpabuf *
-@@ -5618,6 +5619,9 @@ rsnxe_done:
+@@ -5615,6 +5616,9 @@ rsnxe_done:
  	if (sta && (sta->flags & WLAN_STA_WMM))
  		p = hostapd_eid_wmm(hapd, p, false);
  
@@ -288,18 +289,18 @@ index 4e6e933..31586f8 100644
  #ifdef CONFIG_WPS
  	if (sta &&
  	    ((sta->flags & WLAN_STA_WPS) ||
-@@ -6119,6 +6123,9 @@ static void handle_assoc(struct hostapd_data *hapd,
- 
- #endif /* CONFIG_IEEE80211BE */
+@@ -6340,6 +6344,9 @@ static void handle_assoc(struct hostapd_
+ 			set_beacon = true;
+ 	}
  
 +	if (sta)
 +		hostapd_check_dscp_policy_capability(sta, pos, left);
 +
- #ifdef CONFIG_IEEE80211R_AP
- 	if (!sta) {
- 		wpa_printf(MSG_DEBUG,
-diff --git a/src/ap/sta_info.h b/src/ap/sta_info.h
-index 0f0531c..cfdfe10 100644
+ 	if (sta->capability & WLAN_CAPABILITY_SHORT_PREAMBLE)
+ 		sta->flags |= WLAN_STA_SHORT_PREAMBLE;
+ 	else
+Index: b/src/ap/sta_info.h
+===================================================================
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
 @@ -338,6 +338,8 @@ struct sta_info {
@@ -311,8 +312,8 @@ index 0f0531c..cfdfe10 100644
  	bool ft_re_add;
  };
  
-diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
-index 13194c1..a69d111 100644
+Index: b/wpa_supplicant/Makefile
+===================================================================
 --- a/wpa_supplicant/Makefile
 +++ b/wpa_supplicant/Makefile
 @@ -1051,6 +1051,7 @@ ifdef CONFIG_IEEE80211BE
@@ -323,6 +324,3 @@ index 13194c1..a69d111 100644
  ifdef CONFIG_WNM_AP
  CFLAGS += -DCONFIG_WNM_AP
  OBJS += ../src/ap/wnm_ap.o
--- 
-2.34.1
-

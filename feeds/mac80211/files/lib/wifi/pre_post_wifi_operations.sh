@@ -137,39 +137,6 @@ mac80211_update_mld_iface_config() {
 	uci commit wireless
 }
 
-mac80211_update_qos_configs()
-{
-	local iflist
-	config_load wireless
-	mac80211_update_qos_cfg() {
-		append iflist "$1"
-	}
-	config_foreach mac80211_update_qos_cfg wifi-iface
-	for name in $iflist
-	do
-		config_get device "$name" device
-		config_get ht_mode "$device" htmode
-		if ([ -n "$ht_mode" ] && [[ "$ht_mode" == "EHT"* ]] || [[ "$ht_mode" == "HE"* ]]); then
-			config_get enable_scs "$name" enable_scs
-			if [ -n "$enable_scs" ]; then
-				# SCS is configured, use the config
-				uci_set wireless "$name" enable_scs "$enable_scs"
-			else
-				# SCS is not configured, enable by default
-				uci_set wireless "$name" enable_scs "1"
-			fi
-			config_get enable_mscs "$name" enable_mscs
-			if [ -n "$enable_mscs" ]; then
-				# MSCS is configured, use the config
-				uci_set wireless "$name" enable_mscs "$enable_mscs"
-			else
-				# MSCS is not configured, enable by default
-				uci_set wireless "$name" enable_mscs "1"
-			fi
-		fi
-	done
-}
-
 mac80211_update_mld_configs() {
 	local iflist
 	config_load wireless
@@ -227,7 +194,7 @@ mlo_add_link() {
 
 	case "$2" in
 		2g)
-		test_band=$(uci show wireless | grep $2 | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'$2'" | cut -d "." -f 2)
 		radio_id=$(uci show wireless.$test_band.radio | cut -d "'" -f 2)
 		start_freq=$(iw $1 info | grep -A 2 "Idx $radio_id:" | grep "Frequency Range:" | awk '{print $3}')
 		start_freq=$((start_freq+10))
@@ -238,7 +205,7 @@ mlo_add_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		5g)
-		test_band=$(uci show wireless | grep $2 | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'$2'" | cut -d "." -f 2)
 		radio_id=$(uci show wireless.$test_band.radio | cut -d "'" -f 2)
 		start_freq=$(iw $1 info | grep -A 2 "Idx $radio_id:" | grep "Frequency Range:" | awk '{print $3}')
 		start_freq=$((start_freq+10))
@@ -249,7 +216,7 @@ mlo_add_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		5gl)
-		test_band=$(uci show wireless | grep 5g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -lt "65" ]; then
@@ -267,7 +234,7 @@ mlo_add_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		5gh)
-		test_band=$(uci show wireless | grep 5g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -gt "65" ]; then
@@ -285,7 +252,7 @@ mlo_add_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		6g)
-		test_band=$(uci show wireless | grep $2 | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'$2'" | cut -d "." -f 2)
 		radio_id=$(uci show wireless.$test_band.radio | cut -d "'" -f 2)
 		start_freq=$(iw $1 info | grep -A 2 "Idx $radio_id:" | grep "Frequency Range:" | awk '{print $3}')
 		start_freq=$((start_freq+10))
@@ -296,7 +263,7 @@ mlo_add_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		6gl)
-		test_band=$(uci show wireless | grep 6g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -lt "100" ]; then
@@ -314,7 +281,7 @@ mlo_add_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		6gh)
-		test_band=$(uci show wireless | grep 6g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -gt "100" ]; then
@@ -343,7 +310,7 @@ mlo_add_link() {
 	hw_idx=$(uci show wireless.$link.radio | cut -d "'" -f 2)
 	for iface in $iface_data; do
 		check_band=$(uci show wireless.${iface}.device | awk -F"'" '{print $2}' | cut -d'.' -f2) 2> /dev/null
-		check_disabled=$(uci show wireless.${iface}.disabled | cut -d "'" -f2)
+		check_disabled=$(uci show wireless.${iface}.disabled | cut -d "'" -f2) 2> /dev/null
 		if [ "$check_band" = "$link" ] && [ "$check_disabled" = 0 ]; then
 			echo "link is already present in the mld" > /dev/ttyMSM0
 			return
@@ -635,7 +602,7 @@ mlo_remove_link() {
 
 	case "$2" in
 		2g)
-		test_band=$(uci show wireless | grep $2 | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'$2'" | cut -d "." -f 2)
 		radio_id=$(uci show wireless.$test_band.radio | cut -d "'" -f 2)
 		start_freq=$(iw $1 info | grep -A 2 "Idx $radio_id:" | grep "Frequency Range:" | awk '{print $3}')
 		start_freq=$((start_freq+10))
@@ -646,7 +613,7 @@ mlo_remove_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		5g)
-		test_band=$(uci show wireless | grep $2 | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'$2'" | cut -d "." -f 2)
 		radio_id=$(uci show wireless.$test_band.radio | cut -d "'" -f 2)
 		start_freq=$(iw $1 info | grep -A 2 "Idx $radio_id:" | grep "Frequency Range:" | awk '{print $3}')
 		start_freq=$((start_freq+10))
@@ -657,7 +624,7 @@ mlo_remove_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		5gl)
-		test_band=$(uci show wireless | grep 5g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -lt "65" ]; then
@@ -675,7 +642,7 @@ mlo_remove_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		5gh)
-		test_band=$(uci show wireless | grep 5g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -gt "65" ]; then
@@ -693,7 +660,7 @@ mlo_remove_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		6g)
-		test_band=$(uci show wireless | grep $2 | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'$2'" | cut -d "." -f 2)
 		radio_id=$(uci show wireless.$test_band.radio | cut -d "'" -f 2)
 		start_freq=$(iw $1 info | grep -A 2 "Idx $radio_id:" | grep "Frequency Range:" | awk '{print $3}')
 		start_freq=$((start_freq+10))
@@ -704,7 +671,7 @@ mlo_remove_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		6gl)
-		test_band=$(uci show wireless | grep 6g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -lt "100" ]; then
@@ -722,7 +689,7 @@ mlo_remove_link() {
 		channels=$(echo $start_chan-$end_chan)
 		;;
 		6gh)
-		test_band=$(uci show wireless | grep 6g | cut -d "." -f 2)
+		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
 			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
 			if [ "$local_channel" -gt "100" ]; then
@@ -750,7 +717,7 @@ mlo_remove_link() {
 	for i in $iface_data; do
 		check_mld=$(uci show wireless.$i.mld | cut -d "'" -f 2)
 		if [ "$check_mld" = "$mld" ]; then
-			check_disabled=$(uci show wireless.$i.disabled | cut -d "'" -f 2)
+			check_disabled=$(uci show wireless.$i.disabled | cut -d "'" -f 2) 2> /dev/null
 			check_device=$(uci show wireless.$i.device | cut -d "'" -f 2)
 			if [ "$check_disabled" = 1 ] && [ "$check_device" = "$link" ]; then
 				echo "Interface is already disabled" > /dev/console
@@ -1018,7 +985,6 @@ configure_telemetry_sla_samples() {
 
 pre_wifi_updown() {
 	mac80211_update_mld_configs
-	mac80211_update_qos_configs
 	:
 }
 
@@ -1026,19 +992,17 @@ post_wifi_updown() {
 	if [ -f "/lib/ftrace_enable_events.sh" ]; then
                 sh /lib/ftrace_enable_events.sh
         fi
+        if command -v udebug >/dev/null && ubus list udebug | grep -q .; then
+                ubus call udebug set_config '{"service": {"hostapd": {"enabled": "1"}}}'
+                udebug set_flag hostapd:wpa_nl_rx rx_frame=1
+		ubus call udebug set_config '{"service": {"wpa_supplicant": {"enabled": "1","wpa_nl_rx": "1","wpa_nl_tx": "1"}}}'
+        fi
 	:
 }
 
 post_wifi_config() {
 	post_mac80211 "update_pri_link"
 	:
-}
-
-restart_rsrcmgr() {
-	[ -f /tmp/rsrcmgr.log ] && {
-		rm -rf /tmp/rsrcmgr.log
-	}
-	/etc/init.d/rsrcmgr restart
 }
 
 pre_mac80211() {
@@ -1063,9 +1027,6 @@ pre_mac80211() {
 				kill -15 $pid 2>/dev/null
 				rm /tmp/apsta_mode.pid 2>/dev/null
 			fi
-		;;
-		enable)
-			restart_rsrcmgr
 		;;
 	esac
 	return 0

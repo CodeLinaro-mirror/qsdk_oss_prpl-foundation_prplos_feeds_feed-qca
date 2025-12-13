@@ -1,0 +1,261 @@
+commit c79d25f7c46e88e59ae20272df7397be007ed6eb
+Author: David Bar-On <david.cdb004@gmail.com>
+Date:   Sun Jun 16 19:47:19 2024 +0300
+
+    Add SKIP-RX-COPY support - using MSG_TRUNC socket option
+
+diff --git a/configure.ac b/configure.ac
+index 0871d3b..7b25535 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -337,6 +337,20 @@ if test "x$iperf3_cv_header_tcp_info_snd_wnd" = "xyes"; then
+   AC_DEFINE([HAVE_TCP_INFO_SND_WND], [1], [Have tcpi_snd_wnd field in tcp_info.])
+ fi
+ 
++# Check for MSG_TRUNC (mostly on Linux)
++AC_CACHE_CHECK([MSG_TRUNC recv option],
++[iperf3_cv_header_msg_trunc],
++AC_COMPILE_IFELSE(
++  [AC_LANG_PROGRAM([[#include <sys/types.h>
++                     #include <sys/socket.h>
++                     #include <netinet/in.h>]],
++                   [[int foo = MSG_TRUNC;]])],
++  iperf3_cv_header_msg_trunc=yes,
++  iperf3_cv_header_msg_trunc=no))
++if test "x$iperf3_cv_header_msg_trunc" = "xyes"; then
++    AC_DEFINE([HAVE_MSG_TRUNC], [1], [Have MSG_TRUNC recv option.])
++fi
++
+ # Check if we need -lrt for clock_gettime
+ AC_SEARCH_LIBS(clock_gettime, [rt posix4])
+ # Check for clock_gettime support
+diff --git a/src/iperf.h b/src/iperf.h
+index 527e549..c23a548 100644
+--- a/src/iperf.h
++++ b/src/iperf.h
+@@ -169,6 +169,7 @@ struct iperf_settings
+     char      *client_password;
+     EVP_PKEY  *client_rsa_pubkey;
+ #endif // HAVE_SSL
++    int       skip_rx_copy;         /* Whether to ignore received messages data, using MSG_TRUNC option */
+     int	      connect_timeout;	    /* socket connection timeout, in ms */
+     int       idle_timeout;         /* server idle time timeout */
+     unsigned int snd_timeout; /* Timeout for sending tcp messages in active mode, in us */
+diff --git a/src/iperf_api.c b/src/iperf_api.c
+index 7fb741e..c806bb4 100644
+--- a/src/iperf_api.c
++++ b/src/iperf_api.c
+@@ -1131,6 +1131,9 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
+ #if defined(HAVE_DONT_FRAGMENT)
+ 	{"dont-fragment", no_argument, NULL, OPT_DONT_FRAGMENT},
+ #endif /* HAVE_DONT_FRAGMENT */
++#if defined(HAVE_MSG_TRUNC)
++	{"skip-rx-copy", no_argument, NULL, OPT_SKIP_RX_COPY},
++#endif /* HAVE_MSG_TRUNC */
+ #if defined(HAVE_SSL)
+     {"username", required_argument, NULL, OPT_CLIENT_USERNAME},
+     {"rsa-public-key-path", required_argument, NULL, OPT_CLIENT_RSA_PUBLIC_KEY},
+@@ -1635,6 +1638,12 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
+ 	    test->use_pkcs1_padding = 1;
+ 	    break;
+ #endif /* HAVE_SSL */
++#if defined(HAVE_MSG_TRUNC)
++            case OPT_SKIP_RX_COPY:
++                test->settings->skip_rx_copy = 1;
++                client_flag = 1;
++                break;
++#endif /* HAVE_MSG_TRUNC */
+ 	    case OPT_PACING_TIMER:
+ 		test->settings->pacing_timer = unit_atoi(optarg);
+ 		client_flag = 1;
+@@ -2270,6 +2279,8 @@ send_parameters(struct iperf_test *test)
+ 	    cJSON_AddStringToObject(j, "authtoken", test->settings->authtoken);
+ 	}
+ #endif // HAVE_SSL
++	if (test->settings->skip_rx_copy)
++	    cJSON_AddNumberToObject(j, "skip_rx_copy", test->settings->skip_rx_copy);
+ 	cJSON_AddStringToObject(j, "client_version", IPERF_VERSION);
+ 
+ 	if (test->debug) {
+@@ -2376,6 +2387,8 @@ get_parameters(struct iperf_test *test)
+ 	if ((j_p = cJSON_GetObjectItem(j, "authtoken")) != NULL)
+         test->settings->authtoken = strdup(j_p->valuestring);
+ #endif //HAVE_SSL
++	if ((j_p = cJSON_GetObjectItem(j, "skip_rx_copy")) != NULL)
++	    test->settings->skip_rx_copy = j_p->valueint;
+ 	if (test->mode && test->protocol->id == Ptcp && has_tcpinfo_retransmits())
+ 	    test->sender_has_retransmits = 1;
+ 	if (test->settings->rate)
+@@ -2971,6 +2984,7 @@ iperf_defaults(struct iperf_test *testp)
+     testp->settings->rcv_timeout.secs = DEFAULT_NO_MSG_RCVD_TIMEOUT / SEC_TO_mS;
+     testp->settings->rcv_timeout.usecs = (DEFAULT_NO_MSG_RCVD_TIMEOUT % SEC_TO_mS) * mS_TO_US;
+     testp->zerocopy = 0;
++    testp->settings->skip_rx_copy = 0;
+ 
+     memset(testp->cookie, 0, COOKIE_SIZE);
+ 
+@@ -3268,6 +3282,7 @@ iperf_reset_test(struct iperf_test *test)
+     test->settings->tos = 0;
+     test->settings->dont_fragment = 0;
+     test->zerocopy = 0;
++    test->settings->skip_rx_copy = 0;
+ 
+ #if defined(HAVE_SSL)
+     if (test->settings->authtoken) {
+diff --git a/src/iperf_api.h b/src/iperf_api.h
+index 1313142..cb0be42 100644
+--- a/src/iperf_api.h
++++ b/src/iperf_api.h
+@@ -101,6 +101,7 @@ typedef atomic_uint_fast64_t atomic_iperf_size_t;
+ #define OPT_JSON_STREAM 28
+ #define OPT_SND_TIMEOUT 29
+ #define OPT_USE_PKCS1_PADDING 30
++#define OPT_SKIP_RX_COPY 31
+ 
+ /* states */
+ #define TEST_START 1
+diff --git a/src/iperf_locale.c b/src/iperf_locale.c
+index 9d94e02..94d7715 100644
+--- a/src/iperf_locale.c
++++ b/src/iperf_locale.c
+@@ -199,6 +199,9 @@ const char usage_longstr[] = "Usage: iperf3 [-s|-c host] [options]\n"
+                            "  -L, --flowlabel N         set the IPv6 flow label (only supported on Linux)\n"
+ #endif /* HAVE_FLOWLABEL */
+                            "  -Z, --zerocopy            use a 'zero copy' method of sending data\n"
++#if defined(HAVE_MSG_TRUNC)
++                           "  --skip-rx-copy            ignore received messages using MSG_TRUNC option\n"
++#endif /* HAVE_MSG_TRUNC */
+                            "  -O, --omit N              perform pre-test for N seconds and omit the pre-test statistics\n"
+                            "  -T, --title str           prefix every output line with this string\n"
+                            "  --extra-data str          data string to include in client and server JSON\n"
+diff --git a/src/iperf_tcp.c b/src/iperf_tcp.c
+index 71c40a6..f6f4e38 100644
+--- a/src/iperf_tcp.c
++++ b/src/iperf_tcp.c
+@@ -56,8 +56,15 @@ int
+ iperf_tcp_recv(struct iperf_stream *sp)
+ {
+     int r;
++    int sock_opt;
+ 
+-    r = Nread(sp->socket, sp->buffer, sp->settings->blksize, Ptcp);
++#if defined(HAVE_MSG_TRUNC)
++    sock_opt = sp->test->settings->skip_rx_copy ? MSG_TRUNC : 0;
++#else
++    sock_opt = 0;
++#endif /* HAVE_MSG_TRUNC */
++
++    r = Nrecv(sp->socket, sp->buffer, sp->settings->blksize, Ptcp, sock_opt);
+ 
+     if (r < 0)
+         return r;
+diff --git a/src/iperf_udp.c b/src/iperf_udp.c
+index a603236..247302d 100644
+--- a/src/iperf_udp.c
++++ b/src/iperf_udp.c
+@@ -61,8 +61,17 @@ iperf_udp_recv(struct iperf_stream *sp)
+     int       first_packet = 0;
+     double    transit = 0, d = 0;
+     struct iperf_time sent_time, arrival_time, temp_time;
++    int sock_opt = 0;
+ 
+-    r = Nread(sp->socket, sp->buffer, size, Pudp);
++#if defined(HAVE_MSG_TRUNC)
++    // UDP recv() with MSG_TRUNC reads only the size bytes, but return the length of the full packet
++    if (sp->test->settings->skip_rx_copy) {
++        sock_opt = MSG_TRUNC;
++        size = sizeof(sec) + sizeof(usec) + sizeof(pcount);
++    }
++#endif /* HAVE_MSG_TRUNC */
++
++    r = Nrecv(sp->socket, sp->buffer, size, Pudp, sock_opt);
+ 
+     /*
+      * If we got an error in the read, or if we didn't read anything
+@@ -446,6 +455,7 @@ iperf_udp_accept(struct iperf_test *test)
+     /*
+      * Create a new "listening" socket to replace the one we were using before.
+      */
++    FD_CLR(test->prot_listener, &test->read_set); // No control messages from old listener
+     test->prot_listener = netannounce(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->server_port);
+     if (test->prot_listener < 0) {
+         i_errno = IESTREAMLISTEN;
+diff --git a/src/net.c b/src/net.c
+index 632ae03..43333dd 100644
+--- a/src/net.c
++++ b/src/net.c
+@@ -366,16 +366,27 @@ netannounce(int domain, int proto, const char *local, const char *bind_dev, int
+     return s;
+ }
+ 
+-
+ /*******************************************************************/
+-/* reads 'count' bytes from a socket  */
++/* Nread - reads 'count' bytes from a socket  */
+ /********************************************************************/
+ 
+ int
+ Nread(int fd, char *buf, size_t count, int prot)
++{
++    return Nrecv(fd, buf, count, prot, 0);
++}
++
++/*******************************************************************/
++/* Nrecv - reads 'count' bytes from a socket  */
++/********************************************************************/
++
++int
++Nrecv(int fd, char *buf, size_t count, int prot, int sock_opt)
+ {
+     register ssize_t r;
+-    register size_t nleft = count;
++    // `nleft` must be signed as it may get negative value for SKIP-RX-COPY UDP (MSG_TRUNC in sock_opt).
++    register ssize_t nleft = count;
++    register size_t total = 0;
+     struct iperf_time ftimeout = { 0, 0 };
+ 
+     fd_set rfdset;
+@@ -404,7 +415,11 @@ Nread(int fd, char *buf, size_t count, int prot)
+     }
+ 
+     while (nleft > 0) {
+-        r = read(fd, buf, nleft);
++        if (sock_opt)
++            r = recv(fd, buf, nleft, sock_opt);
++        else
++            r = read(fd, buf, nleft);
++
+         if (r < 0) {
+             /* XXX EWOULDBLOCK can't happen without non-blocking sockets */
+             if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+@@ -414,7 +429,8 @@ Nread(int fd, char *buf, size_t count, int prot)
+         } else if (r == 0)
+             break;
+ 
+-        nleft -= r;
++        total += r;
++        nleft -= r; 
+         buf += r;
+ 
+         /*
+@@ -450,7 +466,7 @@ Nread(int fd, char *buf, size_t count, int prot)
+             }
+         }
+     }
+-    return count - nleft;
++    return total;
+ }
+ 
+ 
+diff --git a/src/net.h b/src/net.h
+index f0e1b4f..bba87de 100644
+--- a/src/net.h
++++ b/src/net.h
+@@ -32,6 +32,7 @@ int create_socket(int domain, int proto, const char *local, const char *bind_dev
+ int netdial(int domain, int proto, const char *local, const char *bind_dev, int local_port, const char *server, int port, int timeout);
+ int netannounce(int domain, int proto, const char *local, const char *bind_dev, int port);
+ int Nread(int fd, char *buf, size_t count, int prot);
++int Nrecv(int fd, char *buf, size_t count, int prot, int sock_opt);
+ int Nwrite(int fd, const char *buf, size_t count, int prot) /* __attribute__((hot)) */;
+ int has_sendfile(void);
+ int Nsendfile(int fromfd, int tofd, const char *buf, size_t count) /* __attribute__((hot)) */;

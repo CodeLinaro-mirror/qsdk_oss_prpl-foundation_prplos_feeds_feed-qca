@@ -64,11 +64,11 @@ Signed-off-by: Priyadarshnee Srinivasan <priys@qti.qualcomm.com>
  src/drivers/driver_nl80211_capa.c |   2 -
  6 files changed, 284 insertions(+), 79 deletions(-)
 
-diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
-index dc29c23342..351e4b36d1 100644
---- a/src/ap/hostapd.c
-+++ b/src/ap/hostapd.c
-@@ -6456,7 +6456,7 @@ hostapd_reg_get_eirp_from_chan_list(struct hostapd_iface *iface, u16 freq,
+Index: hostapd-2025.03.10~95ad7115/src/ap/hostapd.c
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/hostapd.c
++++ hostapd-2025.03.10~95ad7115/src/ap/hostapd.c
+@@ -6608,7 +6608,7 @@ hostapd_reg_get_eirp_from_chan_list(stru
   *
   * Return: 0 on success, -1 on failure
   */
@@ -77,7 +77,7 @@ index dc29c23342..351e4b36d1 100644
  hostapd_reg_get_psd_from_chan_list(struct hostapd_iface *iface, u16 freq,
  				   u16 center_freq, u16 bw, u16 in_punc_pattern,
  				   u8 ap_pwr_type, u8 client_type,
-@@ -6499,15 +6499,21 @@ hostapd_reg_get_psd_from_chan_list(struct hostapd_iface *iface, u16 freq,
+@@ -6651,15 +6651,21 @@ hostapd_reg_get_psd_from_chan_list(struc
  		wpa_printf(MSG_INFO,
  			   "Channel %d does not support PSD, flag: 0x%x",
  			   chan_6ghz->freq, chan_6ghz->flag);
@@ -108,11 +108,19 @@ index dc29c23342..351e4b36d1 100644
  		ret = hapd_eirp_to_psd(reg_eirp_pwr, is_twice_pwr ? 2 : 1,
  				       effective_bw, psd_pwr);
  		if (ret) {
-diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
-index 3543a665b8..bef36b0d10 100644
---- a/src/ap/hostapd.h
-+++ b/src/ap/hostapd.h
-@@ -1280,4 +1280,26 @@ int hostapd_epcs_handle_cli(struct hostapd_data *hapd, char *pos,
+Index: hostapd-2025.03.10~95ad7115/src/ap/hostapd.h
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/hostapd.h
++++ hostapd-2025.03.10~95ad7115/src/ap/hostapd.h
+@@ -1066,6 +1066,7 @@ static inline bool hostapd_mld_is_first_
+ 
+ #endif /* CONFIG_IEEE80211BE */
+ 
++#define SP_AP_AND_CLIENT_POWER_DIFF            6
+ #define CONV_20MHZ_EIRP_TO_PSD_IN_DBM         13
+ #define SP_AP_AND_CLIENT_POWER_DIFF_IN_SCALE 600
+ #define TPE_NUM_POWER_SUPP_IN_11BE             5
+@@ -1334,4 +1335,26 @@ int hostapd_epcs_handle_cli(struct hosta
  bool
  hostapd_verify_action_frame_has_min_length(const struct ieee80211_mgmt *mgmt,
  					   size_t len);
@@ -139,16 +147,18 @@ index 3543a665b8..bef36b0d10 100644
 +				   bool is_client_lookup, bool is_twice_pwr,
 +				   s16 *psd_pwr);
  #endif /* HOSTAPD_H */
-diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
-index f2a02ed372..7b5a362a1c 100644
---- a/src/ap/ieee802_11.c
-+++ b/src/ap/ieee802_11.c
-@@ -8161,25 +8161,33 @@ static u8 num_psd_values_to_psd_count(int n_chans)
+Index: hostapd-2025.03.10~95ad7115/src/ap/ieee802_11.c
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/ap/ieee802_11.c
++++ hostapd-2025.03.10~95ad7115/src/ap/ieee802_11.c
+@@ -8162,25 +8162,33 @@ static u8 num_psd_values_to_psd_count(in
  }
  
  static int set_ieee_order_chan_list(struct hostapd_hw_modes *mode,
 -				       struct ieee_chan_data *chan_data)
--{
++				    struct ieee_chan_data *chan_data,
++				    enum nl80211_regulatory_power_modes client_mode)
+ {
 -	int ieee_6g_chan[60] = {2,
 -				1, 5, 9, 13, 17, 21, 25, 29,
 -				33, 37, 41, 45, 49, 53, 57, 61,
@@ -158,9 +168,6 @@ index f2a02ed372..7b5a362a1c 100644
 -				161, 165, 169, 173, 177, 181, 185, 189,
 -				193, 197, 201, 205, 209, 213, 217, 221,
 -				225, 229, 233};
-+				    struct ieee_chan_data *chan_data,
-+				    enum nl80211_regulatory_power_modes client_mode)
-+{
 +	static const int ieee_6g_chan[] =  {2,
 +					    1, 5, 9, 13, 17, 21, 25, 29,
 +					    33, 37, 41, 45, 49, 53, 57, 61,
@@ -190,7 +197,7 @@ index f2a02ed372..7b5a362a1c 100644
  
  	channels = os_malloc(chan_data_size);
  	if (channels ==  NULL) {
-@@ -8187,11 +8195,11 @@ static int set_ieee_order_chan_list(struct hostapd_hw_modes *mode,
+@@ -8188,11 +8196,11 @@ static int set_ieee_order_chan_list(stru
  		return -1;
  	}
  
@@ -205,7 +212,7 @@ index f2a02ed372..7b5a362a1c 100644
  				if (ieee_6g_chan[i] == channels[j].chan) {
  					os_memcpy(&tmp_chan, &channels[j],
  						  sizeof(struct hostapd_channel_data));
-@@ -8204,7 +8212,15 @@ static int set_ieee_order_chan_list(struct hostapd_hw_modes *mode,
+@@ -8205,7 +8213,15 @@ static int set_ieee_order_chan_list(stru
  		}
  	}
  	chan_data->channels = channels;
@@ -222,7 +229,7 @@ index f2a02ed372..7b5a362a1c 100644
  
  	return 0;
  }
-@@ -8257,7 +8273,6 @@ static void hostapd_get_eirp_arr_for_6ghz(struct hostapd_iface *iface,
+@@ -8258,7 +8274,6 @@ static void hostapd_get_eirp_arr_for_6gh
  			client_type = NL80211_REG_SUBORDINATE_CLIENT_LPI;
  		for (i = 0, bw = 20; bw <= max_bw; i++, bw *= 2) {
  			bw_cen_freq = hostapd_get_bonded_chan_center_freq(freq, bw, cf_320, 0);
@@ -230,7 +237,7 @@ index f2a02ed372..7b5a362a1c 100644
  			max_eirp_arr_lpi[i] =
  			    hostapd_get_eirp_pwr(iface, freq, bw_cen_freq, bw,
  						 iface->conf->punct_bitmap,
-@@ -8394,41 +8409,145 @@ static u8 *hostapd_add_eirp_tpe(struct hostapd_data *hapd, u8 client_type,
+@@ -8395,41 +8410,156 @@ static u8 *hostapd_add_eirp_tpe(struct h
  				    tx_pwr_ext_array, tx_pwr_cat);
  }
  
@@ -329,8 +336,11 @@ index f2a02ed372..7b5a362a1c 100644
 +	reg_psd *= PSD_SCALE;
 +	oobe_psd = MIN(oobe_psd, reg_psd);
 +	oobe_psd /= PSD_SCALE;
++    	/* Primary 20 MHz PSD shouldnt consider the mandatory power difference
++	 * of SP AP and client SP as per regulatory guidelines.
++	 */
 +	if (chan_freq == iface->freq && primary_20_mhz_psd)
-+	    *primary_20_mhz_psd = oobe_psd;
++	    *primary_20_mhz_psd = oobe_psd + SP_AP_AND_CLIENT_POWER_DIFF;
 +
 +	wpa_printf(MSG_DEBUG, "OOBE PSD for %d MHz channel %d is %d dBm, primary_20_mhz_psd = %d",
 +		   20, chan_freq, oobe_psd, *primary_20_mhz_psd);
@@ -362,14 +372,19 @@ index f2a02ed372..7b5a362a1c 100644
 -	reg_psd = chan_data.channels[non_11be_start_idx].psd_values[client_mode];
 -	if (ap_pwr_type != HE_REG_INFO_6GHZ_AP_TYPE_SP)
 -		return reg_psd;
--
++	if (ap_pwr_type != HE_REG_INFO_6GHZ_AP_TYPE_SP) {
++		bool is_psd = chan_data.channels[non_11be_start_idx].flag & HOSTAPD_CHAN_PSD;
++		s8 reg_psd;
+ 
 -	chan_freq = chan_data.channels[non_11be_start_idx].freq;
 -	eirp_for_20mhz = hostapd_get_eirp_pwr(iface, chan_freq, 0, 20,
 -					      0, ap_pwr_type, true,
 -					      client_mode, true);
 -	chan_psd = (eirp_for_20mhz - (CONV_20MHZ_EIRP_TO_PSD_IN_DBM * 2)) / 2;
-+	if (ap_pwr_type != HE_REG_INFO_6GHZ_AP_TYPE_SP) {
-+		s8 reg_psd;
++		if (is_psd) {
++			reg_psd = chan_data.channels[non_11be_start_idx].psd_power;
++		} else {
++			s8 reg_eirp_pwr = chan_data.channels[non_11be_start_idx].eirp_power;
  
 -	if (pwr_mode == HE_REG_INFO_6GHZ_AP_TYPE_INDOOR_SP &&
 -	    !hostapd_is_additional_tpe(tx_pwr_intrpn)) {
@@ -377,10 +392,11 @@ index f2a02ed372..7b5a362a1c 100644
 -			client_mode = NL80211_REG_REGULAR_CLIENT_LPI;
 -		else
 -			client_mode = NL80211_REG_SUBORDINATE_CLIENT_LPI;
--
++			reg_psd = reg_eirp_pwr - CONV_20MHZ_EIRP_TO_PSD_IN_DBM;
++		}
+ 
 -		reg_psd = chan_data.channels[non_11be_start_idx].psd_values[client_mode];
 -		chan_psd = MAX(chan_psd, reg_psd);
-+		reg_psd = chan_data.channels[non_11be_start_idx].psd_power;
 +		wpa_printf(MSG_DEBUG, "Using reg_psd:%d for channel %d",
 +			   reg_psd, chan_data.channels[non_11be_start_idx].chan);
 +		return reg_psd;
@@ -398,7 +414,7 @@ index f2a02ed372..7b5a362a1c 100644
  }
  
  /**
-@@ -8989,6 +9108,56 @@ get_min_psd_values(struct afc_sp_reg_info *afc_rsp_info, u16 freq, u16 cfreq,
+@@ -8990,6 +9120,56 @@ get_min_psd_values(struct afc_sp_reg_inf
  	}
  }
  
@@ -419,7 +435,7 @@ index f2a02ed372..7b5a362a1c 100644
 +						     pwr_type,
 +						     &num_channels_6ghz,
 +						     &chan_idx);
-+	if (!ch_6g_lst) {
++	if (!ch_6g_lst || (ch_6g_lst->flag & HOSTAPD_CHAN_DISABLED)) {
 +		int ret;
 +
 +		/* The given freq is not found in SP power mode channel list, so it is
@@ -431,7 +447,7 @@ index f2a02ed372..7b5a362a1c 100644
 +			   pwr_type, freq);
 +		ret = hostapd_reg_get_psd_from_chan_list(iface, freq, freq, CHWIDTH_20, 0,
 +							 NL80211_REG_AP_LPI,
-+							 client_mode, true, false,
++							 NL80211_REG_REGULAR_CLIENT_LPI, true, false,
 +							 &psd_power);
 +		if (ret)
 +			psd_power = CHAN_MIN_TX_POWER;
@@ -455,7 +471,7 @@ index f2a02ed372..7b5a362a1c 100644
  static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
  			  int chan_start_idx, int non_11be_chan_count,
  			  int total_chan_count, u8 *tx_pwr_count,
-@@ -9000,8 +9169,12 @@ static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
+@@ -9001,8 +9181,12 @@ static int get_psd_values(struct hostapd
  	u16 punct_bitmap = iface->conf->punct_bitmap;
  	u16 non_be_chan_index_map = 0;
  	int is_different_psd = 0, non11be_chan_pos = non_11be_start_idx - chan_start_idx;
@@ -469,7 +485,7 @@ index f2a02ed372..7b5a362a1c 100644
  
  	if (!tx_pwr_array || ((total_chan_count - non_11be_chan_count) && !tx_pwr_ext_array))
  		return -1;
-@@ -9013,7 +9186,8 @@ static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
+@@ -9014,7 +9198,8 @@ static int get_psd_values(struct hostapd
  	}
  
  	start_chan_psd = get_psd_for_chan_idx(hapd, non_11be_start_idx, chan_data,
@@ -479,7 +495,7 @@ index f2a02ed372..7b5a362a1c 100644
  
  	for (i = non_11be_start_idx; i < non_11be_start_idx + non_11be_chan_count;
  	     i++, non11be_chan_pos++) {
-@@ -9023,7 +9197,8 @@ static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
+@@ -9024,7 +9209,8 @@ static int get_psd_values(struct hostapd
  		}
  		non_be_chan_index_map |= BIT(non11be_chan_pos);
  		chan_psd = get_psd_for_chan_idx(hapd, i, chan_data, client_mode,
@@ -489,7 +505,7 @@ index f2a02ed372..7b5a362a1c 100644
  		*tx_pwr_array = chan_psd * 2;
  		tx_pwr_array++;
  		if (!is_different_psd && (start_chan_psd != chan_psd))
-@@ -9033,6 +9208,13 @@ static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
+@@ -9034,6 +9220,13 @@ static int get_psd_values(struct hostapd
  	/* For 11be the TPE extension parameter added if the bw is 320MHZ or if
  	 * any channel is punctured in 320MHZ/160MHZ/80MHZ
  	 */
@@ -503,7 +519,7 @@ index f2a02ed372..7b5a362a1c 100644
  	for (i = chan_start_idx, j = 0; i < chan_start_idx + total_chan_count; i++, j++) {
  		if (i >= chan_data.num_channels) {
  			wpa_printf(MSG_ERROR, "Invalid channel index :%d", i);
-@@ -9041,24 +9223,27 @@ static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
+@@ -9042,24 +9235,27 @@ static int get_psd_values(struct hostapd
  		if (non_be_chan_index_map & BIT(j)) { /* filled in 11ax TPE*/
  			continue;
  		}
@@ -540,7 +556,7 @@ index f2a02ed372..7b5a362a1c 100644
  		*tx_pwr_count = 0;
  		*tx_pwr_ext_count = 0;
  	} else {
-@@ -9072,7 +9257,6 @@ static int get_psd_values(struct hostapd_data *hapd, int non_11be_start_idx,
+@@ -9073,7 +9269,6 @@ static int get_psd_values(struct hostapd
  	return 0;
  }
  
@@ -548,7 +564,7 @@ index f2a02ed372..7b5a362a1c 100644
  static u8 *hostapd_add_psd_tpe(struct hostapd_data *hapd, u8 client_mode,
  			       u8 *eid, u8 tx_pwr_cat,
  			       enum max_tx_pwr_interpretation tx_pwr_intrpn,
-@@ -9084,10 +9268,12 @@ static u8 *hostapd_add_psd_tpe(struct hostapd_data *hapd, u8 client_mode,
+@@ -9085,10 +9280,12 @@ static u8 *hostapd_add_psd_tpe(struct ho
  	s8 tx_pwr_array[MAX_PSD_TPE_POWER_COUNT] = {0};
  	u8 tx_pwr_count = 0, tx_pwr_ext_count = 0;
   	struct hostapd_iface *iface = hapd->iface;
@@ -563,7 +579,7 @@ index f2a02ed372..7b5a362a1c 100644
  		return eid;
  
  	if (get_chan_list(hapd, &non_11be_start_idx, &chan_start_idx,
-@@ -9095,6 +9281,10 @@ static u8 *hostapd_add_psd_tpe(struct hostapd_data *hapd, u8 client_mode,
+@@ -9096,6 +9293,10 @@ static u8 *hostapd_add_psd_tpe(struct ho
  		wpa_printf(MSG_ERROR, "Unable to get chan list");
  		goto free;
  	}
@@ -574,11 +590,11 @@ index f2a02ed372..7b5a362a1c 100644
  
  	if (get_psd_values(hapd, non_11be_start_idx, chan_start_idx,
  			   non_11be_chan_count, total_chan_count, &tx_pwr_count,
-diff --git a/src/common/ieee802_11_defs.h b/src/common/ieee802_11_defs.h
-index 2a5644047b..8dc5fd85da 100644
---- a/src/common/ieee802_11_defs.h
-+++ b/src/common/ieee802_11_defs.h
-@@ -2896,6 +2896,7 @@ struct ieee80211_he_mu_edca_parameter_set {
+Index: hostapd-2025.03.10~95ad7115/src/common/ieee802_11_defs.h
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/common/ieee802_11_defs.h
++++ hostapd-2025.03.10~95ad7115/src/common/ieee802_11_defs.h
+@@ -2972,6 +2972,7 @@ struct ieee80211_he_mu_edca_parameter_se
  /* Maximum transmit power in Y/2 dBm (-127..126); 127 indicates no maximum
   * transmit power is specified for the corresponding 20 MHz channel. */
  #define RNR_20_MHZ_PSD_MAX_TXPOWER                  127
@@ -586,10 +602,10 @@ index 2a5644047b..8dc5fd85da 100644
  
  /* IEEE P802.11be/D5.0, Figure 9-704c - MLD Parameters subfield format */
  /* B0..B7: AP MLD ID */
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 3095f1c383..95d058f785 100644
---- a/src/drivers/driver.h
-+++ b/src/drivers/driver.h
+Index: hostapd-2025.03.10~95ad7115/src/drivers/driver.h
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/drivers/driver.h
++++ hostapd-2025.03.10~95ad7115/src/drivers/driver.h
 @@ -222,18 +222,6 @@ struct hostapd_channel_data {
  	 * eirp_power - EIRP power
  	 */
@@ -609,11 +625,11 @@ index 3095f1c383..95d058f785 100644
  };
  
  #define HE_MAC_CAPAB_0		0
-diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
-index 62be57e7a9..cbbd56b179 100644
---- a/src/drivers/driver_nl80211_capa.c
-+++ b/src/drivers/driver_nl80211_capa.c
-@@ -2514,8 +2514,6 @@ static void nl80211_reg_rule_max_eirp(u32 start, u32 end, u32 max_eirp,
+Index: hostapd-2025.03.10~95ad7115/src/drivers/driver_nl80211_capa.c
+===================================================================
+--- hostapd-2025.03.10~95ad7115.orig/src/drivers/driver_nl80211_capa.c
++++ hostapd-2025.03.10~95ad7115/src/drivers/driver_nl80211_capa.c
+@@ -2517,8 +2517,6 @@ static void nl80211_reg_rule_max_eirp(u3
  			if ((u32) chan->freq - 10 >= start &&
  			    (u32) chan->freq + 10 <= end) {
  				chan->max_tx_power = max_eirp;
@@ -622,6 +638,3 @@ index 62be57e7a9..cbbd56b179 100644
  			}
  		}
  	}
--- 
-2.34.1
-

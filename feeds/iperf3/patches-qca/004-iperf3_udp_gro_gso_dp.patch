@@ -1,0 +1,561 @@
+Author: Krithi D Shetty <kdshetty@qti.qualcomm.com>
+Date:   Thu Mar 13 08:57:54 2025 +0530
+
+    iperf3: IPERF application Data path support for GRO & GSO
+
+    Reference is taken from
+    https://github.com/esnet/iperf/blob/master/src/iperf_udp.c
+
+    Change-Id: I24eef185f0e3dc15e386e03c8ac05a6d61ebbfa5
+    Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+Index: iperf-3.17.1/src/net.c
+===================================================================
+--- iperf-3.17.1.orig/src/net.c
++++ iperf-3.17.1/src/net.c
+@@ -27,6 +27,7 @@
+ #include "iperf_config.h"
+ 
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <unistd.h>
+ #include <errno.h>
+ #include <arpa/inet.h>
+@@ -38,6 +39,7 @@
+ #include <string.h>
+ #include <fcntl.h>
+ #include <limits.h>
++#include <netinet/udp.h>
+ 
+ #ifdef HAVE_SENDFILE
+ #ifdef linux
+@@ -622,3 +624,54 @@ getsockdomain(int sock)
+     }
+     return ((struct sockaddr *) &sa)->sa_family;
+ }
++
++/*
++ * Nrecv_gro
++ *	Receive GRO packets
++ */
++int Nrecv_gro(int fd, char *buf, size_t buf_size, char *cmsg_buf, int *num_segment, int sock_opt)
++{
++	ssize_t bytes_received;
++	struct cmsghdr *cmsg;
++	int segment_size = 0;
++	struct msghdr msg;
++	struct iovec iov;
++
++	iov.iov_base = buf;
++	iov.iov_len = buf_size;
++
++	memset(&msg, 0, sizeof(msg));
++	msg.msg_iov = &iov;
++	msg.msg_iovlen = 1;
++	msg.msg_control = cmsg_buf;
++	msg.msg_controllen = UDP_CMSG_BUF_LEN;
++
++	bytes_received = recvmsg(fd, &msg, sock_opt);
++
++	if (bytes_received < 0) {
++		perror("recvmsg failed");
++		return -1;
++	}
++
++	/*
++	 *  cmsg contains multiple return options,hence requires iteration.
++	 *  For iperf3 offload, UDP_GRO will mostly likely be the first option
++	 */
++	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
++		if (cmsg->cmsg_level == SOL_UDP && cmsg->cmsg_type == UDP_GRO) {
++			segment_size = *(int *)CMSG_DATA(cmsg);
++			break;
++		}
++	}
++
++	/*
++	 * Not a GRO packet, segment size is equal to received bytes.
++	 */
++	if (!segment_size) {
++		segment_size = bytes_received;
++	}
++
++	*num_segment = bytes_received / segment_size;
++
++	return bytes_received;
++}
+Index: iperf-3.17.1/src/iperf_udp.c
+===================================================================
+--- iperf-3.17.1.orig/src/iperf_udp.c
++++ iperf-3.17.1/src/iperf_udp.c
+@@ -265,6 +265,242 @@ iperf_udp_send(struct iperf_stream *sp)
+     return r;
+ }
+ 
++#if defined(HAVE_SO_OFFLOAD)
++
++/*
++ * iperf_udp_recv_gro
++ *	Process the GROed packets
++ */
++int iperf_udp_recv_gro(struct iperf_stream *sp)
++{
++	struct iperf_time sent_time, arrival_time, temp_time;
++	int sock_opt = 0, num_segment = 0, r;
++	int size = sp->settings->blksize;
++	double transit = 0, d = 0;
++	int first_packet = 0;
++	uint32_t  sec, usec;
++	uint64_t  start_seq, end_seq;
++
++#if defined(HAVE_MSG_TRUNC)
++	/*
++	 * UDP recv() with MSG_TRUNC reads only the size bytes,
++	 * but returns the length of the full packet
++	 */
++	if (sp->test->settings->skip_rx_copy) {
++		sock_opt = MSG_TRUNC;
++		size = sizeof(sec) + sizeof(usec) + sizeof(start_seq);
++	}
++#endif /* HAVE_MSG_TRUNC */
++
++	r = Nrecv_gro(sp->socket, sp->buffer, size, sp->cmsg_buf, &num_segment, sock_opt);
++
++	/*
++	 * If we got an error in the read, or if we didn't read anything
++	 * because the underlying read(2) got a EAGAIN, then skip packet
++	 * processing.
++	 */
++	if (r <= 0) {
++		return r;
++	}
++
++	/*
++	 * Below processing is as per iperf_udp_recv() which has been
++	 * modified for GRO (multiple packet) packets.
++	 */
++
++	/*
++	 * Only count bytes received while we're in the correct state.
++	 */
++	if (sp->test->state == TEST_RUNNING) {
++		/*
++		 * For jitter computation below, it's important to know if this
++		 * packet is the first packet received.
++		 */
++		if (sp->result->bytes_received == 0) {
++			first_packet = 1;
++		}
++
++		sp->result->bytes_received += r;
++		sp->result->bytes_received_this_interval += r;
++
++		/*
++		 * Dig the various counters out of the incoming UDP packet
++		 */
++		memcpy(&sec, sp->buffer, sizeof(sec));
++		memcpy(&usec, sp->buffer + 4, sizeof(usec));
++		sec = ntohl(sec);
++		usec = ntohl(usec);
++		sent_time.secs = sec;
++		sent_time.usecs = usec;
++
++		if (sp->test->udp_counters_64bit) {
++			memcpy(&start_seq, sp->buffer + 8, sizeof(start_seq));
++			start_seq = be64toh(start_seq);
++		} else {
++			uint32_t pc;
++			memcpy(&pc, sp->buffer + 8, sizeof(pc));
++			start_seq = ntohl(pc);
++		}
++
++		end_seq = start_seq + (num_segment - 1);
++
++		if (sp->test->debug_level >= DEBUG_LEVEL_DEBUG) {
++			fprintf(stderr, "start sequence %" PRIu64 " end sequence %" PRIu64
++				" packet_count %" PRIu64 "\n", start_seq, end_seq, sp->packet_count);
++		}
++
++		/*
++		 * Try to handle out of order packets.
++		 * First figure out if the sequence numbers are going forward.
++		 * start_seq is the sequence number read from the packet,
++		 * end_seq is the sequence number of last segment in the GROed packet
++		 * and sp->packet_count is the highest sequence number seen so
++		 * far (so we're expecting to see the packet with sequence number
++		 * sp->packet_count + 1 arrive next).
++		 */
++		if (start_seq >= sp->packet_count + 1) {
++			/*
++			 * Forward, but check if there is any gap
++			 * in sequence numbers
++			 */
++			if (start_seq > sp->packet_count + 1) {
++				/*
++				 * There's a gap so count that as a loss.
++				 */
++				sp->cnt_error += (start_seq - 1) - sp->packet_count;
++			}
++			/*
++			 * Update the highest sequence number seen so far.
++			 */
++			sp->packet_count = end_seq;
++		} else {
++			/*
++			 * Sequence number went backward
++			 * This counts as an out-of-order packet
++			 */
++			sp->outoforder_packets += num_segment;
++
++			/*
++			 * If we have lost packets, then the fact that we are now
++			 * seeing an out-of-order packet offsets a prior sequence
++			 * number gap that was counted as a loss.  So we can take
++			 * away a loss.
++			 */
++			if (sp->cnt_error >= num_segment) {
++				sp->cnt_error -= num_segment;
++			} else {
++				sp->cnt_error = 0;
++			}
++
++			if (sp->test->debug) {
++				fprintf(stderr, "OUT OF ORDER - incoming packet sequence %"
++						PRIu64 " but expected sequence %" PRIu64 " on stream %d",
++						start_seq, sp->packet_count + 1, sp->socket);
++			}
++		}
++
++		/*
++		 * jitter measurement
++		 *
++		 * This computation is based on RFC 1889 (specifically
++		 * sections 6.3.1 and A.8).
++		 *
++		 * Note that synchronized clocks are not required since
++		 * the source packet delta times are known.  Also this
++		 * computation does not require knowing the round-trip
++		 * time.
++		 */
++		iperf_time_now(&arrival_time);
++
++		iperf_time_diff(&arrival_time, &sent_time, &temp_time);
++		transit = iperf_time_in_secs(&temp_time);
++
++		/*
++		 * Hack to handle the first packet by initializing prev_transit.
++		 */
++		if (first_packet) {
++			sp->prev_transit = transit;
++		}
++
++		d = transit - sp->prev_transit;
++		if (d < 0)
++			d = -d;
++		sp->prev_transit = transit;
++		sp->jitter += (d - sp->jitter) / 16.0;
++	} else {
++		if (sp->test->debug)
++			fprintf(stderr,"Late receive, state = %d\n", sp->test->state);
++	}
++
++	return r;
++}
++
++/*
++ * iperf_udp_send_gso
++ *	Send large UDP buffer
++ */
++int iperf_udp_send_gso(struct iperf_stream *sp)
++{
++	int buf_len = sp->settings->blksize;
++	int size = sp->settings->udp_gso_len;
++	struct iperf_time before;
++        char *buf = sp->buffer;
++	uint32_t  sec, usec;
++	int tx_len = 0, r;
++
++	iperf_time_now(&before);
++	sec = htonl(before.secs);
++	usec = htonl(before.usecs);
++
++	while (buf_len >= size) {
++		++sp->packet_count;
++
++		if (sp->test->udp_counters_64bit) {
++			uint64_t  pcount;
++
++			pcount = htobe64(sp->packet_count);
++			memcpy(buf, &sec, sizeof(sec));
++			memcpy(buf + 4, &usec, sizeof(usec));
++			memcpy(buf + 8, &pcount, sizeof(pcount));
++		} else {
++			uint32_t pcount;
++
++			pcount = htonl(sp->packet_count);
++			memcpy(buf, &sec, sizeof(sec));
++			memcpy(buf + 4, &usec, sizeof(usec));
++			memcpy(buf + 8, &pcount, sizeof(pcount));
++		}
++
++		buf_len -= size;
++		tx_len += size;
++		buf += size;
++	}
++
++	r = Nwrite(sp->socket, sp->buffer, tx_len, Pudp);
++	if (r <= 0) {
++		/*
++		 * Don't count messages that no data was sent from them.
++		 * Allows "resending" a massage with the same numbering
++		 */
++		sp->packet_count -= (tx_len / size);
++
++		if (r < 0) {
++			if (r == NET_SOFTERROR && sp->test->debug_level >= DEBUG_LEVEL_INFO)
++				fprintf(stderr,"UDP send failed on NET_SOFTERROR. errno=%s\n", strerror(errno));
++			return r;
++		}
++	}
++
++	sp->result->bytes_sent += r;
++	sp->result->bytes_sent_this_interval += r;
++
++	if (sp->test->debug_level >=  DEBUG_LEVEL_DEBUG) {
++		fprintf(stderr,"sent %d bytes of %d, total %" PRIu64 "\n", r, sp->settings->blksize, sp->result->bytes_sent);
++	}
++
++	return r;
++}
++#endif /* HAVE_SO_OFFLOAD */
+ 
+ /**************************************************************************/
+ 
+@@ -626,7 +862,7 @@ iperf_udp_connect(struct iperf_test *tes
+ #if defined(HAVE_SO_OFFLOAD)
+     if(test->offload) {
+ #if defined(HAVE_UDP_SEGMENT)
+-	    gso_len = test->settings->blksize;
++	    gso_len = test->settings->udp_gso_len;
+     	    if (setsockopt(s, SOL_UDP, UDP_SEGMENT, &gso_len, sizeof(gso_len)) < 0) {
+ 		printf("Unable to set UDP_SEGMENT\n");
+ 		i_errno = IESETBUF;
+Index: iperf-3.17.1/src/net.h
+===================================================================
+--- iperf-3.17.1.orig/src/net.h
++++ iperf-3.17.1/src/net.h
+@@ -39,6 +39,7 @@ int Nsendfile(int fromfd, int tofd, cons
+ int setnonblocking(int fd, int nonblocking);
+ int getsockdomain(int sock);
+ int parse_qos(const char *tos);
++int Nrecv_gro(int fd, char *buf, size_t buf_size, char *cmsg_buf, int *segment_size, int sock_opt);
+ 
+ #define NET_SOFTERROR -1
+ #define NET_HARDERROR -2
+Index: iperf-3.17.1/src/iperf_udp.h
+===================================================================
+--- iperf-3.17.1.orig/src/iperf_udp.h
++++ iperf-3.17.1/src/iperf_udp.h
+@@ -44,6 +44,23 @@ int iperf_udp_recv(struct iperf_stream *
+  */
+ int iperf_udp_send(struct iperf_stream *) /* __attribute__((hot)) */;
+ 
++#if defined(HAVE_SO_OFFLOAD)
++/**
++ * iperf_udp_recv_gro -- receive the GROed packets for UDP
++ *
++ * returns: bytes received
++ *
++ */
++int iperf_udp_recv_gro(struct iperf_stream *);
++
++/**
++ * iperf_udp_send_gso -- sends the client GSO packets for UDP
++ *
++ * returns: bytes sent
++ *
++ */
++int iperf_udp_send_gso(struct iperf_stream *);
++#endif /* HAVE_SO_OFFLOAD */
+ 
+ /**
+  * iperf_udp_accept -- accepts a new UDP connection
+Index: iperf-3.17.1/src/iperf.h
+===================================================================
+--- iperf-3.17.1.orig/src/iperf.h
++++ iperf-3.17.1/src/iperf.h
+@@ -86,6 +86,7 @@ typedef unsigned int uint
+ #ifndef SO_OFFLOAD
+ #define SO_OFFLOAD 95
+ #endif
++#define UDP_CMSG_BUF_LEN 256
+ 
+ /**
+  * netfn_sk_offload_apps
+@@ -189,6 +190,9 @@ struct iperf_settings
+     int       idle_timeout;         /* server idle time timeout */
+     unsigned int snd_timeout; /* Timeout for sending tcp messages in active mode, in us */
+     struct iperf_time rcv_timeout;  /* Timeout for receiving messages in active mode, in us */
++#if defined(HAVE_SO_OFFLOAD)
++    int udp_gso_len;		/* Segment length for UDP GSO */
++#endif /* HAVE_SO_OFFLOAD */
+ };
+ 
+ struct iperf_test;
+@@ -250,6 +254,9 @@ struct iperf_stream
+     SLIST_ENTRY(iperf_stream) streams;
+ 
+     void     *data;
++#if defined(HAVE_SO_OFFLOAD)
++    char *cmsg_buf;            /* Segment length for UDP GSO */
++#endif /* HAVE_SO_OFFLOAD */
+ };
+ 
+ struct protocol {
+@@ -475,5 +482,5 @@ extern int gerror; /* error value from g
+ 
+ /* In Reverse mode, maximum number of packets to wait for "accept" response - to handle out of order packets */
+ #define MAX_REVERSE_OUT_OF_ORDER_PACKETS 2
+-
++#define MAX_UDP_GSO_SEGS 64
+ #endif /* !__IPERF_H */
+Index: iperf-3.17.1/src/iperf_api.c
+===================================================================
+--- iperf-3.17.1.orig/src/iperf_api.c
++++ iperf-3.17.1/src/iperf_api.c
+@@ -903,16 +903,26 @@ iperf_on_new_stream(struct iperf_stream
+ void
+ iperf_on_test_start(struct iperf_test *test)
+ {
++	int blksize;
++
++	blksize = test->settings->blksize;
++
++#if defined(HAVE_SO_OFFLOAD)
++	if (test->offload && (test->protocol->id == Pudp)) {
++		blksize = test->settings->udp_gso_len;
++	}
++#endif /* HAVE_SO_OFFLOAD */
++
+     if (test->json_output) {
+-	cJSON_AddItemToObject(test->json_start, "test_start", iperf_json_printf("protocol: %s  num_streams: %d  blksize: %d  omit: %d  duration: %d  bytes: %d  blocks: %d  reverse: %d  tos: %d  target_bitrate: %d bidir: %d fqrate: %d interval: %f", test->protocol->name, (int64_t) test->num_streams, (int64_t) test->settings->blksize, (int64_t) test->omit, (int64_t) test->duration, (int64_t) test->settings->bytes, (int64_t) test->settings->blocks, test->reverse?(int64_t)1:(int64_t)0, (int64_t) test->settings->tos, (int64_t) test->settings->rate, (int64_t) test->bidirectional, (uint64_t) test->settings->fqrate, test->stats_interval));
++	cJSON_AddItemToObject(test->json_start, "test_start", iperf_json_printf("protocol: %s  num_streams: %d  blksize: %d  omit: %d  duration: %d  bytes: %d  blocks: %d  reverse: %d  tos: %d  target_bitrate: %d bidir: %d fqrate: %d interval: %f", test->protocol->name, (int64_t) test->num_streams, (int64_t) blksize, (int64_t) test->omit, (int64_t) test->duration, (int64_t) test->settings->bytes, (int64_t) test->settings->blocks, test->reverse?(int64_t)1:(int64_t)0, (int64_t) test->settings->tos, (int64_t) test->settings->rate, (int64_t) test->bidirectional, (uint64_t) test->settings->fqrate, test->stats_interval));
+     } else {
+ 	if (test->verbose) {
+ 	    if (test->settings->bytes)
+-		iperf_printf(test, test_start_bytes, test->protocol->name, test->num_streams, test->settings->blksize, test->omit, test->settings->bytes, test->settings->tos);
++		iperf_printf(test, test_start_bytes, test->protocol->name, test->num_streams, blksize, test->omit, test->settings->bytes, test->settings->tos);
+ 	    else if (test->settings->blocks)
+-		iperf_printf(test, test_start_blocks, test->protocol->name, test->num_streams, test->settings->blksize, test->omit, test->settings->blocks, test->settings->tos);
++		iperf_printf(test, test_start_blocks, test->protocol->name, test->num_streams, blksize, test->omit, test->settings->blocks, test->settings->tos);
+ 	    else
+-		iperf_printf(test, test_start_time, test->protocol->name, test->num_streams, test->settings->blksize, test->omit, test->duration, test->settings->tos);
++		iperf_printf(test, test_start_time, test->protocol->name, test->num_streams, blksize, test->omit, test->duration, test->settings->tos);
+ 	}
+     }
+     if (test->json_stream) {
+@@ -1671,6 +1681,11 @@ iperf_parse_arguments(struct iperf_test
+             case OPT_OFFLOAD:
+                 test->offload = 1;
+                 client_flag = 1;
++
++		if (test->protocol->id == Pudp) {
++			test->protocol->send = iperf_udp_send_gso;
++			test->protocol->recv = iperf_udp_recv_gro;
++		}
+                 break;
+ #endif /* HAVE_SO_OFFLOAD */
+ 	    case 'h':
+@@ -4408,6 +4423,12 @@ iperf_free_stream(struct iperf_stream *s
+ {
+     struct iperf_interval_results *irp, *nirp;
+ 
++#if defined(HAVE_SO_OFFLOAD)
++    if (sp->cmsg_buf) {
++	    free(sp->cmsg_buf);
++    }
++#endif /* HAVE_SO_OFFLOAD */
++
+     /* XXX: need to free interval list too! */
+     munmap(sp->buffer, sp->test->settings->blksize);
+     close(sp->buffer_fd);
+@@ -4487,6 +4508,7 @@ iperf_new_stream(struct iperf_test *test
+         free(sp);
+         return NULL;
+     }
++
+     if (ftruncate(sp->buffer_fd, test->settings->blksize) < 0) {
+         i_errno = IECREATESTREAM;
+         free(sp->result);
+@@ -4537,6 +4559,25 @@ iperf_new_stream(struct iperf_test *test
+         free(sp);
+         return NULL;
+     }
++
++#if defined(HAVE_SO_OFFLOAD)
++    if (test->offload && (test->protocol->id == Pudp)) {
++	    /*
++	     * Allocate memory for receivng control messages
++	     */
++	    sp->cmsg_buf = malloc(UDP_CMSG_BUF_LEN);
++	    if (!sp->cmsg_buf) {
++		    perror("Unable to allocate memory for control buffer \n");
++		    close(sp->buffer_fd);
++		    munmap(sp->buffer, sp->test->settings->blksize);
++		    free(sp->result);
++		    free(sp);
++		    return NULL;
++	    }
++
++    }
++#endif /* HAVE_SO_OFFLOAD */
++
+     iperf_add_stream(test, sp);
+ 
+     return sp;
+Index: iperf-3.17.1/src/iperf_client_api.c
+===================================================================
+--- iperf-3.17.1.orig/src/iperf_client_api.c
++++ iperf-3.17.1/src/iperf_client_api.c
+@@ -87,6 +87,28 @@ iperf_create_streams(struct iperf_test *
+         return -1;
+     }
+     int i, s;
++
++#if defined(HAVE_SO_OFFLOAD)
++    if (test->offload && (test->protocol->id == Pudp)) {
++	    int len;
++	    /*
++	     * Cache the blksize in udp_gso_len and override it for GRO /GSO
++	     */
++	    test->settings->udp_gso_len = test->settings->blksize;
++                if (test->debug) {
++                        fprintf(stdout, "UDP GSO length %d\n", test->settings->udp_gso_len);
++                }
++
++            len = test->settings->udp_gso_len * MAX_UDP_GSO_SEGS;
++
++            test->settings->blksize = (len > MAX_UDP_BLOCKSIZE) ? MAX_UDP_BLOCKSIZE : len;
++
++            if (test->debug) {
++                    fprintf(stdout, "Setting bufsize %" PRIu64 " to receive GROed packet\n", (int64_t)test->settings->blksize);
++            }
++    }
++#endif /* HAVE_SO_OFFLOAD */
++
+ #if defined(HAVE_TCP_CONGESTION)
+     int saved_errno;
+ #endif /* HAVE_TCP_CONGESTION */
+@@ -489,6 +511,12 @@ iperf_connect(struct iperf_test *test)
+ 	    snprintf(str, sizeof(str),
+ 		     "UDP block size %d exceeds TCP MSS %d, may result in fragmentation / drops", test->settings->blksize, test->ctrl_sck_mss);
+ 	    warning(str);
++
++	    if (test->offload) {
++		    snprintf(str, sizeof(str),
++				    "Fragmentation with offload enabled may result in drops, disable offload when fragmentation has to be tested\n");
++		    warning(str);
++	    }
+ 	}
+     }
+ 

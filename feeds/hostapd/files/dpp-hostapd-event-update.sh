@@ -1,17 +1,7 @@
 #!/bin/sh
-#Copyright (c) 2024, Qualcomm Innovation Center, Inc. All rights reserved.
+#Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+#SPDX-License-Identifier: ISC
 #
-#Permission to use, copy, modify, and/or distribute this software for any
-#purpose with or without fee is hereby granted, provided that the above
-#copyright notice and this permission notice appear in all copies.
-#
-#THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-#WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-#MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-#ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-#WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-#ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-#OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [ -e /lib/functions.sh ] && . /lib/functions.sh
 
@@ -29,24 +19,26 @@ mld_group=
 
 get_section() {
 	local config=$1
-	local ifname
-	local band="${2:4:1}"
-	local index=0
-	local device
+        local ifname
+        local device
+        local iface
 
-	config_get ifname "$config" ifname
-	if [ -n "$ifname" ]; then
-		[ "${ifname}" = "$2" ] && eval "$3=$config"
-	else
-		[ -z "${2:6:1}" ] && index=0 || index="${2:6:1}"
-		! [[ "$index" =~ ^[0-9]$ ]] && index=0
-		config_get device "$config" device
-		[ "$band" = "${device:11:1}" ]  && [ "${index}" = "$i" ] && eval "$3=$config"
-		if [ "$band" = "${device:11:1}" ]
-		then
-			i=$((i+1))
-		fi
-	fi
+        config_get ifname "$config" ifname
+        if [ -n "$ifname" ]; then
+                [ "${ifname}" = "$2" ] && eval "$3=$config"
+        else
+                local phy=${2:4:1}
+                local band=${2:6:1}
+                local index=${2:8:1}
+                iface="radio${phy}_band${band}"
+
+                config_get device "$config" device
+                [ "$iface" = "$device" ]  && [ "${index}" = "$i" ] && eval "$3=$config"
+                if [ "$index" -lt "$i" ];
+                then
+                        i=$((i+1))
+                fi
+        fi
 }
 
 apply_mld_config() {
@@ -203,7 +195,6 @@ local ifname=$2
 
 			hostapd_cli -i"$ifname" disable
 			hostapd_cli -i"$ifname" enable
-			[ -n "$mld_group" ] && wifi
 			;;
 	esac
 }
@@ -218,6 +209,7 @@ if [[ "$CMD" == *DPP* ]]; then
 	config_foreach is_mld wifi-mld
 	if [ -n "$mld_iface" ]; then
 		config_foreach apply_mld_config wifi-iface
+		[ "$CMD" = "DPP-NET-ACCESS-KEY" ] &&  wifi;
 		#TODO. change needed here to bring up MLO vaps without wifi command
 	else
 		sect=

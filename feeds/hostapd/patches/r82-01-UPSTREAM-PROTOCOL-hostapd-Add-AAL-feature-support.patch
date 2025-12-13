@@ -61,7 +61,24 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  		if (get_u16(pos, line, &bss->eht_oper_puncturing_override))
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -4958,6 +4958,38 @@ static int hostapd_ctrl_iface_negotiated
+@@ -1146,6 +1146,16 @@ static int hostapd_ctrl_iface_get_config
+ 		pos += ret;
+ 	}
+ 
++#ifdef CONFIG_IEEE80211BE
++	if (hapd->conf->mld_ap && hapd->conf->enable_aal) {
++		ret = os_snprintf(pos, end - pos, "ml_max_rec_links=%d\n",
++				  hapd->conf->ml_max_rec_links);
++		if (os_snprintf_error(end - pos, ret))
++			return pos - buf;
++		pos += ret;
++	}
++#endif /* CONFIG_IEEE80211BE */
++
+ 	return pos - buf;
+ }
+ 
+@@ -5011,6 +5021,38 @@ static int hostapd_ctrl_iface_negotiated
  
  	return 0;
  }
@@ -80,10 +97,10 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
 +		return -1;
 +	}
 +
-+	if (links_val > ML_IE_DEF_MAX_REC_LINKS) {
++	if (links_val > ML_IE_MAX_SUPPORT_MAX_REC_LINKS) {
 +		wpa_printf(MSG_ERROR,
 +			   "configured max rec links is %d greater than %d", links_val,
-+			   ML_IE_DEF_MAX_REC_LINKS);
++			   ML_IE_MAX_SUPPORT_MAX_REC_LINKS);
 +		return -1;
 +	}
 +
@@ -100,7 +117,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  #endif /* CONFIG_IEEE80211BE */
  
  
-@@ -5881,6 +5913,9 @@ static int hostapd_ctrl_iface_receive_pr
+@@ -5934,6 +5976,9 @@ static int hostapd_ctrl_iface_receive_pr
  	} else if (os_strncmp(buf, "NEGOTIATED_TTLM ", 16) == 0) {
  		if (hostapd_ctrl_iface_negotiated_ttlm(hapd, buf + 16))
  			reply_len = -1;
@@ -175,7 +192,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -374,6 +374,8 @@ struct hostapd_config * hostapd_config_d
+@@ -372,6 +372,8 @@ struct hostapd_config * hostapd_config_d
  	hostapd_set_and_check_bw320_offset(conf, 0);
  
  #ifdef CONFIG_IEEE80211BE
@@ -184,7 +201,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  	hostapd_set_default_epcs_params(bss);
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -1588,6 +1590,13 @@ static int hostapd_config_check_bss(stru
+@@ -1586,6 +1588,13 @@ static int hostapd_config_check_bss(stru
  		wpa_printf(MSG_INFO,
  			   "Enabling beacon protection as IEEE 802.11be is enabled for this BSS");
  	}
@@ -212,16 +229,35 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  	 * If set indicate the AP as disabled in the RNR element included in the
 --- a/src/ap/beacon.c
 +++ b/src/ap/beacon.c
-@@ -756,6 +756,8 @@ static size_t hostapd_probe_resp_elems_l
+@@ -606,7 +606,7 @@ ieee802_11_build_ap_params_mbssid(struct
+ 	else
+ 		params->mbssid.mbssid_tx_iface_linkid = -1;
+ 	len = hostapd_eid_mbssid_len(tx_bss, WLAN_FC_STYPE_BEACON, &elem_count,
+-				     NULL, 0, &rnr_len);
++				     NULL, 0, &rnr_len, true);
+ 
+ 	if (iface->conf->mbssid == MULTI_MBSSID_GROUP_ENABLED && !elem_count)
+ 		return 0;
+@@ -636,7 +636,7 @@ ieee802_11_build_ap_params_mbssid(struct
+ 	end = hostapd_eid_mbssid(tx_bss, elem, elem + len, WLAN_FC_STYPE_BEACON,
+ 				 elem_count, elem_offset, NULL, 0, rnr_elem,
+ 				 &rnr_elem_count, rnr_elem_offset, rnr_len,
+-				 &elemid_modified_bmap);
++				 &elemid_modified_bmap, true);
+ 
+ 	params->mbssid.mbssid_tx_iface = tx_bss->conf->iface;
+ 	params->mbssid.mbssid_index = hostapd_mbssid_get_bss_index(hapd);
+@@ -756,6 +756,9 @@ static size_t hostapd_probe_resp_elems_l
  {
  	size_t buflen = 0;
  	struct hostapd_data *hapd_probed = params->mld_ap? params->mld_ap : hapd;
-+	u8 include_ext_cap;
-+	u8 param_ext_cap;
++	u8 include_ext_cap = 0;
++	u8 param_ext_cap = 0;
++	bool bcast_prb_resp = false;
  
  #ifdef CONFIG_WPS
  	if (hapd->wps_probe_resp_ie)
-@@ -790,12 +792,19 @@ static size_t hostapd_probe_resp_elems_l
+@@ -790,12 +793,19 @@ static size_t hostapd_probe_resp_elems_l
  		if (hapd->iconf->punct_bitmap)
  			buflen += EHT_OPER_DISABLED_SUBCHAN_BITMAP_SIZE;
  
@@ -243,7 +279,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  				WLAN_FC_STYPE_PROBE_RESP);
  
  			/* For Max Channel Switch Time element during channel
-@@ -804,7 +813,7 @@ static size_t hostapd_probe_resp_elems_l
+@@ -804,7 +814,7 @@ static size_t hostapd_probe_resp_elems_l
  
  		} else if (hapd->conf->mld_ap) {
  			buflen += hostapd_eid_eht_ml_beacon_len(
@@ -252,25 +288,58 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  				WLAN_FC_STYPE_PROBE_RESP);
  			/* For Max Channel Switch Time element
  			 * during channel switch
-@@ -847,6 +856,8 @@ static u8 * hostapd_probe_resp_fill_elem
+@@ -824,10 +834,14 @@ static size_t hostapd_probe_resp_elems_l
+ 
+ 	/* TODO: hanlde ML probe len */
+ #endif /* CONFIG_IEEE80211BE */
++	/* RMSL value would be sent in broadcast Probe response case */
++	if (!(params->req && (!is_6ghz_op_class(hapd->iconf->op_class) ||
++			      hapd_probed->conf->ignore_broadcast_ssid)))
++		bcast_prb_resp = true;
+ 
+ 	buflen += hostapd_eid_mbssid_len(hapd_probed, WLAN_FC_STYPE_PROBE_RESP, NULL,
+ 					 params->known_bss,
+-					 params->known_bss_len, NULL);
++					 params->known_bss_len, NULL, bcast_prb_resp);
+ 	buflen += hostapd_eid_rnr_len(hapd, WLAN_FC_STYPE_PROBE_RESP, true);
+ 	buflen += hostapd_mbo_ie_len(hapd);
+ 	buflen += hostapd_eid_owe_trans_len(hapd);
+@@ -847,6 +861,9 @@ static u8 * hostapd_probe_resp_fill_elem
  	u8 *csa_pos;
  	u8 *epos;
  	struct hostapd_data *hapd_probed = params->mld_ap ? params->mld_ap : hapd;
-+	u8 include_ext_cap = 0;
++	u8 ext_cap = 0;
 +	u8 p_ext_cap = 0;
++	bool bcast_prb_resp = false;
  
  	epos = pos + len;
  
-@@ -973,18 +984,36 @@ static u8 * hostapd_probe_resp_fill_elem
+@@ -883,9 +900,14 @@ static u8 * hostapd_probe_resp_fill_elem
+ 
+ 	pos = hostapd_get_rsne(hapd, pos, epos - pos);
+ 	pos = hostapd_eid_bss_load(hapd, pos, epos - pos);
++
++	/* RMSL value would be sent in broadcast Probe response case */
++	if (is_broadcast_ether_addr(params->resp->da))
++		bcast_prb_resp = true;
++
+ 	pos = hostapd_eid_mbssid(hapd_probed, pos, epos, WLAN_FC_STYPE_PROBE_RESP, 0,
+ 				 NULL, params->known_bss, params->known_bss_len,
+-				 NULL, NULL, NULL, 0, NULL);
++				 NULL, NULL, NULL, 0, NULL, bcast_prb_resp);
+ 	pos = hostapd_eid_rm_enabled_capab(hapd, pos, epos - pos);
+ 	pos = hostapd_get_mde(hapd, pos, epos - pos);
+ 
+@@ -973,18 +995,37 @@ static u8 * hostapd_probe_resp_fill_elem
  
  #ifdef CONFIG_IEEE80211BE
  	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
 +		if (hapd->conf->enable_aal) {
-+			include_ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_EN);
++			ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_EN);
 +
-+			/* RMSL value would be sent in broadcast Probe response case only */
-+			if (is_broadcast_ether_addr(params->resp->da))
-+				include_ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_RMSL_INFO_EN);
++			/* RMSL value would be sent in broadcast Probe response case */
++			if (bcast_prb_resp)
++				ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_RMSL_INFO_EN);
 +		}
 +
  		if (params->mld_ap && params->mld_ap->conf->mld_ap) {
@@ -278,9 +347,10 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
 +			if (params->mld_ap->conf->enable_aal) {
 +				p_ext_cap = BIT(BASIC_MULTI_LINK_CTRL_EXT_EN);
 +
-+				/* RMSL value would be sent in broadcast Probe response case */
-+				if (is_broadcast_ether_addr(params->resp->da))
-+					p_ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_RMSL_INFO_EN);
++				/* RMSL value would be sent in broadcast Probe response */
++				if (bcast_prb_resp)
++					p_ext_cap |=
++					BIT(BASIC_MULTI_LINK_CTRL_EXT_RMSL_INFO_EN);
 +			}
 +
  			pos = hostapd_eid_eht_ml_beacon(
@@ -292,16 +362,16 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  				pos = hostapd_eid_eht_ml_beacon(
  					hapd, NULL,
 -					pos, false, WLAN_FC_STYPE_PROBE_RESP);
-+					pos, false, include_ext_cap,
++					pos, false, ext_cap,
 +					WLAN_FC_STYPE_PROBE_RESP);
  		} else if (hapd->conf->mld_ap)
  			pos = hostapd_eid_eht_ml_beacon(hapd,
 -				params->mld_info, pos, false,
-+				params->mld_info, pos, false, include_ext_cap,
++				params->mld_info, pos, false, ext_cap,
  				WLAN_FC_STYPE_PROBE_RESP);
  
  		/* ML reconfigure feature */
-@@ -2331,6 +2360,7 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2331,6 +2372,7 @@ int ieee802_11_build_ap_params(struct ho
  	u8 *startpos;
  	u16 elemid_modified = 0;
  	struct hostapd_data *tx_bss;
@@ -309,7 +379,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  #endif /* NEED_AP_MLME */
  
  	os_memset(params, 0, sizeof(*params));
-@@ -2615,8 +2645,14 @@ int ieee802_11_build_ap_params(struct ho
+@@ -2615,8 +2657,14 @@ int ieee802_11_build_ap_params(struct ho
  	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
  		if (hapd->conf->mld_ap) {
  			startpos = tailpos;
@@ -364,13 +434,14 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  	}
  #endif /* CONFIG_IEEE80211BE */
  
-@@ -6184,6 +6185,53 @@ u8 hostapd_get_active_links(struct hosta
+@@ -6176,6 +6177,69 @@ u8 hostapd_get_active_links(struct hosta
  	return active_links;
  }
  
 +void hostapd_set_ml_max_rec_links(struct hostapd_data *hapd, u8 ml_max_rec_links)
 +{
 +	struct hostapd_data *link_bss;
++	struct hostapd_data *tx_hapd;
 +
 +	if (!hapd || !hapd->conf->mld_ap)
 +		return;
@@ -387,7 +458,22 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
 +
 +	wpa_printf(MSG_DEBUG, "link-%u: beacon update with max rec links",
 +		   hapd->mld_link_id);
++
++	if (!hapd->beacon_set_done) {
++		wpa_printf(MSG_DEBUG, "link-%u: is not beaconing, skipping set_beacon",
++			   hapd->mld_link_id);
++		return;
++	}
++
 +	ieee802_11_set_beacon(hapd);
++
++	/* If link BSS is non-TX BSS, Invoke set beacon for Tx BSS */
++	for_each_mld_link(link_bss, hapd) {
++		/* if link bss is non-tx bss, get Tx BSS */
++		tx_hapd = hostapd_mbssid_get_tx_bss(link_bss);
++		if ((link_bss != tx_hapd) && tx_hapd->beacon_set_done)
++			ieee802_11_set_beacon(tx_hapd);
++	}
 +}
 +
 +void hostapd_validate_update_ml_max_rec_links(struct hostapd_data *hapd)
@@ -420,7 +506,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -1038,6 +1038,8 @@ int hostapd_fill_cca_settings(struct hos
+@@ -1039,6 +1039,8 @@ int hostapd_fill_cca_settings(struct hos
  
  #ifdef CONFIG_IEEE80211BE
  
@@ -431,7 +517,14 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  int hostapd_wnm_add_multi_link_sub_elem(struct hostapd_data *hapd,
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -10342,6 +10342,7 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -10334,11 +10334,13 @@ static size_t hostapd_mbssid_ext_capa(st
+ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 					  u32 frame_type, size_t *bss_index,
+ 					  const u8 *known_bss,
+-					  size_t known_bss_len, size_t num_bss)
++					  size_t known_bss_len, size_t num_bss,
++					  bool bcast_prb_resp)
+ {
  	struct hostapd_data *tx_bss = hostapd_mbssid_get_tx_bss(hapd);
  	size_t len, i, tx_xrate_len;
  	u8 ext_capa[20], buf[100];
@@ -439,12 +532,16 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  
  	/* Element ID: 1 octet
  	 * Length: 1 octet
-@@ -10417,7 +10418,12 @@ static size_t hostapd_eid_mbssid_elem_le
+@@ -10414,7 +10416,16 @@ static size_t hostapd_eid_mbssid_elem_le
  
  		/* For ML Probe resp, solicited hapd's MLE will be in the frame body */
  		if (bss->conf->mld_ap && (bss != hapd || frame_type != WLAN_FC_STYPE_PROBE_RESP)) {
 +			ext_cap = 0;
-+			if (hapd->conf->enable_aal)
++			/* RMSL value sent in broadcast Probe response case and beacon */
++			if (bss->conf->enable_aal &&
++			    (((frame_type == WLAN_FC_STYPE_PROBE_RESP) &&
++			       bcast_prb_resp) ||
++			      (frame_type == WLAN_FC_STYPE_BEACON)))
 +				ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_RMSL_INFO_EN);
 +
  			nontx_profile_len += hostapd_eid_eht_ml_beacon_len(bss, NULL, true,
@@ -452,7 +549,36 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  									   frame_type);
  			if (bss->eht_mld_link_removal_inprogress)
  				nontx_profile_len += hostapd_eid_eht_ml_reconfig_len(bss);
-@@ -10541,6 +10547,7 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -10445,7 +10456,8 @@ static size_t hostapd_eid_mbssid_elem_le
+ 
+ size_t hostapd_eid_mbssid_len(struct hostapd_data *hapd_probed, u32 frame_type,
+ 			      u8 *elem_count, const u8 *known_bss,
+-			      size_t known_bss_len, size_t *rnr_len)
++			      size_t known_bss_len, size_t *rnr_len,
++			      bool bcast_prb_resp)
+ {
+ 	size_t len = 0, bss_index = 1;
+ 	size_t num_bss;
+@@ -10477,7 +10489,8 @@ size_t hostapd_eid_mbssid_len(struct hos
+ 
+ 		len += hostapd_eid_mbssid_elem_len(hapd_probed, frame_type,
+ 						   &bss_index, known_bss,
+-						   known_bss_len, num_bss);
++						   known_bss_len, num_bss,
++						   bcast_prb_resp);
+ 
+ 		if (frame_type == WLAN_FC_STYPE_BEACON)
+ 			*elem_count += 1;
+@@ -10531,13 +10544,15 @@ static u8 * hostapd_eid_mbssid_elem(stru
+ 				    u32 frame_type, u8 max_bssid_indicator,
+ 				    size_t *bss_index, u8 elem_count,
+ 				    const u8 *known_bss, size_t known_bss_len,
+-				    u32 *elemid_modified_bmap, size_t num_bss)
++				    u32 *elemid_modified_bmap, size_t num_bss,
++				    bool bcast_prb_resp)
+ {
+ 	struct hostapd_data *tx_bss = hostapd_mbssid_get_tx_bss(hapd);
+ 	size_t i, tx_xrate_len;
  	u8 *eid_len_offset, *max_bssid_indicator_offset;
  	u8 buf[100];
  	u8 *startpos;
@@ -460,13 +586,16 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  
  	*eid++ = WLAN_EID_MULTIPLE_BSSID;
  	eid_len_offset = eid++;
-@@ -10651,7 +10658,12 @@ static u8 * hostapd_eid_mbssid_elem(stru
+@@ -10648,7 +10663,15 @@ static u8 * hostapd_eid_mbssid_elem(stru
  
  		/* For ML Probe resp, solicited hapd's MLE will be in the frame body */
  		if (bss->conf->mld_ap && (bss != hapd || frame_type != WLAN_FC_STYPE_PROBE_RESP)) {
 -			eid = hostapd_eid_eht_ml_beacon(bss, NULL, eid, true, frame_type);
 +			ext_cap = 0;
-+			if (hapd->conf->enable_aal)
++			if (bss->conf->enable_aal &&
++			    (((frame_type == WLAN_FC_STYPE_PROBE_RESP) &&
++			       bcast_prb_resp) ||
++			      (frame_type == WLAN_FC_STYPE_BEACON)))
 +				ext_cap |= BIT(BASIC_MULTI_LINK_CTRL_EXT_RMSL_INFO_EN);
 +
 +			eid = hostapd_eid_eht_ml_beacon(bss, NULL, eid, true,
@@ -474,6 +603,25 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  			if (bss->eht_mld_link_removal_inprogress)
  				eid = hostapd_eid_eht_reconf_ml(bss, eid);
  		}
+@@ -10697,7 +10720,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
+ 			u8 **elem_offset,
+ 			const u8 *known_bss, size_t known_bss_len, u8 *rnr_eid,
+ 			u8 *rnr_count, u8 **rnr_offset, size_t rnr_len,
+-			u32 *elemid_modified_bmap)
++			u32 *elemid_modified_bmap, bool bcast_prb_resp)
+ {
+ 	size_t bss_index = 1, cur_len = 0;
+ 	u8 elem_index = 0, *rnr_start_eid = rnr_eid;
+@@ -10742,7 +10765,8 @@ u8 * hostapd_eid_mbssid(struct hostapd_d
+ 					      hostapd_max_bssid_indicator(hapd),
+ 					      &bss_index, elem_count,
+ 					      known_bss, known_bss_len,
+-					      elemid_modified_bmap, num_bss);
++					      elemid_modified_bmap, num_bss,
++					      bcast_prb_resp);
+ 
+ 		if (add_rnr) {
+ 			struct mbssid_ie_profiles skip_profiles = {
 --- a/src/ap/ieee802_11.h
 +++ b/src/ap/ieee802_11.h
 @@ -107,15 +107,18 @@ void hostapd_get_eht_capab(struct hostap
@@ -498,6 +646,23 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  struct wpabuf * hostapd_ml_auth_resp(struct hostapd_data *hapd);
  const u8 * hostapd_process_ml_auth(struct hostapd_data *hapd,
  				   const struct ieee80211_mgmt *mgmt,
+@@ -280,13 +283,14 @@ u16 copy_sta_eht_240mhz_capab(struct hos
+ 			      const u8 *eht_240mhz_capab, size_t eht_240mhz_len);
+ size_t hostapd_eid_mbssid_len(struct hostapd_data *hapd, u32 frame_type,
+ 			      u8 *elem_count, const u8 *known_bss,
+-			      size_t known_bss_len, size_t *rnr_len);
++			      size_t known_bss_len, size_t *rnr_len,
++			      bool bcast_prb_resp);
+ u8 * hostapd_eid_mbssid(struct hostapd_data *hapd, u8 *eid, u8 *end,
+ 			unsigned int frame_stype, u8 elem_count,
+ 			u8 **elem_offset,
+ 			const u8 *known_bss, size_t known_bss_len, u8 *rnr_eid,
+ 			u8 *rnr_count, u8 **rnr_offset, size_t rnr_len,
+-			u32 *elemid_modified_bmap);
++			u32 *elemid_modified_bmap, bool bcast_prb_resp);
+ #define INVALID_EDGE 0xFFF
+ #define INVALID_DBR    100
+ #define INVALID_PSD (-1270) /* -127 multiplied by 10 */
 --- a/src/ap/ieee802_11_eht.c
 +++ b/src/ap/ieee802_11_eht.c
 @@ -559,7 +559,8 @@ void hostapd_get_eht_capab(struct hostap

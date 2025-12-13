@@ -88,21 +88,28 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  	} else if (os_strcmp(buf, "reg_sub_cli_eirp_psd") == 0) {
 --- a/hostapd/ctrl_iface.c
 +++ b/hostapd/ctrl_iface.c
-@@ -2932,6 +2932,20 @@ static int hostapd_ctrl_iface_chan_switc
+@@ -2932,6 +2932,27 @@ static int hostapd_ctrl_iface_chan_switc
  		return -1;
  	}
  
 +
-+	if (hostapd_allow_6ghz_dynamic_puncture(iface, settings.freq_params.freq,
-+						settings.power_mode)) {
-+		u16 best_6ghz_pp = settings.freq_params.punct_bitmap;
++	if (settings.power_mode == -1 || settings.power_mode == HE_REG_INFO_6GHZ_AP_TYPE_SP) {
++		bool is_bpm_needed = iface->conf->enable_best_power_mode;
 +
-+		if (!hostapd_get_6ghz_best_pp(iface, settings.freq_params.freq,
-+					      settings.freq_params.center_freq1,
-+					      settings.freq_params.bandwidth,
-+					      &best_6ghz_pp,
-+					      iface->conf->enable_best_power_mode)) {
-+			settings.freq_params.punct_bitmap = best_6ghz_pp;
++		if (settings.power_mode == HE_REG_INFO_6GHZ_AP_TYPE_SP)
++			is_bpm_needed = false;
++
++		if (hostapd_allow_6ghz_dynamic_puncture(iface, settings.freq_params.freq,
++							settings.power_mode)) {
++			u16 best_6ghz_pp = settings.freq_params.punct_bitmap;
++
++			if (!hostapd_get_6ghz_best_pp(iface, settings.freq_params.freq,
++						      settings.freq_params.center_freq1,
++						      settings.freq_params.bandwidth,
++						      &best_6ghz_pp,
++						      is_bpm_needed)) {
++				settings.freq_params.punct_bitmap = best_6ghz_pp;
++			}
 +		}
 +	}
 +
@@ -126,7 +133,7 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  # Require IEEE 802.1X authorization
 --- a/src/ap/ap_config.c
 +++ b/src/ap/ap_config.c
-@@ -352,6 +352,7 @@ struct hostapd_config * hostapd_config_d
+@@ -350,6 +350,7 @@ struct hostapd_config * hostapd_config_d
  	conf->discard_6g_awgn_event = 0;
  	conf->he_6ghz_reg_pwr_type = HE_REG_INFO_6GHZ_AP_TYPE_VLP;
  	conf->enable_best_power_mode = 1;
@@ -549,7 +556,7 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  			   "%s freq %d, cfreq %d, bw %d, pp %d, pwr_type %d, EIRP %d",
 --- a/src/ap/hostapd.h
 +++ b/src/ap/hostapd.h
-@@ -1073,6 +1073,14 @@ static inline bool hostapd_mld_is_first_
+@@ -1074,6 +1074,14 @@ static inline bool hostapd_mld_is_first_
  #define CHAN_MIN_TWICE_TX_POWER              (CHAN_MIN_TX_POWER * 2)
  #define CHAN_MAX_TWICE_TX_POWER              ((CHAN_MAX_TX_POWER * 2) + 1)
  
@@ -564,7 +571,7 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  /**
   * hostapd_iface_get_6ghz_chan_list() - Find the 6 GHz channel data for the given freq
   * @iface: Pointer to hostapd_iface
-@@ -1119,6 +1127,44 @@ enum chan_width
+@@ -1120,6 +1128,44 @@ enum chan_width
  hostapd_get_chan_width_from_oper_chan_width(struct hostapd_config *iconf);
  
  /**

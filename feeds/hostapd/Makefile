@@ -20,6 +20,9 @@ PKG_SOURCE_SUBMODULES:=skip
 PKG_BUILD_PARALLEL:=1
 PKG_ASLR_PIE_REGULAR:=1
 
+HOSTAPD_PATCH_DIR:=$(CURDIR)/patches-qca
+EXTENSIONS_DIR:=$(CURDIR)/wlan-app-extns/hostapd
+
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_hostapd \
 	CONFIG_PACKAGE_hostapd-basic \
@@ -67,10 +70,10 @@ ifeq ($(LOCAL_VARIANT),mesh)
   CONFIG_VARIANT:=full
 endif
 
-
-PATCH_DIR:=$(CURDIR)/patches-qca
-#PATCH_DIR_PRPL:=$(CURDIR)/patches
-EXTERNAL_PATCH_DIR:=$(CURDIR)/patches
+FILE_DIR_HOSTAPD:=$(CURDIR)/
+ifneq ("$(wildcard $(FILE_DIR_HOSTAPD)/wlan-hostapd.mk)","")
+   include $(FILE_DIR_HOSTAPD)/wlan-hostapd.mk
+endif
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -92,7 +95,8 @@ DRIVER_MAKEOPTS= \
 	CONFIG_IEEE80211AC=$(HOSTAPD_IEEE80211AC) \
 	CONFIG_IEEE80211AX=$(HOSTAPD_IEEE80211AX) \
 	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT) \
-	CONFIG_UCODE=y
+	CONFIG_UCODE=y \
+	CONFIG_ATF_OFFLOAD=y
 
 ifeq ($(SSL_VARIANT),openssl)
   DRIVER_MAKEOPTS += CONFIG_TLS=openssl CONFIG_SAE=y
@@ -587,14 +591,6 @@ define Package/eapol-test-mbedtls
   PROVIDES:=eapol-test
 endef
 
-define Build/Patch
-	$(if $(QUILT),rm -rf $(PKG_BUILD_DIR)/patches; mkdir -p $(PKG_BUILD_DIR)/patches)
-	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR),)
-#	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR_PRPL),)
-	$(call PatchDir,$(PKG_BUILD_DIR),$(EXTERNAL_PATCH_DIR),)
-	$(if $(QUILT),touch $(PKG_BUILD_DIR)/.quilt_used)
-endef
-
 ifneq ($(wildcard $(PKG_BUILD_DIR)/.config_*),$(subst .configured_,.config_,$(STAMP_CONFIGURED)))
   define Build/Configure/rebuild
 	$(FIND) $(PKG_BUILD_DIR) -name \*.o -or -name \*.a | $(XARGS) rm -f
@@ -604,6 +600,16 @@ ifneq ($(wildcard $(PKG_BUILD_DIR)/.config_*),$(subst .configured_,.config_,$(ST
 	touch $(subst .configured_,.config_,$(STAMP_CONFIGURED))
   endef
 endif
+
+
+define Build/Patch
+	$(call PatchDir,$(PKG_BUILD_DIR),$(HOSTAPD_PATCH_DIR),patches/)
+	$(call PatchDir,$(PKG_BUILD_DIR),$(FILE_DIR_HOSTAPD)/patches,patches/)
+ifdef CONFIG_PACKAGE_QCN_EXTN
+	$(call PatchDir,$(PKG_BUILD_DIR),$(EXTENSIONS_DIR)/patches,patches/)
+	$(CP) $(EXTENSIONS_DIR)/src $(PKG_BUILD_DIR)/qcn_extns
+endif
+endef
 
 define Build/Configure
 	$(Build/Configure/rebuild)
@@ -647,18 +653,14 @@ TARGET_CPPFLAGS := \
 	$(if $(CONFIG_WPA_MSG_MIN_PRIORITY),-DCONFIG_MSG_MIN_PRIORITY=$(CONFIG_WPA_MSG_MIN_PRIORITY))
 
 TARGET_LDFLAGS += -lubox -lubus -lblobmsg_json -lucode -lm -lnl-tiny -ludebug
-TARGET_CFLAGS += -fPIC -Wall -Werror
-
-ifdef CONFIG_DEBUG
-	TARGET_CFLAGS += -g3
-endif
-
+TARGET_CFLAGS += -fPIC -Wall -Werror -g
 
 ifdef CONFIG_WPA_ENABLE_WEP
     DRIVER_MAKEOPTS += CONFIG_WEP=y
 endif
 
 ifeq ($(LOCAL_VARIANT),macsec)
+	EXTERNAL_PATCH_DIR:=$(CURDIR)/patches
 	TARGET_LDFLAGS += -lcrypto -lssl -lfal -L$(STAGING_DIR)/usr/lib -lnl-3 -lnl-genl-3 -lnl-route-3 -ldl -pie
 	TARGET_LDFLAGS := $(filter-out -lnl-tiny, $(TARGET_LDFLAGS))
 	TARGET_CFLAGS += -Wno-implicit-function-declaration -Wno-int-conversion
@@ -774,16 +776,33 @@ Package/hostapd-wolfssl/conffiles = $(Package/hostapd-full/conffiles)
 Package/hostapd-mbedtls/conffiles = $(Package/hostapd-full/conffiles)
 endif
 
+#Select hostapd.uc file from external hostapd dir if available
+ifneq ("$(wildcard $(FILE_DIR_HOSTAPD)/files/hostapd.uc)","")
+define Install/hostapd
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/share/hostap
+	$(INSTALL_DATA) $(FILE_DIR_HOSTAPD)/files/hostapd.uc $(1)/usr/share/hostap/
+	$(if $(findstring full,$(CONFIG_VARIANT)),$(Install/hostapd/full))
+endef
+else
 define Install/hostapd
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/share/hostap
 	$(INSTALL_DATA) ./files/hostapd.uc $(1)/usr/share/hostap/
 	$(if $(findstring full,$(CONFIG_VARIANT)),$(Install/hostapd/full))
 endef
+endif
 
+#Select wpa_supplicant.uc file from external hostapd dir if available
+ifneq ("$(wildcard $(FILE_DIR_HOSTAPD)/files/wpa_supplicant.uc)","")
+define Install/supplicant
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/share/hostap
+	$(INSTALL_DATA) $(FILE_DIR_HOSTAPD)/files/wpa_supplicant.uc $(1)/usr/share/hostap/
+endef
+else
 define Install/supplicant
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/share/hostap
 	$(INSTALL_DATA) ./files/wpa_supplicant.uc $(1)/usr/share/hostap/
 endef
+endif
 
 define Package/hostapd-common/install
 	$(INSTALL_DIR) $(1)/etc/capabilities $(1)/etc/rc.button $(1)/etc/hotplug.d/ieee80211 $(1)/etc/init.d $(1)/lib/netifd  $(1)/usr/share/acl.d $(1)/usr/share/hostap
@@ -821,7 +840,7 @@ ifneq ($(LOCAL_VARIANT),macsec)
 endif
 endif
 
-EXTERNAL_DIR:=$(CURDIR)
+EXTERNAL_DIR:=$(CURDIR)/
 
 define Package/wpad/install
 	$(call Install/hostapd,$(1))
@@ -906,39 +925,31 @@ $(eval $(call BuildPackage,hostapd-common))
 $(eval $(call BuildPackage,hostapd))
 $(eval $(call BuildPackage,hostapd-basic))
 $(eval $(call BuildPackage,hostapd-basic-openssl))
-$(eval $(call BuildPackage,hostapd-basic-wolfssl))
 $(eval $(call BuildPackage,hostapd-basic-mbedtls))
 $(eval $(call BuildPackage,hostapd-mini))
 #$(eval $(call BuildPackage,hostapd-openssl))
-$(eval $(call BuildPackage,hostapd-wolfssl))
 $(eval $(call BuildPackage,hostapd-mbedtls))
 $(eval $(call BuildPackage,wpad))
 $(eval $(call BuildPackage,wpad-mesh-openssl))
-$(eval $(call BuildPackage,wpad-mesh-wolfssl))
 $(eval $(call BuildPackage,wpad-mesh-mbedtls))
 $(eval $(call BuildPackage,wpad-basic))
 $(eval $(call BuildPackage,wpad-basic-openssl))
-$(eval $(call BuildPackage,wpad-basic-wolfssl))
 $(eval $(call BuildPackage,wpad-basic-mbedtls))
 $(eval $(call BuildPackage,wpad-mini))
 $(eval $(call BuildPackage,wpad-openssl))
-$(eval $(call BuildPackage,wpad-wolfssl))
 $(eval $(call BuildPackage,wpad-mbedtls))
 $(eval $(call BuildPackage,wpa-supplicant))
 $(eval $(call BuildPackage,wpa-supplicant-mesh-openssl))
-$(eval $(call BuildPackage,wpa-supplicant-mesh-wolfssl))
 $(eval $(call BuildPackage,wpa-supplicant-mesh-mbedtls))
 $(eval $(call BuildPackage,wpa-supplicant-basic))
 $(eval $(call BuildPackage,wpa-supplicant-mini))
 $(eval $(call BuildPackage,wpa-supplicant-p2p))
 #$(eval $(call BuildPackage,wpa-supplicant-openssl))
-$(eval $(call BuildPackage,wpa-supplicant-wolfssl))
 $(eval $(call BuildPackage,wpa-supplicant-mbedtls))
 $(eval $(call BuildPackage,wpa-cli))
 $(eval $(call BuildPackage,hostapd-utils))
 $(eval $(call BuildPackage,eapol-test))
 $(eval $(call BuildPackage,eapol-test-openssl))
-$(eval $(call BuildPackage,eapol-test-wolfssl))
 $(eval $(call BuildPackage,eapol-test-mbedtls))
 $(eval $(call BuildPackage,hostapd-macsec))
 $(eval $(call BuildPackage,wpa-supplicant-macsec))

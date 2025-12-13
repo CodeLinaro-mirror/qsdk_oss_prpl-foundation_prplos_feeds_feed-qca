@@ -88,7 +88,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  
  	if (!hostapd_is_freq_in_current_hw_info(iface, freq)) {
  		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_PRE_CAC_EXPIRED
-@@ -1732,25 +1750,79 @@ enum oper_chan_width convert_to_oper_cha
+@@ -1732,27 +1750,70 @@ enum oper_chan_width convert_to_oper_cha
  	return CHAN_WIDTH_UNKNOWN;
  }
  
@@ -144,6 +144,17 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_RADAR_DETECTED
 -		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d radar_bitmap:%d",
 -		freq, ht_enabled, chan_offset, chan_width, cf1, cf2, radar_bitmap);
+-
+-	if (iface->conf->use_ru_puncture_dfs) {
+-		radar_bit_pattern = iface->radar_bit_pattern | iface->conf->punct_bitmap;
+-
+-		/* Radar detected already punctured sub channel*/
+-		if (radar_bit_pattern & radar_bitmap)
+-			return 0;
+-
+-		radar_bit_pattern |= radar_bitmap;
+-		iface->conf->punct_bitmap = radar_bit_pattern;
+-	}
 +		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d radar_bitmap:%d"
 +		"chan_width_device=%d cf_device=%d",
 +		freq, ht_enabled, chan_offset, chan_width, cf1, cf2, radar_bitmap,
@@ -161,21 +172,9 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +							      chan_width_device,
 +							      cf_device);
  
--	if (iface->conf->use_ru_puncture_dfs) {
-+	if (iface->conf->use_ru_puncture_dfs && radar_bitmap_oper) {
- 		radar_bit_pattern = iface->radar_bit_pattern | iface->conf->punct_bitmap;
+ 	iface->radar_detected = true;
  
- 		/* Radar detected already punctured sub channel*/
--		if (radar_bit_pattern & radar_bitmap)
-+		if (radar_bit_pattern & radar_bitmap_oper)
- 			return 0;
- 
--		radar_bit_pattern |= radar_bitmap;
-+		radar_bit_pattern |= radar_bitmap_oper;
- 		iface->conf->punct_bitmap = radar_bit_pattern;
- 	}
- 
-@@ -1764,9 +1836,16 @@ int hostapd_dfs_radar_detected(struct ho
+@@ -1764,9 +1825,27 @@ int hostapd_dfs_radar_detected(struct ho
  		return 0;
  
  	/* mark radar frequency as invalid */
@@ -191,6 +190,17 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
 +		if (!set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
 +				   cf1, cf2, HOSTAPD_CHAN_DFS_UNAVAILABLE, radar_bitmap))
 +			return 0;
++	}
++
++	if (iface->conf->use_ru_puncture_dfs && radar_bitmap_oper) {
++		radar_bit_pattern = iface->radar_bit_pattern | iface->conf->punct_bitmap;
++
++		/* Radar detected already punctured sub channel*/
++		if (radar_bitmap_oper && !(radar_bitmap_oper & ~radar_bit_pattern))
++			return 0;
++
++		radar_bit_pattern |= radar_bitmap_oper;
++		iface->conf->punct_bitmap = radar_bit_pattern;
 +	}
  
  	 if (iface->conf->dfs_test_mode) {
@@ -378,7 +388,7 @@ Signed-off-by: Shivani Tambatkar <quic_stambatk@quicinc.com>
  #endif /* NEED_AP_MLME */
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -7026,6 +7026,8 @@ union wpa_event_data {
+@@ -7002,6 +7002,8 @@ union wpa_event_data {
  		int link_id;
  		u16 radar_bitmap;
  		bool is_background;

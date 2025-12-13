@@ -23,20 +23,16 @@ Signed-off-by: Mohan Kumar G <mkumarg@qti.qualcomm.com>
  src/drivers/driver.h | 8 ++++++++
  2 files changed, 9 insertions(+)
 
-diff --git a/src/ap/sta_info.h b/src/ap/sta_info.h
-index c5251bd..1616b14 100644
 --- a/src/ap/sta_info.h
 +++ b/src/ap/sta_info.h
-@@ -339,6 +339,7 @@ struct sta_info {
- 	struct mld_info mld_info;
+@@ -340,6 +340,7 @@ struct sta_info {
  	u8 mld_assoc_link_id;
+ 
  	struct link_reconf_req_list *reconf_req;
 +	struct hostapd_sta_add_params *recfg_sta_add_params[MAX_NUM_MLD_LINKS];
- #endif /* CONFIG_IEEE80211BE */
- 
- 	u16 max_idle_period; /* if nonzero, the granted BSS max idle period in
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 4905b04..707c449 100644
+ 	/* if receive auth request from partner link, when partner sta exist,
+ 	 * response send without add the station in kernel.
+ 	 */
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
 @@ -2974,6 +2974,14 @@ struct hostapd_sta_add_params {
@@ -54,6 +50,3 @@ index 4905b04..707c449 100644
  struct mac_address {
  	u8 addr[ETH_ALEN];
  };
--- 
-2.34.1
-

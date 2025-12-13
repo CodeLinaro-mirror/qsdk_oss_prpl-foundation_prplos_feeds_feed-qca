@@ -3,7 +3,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-dscpstats
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-dscpstats

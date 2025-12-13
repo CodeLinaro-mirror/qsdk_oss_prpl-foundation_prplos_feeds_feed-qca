@@ -4,10 +4,10 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=libnl-ppe
 PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/nss-userspace
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=144d832bcb7b3c680b1ce9914c49c5855a860d91
+PKG_VERSION:=66523ce70507e2bf7db5540e23b3a3ba0324b288
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

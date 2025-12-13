@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-macsec
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-macsec
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=7b9dc40e93c557f791a2c8f92239d544ed999d6d
+PKG_VERSION:=dd7242d565362ccb1423185839f8502cd4dd4cd0
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

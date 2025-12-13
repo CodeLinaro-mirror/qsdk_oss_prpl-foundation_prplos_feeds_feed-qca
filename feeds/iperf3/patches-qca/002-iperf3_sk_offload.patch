@@ -1,0 +1,302 @@
+Author: Vishnu Vardhan Bantanahal <vishvard@qti.qualcomm.com>
+Date:   Thu May 15 14:42:45 2025 +0530
+
+    iperf3: Add support for Socket Offloading.
+
+    Change-Id: Ifa2c606b6a6a10c98c763d0df8a1cd73cf9f8bbb
+    Signed-off-by: Vishnu Vardhan Bantanahal <vishvard@qti.qualcomm.com>
+---
+--- a/src/iperf.h
++++ b/src/iperf.h
+@@ -83,6 +83,21 @@ typedef atomic_uint_fast64_t atomic_iper
+ typedef unsigned int uint
+ #endif // __vxworks or __VXWORKS__
+ 
++#ifndef SO_OFFLOAD
++#define SO_OFFLOAD 95
++#endif
++
++/**
++ * netfn_sk_offload_apps
++ *	Socket Offload Apps.
++ */
++enum netfn_sk_offload_apps {
++	NSS_SK_OFFLOAD_NONE	 = 0,	/**< No Offload */
++	NSS_SK_OFFLOAD_IPERF_32  = 1,	/**< Offload option for IPERF 32 bit */
++	NSS_SK_OFFLOAD_IPERF_64  = 2,	/**< Offload option for IPERF 64 bit */
++	NSS_SK_OFFLOAD_MAX       = 3,	/**< Max limit */
++};
++
+ struct iperf_interval_results
+ {
+     atomic_iperf_size_t bytes_transferred; /* bytes transferred in this interval */
+@@ -365,6 +380,7 @@ struct iperf_test
+     double remote_cpu_util[3];                     /* cpu utilization for the remote host/client - total, user, system */
+ 
+     int       num_streams;                      /* total streams in the test (-P) */
++    int       offload;                          /* Offload option */
+ 
+     atomic_iperf_size_t bytes_sent;
+     atomic_iperf_size_t blocks_sent;
+--- a/src/iperf_api.c
++++ b/src/iperf_api.c
+@@ -440,6 +440,12 @@ iperf_get_mapped_v4(struct iperf_test* i
+     return ipt->mapped_v4;
+ }
+ 
++int
++iperf_get_test_offload(struct iperf_test *ipt)
++{
++    return ipt->offload;
++}
++
+ /************** Setter routines for some fields inside iperf_test *************/
+ 
+ void
+@@ -844,6 +850,12 @@ iperf_set_test_mss(struct iperf_test *ip
+     ipt->settings->mss = mss;
+ }
+ 
++void
++iperf_set_test_offload(struct iperf_test *ipt, int offload)
++{
++    ipt->offload = offload;
++}
++
+ /********************** Get/set test protocol structure ***********************/
+ 
+ struct protocol *
+@@ -1148,6 +1160,9 @@ iperf_parse_arguments(struct iperf_test
+         {"idle-timeout", required_argument, NULL, OPT_IDLE_TIMEOUT},
+         {"rcv-timeout", required_argument, NULL, OPT_RCV_TIMEOUT},
+         {"snd-timeout", required_argument, NULL, OPT_SND_TIMEOUT},
++#if defined(HAVE_SO_OFFLOAD)
++        {"offload", no_argument, NULL, OPT_OFFLOAD},
++#endif /* HAVE_SO_OFFLOAD */
+         {"debug", optional_argument, NULL, 'd'},
+         {"help", no_argument, NULL, 'h'},
+         {NULL, 0, NULL, 0}
+@@ -1652,6 +1667,12 @@ iperf_parse_arguments(struct iperf_test
+ 		test->settings->connect_timeout = unit_atoi(optarg);
+ 		client_flag = 1;
+ 		break;
++#if defined(HAVE_SO_OFFLOAD)
++            case OPT_OFFLOAD:
++                test->offload = 1;
++                client_flag = 1;
++                break;
++#endif /* HAVE_SO_OFFLOAD */
+ 	    case 'h':
+ 		usage_long(stdout);
+ 		exit(0);
+@@ -2281,6 +2302,10 @@ send_parameters(struct iperf_test *test)
+ #endif // HAVE_SSL
+ 	if (test->settings->skip_rx_copy)
+ 	    cJSON_AddNumberToObject(j, "skip_rx_copy", test->settings->skip_rx_copy);
++
++        if (test->offload)
++            cJSON_AddNumberToObject(j, "offload", test->offload);
++
+ 	cJSON_AddStringToObject(j, "client_version", IPERF_VERSION);
+ 
+ 	if (test->debug) {
+@@ -2393,6 +2418,8 @@ get_parameters(struct iperf_test *test)
+ 	    test->sender_has_retransmits = 1;
+ 	if (test->settings->rate)
+ 	    cJSON_AddNumberToObject(test->json_start, "target_bitrate", test->settings->rate);
++	if ((j_p = cJSON_GetObjectItem(j, "offload")) != NULL)
++            test->offload = j_p->valueint;
+ 	cJSON_Delete(j);
+     }
+     return r;
+@@ -2985,6 +3012,7 @@ iperf_defaults(struct iperf_test *testp)
+     testp->settings->rcv_timeout.usecs = (DEFAULT_NO_MSG_RCVD_TIMEOUT % SEC_TO_mS) * mS_TO_US;
+     testp->zerocopy = 0;
+     testp->settings->skip_rx_copy = 0;
++    testp->offload = 0;
+ 
+     memset(testp->cookie, 0, COOKIE_SIZE);
+ 
+@@ -3283,6 +3311,7 @@ iperf_reset_test(struct iperf_test *test
+     test->settings->dont_fragment = 0;
+     test->zerocopy = 0;
+     test->settings->skip_rx_copy = 0;
++    test->offload = 0;
+ 
+ #if defined(HAVE_SSL)
+     if (test->settings->authtoken) {
+@@ -4762,6 +4791,13 @@ iperf_got_sigend(struct iperf_test *test
+ 	cpu_util(test->cpu_util);
+ 	test->stats_callback(test);
+ 	test->state = DISPLAY_RESULTS; /* change local state only */
++
++#if defined(HAVE_SO_OFFLOAD)
++	if (test->offload) {
++	    iperf_client_disable_offload(test);
++	}
++#endif /* HAVE_SO_OFFLOAD */
++
+ 	if (test->on_test_finish)
+ 	    test->on_test_finish(test);
+ 	test->reporter_callback(test);
+--- a/src/iperf_api.h
++++ b/src/iperf_api.h
+@@ -102,6 +102,7 @@ typedef atomic_uint_fast64_t atomic_iper
+ #define OPT_SND_TIMEOUT 29
+ #define OPT_USE_PKCS1_PADDING 30
+ #define OPT_SKIP_RX_COPY 31
++#define OPT_OFFLOAD 32
+ 
+ /* states */
+ #define TEST_START 1
+@@ -169,6 +170,7 @@ int	iperf_get_dont_fragment( struct iper
+ char*   iperf_get_test_congestion_control(struct iperf_test* ipt);
+ int iperf_get_test_mss(struct iperf_test* ipt);
+ int     iperf_get_mapped_v4(struct iperf_test* ipt);
++int     iperf_get_test_offload( struct iperf_test* ipt);
+ 
+ /* Setter routines for some fields inside iperf_test. */
+ void	iperf_set_verbose( struct iperf_test* ipt, int verbose );
+@@ -229,6 +231,7 @@ void    iperf_set_test_server_rsa_privke
+ #endif // HAVE_SSL
+ 
+ void	iperf_set_test_connect_timeout(struct iperf_test *ipt, int ct);
++void    iperf_set_test_offload(struct iperf_test *ipt, int offload);
+ 
+ /**
+  * exchange_parameters - handles the param_Exchange part for client
+@@ -357,6 +360,11 @@ int iperf_create_streams(struct iperf_te
+ int iperf_handle_message_client(struct iperf_test *);
+ int iperf_client_end(struct iperf_test *);
+ 
++#if defined(HAVE_SO_OFFLOAD)
++/* Client Disable Offload Routine. */
++void iperf_client_disable_offload(struct iperf_test *);
++#endif /* HAVE_SO_OFFLOAD */
++
+ /* Server routines. */
+ int iperf_run_server(struct iperf_test *);
+ int iperf_server_listen(struct iperf_test *);
+--- a/src/iperf_locale.c
++++ b/src/iperf_locale.c
+@@ -202,6 +202,9 @@ const char usage_longstr[] = "Usage: ipe
+ #if defined(HAVE_MSG_TRUNC)
+                            "  --skip-rx-copy            ignore received messages using MSG_TRUNC option\n"
+ #endif /* HAVE_MSG_TRUNC */
++#if defined(HAVE_SO_OFFLOAD)
++                           "  --offload                 Enable NSS Offload\n"
++#endif /* HAVE_SO_OFFLOAD */
+                            "  -O, --omit N              perform pre-test for N seconds and omit the pre-test statistics\n"
+                            "  -T, --title str           prefix every output line with this string\n"
+                            "  --extra-data str          data string to include in client and server JSON\n"
+--- a/src/iperf_tcp.c
++++ b/src/iperf_tcp.c
+@@ -580,6 +580,20 @@ iperf_tcp_connect(struct iperf_test *tes
+         return -1;
+     }
+ 
++#if defined(HAVE_SO_OFFLOAD)
++    if(test->offload) {
++            int offload = NSS_SK_OFFLOAD_IPERF_32;
++	    if (test->udp_counters_64bit) {
++                offload = NSS_SK_OFFLOAD_IPERF_64;
++            }
++            if (setsockopt(s, SOL_SOCKET, SO_OFFLOAD, &offload, sizeof(offload)) < 0) {
++                    printf("Failed to set SO_OFFLOAD socket option\n");
++                    i_errno = IESETBUF;
++                    return -1;
++            }
++    }
++#endif /* HAVE_SO_OFFLOAD */
++
+     freeaddrinfo(server_res);
+ 
+     /* Send cookie for verification */
+--- a/src/iperf_udp.c
++++ b/src/iperf_udp.c
+@@ -616,6 +616,20 @@ iperf_udp_connect(struct iperf_test *tes
+         return -1;
+     }
+ 
++#if defined(HAVE_SO_OFFLOAD)
++    if(test->offload) {
++            int offload = NSS_SK_OFFLOAD_IPERF_32;
++	    if (test->udp_counters_64bit) {
++            	offload = NSS_SK_OFFLOAD_IPERF_64;
++	    }
++            if (setsockopt(s, SOL_SOCKET, SO_OFFLOAD, &offload, sizeof(offload)) < 0) {
++                printf("Failed to set SO_OFFLOAD socket option\n");
++                i_errno = IESETBUF;
++                return -1;
++            }
++    }
++#endif /* HAVE_SO_OFFLOAD */
++
+     return s;
+ }
+ 
+--- a/src/iperf_util.c
++++ b/src/iperf_util.c
+@@ -347,6 +347,14 @@ get_optional_features(void)
+     numfeatures++;
+ #endif /* HAVE_PTHREAD */
+ 
++#if defined(HAVE_SO_OFFLOAD)
++    if (numfeatures > 0) {
++	strlcat(features, ", ", sizeof(features));
++    }
++    strlcat(features, "socket offload", sizeof(features));
++    numfeatures++;
++#endif /* HAVE_SO_OFFLOAD */
++
+     if (numfeatures == 0) {
+ 	strncat(features, "None",
+ 		sizeof(features) - strlen(features) - 1);
+--- a/configure.ac
++++ b/configure.ac
+@@ -351,6 +351,8 @@ if test "x$iperf3_cv_header_msg_trunc" =
+     AC_DEFINE([HAVE_MSG_TRUNC], [1], [Have MSG_TRUNC recv option.])
+ fi
+ 
++AC_DEFINE([HAVE_SO_OFFLOAD], [1], [Have SO_OFFLOAD sockopt.])
++
+ # Check if we need -lrt for clock_gettime
+ AC_SEARCH_LIBS(clock_gettime, [rt posix4])
+ # Check for clock_gettime support
+--- a/src/iperf_client_api.c
++++ b/src/iperf_client_api.c
+@@ -495,6 +495,21 @@ iperf_connect(struct iperf_test *test)
+     return 0;
+ }
+ 
++#if defined(HAVE_SO_OFFLOAD)
++void
++iperf_client_disable_offload(struct iperf_test *test)
++{
++    struct iperf_stream *sp;
++    int offload = 0;
++
++    /* Disable socket offload for all relevant stream sockets */
++    SLIST_FOREACH(sp, &test->streams, streams) {
++        if (setsockopt(sp->socket, SOL_SOCKET, SO_OFFLOAD, &offload, sizeof(offload)) < 0) {
++            printf("Failed to unset SO_OFFLOAD socket option from iperf_client_disable_offload\n");
++        }
++    }
++}
++#endif /* HAVE_SO_OFFLOAD */
+ 
+ int
+ iperf_client_end(struct iperf_test *test)
+@@ -506,6 +521,12 @@ iperf_client_end(struct iperf_test *test
+     }
+     struct iperf_stream *sp;
+ 
++#if defined(HAVE_SO_OFFLOAD)
++    if (test->offload) {
++	iperf_client_disable_offload(test);
++    }
++#endif /* HAVE_SO_OFFLOAD */
++
+     /* Close all stream sockets */
+     SLIST_FOREACH(sp, &test->streams, streams) {
+         close(sp->socket);

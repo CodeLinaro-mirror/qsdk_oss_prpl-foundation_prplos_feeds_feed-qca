@@ -29,11 +29,9 @@ Signed-off-by: Kavita Kavita <kkavita@qti.qualcomm.com>
  wpa_supplicant/events.c            | 49 ++++++++++++++++++++++
  8 files changed, 246 insertions(+)
 
-diff --git a/src/drivers/driver.h b/src/drivers/driver.h
-index 21c34f2..79e0749 100644
 --- a/src/drivers/driver.h
 +++ b/src/drivers/driver.h
-@@ -6734,6 +6734,11 @@ enum wpa_event_type {
+@@ -6735,6 +6735,11 @@ enum wpa_event_type {
  	 * received value
  	 */
  	EVENT_TTLM_EXPEC_DUR_UPDATE,
@@ -45,7 +43,7 @@ index 21c34f2..79e0749 100644
  };
  
  
-@@ -7806,6 +7811,15 @@ union wpa_event_data {
+@@ -7817,6 +7822,15 @@ union wpa_event_data {
  		u8 link_id;
  		u32 expec_dur;
  	} ttlm_expec_dur_event;
@@ -61,11 +59,9 @@ index 21c34f2..79e0749 100644
  };
  
  /**
-diff --git a/src/drivers/driver_common.c b/src/drivers/driver_common.c
-index dcd8c3d..7011c54 100644
 --- a/src/drivers/driver_common.c
 +++ b/src/drivers/driver_common.c
-@@ -113,6 +113,7 @@ const char * event_to_string(enum wpa_event_type event)
+@@ -113,6 +113,7 @@ const char * event_to_string(enum wpa_ev
  	E2S(IFACE_RELOAD);
  	E2S(TTLM_UPDATE);
  	E2S(TTLM_EXPEC_DUR_UPDATE);
@@ -73,11 +69,9 @@ index dcd8c3d..7011c54 100644
  	}
  
  	return "UNKNOWN";
-diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
-index cddbe49..e84f793 100644
 --- a/src/drivers/driver_nl80211.c
 +++ b/src/drivers/driver_nl80211.c
-@@ -1171,6 +1171,19 @@ static int nl80211_get_sta_mlo_info(void *priv,
+@@ -1171,6 +1171,19 @@ static int nl80211_get_sta_mlo_info(void
  }
  
  
@@ -149,11 +143,9 @@ index cddbe49..e84f793 100644
  static int get_link_noise(struct nl_msg *msg, void *arg)
  {
  	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-diff --git a/src/drivers/driver_nl80211.h b/src/drivers/driver_nl80211.h
-index cd5bfd1..ac53df8 100644
 --- a/src/drivers/driver_nl80211.h
 +++ b/src/drivers/driver_nl80211.h
-@@ -337,6 +337,7 @@ int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
+@@ -337,6 +337,7 @@ int nl80211_create_iface(struct wpa_driv
  			 void *arg, int use_existing, int ppe_vp_type);
  void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx);
  unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv);
@@ -168,11 +160,9 @@ index cd5bfd1..ac53df8 100644
 +int get_sta_mlo_interface_info(struct wpa_driver_nl80211_data *drv);
 +
  #endif /* DRIVER_NL80211_H */
-diff --git a/src/drivers/driver_nl80211_event.c b/src/drivers/driver_nl80211_event.c
-index 4a140a1..0d751b0 100644
 --- a/src/drivers/driver_nl80211_event.c
 +++ b/src/drivers/driver_nl80211_event.c
-@@ -1915,6 +1915,56 @@ static void mlme_event_unprot_beacon(struct wpa_driver_nl80211_data *drv,
+@@ -1921,6 +1921,56 @@ static void mlme_event_unprot_beacon(str
  }
  
  
@@ -229,21 +219,19 @@ index 4a140a1..0d751b0 100644
  static s8
  nl80211_get_link_id_by_freq(struct i802_bss *bss, unsigned int freq)
  {
-@@ -5281,6 +5331,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
- #ifdef CONFIG_IEEE80211BE
+@@ -5318,6 +5368,9 @@ static void do_process_drv_event(struct
  	case NL80211_CMD_SET_TID_TO_LINK_MAPPING:
  		nl80211_ttlm_update_event(bss, tb);
+ 		break;
 +	case NL80211_CMD_ASSOC_MLO_RECONF:
 +		mlme_event_link_addition(drv, nla_data(frame), nla_len(frame));
 +		break;
  #endif /* CONFIG_IEEE80211BE */
  	default:
  		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "
-diff --git a/src/rsn_supp/wpa.c b/src/rsn_supp/wpa.c
-index 879074f..35f26f9 100644
 --- a/src/rsn_supp/wpa.c
 +++ b/src/rsn_supp/wpa.c
-@@ -7287,3 +7287,69 @@ struct wpabuf * wpa_sm_known_sta_identification(struct wpa_sm *sm, const u8 *aa,
+@@ -7287,3 +7287,69 @@ struct wpabuf * wpa_sm_known_sta_identif
  
  	return ie;
  }
@@ -313,11 +301,9 @@ index 879074f..35f26f9 100644
 +
 +	return 0;
 +}
-diff --git a/src/rsn_supp/wpa.h b/src/rsn_supp/wpa.h
-index c011162..d762b3a 100644
 --- a/src/rsn_supp/wpa.h
 +++ b/src/rsn_supp/wpa.h
-@@ -676,5 +676,7 @@ void wpa_sm_set_cur_pmksa(struct wpa_sm *sm,
+@@ -676,5 +676,7 @@ void wpa_sm_set_cur_pmksa(struct wpa_sm
  const u8 * wpa_sm_get_auth_addr(struct wpa_sm *sm);
  struct wpabuf * wpa_sm_known_sta_identification(struct wpa_sm *sm, const u8 *aa,
  						u64 timestamp);
@@ -325,11 +311,9 @@ index c011162..d762b3a 100644
 +				      u8 key_data_len, u16 added_links_bitmap);
  
  #endif /* WPA_H */
-diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
-index 3d1ec3e..09987e0 100644
 --- a/wpa_supplicant/events.c
 +++ b/wpa_supplicant/events.c
-@@ -6149,6 +6149,51 @@ static void wpas_tid_link_map(struct wpa_supplicant *wpa_s,
+@@ -6149,6 +6149,51 @@ static void wpas_tid_link_map(struct wpa
  }
  
  
@@ -381,7 +365,7 @@ index 3d1ec3e..09987e0 100644
  static void wpas_link_reconfig(struct wpa_supplicant *wpa_s)
  {
  	u8 bssid[ETH_ALEN];
-@@ -7198,6 +7243,10 @@ void supplicant_event(void *ctx, enum wpa_event_type event,
+@@ -7199,6 +7244,10 @@ void supplicant_event(void *ctx, enum wp
  		if (data)
  			wpas_tid_link_map(wpa_s, &data->t2l_map_info);
  		break;
@@ -392,6 +376,3 @@ index 3d1ec3e..09987e0 100644
  	default:
  		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);
  		break;
--- 
-2.34.1
-

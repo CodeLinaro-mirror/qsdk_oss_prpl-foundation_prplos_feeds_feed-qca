@@ -4,6 +4,7 @@ wait_for_uci_wireless() {
 	local timeout=10
 	local elapsed=0
 	local uci_detect
+	local min_phy
 
 	uci_detect=$(uci show wireless > /dev/null 2>/dev/null;echo $?)
 
@@ -18,8 +19,8 @@ init_vendor_uci_wireless() {
 	uci get wireless.vendor 1>/dev/null 2>/dev/null || {
 		uci set wireless.vendor=vendor
 	}
-
-	uci  set wireless.vendor.min_phy=3
+	min_phy=$(ls /sys/kernel/debug/ath12k/ |wc -l)
+	uci  set wireless.vendor.min_phy=$min_phy
 	uci  set wireless.vendor.phy_detect_timeout=10
 	uci commit wireless
 }

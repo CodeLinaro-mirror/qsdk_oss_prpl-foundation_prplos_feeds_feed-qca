@@ -1,17 +1,7 @@
 #!/bin/sh
-#Copyright (c) 2024, Qualcomm Innovation Center, Inc. All rights reserved.
+#Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+#SPDX-License-Identifier: ISC
 #
-#Permission to use, copy, modify, and/or distribute this software for any
-#purpose with or without fee is hereby granted, provided that the above
-#copyright notice and this permission notice appear in all copies.
-#
-#THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-#WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-#MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-#ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-#WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-#ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-#OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [ -e /lib/functions.sh ] && . /lib/functions.sh
 
@@ -33,18 +23,21 @@ i=0
 get_section() {
 	local config=$1
 	local ifname
-	local band="${2:4:1}"
-	local index=0
 	local device
+	local iface
 
 	config_get ifname "$config" ifname
 	if [ -n "$ifname" ]; then
 		[ "${ifname}" = "$2" ] && eval "$3=$config"
 	else
-		[ -z "${2:6:1}" ] && index=0 || index="${2:6:1}"
+		local phy=${2:4:1}
+		local band=${2:6:1}
+		local index=${2:8:1}
+		iface="radio${phy}_band${band}"
+
 		config_get device "$config" device
-		[ "$band" = "${device:11:1}" ]  && [ "${index}" = "$i" ] && eval "$3=$config"
-		if [ "$band" = "${device:11:1}" ]
+		[ "$iface" = "$device" ]  && [ "${index}" = "$i" ] && eval "$3=$config"
+		if [ "$index" -lt "$i" ];
 		then
 			i=$((i+1))
 		fi
@@ -63,8 +56,12 @@ hex2string()
 
 get_config_val() {
 	local key=$1
-	local conf=/var/run/wpa_supplicant-$ifname.conf
+	#TODO: if update_config permission issue fixed, then this location has to be changed
+	local conf=/tmp/wpa_supplicant-$ifname.conf
 
+	if [ ! -f "$conf" ]; then
+		conf=/var/run/wpa_supplicant-$ifname.conf
+	fi
 	config_val=$(wpa_cli -i"$ifname" get_network 0 "$1" | cut -f 2 -d= | sed -e 's/^"\(.*\)"/\1/')
 	if [ "$key" == 'psk' ]; then
 		config_val=$(awk "BEGIN{FS=\"=\"} /[[:space:]]${key}=/ {print \$0}" "$conf" |grep "${key}=" |tail -n 1 | cut -f 2 -d= | sed -e 's/^"\(.*\)"/\1/')
@@ -260,8 +257,8 @@ case "$CMD" in
 		wpa_cli -i"$ifname" enable_network 0
 		wpa_cli -i"$ifname" save_config
 
-		wpa_cli -i"$ifname" disable
-		wpa_cli -i"$ifname" enable
+		wpa_cli -i"$ifname" disable 0
+		wpa_cli -i"$ifname" enable 0
 
 		. /sbin/wifi config
 		config_foreach is_mld wifi-mld

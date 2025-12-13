@@ -3,7 +3,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-ovsmgr
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ovsmgr

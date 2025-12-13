@@ -4,7 +4,7 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=sw-hook
 PKG_RELEASE:=1
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.pon.1.0.r29
+PKG_BRANCH:=win.pon.1.0.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/trex/sw-hook
 PKG_MIRROR_HASH:=skip
 PKG_VERSION:=3edf3086b78b9ee5b3a78656739ed3672ca5f2fb

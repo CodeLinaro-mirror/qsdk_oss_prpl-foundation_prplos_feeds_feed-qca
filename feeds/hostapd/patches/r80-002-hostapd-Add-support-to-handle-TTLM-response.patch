@@ -79,7 +79,7 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
  #include "ttlm.h"
  
  
-@@ -263,3 +264,183 @@ int hostapd_send_ttlm_req(struct hostapd
+@@ -263,3 +264,189 @@ int hostapd_send_ttlm_req(struct hostapd
  
  	return ret;
  }
@@ -142,6 +142,9 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +					negotiated_ttlm_of_tids->ieee_link_map_tid[tid] =
 +						ongoing_ttlm_of_tids->ieee_link_map_tid[tid];
 +				}
++
++				negotiated_ttlm_of_tids->link_mapping_size =
++					ongoing_ttlm_of_tids->link_mapping_size;
 +			}
 +		} else {
 +			negotiated_ttlm_of_tids = &negotiated_ttlm->ttlm_info[dir];
@@ -155,6 +158,9 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +				negotiated_ttlm_of_tids->ieee_link_map_tid[tid] =
 +					ongoing_ttlm_of_tids->ieee_link_map_tid[tid];
 +			}
++
++			negotiated_ttlm_of_tids->link_mapping_size =
++				ongoing_ttlm_of_tids->link_mapping_size;
 +		}
 +	}
 +

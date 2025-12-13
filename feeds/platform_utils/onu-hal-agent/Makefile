@@ -3,10 +3,10 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=onu-hal-agent
 PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.openwrt.24.0.r29
+PKG_BRANCH:=win.prplos.4.1.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/fontana/middleware/onu-hal
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=55d6c893c81274bf68ee1f69e3cf8ff27a04393b
+PKG_VERSION:=5c8343dd1bf981ce255c906b5370cef8f580e118
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

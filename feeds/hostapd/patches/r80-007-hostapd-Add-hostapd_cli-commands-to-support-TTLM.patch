@@ -166,8 +166,8 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +			if (os_strncmp(token, "def_link_map=", 13) == 0) {
 +				ttlm_dir->default_mapping = atoi(token + 13);
 +
-+			} else if (os_strncmp(token, "link_map_size=", 15) == 0) {
-+				ttlm_dir->link_mapping_size = atoi(token + 15);
++			} else if (os_strncmp(token, "link_map_size=", 14) == 0) {
++				ttlm_dir->link_mapping_size = atoi(token + 14);
 +
 +			} else if (os_strncmp(token, "num_tids=", 9) == 0) {
 +				num_tids = atoi(token + 9);
@@ -339,10 +339,10 @@ Signed-off-by: Dhanavandhana Kannan <dhanavan@qti.qualcomm.com>
 +			}
 +
 +			ttlm_dir = &ttlm_conf->ttlm_direction[dir];
-+			if (strncmp(token, "def_link_map=", 14) == 0) {
-+				ttlm_dir->default_mapping = atoi(token + 14);
-+			} else if (strncmp(token, "link_map_size=", 15) == 0) {
-+				ttlm_dir->link_mapping_size = atoi(token + 15);
++			if (strncmp(token, "def_link_map=", 13) == 0) {
++				ttlm_dir->default_mapping = atoi(token + 13);
++			} else if (strncmp(token, "link_map_size=", 14) == 0) {
++				ttlm_dir->link_mapping_size = atoi(token + 14);
 +			} else if (strncmp(token, "num_tids=", 9) == 0) {
 +				ttlm_dir->num_tids = atoi(token + 9);
 +				for (i = 0; i < ttlm_dir->num_tids; i++) {

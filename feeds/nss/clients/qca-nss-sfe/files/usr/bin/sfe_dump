@@ -15,16 +15,37 @@
 
 #@sfe_dump
 #@example : sfe_dump (ipv4|ipv6)
-sfe_dump(){
-	[ -e "/dev/sfe_ipv4" ] || {
-		dev_num=$(cat /sys/sfe_ipv4/debug_dev)
-		mknod /dev/sfe_ipv4 c $dev_num 0
-	}
-	[ -e "/dev/sfe_ipv6" ] || {
-		dev_num=$(cat /sys/sfe_ipv6/debug_dev)
-		mknod /dev/sfe_ipv6 c $dev_num 0
-	}
-	cat /dev/sfe_$1
+sfe_dump() {
+    local dev_name="sfe_$1"
+    local dev_num
+    local dev_path="/dev/$dev_name"
+    local sys_path
+
+    if [ "$1" = "ipv4" ]; then
+        sys_path="/sys/sfe_ipv4/debug_dev"
+    else
+        sys_path="/sys/sfe_ipv6/debug_dev"
+    fi
+
+    dev_num=$(cat "$sys_path" 2>/dev/null)
+    if [ -z "$dev_num" ]; then
+        echo "Device number not found for $dev_name"
+        return 1
+    fi
+
+    # Try minor 0
+    rm -f "$dev_path"
+    mknod "$dev_path" c "$dev_num" 0
+    chmod 666 "$dev_path"
+    if cat "$dev_path"; then
+        return 0
+    fi
+
+    # If failed, try minor 1
+    rm -f "$dev_path"
+    mknod "$dev_path" c "$dev_num" 1
+    chmod 666 "$dev_path"
+    cat "$dev_path"
 }
 
 if [ -z "$1" ]; then

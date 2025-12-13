@@ -1578,7 +1578,6 @@ enable_affinity_mr03() {
 	enable_affinity_ds
 }
 
-
 ce_interrupt_affinity() {
         i=0
         cpu_mul=2
@@ -1586,12 +1585,20 @@ ce_interrupt_affinity() {
         ce1="ce_"
         ce_name="$ce$i"
         ce_name1="$ce1$i"
+        seen_irqs=""
         while [ $i -lt 15 ]
         do
         cpu=1
                 for irq_num in `grep -e "$ce_name" -e "$ce_name1" /proc/interrupts | cut -d ':' -f 1`
                 do
-                        [ -n "$irq_num" ] && echo $cpu > /proc/irq/$irq_num/smp_affinity
+                        irq=$(echo "$irq_num" | tr -d '[:space:]')
+                        [ -z "$irq" ] && continue
+                        case " $seen_irqs " in
+                                *" $irq "*)
+                                        continue ;;
+                        esac
+                        seen_irqs="$seen_irqs $irq"
+                        echo $cpu > /proc/irq/$irq/smp_affinity
                         cpu=$((cpu * cpu_mul))
                         if [ $cpu -gt 4 ] ; then cpu=1; fi
                 done

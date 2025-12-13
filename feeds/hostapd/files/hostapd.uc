@@ -1,6 +1,6 @@
 let libubus = require("ubus");
 import { open, readfile } from "fs";
-import { wdev_remove, is_equal, vlist_new, phy_is_fullmac, phy_open, wdev_set_radio_mask } from "common";
+import { wdev_remove, is_equal, vlist_new, phy_is_fullmac, phy_open, wdev_get_radio_mask, wdev_set_radio_mask } from "common";
 
 let ubus = libubus.connect(null, 60);
 
@@ -242,6 +242,18 @@ function __iface_pending_next(pending, state, ret, data)
 				hostapd.printf(`Failed to create ${bss.ifname} on phy ${phy}: ${err}`);
 				return null;
 			}
+		} else {
+			let radio_mask = wdev_get_radio_mask(bss.ifname);
+
+			if (radio_mask == null) {
+				hostapd.printf(`[error] Failed to get radio mask for ${bss.ifname}`);
+				return null;
+			}
+
+			// Configure the radio mask for each radio during BSS creation
+			radio_mask = (radio_mask | (1 << phydev.radio));
+			wdev_set_radio_mask(bss.ifname, radio_mask);
+			hostapd.printf(`[debug] preserving radio mask ${radio_mask} for ML BSS ${bss.ifname} radio index ${phydev.radio}`);
 		}
 		bss.created = true;
 		update_bss(config);
@@ -889,6 +901,40 @@ function bss_config(bss_name) {
 	}
 }
 
+let chan_width = {
+        "0" : "CHAN_WIDTH_20_NOHT",
+        "1" : "CHAN_WIDTH_20",
+        "2" : "CHAN_WIDTH_40",
+        "3" : "CHAN_WIDTH_80",
+        "4" : "CHAN_WIDTH_80P80",
+        "5" : "CHAN_WIDTH_160",
+        "6" : "CHAN_WIDTH_2160",
+        "7" : "CHAN_WIDTH_4320",
+        "8" : "CHAN_WIDTH_6480",
+        "9" : "CHAN_WIDTH_8640",
+        "10" : "CHAN_WIDTH_320",
+        "11" : "CHAN_WIDTH_UNKNOWN",
+};
+
+function get_bw(curr_chan_width) {
+
+        switch (chan_width[curr_chan_width]) {
+        case "CHAN_WIDTH_20_NOHT":
+        case "CHAN_WIDTH_20":
+                return 20;
+        case "CHAN_WIDTH_40":
+                return 40;
+        case "CHAN_WIDTH_80":
+                return 80;
+        case "CHAN_WIDTH_160":
+                return 160;
+        case "CHAN_WIDTH_320":
+                return 320;
+        default:
+                return 20;
+        }
+}
+
 let main_obj = {
 	reload: {
 		args: {
@@ -919,9 +965,12 @@ let main_obj = {
 			csa: true,
 			csa_count: 0,
 			punct_bitmap: 0,
+			mon_ifaces: "",
 		},
 		call: ex_wrap(function(req) {
 			let phy = phy_name(req.args.phy, req.args.radio);
+			let mon_if_names = split(req.args.mon_ifaces, " ");
+
 			if (req.args.up == null || !phy)
 				return libubus.STATUS_INVALID_ARGUMENT;
 
@@ -937,9 +986,19 @@ let main_obj = {
 				return 0;
 			}
 
+			let ret;
 			if (!req.args.up) {
 				hostapd.printf(`apsta_state: Stopping interfaces for radio ${req.args.radio}`);
 				iface.stop();
+				for (let mon in mon_if_names) {
+					if (mon == null)
+						continue;
+
+					ret = system(`ifconfig ${mon} down`);
+					if (ret) {
+						hostapd.printf(`Failed to bring down monitor interface ${mon}: ${ret}`);
+					}
+				}
 				return 0;
 			}
 
@@ -951,7 +1010,6 @@ let main_obj = {
 				return libubus.STATUS_UNKNOWN_ERROR;
 
 			hostapd.printf(`apsta_state: freq_info for radio ${req.args.radio} is ${freq_info}`);
-			let ret;
 			if (req.args.csa) {
 				freq_info.csa_count = req.args.csa_count ?? 10;
 				ret = iface.switch_channel(freq_info);
@@ -960,6 +1018,25 @@ let main_obj = {
 			}
 			if (!ret)
 				return libubus.STATUS_UNKNOWN_ERROR;
+
+			let bw = get_bw(req.args.chan_width);
+
+                        for (let mon in mon_if_names) {
+                                ret = system(`ifconfig ${mon} up`);
+
+				if (ret) {
+					hostapd.printf(`Failed to bring up monitor interface ${mon}: ${ret}`);
+					continue;
+				}
+				if (freq_info.frequency == freq_info.center_freq1)
+					ret = system(`iw ${mon} set freq ${freq_info.frequency} ${bw}`);
+				else
+					ret = system(`iw ${mon} set freq ${freq_info.frequency} ${bw} ${freq_info.center_freq1}`);
+
+				if (ret) {
+					hostapd.printf(`Failed to set frequency for monitor interface ${mon}: ${ret}`);
+				}
+                        }
 
 			return 0;
 		})
@@ -1088,6 +1165,9 @@ let auth_obj = {};
 hostapd.data.auth_obj = ubus.publish("hostapd-auth", auth_obj);
 hostapd.udebug_set("hostapd", hostapd.data.ubus);
 
+const TRANSPORT_HEADER_SIZE_IN_BITS = 64;
+const SPI_LEN_IN_BITS = 32;
+
 function bss_event(type, name, data) {
 	let ubus = hostapd.data.ubus;
 
@@ -1140,5 +1220,147 @@ return {
 		if (hostapd.data.auth_obj)
 			hostapd.data.auth_obj.notify("sta_connected", msg, data_cb, null, null, 1000);
 		return ret;
+	},
+	config_nft_table: function(table, add) {
+                let add_del = {};
+                let ret = {};
+                if (add)
+                        add_del = "add";
+                else
+                        add_del = "delete";
+
+                ret = system(`nft ${add_del} table netdev ${table}`);
+	},
+	config_nft_chain: function(table, chain, iface, add) {
+                let add_del = {};
+                let hook = {};
+                let ret = {};
+                if (add) {
+                        add_del = "add";
+                } else {
+                        add_del = "delete";
+                }
+
+                hook = "{ type filter hook egress device " + iface + " priority 0\\; }";
+                ret = system(`nft ${add_del} chain netdev ${table} ${chain} ${hook}`);
+	},
+	config_nft_rule: function(table, chain, iface, add,
+				  dst_mac_addr, proto,
+				  v6_src_addr, v6_dst_addr, v4_src_addr, v4_dst_addr,
+				  sport, dport, mark, esp_spi, dscp, ip_family) {
+		let cmd = {};
+		if (add) {
+                let rule = "nft add rule netdev" + " " + table + " " + chain;
+		let pr = {};
+
+		if (dst_mac_addr)
+			rule = rule + " ether daddr " + dst_mac_addr;
+
+                if (v6_src_addr)
+                        rule = rule + " ip6 saddr " + v6_src_addr;
+
+                if (v6_dst_addr)
+                        rule = rule + " ip6 daddr " + v6_dst_addr;
+
+                if (v4_src_addr)
+                        rule = rule + " ip saddr " + v4_src_addr;
+
+                if (v4_dst_addr)
+                        rule = rule + " ip daddr " + v4_dst_addr;
+
+		if (proto) {
+			let temp = {};
+
+			if (ip_family == 4)
+				temp = " ip protocol ";
+			else
+				temp = " ip6 nexthdr ";
+
+			if (proto == 6)
+				pr = " tcp ";
+
+			if (proto == 17)
+				pr = " udp ";
+
+			if (proto == 50)
+				pr = " esp ";
+
+			if (pr) {
+				rule = rule + temp + pr;
+			}
+		}
+
+		if (pr) {
+			if (sport)
+				rule = rule + pr +" sport " + sport;
+
+	                if (proto == 17 && dport == 4500) {
+				rule = rule + pr + " dport { 4500, 5200 } ";
+			} else if (dport) {
+				rule = rule + pr + " dport " + dport;
+			}
+		}
+
+		if (esp_spi && proto == 50) {
+			rule = rule + " esp spi " + esp_spi;
+		}
+
+                if (esp_spi && proto == 17) {
+                        rule = rule + " @th," + TRANSPORT_HEADER_SIZE_IN_BITS +  "," + SPI_LEN_IN_BITS + " " + esp_spi;
+                }
+
+                rule = rule + " meta mark set " + mark + " counter";
+
+                hostapd.printf(`${rule}`);
+		system(`${rule}`);
+
+		} else {
+			let cmd = `nft -a list chain  netdev wifi_qos_table ${chain} > /tmp/nft_info`;
+			system(`${cmd}`);
+
+			if (!mark || !dst_mac_addr) {
+				hostapd.printf(`ERROR: NFT Delete Rule, mandatory info not provided `);
+			} else {
+				let mark_hex = sprintf("%x", mark);
+				let f = open("/tmp/nft_info", "r");
+                                let line;
+                                while ((line = rtrim(f.read("line"), "\n")) != null) {
+					let rule = "nft delete rule netdev" + " " + table + " " + chain;
+					let handle;
+                                        if (match(line, regexp(mark_hex)) && match(line, regexp(dst_mac_addr))) {
+						handle = split(line, "#")[1];
+						rule = rule + handle;
+						hostapd.printf(`${rule}`);
+						system(`${rule}`);
+                                        }
+                                }
+                                f.close();
+
+			}
+
+			cmd = "rm /tmp/nft_info";
+			system(`${cmd}`);
+
+		}
+	},
+	update_radio_mask: function(ifname, hw_idx) {
+		const mask_bit = 1 << hw_idx;
+		let radio_mask = wdev_get_radio_mask(ifname);
+
+		if (radio_mask == null) {
+			hostapd.printf(`[error] Failed to get radio mask for ${ifname}`);
+			return false;
+		}
+
+		if (radio_mask & mask_bit) {
+			hostapd.printf(`[debug] hw_idx ${hw_idx} already set for ${ifname}`);
+			return true;
+		}
+
+		radio_mask |= mask_bit;
+		wdev_set_radio_mask(ifname, radio_mask);
+		hostapd.printf(`[debug] radio mask ${radio_mask} updated for ML BSS ${ifname} hw index ${hw_idx}`);
+
+		return true;
 	},
 };

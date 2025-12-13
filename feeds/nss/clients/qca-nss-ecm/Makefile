@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ecm
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-ecm
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=0c29e39abfdc27876aeaf9bb368e1fce8bf4a105
+PKG_VERSION:=590c8510ee4df6c9a072dace20959c8880f2a094
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -23,6 +23,10 @@ endif
 
 ifeq ($(CONFIG_QCA_NSS_ECM_EXAMPLES_MARK),y)
        FILES_EXAMPLES+=$(PKG_BUILD_DIR)/examples/ecm_mark_test.ko
+endif
+
+ifeq ($(CONFIG_QCA_NSS_ECM_EXAMPLES_SDX),y)
+	FILES_EXAMPLES=$(PKG_BUILD_DIR)/examples/ecm_sdx_pcc.ko
 endif
 
 #Explicitly enable OVS external module, if ovsmgr is enabled.
@@ -212,7 +216,8 @@ define KernelPackage/qca-nss-ecm-noload
 	   +TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe +TARGET_ipq54xx:kmod-qca-nss-ppe-tunipip6 \
 	   +kmod-bonding +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +PACKAGE_kmod-qca-nss-ppe-mapt:kmod-nat46 \
 	   +TARGET_ipq95xx:kmod-emesh-sp +TARGET_ipq95xx:kmod-qca-nss-ppe-tunipip6 \
-	   +TARGET_ipq52xx:kmod-emesh-sp +TARGET_ipq52xx:kmod-qca-nss-ppe-tunipip6
+	   +TARGET_ipq52xx:kmod-emesh-sp +TARGET_ipq52xx:kmod-qca-nss-ppe-tunipip6 \
+	   +TARGET_ipq96xx:kmod-emesh-sp +TARGET_ipq96xx:kmod-qca-nss-ppe-tunipip6
 endef
 
 define KernelPackage/qca-nss-ecm-noload/Description
@@ -458,6 +463,10 @@ ECM_MAKE_OPTS+=ECM_INTERFACE_L2TPV3_ENABLE=y
 endif
 endif
 
+ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx), y)
+ECM_MAKE_OPTS+=ECM_FRONT_END_BRIDGE_ISOLATION_ENABLE=y
+endif
+
 # Disable ECM IPv6 support when global IPv6 support is disabled.
 ifneq ($(CONFIG_IPV6),)
 ECM_MAKE_OPTS+=ECM_IPV6_ENABLE=y
@@ -495,6 +504,7 @@ define Build/Compile
 		EXAMPLES_BUILD_MARK="$(CONFIG_QCA_NSS_ECM_EXAMPLES_MARK)" \
 		EXAMPLES_BUILD_OVS="$(CONFIG_QCA_NSS_ECM_OVS)" \
 		BUILD_ECM_WIFI_PLUGIN="$(CONFIG_QCA_NSS_ECM_WIFI_PLUGIN)" \
+		EXAMPLES_BUILD_SDX="$(CONFIG_QCA_NSS_ECM_EXAMPLES_SDX)" \
 		modules
 endef
 
@@ -516,6 +526,12 @@ menu "ECM Configuration"
 		bool "Build OVS classifier external module"
 		help
 			Selecting this will build the OVS classifier external module.
+		default n
+
+	config QCA_NSS_ECM_EXAMPLES_SDX
+		bool "Build PCC SDX module"
+		help
+			Selecting this will build the SDX PCC classifier usage module.
 		default n
 endmenu
 endef

@@ -340,7 +340,7 @@ index 905ed62..1402665 100644
 +	}
 +
 +	freq_low = reg_cap->low_5ghz_chan;
-+	hw_index = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy, freq_low);
++	hw_index = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy, freq_low);
 +	if (hw_index == -1) {
 +		ath12k_err(ab, "Failed to get hw index for freq %d\n", freq_low);
 +		goto out;

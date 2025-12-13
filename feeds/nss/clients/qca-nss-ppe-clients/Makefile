@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe-clients
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=ed2e94a1fcc1d195440f5ae3f5a47cab5c62158c
+PKG_VERSION:=d53eff24bf257a8bb1b2f68beb3aa06332bfd567
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -27,7 +27,7 @@ define KernelPackage/qca-nss-ppe-bridge-mgr
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=Kernel driver for NSS PPE bridge manager
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96x||TARGET_ipq52xxx \
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx||TARGET_ipq52xx \
 		+kmod-qca-nss-ppe \
 		+kmod-qca-nss-ppe-vlan-mgr \
 		+PACKAGE_kmod-bonding:kmod-bonding \
@@ -57,23 +57,21 @@ define KernelPackage/qca-nss-ppe-vlan-mgr/Description
 Kernel modules for NSS PPE vlan manager
 endef
 
-define KernelPackage/qca-nss-pppoe-mgr
+define KernelPackage/qca-nss-ppe-pppoe-mgr
   SECTION:=kernel
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
-  TITLE:=Kernel driver for NSS PPPoE manager
+  TITLE:=Kernel driver for NSS PPE PPPoE manager
   DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
+		+kmod-qca-nss-ppe \
 		+kmod-pppoe @!LINUX_3_18 \
-		+PACKAGE_kmod-bonding:kmod-bonding \
-		+TARGET_ipq95xx:kmod-qca-nss-ppe \
-		+TARGET_ipq53xx:kmod-qca-nss-ppe \
-		+TARGET_ipq54xx:kmod-qca-nss-ppe
-  FILES:=$(PKG_BUILD_DIR)/clients/pppoe/qca-nss-pppoe-mgr.ko
-  AUTOLOAD:=$(call AutoLoad,51,qca-nss-pppoe-mgr)
+		+PACKAGE_kmod-bonding:kmod-bonding
+  FILES:=$(PKG_BUILD_DIR)/clients/pppoe/qca-nss-ppe-pppoe-mgr.ko
+  AUTOLOAD:=$(call AutoLoad,51,qca-nss-ppe-pppoe-mgr)
 endef
 
-define KernelPackage/qca-nss-pppoe-mgr/Description
-Kernel modules for NSS PPPoE manager
+define KernelPackage/qca-nss-ppe-pppoe-mgr/Description
+Kernel modules for NSS PPE PPPoE manager
 endef
 
 define KernelPackage/qca-nss-ppe-lag-mgr
@@ -148,7 +146,7 @@ endif
 MAKE_OPTS+=vlan-mgr=y
 endif
 
-ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-pppoe-mgr),)
+ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ppe-pppoe-mgr),)
 MAKE_OPTS+=pppoe-mgr=y
 ifneq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),)
 MAKE_OPTS+=PPPOE_MGR_FE_PPE_ENABLE=y
@@ -169,6 +167,13 @@ EXTRA_CFLAGS+= -I$(STAGING_DIR)/usr/include/qca-nss-ppe
 define KernelPackage/qca-nss-ppe-bridge-mgr/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/qca-nss-ppe-bridge-mgr.init $(1)/etc/init.d/qca-nss-ppe-bridge-mgr
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/ppe_bridge_mgr_dump $(1)/usr/bin/
+endef
+
+define KernelPackage/qca-nss-ppe-lag-mgr/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/ppe_lag_dump $(1)/usr/bin/
 endef
 
 define Build/Compile
@@ -181,7 +186,7 @@ endef
 
 $(eval $(call KernelPackage,qca-nss-ppe-bridge-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-vlan-mgr))
-$(eval $(call KernelPackage,qca-nss-pppoe-mgr))
+$(eval $(call KernelPackage,qca-nss-ppe-pppoe-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-lag-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-dsa-mgr))
 $(eval $(call KernelPackage,qca-nss-ppe-ath-clients))

@@ -4,7 +4,7 @@ PKG_NAME:=util-ubus
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.pon.1.0.r29
+PKG_BRANCH:=win.pon.1.0.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/trex/tools/util-ubus
 PKG_MIRROR_HASH:=skip
 PKG_VERSION:=dd17c03178a6c196060a135a207b0bf018deed1a

@@ -29,6 +29,10 @@ target_specific_settings() {
 			echo 0x71c71c > /sys/kernel/debug/ath11k/qcn9074\ hw1.0_0003\:01\:00.0/rx_hash
 			echo 0x71c71c > /sys/kernel/debug/ath11k/qcn9074\ hw1.0_0004\:01\:00.0/rx_hash
 			;;
+		ap-al06)
+			#case for rdp476 alder
+			echo 0x69a2d1 > /sys/kernel/debug/ath11k/ahb-c000000.wifi/rx_hash
+			;;
 		*)
 			#no settings
 			;;
@@ -54,17 +58,10 @@ disable_stats_n_qdss_trace() {
 				echo 0 > "$dir/trace_qdss"
 			fi
 		fi
-
-		#Check if mesh metric offload is set to disable link metrics for mesh
-		if [[ "$dir" == *ath12k* ]]; then
-			if [ $(cat /sys/module/ath12k/parameters/mesh_metric_offload) -eq 1 ]; then
-				if [ -f "$dir/link_metrics_update" ]; then
-					#Disable Link metrics update for mesh
-					echo disable > "$dir/link_metrics_update"
-				fi
-			fi
-		fi
 	done
+
+	#Disable Global dp stats
+	echo 0 > /sys/kernel/debug/ieee80211/phy00/dp_stats_mask
 }
 
 boost_performance() {

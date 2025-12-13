@@ -105,7 +105,7 @@ Index: b/hostapd/ctrl_iface.c
  #ifdef CONFIG_WNM_AP
  
  static int hostapd_ctrl_iface_coloc_intf_req(struct hostapd_data *hapd,
-@@ -6359,6 +6423,9 @@ static int hostapd_ctrl_iface_receive_pr
+@@ -6375,6 +6439,9 @@ static int hostapd_ctrl_iface_receive_pr
  	} else if (os_strncmp(buf, "SET_DSCP_POLICY ", 16) == 0) {
  		if (hostapd_ctrl_iface_set_dscp_policy(hapd, buf + 16))
  			reply_len = -1;
@@ -162,7 +162,7 @@ Index: b/src/ap/dscp_policy.c
 ===================================================================
 --- a/src/ap/dscp_policy.c
 +++ b/src/ap/dscp_policy.c
-@@ -472,3 +472,160 @@ void free_dscp_policies(struct sta_info
+@@ -475,3 +475,160 @@ void free_dscp_policies(struct sta_info
  	sta->num_dscp_policies = 0;
  }
  
@@ -268,7 +268,7 @@ Index: b/src/ap/dscp_policy.c
 +	size_t frame_len;
 +	bool more = false;
 +
-+	if (!hapd || !sta)
++	if (!hapd || !sta || !sta->dscp_policy_capable)
 +		return;
 +
 +	dialog_token = get_next_unsolicited_dialog_token(sta);
@@ -327,7 +327,7 @@ Index: b/src/ap/dscp_policy.h
 ===================================================================
 --- a/src/ap/dscp_policy.h
 +++ b/src/ap/dscp_policy.h
-@@ -35,6 +35,8 @@
+@@ -37,6 +37,8 @@
  #define PROTOCOL_LEN	1
  #define HEADER_LEN	3
  
@@ -336,7 +336,7 @@ Index: b/src/ap/dscp_policy.h
  enum ip_version {
  	IPV4 = 4,
  	IPV6 = 6,
-@@ -94,3 +96,8 @@ int build_frame_classifier(struct hostap
+@@ -96,3 +98,8 @@ int build_frame_classifier(struct hostap
  int add_dscp_policy_to_sta(struct sta_info *sta,
  			   struct hostapd_dscp_policy *new_policy);
  void free_dscp_policies(struct sta_info *sta);
@@ -349,7 +349,7 @@ Index: b/src/ap/ieee802_11.c
 ===================================================================
 --- a/src/ap/ieee802_11.c
 +++ b/src/ap/ieee802_11.c
-@@ -7625,6 +7625,27 @@ static void handle_assoc_cb(struct hosta
+@@ -7622,6 +7622,27 @@ static void handle_assoc_cb(struct hosta
  		sta->pending_eapol_rx = NULL;
  	}
  
