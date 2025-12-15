@@ -1,3 +1,4 @@
 0001-uboot-dtb-add-mfg-sig.patch
 0002-uboot-mfg-cmd.patch
 0003-Freedom-Allow-Legacy-Format-Image.patch
+0004-uboot-cmd-bootm-preload.patch
