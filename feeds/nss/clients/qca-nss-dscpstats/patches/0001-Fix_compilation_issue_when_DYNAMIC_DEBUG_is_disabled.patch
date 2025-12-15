@@ -1,0 +1,61 @@
+From 4108235ef472b081b13bf7c4d16a689ca479676b Mon Sep 17 00:00:00 2001
+From: Ayush Aggarwal <ayusagga@qti.qualcomm.com>
+Date: Mon, 01 Dec 2025 15:24:37 +0530
+Subject: [PATCH] [qca-nss-dscpstats] Fix build failure by adding debug level macro and required header
+
+Change-Id: I2481de4be9444aae3fffec96ef93a72f80e02ee2
+Signed-off-by: Ayush Aggarwal <ayusagga@qti.qualcomm.com>
+---
+
+diff --git a/Makefile b/Makefile
+index 547ea23..aa3cc7a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -9,3 +9,4 @@
+ 
+ ccflags-y += -I$(obj)/exports
+ ccflags-y += -Wall -Werror
++ccflags-y += -DNSS_DSCPSTATS_DEBUG_LEVEL=3
+diff --git a/nss_dscpstats.h b/nss_dscpstats.h
+index a3285bc..54331c8 100644
+--- a/nss_dscpstats.h
++++ b/nss_dscpstats.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
++ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+  *
+  * Permission to use, copy, modify, and/or distribute this software for any
+  * purpose with or without fee is hereby granted, provided that the above
+@@ -20,6 +20,8 @@
+ #ifndef __NSSSTATDSCP__H
+ #define __NSSSTATDSCP__H
+ 
++#include <linux/netdevice.h>
++
+ #if defined(CONFIG_DYNAMIC_DEBUG)
+ /*
+  * If dynamic debug is enabled, use pr_debug.
+@@ -32,19 +34,19 @@
+ /*
+  * Statically compile messages at different levels, when dynamic debug is disabled.
+  */
+-#if (nss_dscpstats_DEBUG_LEVEL < 2)
++#if (NSS_DSCPSTATS_DEBUG_LEVEL < 2)
+ #define nss_dscpstats_warn(s, ...)
+ #else
+ #define nss_dscpstats_warn(s, ...) pr_warn("%s[%d]:" s, __func__, __LINE__, ##__VA_ARGS__)
+ #endif
+ 
+-#if (nss_dscpstats_DEBUG_LEVEL < 3)
++#if (NSS_DSCPSTATS_DEBUG_LEVEL < 3)
+ #define nss_dscpstats_info(s, ...)
+ #else
+ #define nss_dscpstats_info(s, ...) pr_notice("%s[%d]:" s, __func__, __LINE__, ##__VA_ARGS__)
+ #endif
+ 
+-#if (nss_dscpstats_DEBUG_LEVEL < 4)
++#if (NSS_DSCPSTATS_DEBUG_LEVEL < 4)
+ #define nss_dscpstats_trace(s, ...)
+ #else
+ #define nss_dscpstats_trace(s, ...) pr_info("%s[%d]:" s, __func__, __LINE__, ##__VA_ARGS__)
