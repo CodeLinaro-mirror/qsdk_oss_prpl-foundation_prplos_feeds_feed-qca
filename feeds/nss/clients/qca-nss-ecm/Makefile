@@ -42,18 +42,7 @@ define KernelPackage/qca-nss-ecm/Default
   SECTION:=kernel
   CATEGORY:=Kernel modules
   SUBMENU:=Network Support
-  DEPENDS:=+TARGET_ipq806x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq806x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq807x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq807x_64:kmod-qca-nss-drv \
-	+TARGET_ipq807x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq60xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq60xx_64:kmod-qca-nss-drv \
-	+TARGET_ipq60xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq50xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq50xx_64:kmod-qca-nss-drv \
-	+TARGET_ipq50xx:kmod-qca-nss-drv \
-	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):iptables-mod-extra \
+  DEPENDS:=+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):iptables-mod-extra \
 	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-ipt-conntrack \
 	+(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-nf-conntrack \
 	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-vxlan \
@@ -73,7 +62,7 @@ define KernelPackage/qca-nss-ecm-nonss/Default
   SECTION:=kernel
   CATEGORY:=Kernel modules
   SUBMENU:=Network Support
-  DEPENDS:=@TARGET_ipq50xx +PACKAGE_kmod-qca-hyfi-bridge:kmod-qca-hyfi-bridge +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +kmod-nat46 \
+  DEPENDS:=@TARGET_ipq50xx +kmod-nat46 \
 	+iptables-mod-extra +kmod-ipt-conntrack +kmod-pppoe @!LINUX_3_18 +PACKAGE_kmod-qca-ovsmgr:kmod-qca-ovsmgr \
 	+kmod-l2tp +kmod-pppol2tp +kmod-pptp +kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe-vxlanmgr +TARGET_ipq53xx:kmod-qca-nss-ppe-vxlanmgr \
 	+TARGET_ipq54xx:kmod-qca-nss-ppe-vxlanmgr +kmod-vxlan \
@@ -115,13 +104,11 @@ define KernelPackage/qca-nss-ecm-standard
   $(call KernelPackage/qca-nss-ecm/Default)
   TITLE+= (with standard features)
   VARIANT:=standard
-  DEPENDS+=+PACKAGE_kmod-qca-mcs:kmod-qca-mcs \
-	+TARGET_ipq95xx:kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe \
+  DEPENDS+=	+TARGET_ipq95xx:kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe \
 	+TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe \
 	+TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
 	+TARGET_ipq96xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
 	+TARGET_ipq52xx:kmod-qca-nss-sfe +TARGET_ipq52xx:kmod-qca-nss-ppe \
-	+PACKAGE_kmod-qca-hyfi-bridge:kmod-qca-hyfi-bridge \
 	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256)&&(TARGET_ipq53xx||TARGET_ipq54xx):kmod-bonding \
 	+TARGET_ipq95xx:kmod-bonding +PACKAGE_kmod-emesh-sp:kmod-emesh-sp
 endef
@@ -139,7 +126,7 @@ define KernelPackage/qca-nss-ecm-premium/Default
 $(call KernelPackage/qca-nss-ecm/Default)
   TITLE+= (with premium features)
   VARIANT:=premium
-  DEPENDS+=+PACKAGE_kmod-qca-hyfi-bridge:kmod-qca-hyfi-bridge +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +kmod-nat46 \
+  DEPENDS+=+kmod-nat46 \
 	+kmod-l2tp +kmod-pppol2tp +kmod-pptp +TARGET_ipq95xx:kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe \
 	+TARGET_ipq96xx:kmod-qca-nss-sfe +TARGET_ipq96xx:kmod-qca-nss-ppe +TARGET_ipq96xx:kmod-qca-nss-ppe-vxlanmgr \
 	+TARGET_ipq52xx:kmod-qca-nss-sfe +TARGET_ipq52xx:kmod-qca-nss-ppe +TARGET_ipq52xx:kmod-qca-nss-ppe-vxlanmgr \
@@ -158,8 +145,7 @@ endef
 define KernelPackage/qca-nss-ecm-wifi-plugin
   TITLE+= (with no-nss for host mode)
   DEPENDS+=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
-		+PACKAGE_kmod-qca-wifi-unified-profile:kmod-qca-wifi +PACKAGE_kmod-ath:kmod-ath \
-		+PACKAGE_kmod-qca-wifi-lowmem-profile:kmod-qca-wifi \
+		+PACKAGE_kmod-ath:kmod-ath \
 		+PACKAGE_kmod-qca-nss-ecm-premium:kmod-qca-nss-ecm-premium \
 		+PACKAGE_kmod-qca-nss-ecm-standard:kmod-qca-nss-ecm-standard \
 		+PACKAGE_kmod-qca-nss-ecm-noload:kmod-qca-nss-ecm-noload \
@@ -214,7 +200,7 @@ define KernelPackage/qca-nss-ecm-noload
 	   +TARGET_ipq52xx:kmod-qca-nss-sfe +TARGET_ipq52xx:kmod-qca-nss-ppe \
 	   +TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe +TARGET_ipq53xx:kmod-qca-nss-ppe-tunipip6 \
 	   +TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe +TARGET_ipq54xx:kmod-qca-nss-ppe-tunipip6 \
-	   +kmod-bonding +PACKAGE_kmod-qca-mcs:kmod-qca-mcs +PACKAGE_kmod-qca-nss-ppe-mapt:kmod-nat46 \
+	   +kmod-bonding +PACKAGE_kmod-qca-nss-ppe-mapt:kmod-nat46 \
 	   +TARGET_ipq95xx:kmod-emesh-sp +TARGET_ipq95xx:kmod-qca-nss-ppe-tunipip6 \
 	   +TARGET_ipq52xx:kmod-emesh-sp +TARGET_ipq52xx:kmod-qca-nss-ppe-tunipip6 \
 	   +TARGET_ipq96xx:kmod-emesh-sp +TARGET_ipq96xx:kmod-qca-nss-ppe-tunipip6
