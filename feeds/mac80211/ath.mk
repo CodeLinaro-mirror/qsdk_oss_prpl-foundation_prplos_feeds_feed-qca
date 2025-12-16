@@ -215,7 +215,7 @@ endef
 define KernelPackage/owl-loader
   $(call KernelPackage/mac80211/Default)
   TITLE:=Owl loader for initializing Atheros PCI(e) Wifi chips
-  DEPENDS:=@PCI_SUPPORT +kmod-ath9k
+  DEPENDS:=@PCI_SUPPORT
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath9k/ath9k_pci_owl_loader.ko
   AUTOLOAD:=$(call AutoProbe,ath9k_pci_owl_loader)
 endef
