@@ -35,18 +35,7 @@ SECTION:=kernel
 CATEGORY:=Kernel modules
 SUBMENU:=Network Devices
 DEPENDS:=@TARGET_ipq806x||TARGET_ipq_ipq806x||TARGET_ipq_ipq807x||TARGET_ipq_ipq807x_64||TARGET_ipq807x||TARGET_ipq_ipq50xx||TARGET_ipq_ipq50xx_64||TARGET_ipq50xx||TARGET_ipq_ipq60xx||TARGET_ipq_ipq60xx_64||TARGET_ipq60xx||TARGET_ipq95xx||TARGET_ipq95xx_32 \
-	TARGET_ipq95xx:kmod-qca-nss-drv-lite \
-	+TARGET_ipq806x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq806x:kmod-qca-nss-drv \
-	+TARGET_ipq807x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq807x:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq807x_64:kmod-qca-nss-drv \
-	+TARGET_ipq50xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq50xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq50xx_64:kmod-qca-nss-drv \
-	+TARGET_ipq60xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq60xx:kmod-qca-nss-drv \
-	+TARGET_ipq_ipq60xx_64:kmod-qca-nss-drv @!LINUX_3_18
+	@!LINUX_3_18
 KCONFIG:=CONFIG_CRYPTO_DISABLE_AHASH_TYPE2_TESTS=y \
 	 CONFIG_IPQ_PROFILE_MINENT=y
 endef
