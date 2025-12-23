@@ -297,7 +297,7 @@ generate_5g_6g_split_phy_config() {
 		set wireless.default_${name}.device=${name}
 		set wireless.default_${name}.network=lan
 		set wireless.default_${name}.mode=ap
-		set wireless.default_${name}.ssid=prplOs
+		set wireless.default_${name}.ssid=prplOS
 	EOF
 		if [ ${_mode_band} == '5g'  ]; then
 			uci set wireless.default_${name}.encryption=none
@@ -443,7 +443,7 @@ detect_mac80211() {
 					set wireless.default_${name}.device=${name}
 					set wireless.default_${name}.network=lan
 					set wireless.default_${name}.mode=ap
-					set wireless.default_${name}.ssid=prplOs
+					set wireless.default_${name}.ssid=prplOS
 			EOF
 				if [ ${_mode_band} == '6g'  ]; then
 					uci -q batch <<-EOF

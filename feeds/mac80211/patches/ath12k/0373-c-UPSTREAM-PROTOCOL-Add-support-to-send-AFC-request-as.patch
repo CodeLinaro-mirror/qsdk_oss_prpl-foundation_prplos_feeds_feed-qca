@@ -31,7 +31,7 @@ Signed-off-by: Hariharan Basuthkar <hbasuthk@qti.qualcomm.com>
  
  /* World regdom to be used in case default regd from fw is unavailable */
  #define ATH12K_2GHZ_CH01_11      REG_RULE(2412 - 10, 2462 + 10, 40, 0, 20, 0)
-@@ -1651,6 +1652,7 @@ static int ath12k_reg_afc_start(struct a
+@@ -1653,6 +1654,7 @@ static int ath12k_reg_afc_start(struct a
  	}
  
  	ath12k_reg_print_afc_req_info(ab, afc_req);
@@ -41,31 +41,7 @@ Signed-off-by: Hariharan Basuthkar <hbasuthk@qti.qualcomm.com>
  	return ret;
 --- a/drivers/net/wireless/ath/ath12k/vendor.c
 +++ b/drivers/net/wireless/ath/ath12k/vendor.c
-@@ -539,6 +539,23 @@ out:
- 		nla_nest_end(skb, start);               \
- } while (0)
- 
-+static int ath12k_get_radio_idx_by_freq(struct wiphy *wiphy, u32 freq)
-+{
-+	const struct wiphy_radio *radio;
-+	u8 i, j;
-+
-+	for (i = 0; i < wiphy->n_radio; i++) {
-+		radio = &wiphy->radio[i];
-+		for (j = 0; j < radio->n_freq_range; j++) {
-+			if (freq >= radio->freq_range[j].start_freq &&
-+					freq <= radio->freq_range[j].end_freq)
-+				return i;
-+		}
-+	}
-+
-+	return -1;
-+}
-+
- /**
-  * ath12k_afc_power_event_update_or_get_len() - Function to fill vendor event
-  * buffer  with AFC power update event or get required vendor buffer length
-@@ -564,6 +581,7 @@ ath12k_afc_power_event_update_or_get_len
+@@ -564,6 +564,7 @@ ath12k_afc_power_event_update_or_get_len
  	struct nlattr *chan_list;
  	struct nlattr *chan_info = NULL;
  	int i, j, len = NLMSG_HDRLEN;
@@ -73,11 +49,11 @@ Signed-off-by: Hariharan Basuthkar <hbasuthk@qti.qualcomm.com>
  
  	if (vendor_event &&
  	    nla_put_u8(vendor_event,
-@@ -750,12 +768,273 @@ ath12k_afc_power_event_update_or_get_len
+@@ -750,12 +751,273 @@ ath12k_afc_power_event_update_or_get_len
  
  	nla_nest_end_checked(vendor_event, nla_attr);
  
-+	hw_idx = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy,
++	hw_idx = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy,
 +					      pwr_evt->afc_freq_info[0].low_freq + 10);
 +	if (vendor_event &&
 +	    nla_put_u8(vendor_event,
@@ -88,12 +64,12 @@ Signed-off-by: Hariharan Basuthkar <hbasuthk@qti.qualcomm.com>
 +		len += nla_total_size(sizeof(u8));
 +	}
 +
-+	return vendor_event ? 0 : len;
-+
-+fail:
-+	return -EINVAL;
-+}
-+
+ 	return vendor_event ? 0 : len;
+ 
+ fail:
+ 	return -EINVAL;
+ }
+ 
 +/**
 + * ath12k_afc_expiry_event_update_or_get_len() - Function to fill vendor evt buffer
 + * with info extracted from AFC request, or get required vendor buffer length.
@@ -290,7 +266,7 @@ Signed-off-by: Hariharan Basuthkar <hbasuthk@qti.qualcomm.com>
 +	}
 +	nla_nest_end_checked(vendor_event, nla_attr);
 +
-+	hw_idx = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy,
++	hw_idx = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy,
 +					      afc_req->freq_lst->range_objs[0].lowfreq + 10);
 +	if (vendor_event &&
 +	    nla_put_u8(vendor_event,
@@ -301,12 +277,12 @@ Signed-off-by: Hariharan Basuthkar <hbasuthk@qti.qualcomm.com>
 +		len += nla_total_size(sizeof(u8));
 +	}
 +
- 	return vendor_event ? 0 : len;
- 
- fail:
- 	return -EINVAL;
- }
- 
++	return vendor_event ? 0 : len;
++
++fail:
++	return -EINVAL;
++}
++
 +int ath12k_send_afc_request(struct ath12k *ar, struct ath12k_afc_host_request *afc_req)
 +{
 +	struct sk_buff *vendor_event;

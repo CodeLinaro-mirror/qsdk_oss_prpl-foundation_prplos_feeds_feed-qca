@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=iw
 PKG_VERSION:=6.9
 PKG_RELEASE:=1
-
+ 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/software/network/iw
 PKG_HASH:=3f2db22ad41c675242b98ae3942dbf3112548c60a42ff739210f2de4e98e4894
@@ -38,7 +38,6 @@ define Package/iw-full
   VARIANT:=full
   PROVIDES:=iw
 endef
-
 
 EXTERNAL_PATCH_DIR:=$(CURDIR)
 

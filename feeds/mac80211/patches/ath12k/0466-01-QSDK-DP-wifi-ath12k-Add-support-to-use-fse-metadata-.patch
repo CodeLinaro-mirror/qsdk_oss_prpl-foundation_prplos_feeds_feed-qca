@@ -20,19 +20,19 @@ Tag: FSE
 
 Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
 ---
- drivers/net/wireless/ath/ath12k/core.h        |  1 +
- drivers/net/wireless/ath/ath12k/fse.h         |  3 +-
- drivers/net/wireless/ath/ath12k/hal.h         |  4 ++
- drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c | 58 ++++++++++++++++++-
- drivers/net/wireless/ath/ath12k/wifi7/hal.h   | 11 +---
- .../wireless/ath/ath12k/wifi7/hal_qcn9274.c   |  1 +
- .../wireless/ath/ath12k/wifi7/hal_qcn9274.h   | 19 ++++++
- .../wireless/ath/ath12k/wifi7/hal_rx_desc.h   | 10 +++-
- 8 files changed, 94 insertions(+), 13 deletions(-)
+ drivers/net/wireless/ath/ath12k/core.h              |    1 
+ drivers/net/wireless/ath/ath12k/fse.h               |    3 
+ drivers/net/wireless/ath/ath12k/hal.h               |    4 +
+ drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c       |   64 +++++++++++++++++---
+ drivers/net/wireless/ath/ath12k/wifi7/hal.h         |    9 ++
+ drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c |    1 
+ drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.h |   19 +++++
+ drivers/net/wireless/ath/ath12k/wifi7/hal_rx_desc.h |   10 ++-
+ 8 files changed, 100 insertions(+), 11 deletions(-)
 
 --- a/drivers/net/wireless/ath/ath12k/core.h
 +++ b/drivers/net/wireless/ath/ath12k/core.h
-@@ -47,6 +47,7 @@
+@@ -48,6 +48,7 @@
  #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)
  
  #define ATH12K_TX_MGMT_NUM_PENDING_MAX	512
@@ -68,8 +68,8 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
  
  #define HAL_CE_REMAP_REG_BASE  (ab->ce_remap_base_addr)
  
-@@ -1294,6 +1296,8 @@ struct hal_ops {
- 	void (*hal_mon_ops_init)(struct ath12k_hal *hal, u8 hw_version);
+@@ -1323,6 +1325,8 @@ struct hal_ops {
+ 	void (*hal_get_tqm_scratch_reg)(struct ath12k_base *ab, u64 *value);
  	void (*get_hw_hptp)(struct ath12k_base *ab, enum hal_ring_type type,
  			    struct hal_srng *srng, uint32_t *hp, uint32_t *tp);
 +	void (*rx_desc_get_fse_info)(struct hal_rx_desc *desc,
@@ -117,7 +117,7 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
  static bool ath12k_wifi7_dp_rx_check_fast_rx(struct ath12k_dp *dp,
  					     struct sk_buff *msdu,
  					     struct rx_msdu_desc_info *rx_msdu_info,
-@@ -868,7 +892,7 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
+@@ -868,16 +892,39 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
  	int ret = 0;
  	u16 peer_id;
  
@@ -126,7 +126,10 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
  	tid = rx_mpdu_info->tid;
  	/* PN for multicast packets will be checked in mac80211 */
  
-@@ -878,6 +902,29 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
+ 	ath12k_wifi7_dp_rx_h_csum_offload(msdu, rx_msdu_info);
+ 
+ 	if (likely(peer)) {
++		msdu->dev = peer->dev;
  		if (likely(*fast_rx &&
  		    ath12k_wifi7_dp_rx_check_fast_rx(dp, msdu, rx_msdu_info,
  							 tlv_info, peer))) {
@@ -147,8 +150,7 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
 +					 */
 +					if ((rx_mpdu_info->flow_info.flow_metadata &
 +					    ATH12K_RX_FSE_FLOW_MATCH_USE_PPE)) {
-+						msdu->dev = peer->dev;
-+						if (ppe_vp_tx_to_ppe(peer->ppe_vp_num, msdu))
++						if (peer->dev->offload_ops->recv(peer->dev, msdu))
 +							return 0;
 +					}
 +				}
@@ -211,7 +213,7 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
  	ret = ath12k_wifi7_dp_rx_h_mpdu(dp_pdev, msdu, desc, status, &rx_msdu_info,
  					&rx_mpdu_info, &tlv_info,
  					rx_desc_data->err_bitmap, &fast_rx,
-@@ -2705,7 +2755,7 @@ static int ath12k_wifi7_dp_rx_h_unauth_w
+@@ -2710,7 +2760,7 @@ static int ath12k_wifi7_dp_rx_h_unauth_w
  	rx_msdu_info.to_ds = rx_desc_data->is_to_ds;
  	rx_msdu_info.fr_ds = rx_desc_data->is_from_ds;
  	rx_msdu_info.da_is_mcbc = rx_desc_data->is_mcbc;
@@ -244,7 +246,7 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
  
 --- a/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/hal_qcn9274.c
-@@ -1052,4 +1052,5 @@ const struct hal_ops hal_qcn9274_ops = {
+@@ -1054,4 +1054,5 @@ const struct hal_ops hal_qcn9274_ops = {
  	.rx_desc_get_mpdu_ppdu_id = ath12k_wifi7_hal_rx_desc_get_mpdu_ppdu_id_qcn9274,
  	.hal_mon_ops_init = ath12k_wifi7_hal_mon_ops_init,
  	.get_hw_hptp = ath12k_wifi7_hal_get_hw_hptp,

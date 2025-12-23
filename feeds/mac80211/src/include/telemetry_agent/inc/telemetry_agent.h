@@ -35,6 +35,7 @@ agent and APP */
 #define PMLO_MAX_SUB_BUFFERS 2
 #define ERP_MAX_SUB_BUFFERS 2
 #define ENERGY_SVC_MAX_SUB_BUFFERS 2
+#define QOSOPT_SVC_MAX_SUB_BUFFERS 2
 #define RM_MAIN_MAX_SUB_BUFFERS 1
 #define STATS_FREQUENCY  1000 /*in milli seconds */
 
@@ -177,6 +178,10 @@ struct agent_rm_telemetry {
 	struct delayed_work stats_work_init_energysvc;
 	/* delayed work periodic for energy service */
 	struct delayed_work stats_work_periodic_energysvc;
+	/* relay(fs) channel for QoS Optimizer service */
+	struct rchan *rfs_channel_qos_optmzr;
+	/* delyed work for QoS Optimizer service */
+	struct delayed_work stats_work_dynamic_init_qos_optmzr;
 	/* delyed work for dynamic service init */
 	struct delayed_work stats_work_dynamic_init_main;
 };

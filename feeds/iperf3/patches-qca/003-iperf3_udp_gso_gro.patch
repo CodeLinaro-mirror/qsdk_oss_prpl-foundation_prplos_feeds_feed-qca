@@ -1,0 +1,102 @@
+Author: Vishnu Vardhan Bantanahal <vishvard@qti.qualcomm.com>
+Date:   Thu May 15 14:42:45 2025 +0530
+
+    iperf3: Add support for Socket Offloading.
+    Enable UDP GRO GSO support for iperf3.
+
+    Change-Id: Ifa2c606b6a6a10c98c763d0df8a1cd73cf9f8bbb
+    Signed-off-by: Vishnu Vardhan Bantanahal <vishvard@qti.qualcomm.com>
+---
+Index: iperf-3.17.1/configure.ac
+===================================================================
+--- iperf-3.17.1.orig/configure.ac
++++ iperf-3.17.1/configure.ac
+@@ -353,6 +353,30 @@ fi
+ 
+ AC_DEFINE([HAVE_SO_OFFLOAD], [1], [Have SO_OFFLOAD sockopt.])
+ 
++# Check for UDP_SEGMENT sockopt (mostly on Linux)
++AC_CACHE_CHECK([UDP_SEGMENT socket option],
++[iperf3_cv_header_udp_segment],
++AC_COMPILE_IFELSE(
++  [AC_LANG_PROGRAM([[#include <linux/udp.h>]],
++                   [[int foo = UDP_SEGMENT;]])],
++  iperf3_cv_header_udp_segment=yes,
++  iperf3_cv_header_udp_segment=no))
++if test "x$iperf3_cv_header_udp_segment" = "xyes"; then
++    AC_DEFINE([HAVE_UDP_SEGMENT], [1], [Have UDP_SEGMENT sockopt.])
++fi
++
++# Check for UDP_GRO sockopt (mostly on Linux)
++AC_CACHE_CHECK([UDP_GRO socket option],
++[iperf3_cv_header_udp_gro],
++AC_COMPILE_IFELSE(
++  [AC_LANG_PROGRAM([[#include <linux/udp.h>]],
++                   [[int foo = UDP_GRO;]])],
++  iperf3_cv_header_udp_gro=yes,
++  iperf3_cv_header_udp_gro=no))
++if test "x$iperf3_cv_header_udp_gro" = "xyes"; then
++    AC_DEFINE([HAVE_UDP_GRO], [1], [Have UDP_GRO sockopt.])
++fi
++
+ # Check if we need -lrt for clock_gettime
+ AC_SEARCH_LIBS(clock_gettime, [rt posix4])
+ # Check for clock_gettime support
+Index: iperf-3.17.1/src/iperf_udp.c
+===================================================================
+--- iperf-3.17.1.orig/src/iperf_udp.c
++++ iperf-3.17.1/src/iperf_udp.c
+@@ -34,6 +34,7 @@
+ #include <sys/socket.h>
+ #include <sys/types.h>
+ #include <netinet/in.h>
++#include <netinet/udp.h>
+ #include <stdint.h>
+ #include <inttypes.h>
+ #include <sys/time.h>
+@@ -515,6 +516,12 @@ iperf_udp_connect(struct iperf_test *tes
+ #endif
+     int rc;
+     int i, max_len_wait_for_reply;
++#if defined(HAVE_UDP_SEGMENT)
++    int gso_len;
++#endif
++#if defined(HAVE_UDP_GRO)
++    int gro_enabled;
++#endif
+ 
+     /* Create and bind our local socket. */
+     if ((s = netdial(test->settings->domain, Pudp, test->bind_address, test->bind_dev, test->bind_port, test->server_hostname, test->server_port, -1)) < 0) {
+@@ -618,6 +625,24 @@ iperf_udp_connect(struct iperf_test *tes
+ 
+ #if defined(HAVE_SO_OFFLOAD)
+     if(test->offload) {
++#if defined(HAVE_UDP_SEGMENT)
++	    gso_len = test->settings->blksize;
++    	    if (setsockopt(s, SOL_UDP, UDP_SEGMENT, &gso_len, sizeof(gso_len)) < 0) {
++		printf("Unable to set UDP_SEGMENT\n");
++		i_errno = IESETBUF;
++		return -1;
++    	    }
++#endif /* HAVE_UDP_SEGMENT */
++
++#if defined(HAVE_UDP_GRO)
++    	    gro_enabled = 1;
++    	    if (setsockopt(s, SOL_UDP, UDP_GRO, &gro_enabled, sizeof(gro_enabled)) < 0) {
++		printf("Unable to set UDP_GRO\n");
++		i_errno = IESETBUF;
++		return -1;
++    	    }
++#endif /* HAVE_UDP_GRO */
++
+             int offload = NSS_SK_OFFLOAD_IPERF_32;
+ 	    if (test->udp_counters_64bit) {
+             	offload = NSS_SK_OFFLOAD_IPERF_64;
+@@ -633,7 +658,6 @@ iperf_udp_connect(struct iperf_test *tes
+     return s;
+ }
+ 
+-
+ /* iperf_udp_init
+  *
+  * initializer for UDP streams in TEST_START

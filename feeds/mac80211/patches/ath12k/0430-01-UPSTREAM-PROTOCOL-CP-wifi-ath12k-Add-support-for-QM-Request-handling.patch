@@ -149,7 +149,7 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
 +					      addr);
 +	}
 +	if (qos_id == QOS_ID_INVALID)
-+		goto ret;
++		return ret;
 +
 +	rcu_read_lock();
 +	peer = ath12k_dp_link_peer_find_by_peerid_index(ar->ab->dp, &ar->dp,

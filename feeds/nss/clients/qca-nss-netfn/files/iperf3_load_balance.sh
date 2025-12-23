@@ -19,7 +19,7 @@
 sleep 2
 
 # Step 1: Get the main PID of iperf3
-main_pid=$(ps | grep '[i]perf3' | awk '{print $1}')
+main_pid=$(pgrep -x iperf3)
 if [ -z "$main_pid" ]; then
 	echo "iperf3 process not found."
 	exit 1

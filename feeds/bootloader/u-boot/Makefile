@@ -3,12 +3,13 @@ include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/version.mk
 
 PKG_NAME:=u-boot
+BINARY_PATH:=u-boot-2023
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
-PKG_SOURCE_VERSION:=1d7328184facd6bf1b84d6871abc3ea7d1407628
-PKG_BRANCH:=win.coretech.3.0.r29
+PKG_SOURCE_VERSION:=8953469f91044f46864b3a5905cbf392872b80da
+PKG_BRANCH:=win.coretech.3.0.r30
 PKG_RELEASE:=1
-PKG_VERSION:=1d732818
+PKG_VERSION:=8953469f
 
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 CONFIG_NAME=$(shell echo $(BUILD_VARIANT) | sed 's/.*-//')
@@ -21,14 +22,12 @@ LOCAL_VARIANT=$(patsubst ipq9574_%,%,\
 
 VERSION_FILE := $(TOPDIR)/version
 ifneq ($(wildcard $(VERSION_FILE)),)
-  NHSS_VERSION := $(shell grep 'NHSS\.QSDK' $(VERSION_FILE) | cut -d'-' -f2)
-  $(shell sed -i 's/^SUBLEVEL.*/SUBLEVEL =$(NHSS_VERSION)/' $(TOPDIR)/qca/src/u-boot/Makefile)
-
-  $(shell if [ -n "$(NHSS_VERSION)" ]; then \
-	sed -i 's/\.\$$(SUBLEVEL)/-\$$(SUBLEVEL)/' $(TOPDIR)/qca/src/u-boot/Makefile; \
-  else\
-	sed -i 's/\-\$$(SUBLEVEL)/.\$$(SUBLEVEL)/' $(TOPDIR)/qca/src/u-boot/Makefile; \
-  fi)
+	NHSS_VERSION := $(shell awk -F. 'NF == 4 { \
+		if (length($$2) > 1) \
+			print $$1 "." substr($$2, 1, 1) "." substr($$2, 2) "-" $$4; \
+		else \
+			print $$1 "." $$2 "-" $$4; \
+	}' $(VERSION_FILE))
 else
   $(warning Version file $(VERSION_FILE) not found, skipping version update)
 endif
@@ -48,8 +47,16 @@ define Build/Configure/debug
 	echo "CONFIG_SKIP_RESET=y" >> $(PKG_BUILD_DIR)/configs/$(CONFIG_NAME)_defconfig;
 endef
 
+define Update/version
+	if [ "$(NHSS_VERSION)" != "" ]; then \
+		sed -i '/^SUBLEVEL =/s/.*/SUBLEVEL = '"$(NHSS_VERSION)"'/' $(PKG_BUILD_DIR)/Makefile; \
+		sed -i 's/\.\$$$$(SUBLEVEL)/-\$$$$(SUBLEVEL)/g' $(PKG_BUILD_DIR)/Makefile; \
+	fi
+endef
+
 define Build/Configure
 	$(call Build/Configure/$(DEBUG_NAME))
+	$(call Update/version)
 	$(MAKE) -C $(PKG_BUILD_DIR) $(CONFIG_NAME)_defconfig CROSS_COMPILE=$(TARGET_CROSS) TARGETCC=$(TARGET_CC);
 endef
 
@@ -86,10 +93,11 @@ define Package/uboot-ipq5332-debug
 	$(INSTALL_DIR) $(BIN_DIR)
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
+	mkdir -p $(BIN_DIR)/$(BINARY_PATH)
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(STRIP) $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
   endef
 
   $$(eval $$(call BuildPackage,uboot-ipq5332-debug-$(1)))
@@ -113,10 +121,11 @@ define Package/uboot-ipq5332
 	$(INSTALL_DIR) $(BIN_DIR)
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
+	mkdir -p $(BIN_DIR)/$(BINARY_PATH)
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(STRIP) $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5332-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
   endef
 
   $$(eval $$(call BuildPackage,uboot-ipq5332-$(1)))
@@ -140,10 +149,11 @@ define Package/uboot-ipq9574-debug
 	$(INSTALL_DIR) $(BIN_DIR)
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
+	mkdir -p $(BIN_DIR)/$(BINARY_PATH)
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(STRIP) $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
   endef
 
   $$(eval $$(call BuildPackage,uboot-ipq9574-debug-$(1)))
@@ -167,10 +177,11 @@ define Package/uboot-ipq9574
 	$(INSTALL_DIR) $(BIN_DIR)
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
+	mkdir -p $(BIN_DIR)/$(BINARY_PATH)
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(STRIP) $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq9574-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
   endef
 
   $$(eval $$(call BuildPackage,uboot-ipq9574-$(1)))
@@ -194,10 +205,11 @@ define Package/uboot-ipq5424-debug
 	$(INSTALL_DIR) $(BIN_DIR)
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
+	mkdir -p $(BIN_DIR)/$(BINARY_PATH)
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(STRIP) $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
   endef
 
   $$(eval $$(call BuildPackage,uboot-ipq5424-debug-$(1)))
@@ -221,10 +233,11 @@ define Package/uboot-ipq5424
 	$(INSTALL_DIR) $(BIN_DIR)
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot $(PKG_BUILD_DIR)/u-boot-dtb
 	$(OBJCOPY) $(PKG_BUILD_DIR)/u-boot-dtb --set-section-flags .dtb=CONTENTS,ALLOC,DATA --update-section .dtb=$(PKG_BUILD_DIR)/fit-dtb.blob.lzo
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(STRIP) $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
-	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
+	mkdir -p $(BIN_DIR)/$(BINARY_PATH)
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot-dtb $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(STRIP) $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(BINARY_PATH)/openwrt-ipq5424-$(SUBTARGET)-$(LOCAL_VARIANT)-u-boot.img
   endef
 
   $$(eval $$(call BuildPackage,uboot-ipq5424-$(1)))

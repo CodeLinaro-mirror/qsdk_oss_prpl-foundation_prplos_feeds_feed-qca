@@ -3,11 +3,11 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-ovsmgr
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ovsmgr
-PKG_MIRROR_HASH:=1eb41f64c689b96583f81095d57deac52e72a8f6a4c2592d222abb2f36077c09
+PKG_MIRROR_HASH:=skip
 PKG_VERSION:=6c1fafc4fbdc28474d2199fa2bef6e10c89d2118
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

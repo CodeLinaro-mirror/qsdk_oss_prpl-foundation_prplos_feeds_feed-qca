@@ -321,7 +321,15 @@ do_load_ipq4019_board_bin()
 
                     create_cfg_caldata_mr "${mtdblock}" "IPQ9574"
             ;;
-            ap-al02-c4*|ap-al02-c6*|ap-al06*|ap-al05*|ap-al02-c7*|ap-al02-c8*|ap-al02-c9*|ap-al02-c10*|ap-al02-c11*|ap-al02-c12*|ap-al02-c14*|ap-al02-c15*|ap-al02-c16*|ap-al02-c20*|ap-al03-c1*|ap-al03-c2*|ap-al02-c19*)
+            ap-al02-c4*)
+                [ -f /lib/firmware/IPQ9574/caldata.bin ] && return
+                    mkdir -p ${apdk}/IPQ9574
+                    mkdir -p ${apdk}/qcn9224
+                    do_ftm_conf_override
+
+                    create_cfg_caldata "${mtdblock}" "IPQ9574" "qcn9224" "0" 
+            ;;
+            ap-al02-c6*|ap-al06*|ap-al05*|ap-al02-c7*|ap-al02-c8*|ap-al02-c9*|ap-al02-c10*|ap-al02-c11*|ap-al02-c12*|ap-al02-c14*|ap-al02-c15*|ap-al02-c16*|ap-al02-c20*|ap-al03-c1*|ap-al03-c2*|ap-al02-c19*)
                     [ -f /lib/firmware/IPQ9574/caldata.bin ] && return
                     mkdir -p ${apdk}/IPQ9574
                     mkdir -p ${apdk}/qcn9224
@@ -415,6 +423,14 @@ do_load_ipq4019_board_bin()
 
                     create_cfg_caldata_mr "${mtdblock}" "IPQ5332"
             ;;
+            ap-mi01.2-qcn9160*)
+                    [ -f /lib/firmware/IPQ5332/caldata.bin ] && return
+                    mkdir -p ${apdk}/IPQ5332
+                    mkdir -p ${apdk}/qcn9224
+                    mkdir -p ${apdk}/qcn9160
+
+                    create_cfg_caldata_mr "${mtdblock}" "IPQ5332"
+            ;;
             ap-mi01.1*|ap-mi01.2*|ap-mi01.4*|ap-mi01.6*|ap-mi01.9*|ap-mi02.1*)
                     [ -f /lib/firmware/IPQ5332/caldata.bin ] && return
                     mkdir -p ${apdk}/IPQ5332
@@ -422,7 +438,7 @@ do_load_ipq4019_board_bin()
 
                     create_cfg_caldata "${mtdblock}" "IPQ5332" "qcn9224" "0"
             ;;
-            tb-mi03.1*|tb-mi05.1*)
+            tb-mi03.1*|tb-mi05.1*|ap-mi04.5*|ap-mi01.3-c5)
                     [ -f /lib/firmware/IPQ5332/caldata.bin ] && return
                     mkdir -p ${apdk}/IPQ5332
                     mkdir -p ${apdk}/qcn6432

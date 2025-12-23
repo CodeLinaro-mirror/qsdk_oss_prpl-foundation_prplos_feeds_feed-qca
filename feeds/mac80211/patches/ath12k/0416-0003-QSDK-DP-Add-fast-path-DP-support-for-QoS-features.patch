@@ -27,8 +27,6 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
  include/ath/ath_sawf.h                        |  13 --
  8 files changed, 395 insertions(+), 30 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/accel_cfg.c b/drivers/net/wireless/ath/ath12k/accel_cfg.c
-index 7cfa856..e42a553 100644
 --- a/drivers/net/wireless/ath/ath12k/accel_cfg.c
 +++ b/drivers/net/wireless/ath/ath12k/accel_cfg.c
 @@ -7,6 +7,7 @@
@@ -39,7 +37,7 @@ index 7cfa856..e42a553 100644
  #include <linux/module.h>
  #include <linux/if_vlan.h>
  
-@@ -135,11 +136,12 @@ struct wireless_dev *ath12k_get_wdev_from_netdev(struct net_device *dev)
+@@ -135,11 +136,12 @@ struct wireless_dev *ath12k_get_wdev_fro
  	return wdev;
  }
  
@@ -53,7 +51,7 @@ index 7cfa856..e42a553 100644
  	u8 *dest_mac = NULL;
  	u8 link_id = ATH12k_MLO_LINK_ID_INVALID;
  	u8 node_id = ATH12k_DS_NODE_ID_INVALID;
-@@ -172,10 +174,111 @@ u32 ath_get_metadata_info(struct ath_dp_metadata_param *md_param)
+@@ -172,10 +174,111 @@ u32 ath_get_metadata_info(struct ath_dp_
  	if (link_id != ATH12k_MLO_LINK_ID_INVALID)
  		metadata |= ath_encode_mlo_metadata(link_id);
  
@@ -84,7 +82,7 @@ index 7cfa856..e42a553 100644
 +					 mac, &peer_id);
 +
 +	if (!ar) {
-+		ath12k_err(NULL, "ar is NULL");
++		ath12k_dbg(NULL, ATH12K_DBG_QOS, "sdwf_ul_config, ar is null\n");
 +		return;
 +	}
 +
@@ -105,7 +103,7 @@ index 7cfa856..e42a553 100644
 +	ath12k_core_config_ul_qos(ar, &qos_ctx->profiles[qos_id].params,
 +				  qos_id, mac, start_or_stop);
 +}
-+
+ 
 +void ath12k_sdwf_ul_config(struct ath_ul_params *params)
 +{
 +	struct ieee80211_hw *hw;
@@ -119,7 +117,7 @@ index 7cfa856..e42a553 100644
 +		ath12k_dbg(NULL, ATH12K_DBG_QOS, "wdev src_and_dest are null");
 +		return;
 +	}
- 
++
 +	if (src_wdev) {
 +		hw = wiphy_to_ieee80211_hw(src_wdev->wiphy);
 +		if (!ieee80211_hw_check(hw, SUPPORT_ECM_REGISTRATION)) {
@@ -176,8 +174,6 @@ index 7cfa856..e42a553 100644
  };
  
  /**
-diff --git a/drivers/net/wireless/ath/ath12k/sdwf.c b/drivers/net/wireless/ath/ath12k/sdwf.c
-index 7bc0c8f..db55e91 100644
 --- a/drivers/net/wireless/ath/ath12k/sdwf.c
 +++ b/drivers/net/wireless/ath/ath12k/sdwf.c
 @@ -5,6 +5,7 @@
@@ -188,7 +184,7 @@ index 7bc0c8f..db55e91 100644
  #include "debug.h"
  #include <linux/module.h>
  
-@@ -149,3 +150,203 @@ u16 ath12k_sdwf_get_ul_qos_id(struct ath12k_base *ab, u16 svc_id)
+@@ -149,3 +150,203 @@ u16 ath12k_sdwf_get_ul_qos_id(struct ath
  
  	return ul_qos_id;
  }
@@ -392,8 +388,6 @@ index 7bc0c8f..db55e91 100644
 +					dl_params->service_id,
 +					scs_mscs);
 +}
-diff --git a/drivers/net/wireless/ath/ath12k/sdwf.h b/drivers/net/wireless/ath/ath12k/sdwf.h
-index b5637af..9ec973d 100644
 --- a/drivers/net/wireless/ath/ath12k/sdwf.h
 +++ b/drivers/net/wireless/ath/ath12k/sdwf.h
 @@ -6,6 +6,22 @@
@@ -419,7 +413,7 @@ index b5637af..9ec973d 100644
  struct ath12k_sdwf_svc {
  	u16 dl_qos_id;
  	bool configured;
-@@ -20,4 +36,13 @@ bool ath12k_sdwf_service_configured(struct ath12k_base *ab, u16 svc_id);
+@@ -20,4 +36,13 @@ bool ath12k_sdwf_service_configured(stru
  u16 ath12k_sdwf_get_dl_qos_id(struct ath12k_base *ab, u16 svc_id);
  u16 ath12k_sdwf_get_ul_qos_id(struct ath12k_base *ab, u16 svc_id);
  
@@ -433,11 +427,9 @@ index b5637af..9ec973d 100644
 +					   struct ieee80211_vif *vif,
 +					   u8 *peer_mac, u16 *peer_id);
  #endif
-diff --git a/drivers/net/wireless/ath/ath12k/telemetry_agent_if.c b/drivers/net/wireless/ath/ath12k/telemetry_agent_if.c
-index 32ca044..f980eb5 100644
 --- a/drivers/net/wireless/ath/ath12k/telemetry_agent_if.c
 +++ b/drivers/net/wireless/ath/ath12k/telemetry_agent_if.c
-@@ -20,9 +20,3 @@ int unregister_telemetry_agent_ops(struct telemetry_agent_ops *agent_ops){
+@@ -20,9 +20,3 @@ int unregister_telemetry_agent_ops(struc
  	return 0;
  }
  EXPORT_SYMBOL(unregister_telemetry_agent_ops);
@@ -447,11 +439,9 @@ index 32ca044..f980eb5 100644
 -	return;
 -}
 -EXPORT_SYMBOL(ath_sawf_uplink);
-diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
-index 740bf41..a4c4f74 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
-@@ -128,16 +128,30 @@ static inline u8 ath12k_get_qos_tag(u32 mark)
+@@ -128,16 +128,30 @@ static inline u8 ath12k_get_qos_tag(u32
  }
  
  static inline void
@@ -509,7 +499,7 @@ index 740bf41..a4c4f74 100644
  	ath12k_hal_srng_access_end(ab, tcl_ring);
  
  	spin_unlock_bh(&tcl_ring->lock);
-@@ -867,7 +889,7 @@ ath12k_wifi7_dp_tx_process_htt_tx_complete(struct ath12k_dp *dp,
+@@ -867,7 +889,7 @@ ath12k_wifi7_dp_tx_process_htt_tx_comple
  
  }
  
@@ -518,7 +508,7 @@ index 740bf41..a4c4f74 100644
  ath12k_wifi7_dp_tx_cache_peer_stats(struct ath12k *ar,
  					  struct sk_buff *msdu,
  					  struct hal_tx_status *ts)
-@@ -1133,7 +1155,7 @@ static void ath12k_wifi7_dp_tx_complete_msdu(struct ath12k_pdev_dp *dp_pdev,
+@@ -1133,7 +1155,7 @@ static void ath12k_wifi7_dp_tx_complete_
  			} else {
  				ar->cached_stats.is_ampdu = false;
  				ath12k_wifi7_dp_tx_update_txcompl(dp_pdev, ts);
@@ -527,8 +517,6 @@ index 740bf41..a4c4f74 100644
  						sizeof(struct ath12k_per_peer_tx_stats));
  			}
  			ar->last_ppdu_id = ts->ppdu_id;
-diff --git a/drivers/net/wireless/ath/ath_accel_cfg.c b/drivers/net/wireless/ath/ath_accel_cfg.c
-index 9ae93c5..63bdae3 100644
 --- a/drivers/net/wireless/ath/ath_accel_cfg.c
 +++ b/drivers/net/wireless/ath/ath_accel_cfg.c
 @@ -1,6 +1,6 @@
@@ -539,7 +527,7 @@ index 9ae93c5..63bdae3 100644
   */
  
  #include <ath/ath_dp_accel_cfg.h>
-@@ -67,3 +67,21 @@ bool ath_dp_accel_cfg_fetch_ds_node_id(struct ath_dp_accel_cfg *info)
+@@ -67,3 +67,21 @@ bool ath_dp_accel_cfg_fetch_ds_node_id(s
  						&info->out_ppe_ds_node_id);
  }
  EXPORT_SYMBOL(ath_dp_accel_cfg_fetch_ds_node_id);
@@ -561,8 +549,6 @@ index 9ae93c5..63bdae3 100644
 +	ath_dp_accel_cfg_cb->sdwf_ul_config(params);
 +}
 +EXPORT_SYMBOL(ath_sawf_uplink);
-diff --git a/include/ath/ath_dp_accel_cfg.h b/include/ath/ath_dp_accel_cfg.h
-index edba350..270accf 100644
 --- a/include/ath/ath_dp_accel_cfg.h
 +++ b/include/ath/ath_dp_accel_cfg.h
 @@ -74,6 +74,17 @@ struct	ath_dp_metadata_param {
@@ -593,14 +579,12 @@ index edba350..270accf 100644
  };
  
  /**
-@@ -124,4 +137,5 @@ void ath_dp_accel_cfg_ops_callback_unregister(void);
+@@ -124,4 +137,5 @@ void ath_dp_accel_cfg_ops_callback_unreg
  bool ath_dp_accel_cfg_fetch_ds_node_id(struct ath_dp_accel_cfg *info);
  
  u32 ath_get_metadata_info(struct ath_dp_metadata_param *dp_metadata_param);
 +void ath_sawf_uplink(struct ath_ul_params *params);
  #endif
-diff --git a/include/ath/ath_sawf.h b/include/ath/ath_sawf.h
-index c385555..465b50f 100644
 --- a/include/ath/ath_sawf.h
 +++ b/include/ath/ath_sawf.h
 @@ -21,19 +21,6 @@ struct ath_sawf_callbacks {
@@ -623,6 +607,3 @@ index c385555..465b50f 100644
  void ath_sawf_msduq_callback_unregister(void);
 -void ath_sawf_uplink(struct ath_ul_params *ecm_ath_ul_params);
  #endif
--- 
-2.34.1
-

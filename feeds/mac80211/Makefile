@@ -12,25 +12,32 @@ PKG_NAME:=mac80211
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=COPYING
 
-PKG_KERNEL_VERSION:=9a0dddfb30f1
+PKG_VERSION:=5a4cd7fd
+PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/src/mac80211/wlan-open.git
+PKG_BRANCH:=win.wlan_host_opensource.4.0.r30
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_VERSION:=72cb24ebcfe173f9b2fc93807fa981b63a926fbe
+PKG_MIRROR_HASH:=skip
+
+PKG_KERNEL_VERSION:=9a0dddfb3
+PKG_KERNEL_SOURCE_URL:=http://git.codelinaro.org/clo/qsdk/kvalo/ath.git
+PKG_KERNEL_BRANCH:=korg-kvalo/master
 
 PKG_VERSION:=20250213
 PKG_SOURCE:=backports-$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION).tar.bz2
-PKG_SUBDIR:=backports-$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION)
+PKG_SUBDIR:=backports-6.1-$(PKG_KERNEL_VERSION)
+
 PKG_RELEASE:=1
 PKG_BUILD_ID:=1
 
-PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/platform/qualcomm/backports/-/archive/$(PKG_VERSION)-$(LINUX_VERSION)-$(PKG_KERNEL_VERSION)
-PKG_HASH:=ac7e8e88e8c5d304be6f6934c229d0234033a75fa74289ccb94e3854fd2693be
-
-PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_SUBDIR)-$(BUILD_VARIANT)/$(PKG_SUBDIR)
+PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/mac80211-$(PKG_VERSION)/$(PKG_SUBDIR)
+PKG_UNPACK ?= $(SH_FUNC) $(call UNPACK_CMD,$(PKG_BUILD_DIR)/..)
 PKG_BUILD_PARALLEL:=1
 
 MKHASH ?= $(STAGING_DIR_HOST)/bin/mkhash
 PKG_BUILD_ID:=$(shell date | $(MKHASH) md5)
-PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 
-EXTERNAL_HOSTAP_FILE_DIR:=$(TOPDIR)/feeds/feed_qca/feeds/hostapd-qca/
+EXTERNAL_HOSTAP_FILE_DIR:=$(TOPDIR)/feeds/feed_qca/feeds/hostapd/
 
 PKG_DRIVERS = \
 	mac80211-hwsim
@@ -109,9 +116,6 @@ define Package/ath-legacy-wifi-scripts/install
 	$(INSTALL_DIR) $(1)/lib/wifi/
 	$(INSTALL_DIR) $(1)/lib/netifd/
 	$(INSTALL_DIR) $(1)/lib/netifd/wireless/
-ifeq ($(CONFIG_USE_PRPLMESH_WHM),y)
-	sed -i 's/OpenWrt/prplOS/g' ./files/lib/wifi/mac80211.sh
-endif
 	$(INSTALL_BIN) ./files/lib/wifi/mac80211.sh $(1)/lib/wifi/mac80211.sh
 	$(INSTALL_BIN) ./files/lib/netifd-wlan/wireless/mac80211.sh $(1)/lib/netifd/wireless/
 	$(INSTALL_DATA) $(EXTERNAL_HOSTAP_FILE_DIR)/files/hostapd.sh $(1)/lib/netifd/hostapd.sh
@@ -124,6 +128,8 @@ define KernelPackage/cfg80211/install
 	$(INSTALL_DIR) $(1)/lib/wifi $(1)/lib/netifd/wireless
 	$(INSTALL_DIR) $(1)/lib/wifi/sawf
 	$(INSTALL_DIR) $(1)/lib/wifi/sawf/telemetry
+	$(INSTALL_DIR) $(1)/ini
+	$(INSTALL_DIR) $(1)/ini/internal
 	$(INSTALL_DATA) ./files/lib/wifi/def_service_classes.json $(1)/lib/wifi/sawf/
 	$(INSTALL_DATA) ./files/lib/wifi/service_classes.json $(1)/lib/wifi/sawf/
 	$(INSTALL_DATA) ./files/lib/wifi/telemetry/config.json $(1)/lib/wifi/sawf/telemetry/
@@ -138,6 +144,7 @@ endif
 	$(INSTALL_BIN) ./files/lib/performance.sh $(1)/lib
 	$(INSTALL_BIN) ./files/lib/smp_affinity_settings.sh $(1)/lib
 	$(INSTALL_BIN) ./files/lib/boost_performance.sh $(1)/lib
+	$(INSTALL_BIN) ./files/lib/mandatory_dp_stats.sh $(1)/lib
 	$(INSTALL_BIN) ./files/lib/ds_enable.sh $(1)/lib
 	$(INSTALL_BIN) ./files/lib/apsta_mode.sh $(1)/lib
 ifeq ($(CONFIG_KERNEL_ATHMEMDEBUG),y)
@@ -148,11 +155,14 @@ endif
 	$(INSTALL_BIN) ./files/etc/init.d/ath11k_nss_enable.sh $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/ath11k_uboot_mod_params.sh $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/qca-nss-pbuf $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/etc/init.d/diag_socket_app $(1)/etc/init.d
 	$(INSTALL_DATA) $(EXTERNAL_HOSTAP_FILE_DIR)/files/dpp-hostapd-event-update.sh $(1)/lib/netifd/dpp-hostapd-event-update
 	chmod 0755 $(1)/lib/netifd/dpp-hostapd-event-update
 	$(INSTALL_DATA) $(EXTERNAL_HOSTAP_FILE_DIR)/files/dpp-supplicant-event-update.sh $(1)/lib/netifd/dpp-supplicant-event-update
 	chmod 0755 $(1)/lib/netifd/dpp-supplicant-event-update
 	$(INSTALL_BIN) ./files/etc/init.d/ath12k_dyn_dbg_enable.sh $(1)/etc/init.d
+	$(INSTALL_CONF) ./files/ini/*.ini $(1)/ini/
+	$(INSTALL_CONF) ./files/ini/internal/*.ini $(1)/ini/internal/
 endef
 
 define KernelPackage/cfg80211/description
@@ -176,10 +186,11 @@ define KernelPackage/mac80211
   $(call KernelPackage/mac80211/Default)
   TITLE:=Linux 802.11 Wireless Networking Stack
   # +kmod-crypto-cmac is a runtime only dependency of net/mac80211/aes_cmac.c
-  DEPENDS+= +kmod-cfg80211 +kmod-crypto-cmac +kmod-crypto-ccm +kmod-crypto-gcm +hostapd-qca-common \
+  DEPENDS+= +kmod-cfg80211 +kmod-crypto-cmac +kmod-crypto-ccm +kmod-crypto-gcm +hostapd-common \
 	+kmod-qca-nss-ppe \
 	+kmod-qca-nss-ppe-vp \
-	+kmod-qca-nss-ppe-ds
+	+kmod-qca-nss-ppe-ds \
+	+kmod-qca-nss-wifi-plugins
   KCONFIG:=\
 	CONFIG_AVERAGE=y \
 	CONFIG_QCOM_RPROC_DISABLE_MPD_SUPPORT=y \
@@ -291,7 +302,7 @@ ifdef CONFIG_PACKAGE_MAC80211_TRACING
 endif
 
 config-$(CONFIG_PACKAGE_MAC80211_PPE_SUPPORT) += MAC80211_PPE_SUPPORT
-config-$(CONFIG_PACKAGE_MAC80211_DS_SUPPORT) += MAC80211_BONDED_SUPPORT ATH12K_PPE_DS_SUPPORT ATH12K_BONDED_DS_SUPPORT
+config-$(CONFIG_PACKAGE_MAC80211_DS_SUPPORT) += MAC80211_DS_SUPPORT ATH12K_PPE_DS_SUPPORT
 config-$(CONFIG_PACKAGE_MAC80211_SFE_SUPPORT) += MAC80211_SFE_SUPPORT
 config-$(CONFIG_PACKAGE_MAC80211_MESSAGE_TRACING) += MAC80211_MESSAGE_TRACING ATH10K_TRACING ATH11K_TRACING ATH12K_TRACING
 config-$(CONFIG_PACKAGE_MAC80211_DEBUG_MENU) += MAC80211_DEBUG_MENU
@@ -333,27 +344,27 @@ $(call ConfigVars,m)$(call ConfigVars,y)
 endef
 $(eval $(call shexport,mac80211_config))
 
+SPATCH?=1
 define Build/Prepare
 	rm -rf $(PKG_BUILD_DIR)
 	mkdir -p $(PKG_BUILD_DIR)
 	$(PKG_UNPACK)
-	$(CP) ./src/* $(PKG_BUILD_DIR)
-	$(Build/Patch)
-	rm -rf \
-		$(PKG_BUILD_DIR)/include/linux/ssb \
-		$(PKG_BUILD_DIR)/include/linux/bcma \
-		$(PKG_BUILD_DIR)/include/net/bluetooth
+	cp -rf ./src/* $(PKG_BUILD_DIR)
+ifdef CONFIG_PACKAGE_QCN_EXTN
+	$(CP) $(CURDIR)/wlan-open-extns/subsys/src $(PKG_BUILD_DIR)/net/mac80211/qcn_extns
+	$(CP) $(CURDIR)/wlan-open-extns/ath/ath12k/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/qcn_extns
+	$(CP) $(CURDIR)/wlan-open-extns/ath/wifi7/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7/qcn_extns
+endif
+ifneq ($(CONFIG_DEBUG_MEM_USAGE),y)
+ ifneq ($(CONFIG_PACKAGE_MAC80211_ATHMEMDEBUG),y)
+  ifeq ($(CONFIG_PACKAGE_MAC80211_ATHDEBUG),y)
+    ifeq ($(SPATCH),1)
+	$(Build/refactor)
+    endif
+  endif
+ endif
+endif
 
-	rm -f \
-		$(PKG_BUILD_DIR)/include/linux/cordic.h \
-		$(PKG_BUILD_DIR)/include/linux/crc8.h \
-		$(PKG_BUILD_DIR)/include/linux/eeprom_93cx6.h \
-		$(PKG_BUILD_DIR)/include/linux/wl12xx.h \
-		$(PKG_BUILD_DIR)/include/linux/mhi.h \
-		$(PKG_BUILD_DIR)/include/net/ieee80211.h \
-		$(PKG_BUILD_DIR)/backport-include/linux/bcm47xx_nvram.h
-
-	echo 'compat-wireless-$(PKG_VERSION)-$(PKG_RELEASE)-$(REVISION)' > $(PKG_BUILD_DIR)/compat_version
 endef
 
 ifneq ($(CONFIG_PACKAGE_kmod-cfg80211),)
@@ -365,47 +376,18 @@ endif
 
 EXTERNAL_PATCH_DIR:=$(CURDIR)/patches-qca
 
-define Build/Patch
-	$(if $(QUILT),rm -rf $(PKG_BUILD_DIR)/patches; mkdir -p $(PKG_BUILD_DIR)/patches)
-	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/build,build/)
-	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/subsys,subsys/)
-ifdef CONFIG_PACKAGE_QCN_EXTN
-	$(call PatchDir,$(PKG_BUILD_DIR),./wlan-open-extns/subsys/patches,patches/)
-endif
-#	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath,ath/)
-	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath11k,ath11k/)
-	$(call PatchDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath12k,ath12k/)
-ifdef CONFIG_PACKAGE_QCN_EXTN
-	$(call PatchDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/ath12k/patches,patches/)
-	$(call PatchDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/wifi7/patches,patches/)
-	$(CP) ./wlan-open-extns/subsys/src $(PKG_BUILD_DIR)/net/mac80211/qcn_extns
-	$(CP) ./wlan-open-extns/ath/ath12k/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/qcn_extns
-	$(CP) ./wlan-open-extns/ath/wifi7/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7/qcn_extns
-endif
-	$(if $(QUILT),touch $(PKG_BUILD_DIR)/.quilt_used)
-ifneq ($(CONFIG_DEBUG_MEM_USAGE),y)
- ifneq ($(CONFIG_PACKAGE_MAC80211_ATHMEMDEBUG),y)
-  ifeq ($(CONFIG_PACKAGE_MAC80211_ATHDEBUG),y)
-   ifeq ($(QUILT),)
-	$(Build/refactor)
-   endif
-  endif
- endif
-endif
-endef
-
 define Quilt/Refresh/Package
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/build,build/)
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/subsys,subsys/)
 ifdef CONFIG_PACKAGE_QCN_EXTN
-	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),./wlan-open-extns/subsys/patches,patches/)
+	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(CURDIR)/wlan-open-extns/subsys/patches,patches/)
 endif
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath,ath/)
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath11k,ath11k/)
 	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(PATCH_DIR)/ath12k,ath12k/)
 ifdef CONFIG_PACKAGE_QCN_EXTN
-	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/ath12k/patches,patches/)
-	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),./wlan-open-extns/ath/wifi7/patches,patches/)
+	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(CURDIR)/wlan-open-extns/ath/ath12k/patches,patches/)
+	$(call Quilt/RefreshDir,$(PKG_BUILD_DIR),$(CURDIR)/wlan-open-extns/ath/wifi7/patches,patches/)
 endif
 endef
 
@@ -456,6 +438,40 @@ define KernelPackage/ath/install
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ath_dp_accel_cfg.h $(STAGING_DIR)/usr/include/
 	$(CP) $(PKG_BUILD_DIR)/include/ath/ppe_public.h $(STAGING_DIR)/usr/include/
 endef
+
+$(eval EXT_KERNEL_DIR:=$(CONFIG_EXTERNAL_KERNEL_TREE))
+IS_EXT_KERNEL_TREE_GIT:=$(shell cd $(EXT_KERNEL_DIR) && git rev-parse --is-inside-work-tree)
+
+ifeq ($(IS_EXT_KERNEL_TREE_GIT), true)
+  $(eval _LINUX_SRC:=$(CONFIG_EXTERNAL_KERNEL_TREE))
+else
+  _LINUX_SRC=$(CONFIG_KERNEL_GIT_CLONE_URI)
+endif
+
+ifneq ($(call qstrip,$(_LINUX_SRC)),)
+# --reference option doesn't work on git trees synced with "repo", so instead
+# we're manually using clone & fetch to speed up sync time
+  define FastCloneKernel
+	git clone file://$(_LINUX_SRC) $(2) || \
+	(rm -rf $(2) && \
+	git clone file://$(_LINUX_SRC) $(2))
+	(cd $(2); git remote add src $(1); git fetch src)
+  endef
+else
+  define FastCloneKernel
+	GIT_NAME=$$$$(echo $(1) | sed -e 's:.*//[^/]*.::g'); \
+	git clone $(1) $(2) || \
+	([ -n "${CONFIG_GIT_MIRROR}" ] && \
+	rm -rf $(2) && \
+	git clone $(CONFIG_GIT_MIRROR)$$$$GIT_NAME $(2))
+  endef
+endif
+
+
+ifeq (,$(wildcard $(DL_DIR)/$(PKG_SOURCE)))
+$(shell [ -f "$(NFS_MIRROR_SERVER)/$(PKG_SOURCE)" ] && \
+	cp "$(NFS_MIRROR_SERVER)/$(PKG_SOURCE)" "$(TOPDIR)/dl/")
+endif
 
 $(eval $(foreach drv,$(PKG_DRIVERS),$(call KernelPackage,$(drv))))
 $(eval $(call KernelPackage,cfg80211))

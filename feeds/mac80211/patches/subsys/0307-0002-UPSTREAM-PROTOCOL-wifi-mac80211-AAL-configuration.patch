@@ -54,7 +54,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  /**
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -1658,6 +1658,16 @@ static int ieee80211_start_ap(struct wip
+@@ -1666,6 +1666,16 @@ static int ieee80211_start_ap(struct wip
  		goto error;
  	}
  
@@ -71,7 +71,7 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
  	ieee80211_recalc_dtim(local, sdata);
  	ieee80211_vif_cfg_change_notify(sdata, BSS_CHANGED_SSID);
  	ieee80211_link_info_change_notify(sdata, link, changed);
-@@ -1751,6 +1761,15 @@ static int ieee80211_update_ap(struct wi
+@@ -1749,6 +1759,16 @@ static int ieee80211_update_ap(struct wi
  		err |= BSS_CHANGED_HE_BSS_COLOR;
  	}
  
@@ -81,7 +81,8 @@ Signed-off-by: Srinivas Pitla <spitla@qti.qualcomm.com>
 +			return -EINVAL;
 +
 +		link_conf->ml_max_rec_links = params->ml_max_rec_links;
-+		err |= BSS_CHANGED_ML_MAX_REC_LINKS;
++		/* update beacon template */
++		err |= (changed | BSS_CHANGED_ML_MAX_REC_LINKS);
 +	}
 +
  	if (err > 0)

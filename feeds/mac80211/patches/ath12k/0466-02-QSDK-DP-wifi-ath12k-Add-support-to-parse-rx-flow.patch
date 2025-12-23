@@ -30,11 +30,11 @@ Tag: MSCS
 
 Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
 ---
- drivers/net/wireless/ath/ath12k/dp_rx.c       | 123 ++++++++++++++++++
- drivers/net/wireless/ath/ath12k/dp_rx.h       |   5 +
- drivers/net/wireless/ath/ath12k/fse.h         |   1 +
- drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c |  23 ++++
- 4 files changed, 152 insertions(+)
+ drivers/net/wireless/ath/ath12k/dp_rx.c       |  122 ++++++++++++++++++++++++++
+ drivers/net/wireless/ath/ath12k/dp_rx.h       |    5 +
+ drivers/net/wireless/ath/ath12k/fse.h         |    1 
+ drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c |   30 ++++++
+ 4 files changed, 158 insertions(+)
 
 --- a/drivers/net/wireless/ath/ath12k/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_rx.c
@@ -212,10 +212,10 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
  #define ATH12K_FSE_MAGIC_NUM_MASK GENMASK(7, 0)
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-@@ -899,6 +899,37 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
- 	ath12k_wifi7_dp_rx_h_csum_offload(msdu, rx_msdu_info);
+@@ -900,6 +900,36 @@ static int ath12k_wifi7_dp_rx_h_mpdu(str
  
  	if (likely(peer)) {
+ 		msdu->dev = peer->dev;
 +		if (unlikely(peer->mscs_session_exists)) {
 +			if (tlv_info->decap == DP_RX_DECAP_TYPE_ETHERNET2_DIX) {
 +				/* Get the FSE metadata to check if flow entry
@@ -225,7 +225,6 @@ Signed-off-by: Ramanathan Choodamani <rchoodam@qti.qualcomm.com>
 +				 */
 +				dp->hal->hal_ops->rx_desc_get_fse_info(rx_desc,
 +						rx_mpdu_info);
-+
 +				/* Update skb priority with the tid received
 +				 * in rx_mpdu_info.
 +				 * This has to be done per packet since

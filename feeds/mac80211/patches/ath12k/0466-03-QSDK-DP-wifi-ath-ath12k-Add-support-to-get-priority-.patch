@@ -64,7 +64,7 @@ Signed-off-by: Vivek Chettri <vchettri@qti.qualcomm.com>
 +	ar = ath12k_sdwf_get_ar_from_vif(src_wdev, src_vif,
 +					 params->src_mac, &peer_id);
 +	if (!ar) {
-+		ath12k_err(NULL, "ar is NULL");
++		ath12k_dbg(NULL, ATH12K_DBG_QOS, "get_mscs, ar is null\n");
 +		return -1;
 +	}
 +

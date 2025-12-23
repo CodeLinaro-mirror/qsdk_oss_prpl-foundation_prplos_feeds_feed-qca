@@ -4,10 +4,10 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=omciibc
 PKG_RELEASE:=1
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.pon.1.0.r29
+PKG_BRANCH:=win.pon.1.0.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/trex/omciibc
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=8b9a3b53e489f3c5963df1611008a7beafb9e50c
+PKG_VERSION:=869f7e80c39afd26cbcd62bc39a8556efe5fcf2d
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
