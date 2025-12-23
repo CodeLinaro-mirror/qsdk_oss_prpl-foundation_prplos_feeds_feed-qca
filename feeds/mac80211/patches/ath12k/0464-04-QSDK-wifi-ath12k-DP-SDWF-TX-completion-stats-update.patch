@@ -127,7 +127,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  
 --- a/drivers/net/wireless/ath/ath12k/dp_htt.c
 +++ b/drivers/net/wireless/ath/ath12k/dp_htt.c
-@@ -1041,8 +1041,10 @@ static void ath12k_htt_mlo_offset_event_
+@@ -1044,8 +1044,10 @@ static void ath12k_htt_mlo_offset_event_
  						struct sk_buff *skb)
  {
  	struct ath12k_htt_mlo_offset_msg *msg;
@@ -138,7 +138,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  	u8 pdev_id;
  
  	msg = (struct ath12k_htt_mlo_offset_msg *)skb->data;
-@@ -1072,6 +1074,29 @@ static void ath12k_htt_mlo_offset_event_
+@@ -1075,6 +1077,29 @@ static void ath12k_htt_mlo_offset_event_
  	pdev->timestamp.mlo_comp_clks = __le32_to_cpu(msg->mlo_comp_clks);
  	pdev->timestamp.mlo_comp_timer = __le32_to_cpu(msg->mlo_comp_timer);
  
@@ -341,7 +341,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  
  struct ath12k_wifi7_tx_status_entry {
  	struct hal_wbm_completion_ring_tx tx_status;
-@@ -270,6 +271,412 @@ ath12k_dp_sdwftx_ingress_stats_update(st
+@@ -270,6 +271,422 @@ ath12k_dp_sdwftx_ingress_stats_update(st
  	*skb_mark = u32_encode_bits((u32_get_bits(*skb_mark, QOS_NW_TAG_SHIFT)), QOS_TAG_ID) | (qos_nw_delay << QOS_NW_DELAY_SHIFT) | msduq;
  }
  
@@ -518,6 +518,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
 +	u32 nwdelay_avg, hwdelay_avg, swdelay_avg, pkt_win;
 +	u16 msduq_id;
 +	u8 link_id, pri_link_id, qos_id;
++	bool update_pri_peer = false;
 +
 +	if (!ts || !dp_pdev)
 +		return;
@@ -604,8 +605,11 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
 +
 +	mld_qos = &mld_peer->mld_qos_stats[tid][q_id];
 +
-+	if (!link_peer->peer_stats.qos_stats)
-+		goto out;
++	if (!link_peer->peer_stats.qos_stats) {
++		spin_unlock_bh(&dp_hw->peer_lock);
++		spin_unlock_bh(&dp->dp_lock);
++		return;
++	}
 +
 +	qos_tx = &link_peer->peer_stats.qos_stats->qos_tx[tid][q_id];
 +
@@ -680,11 +684,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
 +	if (link_id == pri_link_id) {
 +		qos_tx->queue_depth--;
 +	} else {
-+		spin_lock_bh(&dp_pdev->dp->dp_lock);
-+		pri_peer = rcu_dereference(mld_peer->link_peers[pri_link_id]);
-+		if (pri_peer && pri_peer->peer_stats.qos_stats)
-+			pri_peer->peer_stats.qos_stats->qos_tx[tid][q_id].queue_depth--;
-+		spin_unlock_bh(&dp_pdev->dp->dp_lock);
++		update_pri_peer = true;
 +	}
 +
 +	qos_delay = &link_peer->peer_stats.qos_stats->qos_delay[tid][q_id];
@@ -749,12 +749,22 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
 +out:
 +	spin_unlock_bh(&dp_hw->peer_lock);
 +	spin_unlock_bh(&dp->dp_lock);
++
++	if (update_pri_peer) {
++		 pri_peer = rcu_dereference(mld_peer->link_peers[pri_link_id]);
++		 if (pri_peer) {
++			spin_lock_bh(&dp_pdev->dp->dp_lock);
++			if (pri_peer->peer_stats.qos_stats)
++				pri_peer->peer_stats.qos_stats->qos_tx[tid][q_id].queue_depth--;
++			spin_unlock_bh(&dp_pdev->dp->dp_lock);
++		}
++	}
 +}
 +
  #define HTT_META_DATA_ALIGNMENT 0x8
  
  /* Preparing HTT Metadata when utilized with ext MSDU */
-@@ -988,6 +1395,12 @@ ath12k_wifi7_dp_tx_htt_tx_complete_buf(s
+@@ -988,6 +1405,12 @@ ath12k_wifi7_dp_tx_htt_tx_complete_buf(s
  		status.sta = peer->sta;
  	spin_unlock_bh(&dp->dp_lock);
  
@@ -767,7 +777,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  	status.info = info;
  	status.skb = msdu;
  	ieee80211_tx_status_ext(ath12k_dp_pdev_to_hw(dp_pdev), &status);
-@@ -1317,6 +1730,8 @@ static void ath12k_wifi7_dp_tx_complete_
+@@ -1317,6 +1740,8 @@ static void ath12k_wifi7_dp_tx_complete_
  	/* skip tx rate update from ieee80211_status*/
  	info->status.rates[0].idx = -1;
  
@@ -776,7 +786,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  	peer = ath12k_dp_peer_find_by_peerid_index(dp, dp_pdev, ts->peer_id);
  	if (peer) {
  		link_id = ath12k_dp_get_link_id(dp_pdev, ts, peer);
-@@ -1329,6 +1744,10 @@ static void ath12k_wifi7_dp_tx_complete_
+@@ -1329,6 +1754,10 @@ static void ath12k_wifi7_dp_tx_complete_
  				ath12k_dp_tx_comp_update_peer_stats(peer, ts,
  								    ring,
  								    tx_desc_flags);
@@ -787,7 +797,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  		}
  	} else {
  		DP_DEVICE_STATS_INC(dp, tx_err.tx_comp_err[DP_TX_COMP_ERR_INVALID_PEER][ring], 1);
-@@ -1370,7 +1789,6 @@ static void ath12k_wifi7_dp_tx_complete_
+@@ -1370,7 +1799,6 @@ static void ath12k_wifi7_dp_tx_complete_
  	 * Might end up reporting it out-of-band from HTT stats.
  	 */
  
@@ -795,7 +805,7 @@ Signed-off-by: Nagarajan Maran <nmaran@qti.qualcomm.com>
  	if (ath12k_debugfs_is_extd_tx_stats_enabled(ar)) {
  		if (ts->flags & HAL_TX_STATUS_FLAGS_FIRST_MSDU) {
  			if (ar->last_ppdu_id == 0) {
-@@ -1460,6 +1878,9 @@ ath12k_wifi7_dp_tx_status_parse(struct a
+@@ -1460,6 +1888,9 @@ ath12k_wifi7_dp_tx_status_parse(struct a
  	ts->tid = FIELD_GET(HAL_WBM_RELEASE_TX_INFO3_TID, desc->info3);
  	ts->transmit_cnt = le32_get_bits(desc->info1,
  					 HAL_WBM_COMPL_TX_INFO1_TRANSMIT_COUNT);

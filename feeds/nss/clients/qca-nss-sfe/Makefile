@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-sfe
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/shortcut-fe
-PKG_MIRROR_HASH:=b22da756568c2d8fbbd8bb256cbb76dad79536bfa1e56f69f8e1b55435e6e3e9
-PKG_VERSION:=9f8cc3ffcb47c6828546771e80bfcf3d1b86010c
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=c551e1781f570a78b275620a66a47c3ace7ed598
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -89,7 +89,11 @@ endif
 
 #TSO is supported only on Alder, Miami and Marina
 ifeq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq54xx), y)
-EXTRA_CFLAGS+= -DSFE_TSO_MAX_SEG_LIMIT_ENABLE
+EXTRA_CFLAGS+= -DSFE_TSO_MAX_SEG_LIMIT_ENABLE=y
+EXTRA_CFLAGS+= -DSFE_TSO_SEG_MAX=32
+else ifeq ($(CONFIG_TARGET_ipq54xx), y)
+EXTRA_CFLAGS+= -DSFE_TSO_MAX_SEG_LIMIT_ENABLE=y
+EXTRA_CFLAGS+= -DSFE_TSO_SEG_MAX=48
 endif
 
 #L2TPv3 is supported only on Alder, Miami and Marina Premium and 512M profile

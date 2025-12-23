@@ -78,8 +78,8 @@ index 4b03956..20912a8 100644
 -			ath12k_core_dma_unmap_single(ab->dev, desc_info[j].paddr,
 -						     DP_RX_BUFFER_SIZE,
 -						     DMA_FROM_DEVICE);
-+			end = desc_info->vaddr + DP_RX_BUFFER_SIZE;
-+			ath12k_core_dmac_inv_range(desc_info->vaddr, end);
++			end = desc_info[j].vaddr + DP_RX_BUFFER_SIZE;
++			ath12k_core_dmac_inv_range(desc_info[j].vaddr, end);
  			dev_kfree_skb_any(skb);
  		}
  	}
@@ -99,8 +99,8 @@ index 4b03956..20912a8 100644
 -			ath12k_core_dma_unmap_single(ab->dev, desc_info[j].paddr,
 -						     DP_RX_BUFFER_SIZE,
 -						     DMA_FROM_DEVICE);
-+			end = desc_info->vaddr + DP_RX_BUFFER_SIZE;
-+			ath12k_core_dmac_inv_range(desc_info->vaddr, end);
++			end = desc_info[j].vaddr + DP_RX_BUFFER_SIZE;
++			ath12k_core_dmac_inv_range(desc_info[j].vaddr, end);
  
  			dev_kfree_skb_any(skb);
  
@@ -135,15 +135,6 @@ index e282f8c..45b4f51 100644
  			dev_kfree_skb_any(skb);
  		}
  		dp->device_stats.free_excess_alloc_skb++;
-@@ -457,7 +460,7 @@ void ath12k_dp_rx_bufs_replenish(struct ath12k_dp *dp,
- 		if(unlikely(!paddr)) {
- 			ath12k_dp_rx_skb_free(skb, dp, 0,
- 					      DP_RX_ERR_DROP_REPLENISH);
--			break;
-+			goto out;
- 		}
- 
- 		allocated_entries++;
 diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 index 65b64f9..8161c8f 100644
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c

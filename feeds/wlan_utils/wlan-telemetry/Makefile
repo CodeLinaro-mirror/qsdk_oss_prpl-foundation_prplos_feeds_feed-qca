@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=telemetry-agent
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.wlan_host_opensource.4.0.r29
+PKG_BRANCH:=win.wlan_host_opensource.4.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/wifi/qca-telemetry-agent-oss
-PKG_MIRROR_HASH:=61150b2f6cbe1f930be09f6c39c92a342978f8336d4dadae428af2e5fd898a52
-PKG_VERSION:=11cce2da6beb11406886967856e903801b954e92
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=21f353b8dd68ed4b289e2035ff19e63415a057b4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

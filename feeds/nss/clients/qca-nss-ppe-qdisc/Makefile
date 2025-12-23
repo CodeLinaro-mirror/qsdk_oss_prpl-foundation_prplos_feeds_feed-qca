@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe-qdisc
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
-PKG_MIRROR_HASH:=82dd785e4721d74bbc27c713af725ec7c315f47c15205f0d0f3ed61d1220c703
-PKG_VERSION:=ed2e94a1fcc1d195440f5ae3f5a47cab5c62158c
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=d53eff24bf257a8bb1b2f68beb3aa06332bfd567
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

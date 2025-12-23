@@ -27,6 +27,10 @@ cfg80211_send_auth_timeout
 cfg80211_send_rx_assoc
 cfg80211_send_rx_auth
 cfg80211_tx_mlme_mgmt
+cfg80211_new_sta
+cfg80211_return_bool
+cfg80211_control_port_tx_status
+cfg80211_rx_control_port
 rdev_add_station
 rdev_add_link_station
 rdev_assoc
@@ -57,6 +61,13 @@ rdev_dump_station
 rdev_add_key
 rdev_probe_client
 rdev_del_key
+rdev_return_int
+rdev_mgmt_tx
+rdev_mgmt_tx_cancel_wait
+wiphy_work_queue
+rdev_return_int_cookie
+wiphy_work_worker_start
+wiphy_work_run
 "
 
 # mac80211 events
@@ -86,6 +97,7 @@ drv_get_expected_throughput
 drv_sta_set_4addr
 drv_ampdu_action
 drv_sta_pre_rcu_remove
+drv_return_int
 "
 for event in $CFG80211_EVENTS; do
   echo 1 > "events/cfg80211/$event/enable" 2>/dev/null

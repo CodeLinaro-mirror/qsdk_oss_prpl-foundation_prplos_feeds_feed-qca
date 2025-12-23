@@ -2,12 +2,12 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=nss-tcp-st-cli
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-speedtest
-PKG_MIRROR_HASH:=cb8516337a2f4ef3ad33b4c64376b76b1ce048419b2eaddb2917766ff79d6e6d
-PKG_VERSION:=28a5b461fb95f554d2f2ef321610facd0c4a6e90
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=027a387ad7b2b5cb06ecbcb232376db26f2868cc
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

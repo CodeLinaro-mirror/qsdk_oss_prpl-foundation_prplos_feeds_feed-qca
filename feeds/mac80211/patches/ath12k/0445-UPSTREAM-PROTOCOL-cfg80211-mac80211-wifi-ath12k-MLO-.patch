@@ -42,11 +42,9 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
  drivers/net/wireless/ath/ath12k/vendor.h |   8 +-
  3 files changed, 96 insertions(+), 111 deletions(-)
 
-diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
-index 254a946bef67..6c0e514397c9 100644
 --- a/drivers/net/wireless/ath/ath12k/mac.c
 +++ b/drivers/net/wireless/ath/ath12k/mac.c
-@@ -5864,9 +5864,10 @@ void ath12k_mac_bridge_vdev_up(struct ath12k_link_vif *arvif)
+@@ -5875,9 +5875,10 @@ void ath12k_mac_bridge_vdev_up(struct at
  }
  
  static void ath12k_mac_send_pwr_mode_update(struct ath12k *ar,
@@ -59,7 +57,7 @@ index 254a946bef67..6c0e514397c9 100644
  }
  
  /**
-@@ -6547,23 +6548,20 @@ static void ath12k_mac_fill_reg_tpc(struct ath12k *ar, struct wireless_dev *wdev
+@@ -6558,23 +6559,20 @@ static void ath12k_mac_fill_reg_tpc(stru
  {
  	struct ath12k_vif *ahvif = arvif->ahvif;
  	u8 reg_6g_power_mode;
@@ -94,7 +92,7 @@ index 254a946bef67..6c0e514397c9 100644
  	if (test_bit(WMI_TLV_SERVICE_BOTH_PSD_EIRP_FOR_AP_SP_CLIENT_SP_SUPPORT,
  		     ar->ab->wmi_ab.svc_map) &&
  	    (reg_6g_power_mode == IEEE80211_REG_SP_AP ||
-@@ -6659,7 +6657,7 @@ void ath12k_mac_bss_info_changed(struct ath12k *ar,
+@@ -6670,7 +6668,7 @@ void ath12k_mac_bss_info_changed(struct
  				if (ret)
  					ath12k_warn(ar->ab, "Failed to set 6GHZ power mode\n");
  				else
@@ -103,7 +101,7 @@ index 254a946bef67..6c0e514397c9 100644
  			}
  		} else {
  			ath12k_warn(ar->ab, "Set 6GHZ power mode/TPC not applicable\n");
-@@ -8929,7 +8927,6 @@ void ath12k_mac_fill_reg_tpc_info(struct ath12k *ar,
+@@ -8949,7 +8947,6 @@ void ath12k_mac_fill_reg_tpc_info(struct
  {
          struct ath12k_base *ab = ar->ab;
  	struct ath12k_vif *ahvif = arvif->ahvif;
@@ -111,7 +109,7 @@ index 254a946bef67..6c0e514397c9 100644
          struct ieee80211_bss_conf *bss_conf;
          struct ath12k_reg_tpc_power_info *reg_tpc_info = &arvif->reg_tpc_info;
          struct ieee80211_channel *chan, *temp_chan;
-@@ -8951,30 +8948,12 @@ void ath12k_mac_fill_reg_tpc_info(struct ath12k *ar,
+@@ -8971,30 +8968,12 @@ void ath12k_mac_fill_reg_tpc_info(struct
  		return;
  	}
  
@@ -148,7 +146,7 @@ index 254a946bef67..6c0e514397c9 100644
  
          chan = ctx->def.chan;
          oper_freq = ctx->def.chan->center_freq;
-@@ -9298,7 +9277,6 @@ void ath12k_mac_fill_reg_tpc_info_with_eirp_power(struct ath12k *ar,
+@@ -9318,7 +9297,6 @@ void ath12k_mac_fill_reg_tpc_info_with_e
  	s8 sta_max_eirp_arr[ATH12K_MAX_EIRP_VALS];
  	s8 ap_max_eirp_arr[ATH12K_MAX_EIRP_VALS];
  	struct ath12k_vif *ahvif = arvif->ahvif;
@@ -156,7 +154,7 @@ index 254a946bef67..6c0e514397c9 100644
  	struct ieee80211_bss_conf *bss_conf;
  	u32 cfreqs[ATH12K_MAX_EIRP_VALS];
  	u16 start_freq = 0, oper_freq = 0;
-@@ -9317,30 +9295,12 @@ void ath12k_mac_fill_reg_tpc_info_with_eirp_power(struct ath12k *ar,
+@@ -9337,30 +9315,12 @@ void ath12k_mac_fill_reg_tpc_info_with_e
  		return;
  	}
  
@@ -193,7 +191,7 @@ index 254a946bef67..6c0e514397c9 100644
  
  	start_freq = ath12k_mac_get_6g_start_frequency(&ctx->def);
  	oper_freq = ctx->def.chan->center_freq;
-@@ -9373,9 +9333,9 @@ void ath12k_mac_fill_reg_tpc_info_with_eirp_power(struct ath12k *ar,
+@@ -9393,9 +9353,9 @@ void ath12k_mac_fill_reg_tpc_info_with_e
  	/* In case of a Non-AFC capable SP client, calculate the EIRP values
  	 * from regulatory client PSD
  	 */
@@ -205,7 +203,7 @@ index 254a946bef67..6c0e514397c9 100644
  							      sta_max_eirp_arr, start_freq,
  							      num_pwr_levels);
  	} else {
-@@ -9421,8 +9381,6 @@ void ath12k_mac_fill_reg_tpc_info_with_eirp_power(struct ath12k *ar,
+@@ -9441,8 +9401,6 @@ void ath12k_mac_fill_reg_tpc_info_with_e
  void ath12k_mac_parse_tx_pwr_env(struct ath12k *ar,
  				 struct ath12k_link_vif *arvif)
  {
@@ -214,7 +212,7 @@ index 254a946bef67..6c0e514397c9 100644
  	struct ieee80211_bss_conf *bss_conf = ath12k_mac_get_link_bss_conf(arvif);
  	struct ath12k_reg_tpc_power_info *tpc_info = &arvif->reg_tpc_info;
  	struct ieee80211_parsed_tpe_eirp *local_non_psd, *reg_non_psd, *additional_non_psd;
-@@ -9432,7 +9390,6 @@ void ath12k_mac_parse_tx_pwr_env(struct ath12k *ar,
+@@ -9452,7 +9410,6 @@ void ath12k_mac_parse_tx_pwr_env(struct
  	struct ath12k_base *ab = ar->ab;
  	bool psd_valid, non_psd_valid;
  	int i;
@@ -222,7 +220,7 @@ index 254a946bef67..6c0e514397c9 100644
  	enum ieee80211_ap_reg_power root_ap_power_type = bss_conf->power_type;
  	bool is_afc_power_event_received = ar->afc.is_6ghz_afc_power_event_received;
  
-@@ -9450,9 +9407,10 @@ void ath12k_mac_parse_tx_pwr_env(struct ath12k *ar,
+@@ -9470,9 +9427,10 @@ void ath12k_mac_parse_tx_pwr_env(struct
  		return;
  	}
  
@@ -236,7 +234,7 @@ index 254a946bef67..6c0e514397c9 100644
  		client_type = WMI_REG_DEFAULT_CLIENT;
  
  	local_psd = &tpe->psd_local[client_type];
-@@ -15983,6 +15941,10 @@ ath12k_mac_vdev_config_after_start(struct ath12k_link_vif *arvif,
+@@ -16340,6 +16298,10 @@ ath12k_mac_vdev_config_after_start(struc
  				   const struct cfg80211_chan_def *chandef)
  {
  	struct ath12k *ar = arvif->ar;
@@ -247,7 +245,7 @@ index 254a946bef67..6c0e514397c9 100644
  	struct ath12k_base *ab = ar->ab;
  	unsigned int dfs_cac_time;
  	int ret;
-@@ -15990,6 +15952,21 @@ ath12k_mac_vdev_config_after_start(struct ath12k_link_vif *arvif,
+@@ -16347,6 +16309,21 @@ ath12k_mac_vdev_config_after_start(struc
  	if (ath12k_mac_is_bridge_vdev(arvif))
  		return 0;
  
@@ -269,7 +267,7 @@ index 254a946bef67..6c0e514397c9 100644
  	/* Enable CAC Running Flag in the driver by checking all sub-channel's DFS
  	 * state as NL80211_DFS_USABLE which indicates CAC needs to be
  	 * done before channel usage. This flag is used to drop rx packets.
-@@ -16074,10 +16051,7 @@ ath12k_mac_vdev_start_restart(struct ath12k_link_vif *arvif,
+@@ -16431,10 +16408,7 @@ ath12k_mac_vdev_start_restart(struct ath
  			      bool restart)
  {
  	const struct cfg80211_chan_def* chandef=ctx ? &ctx->def : NULL;
@@ -280,7 +278,7 @@ index 254a946bef67..6c0e514397c9 100644
  	struct ath12k* ar=arvif->ar;
  	struct ieee80211_hw* hw=ath12k_ar_to_hw(ar);
  	struct wmi_vdev_start_req_arg arg={};
-@@ -16214,22 +16188,6 @@ ath12k_mac_vdev_start_restart(struct ath12k_link_vif *arvif,
+@@ -16571,22 +16545,6 @@ ath12k_mac_vdev_start_restart(struct ath
  		return ret;
  	}
  
@@ -303,11 +301,9 @@ index 254a946bef67..6c0e514397c9 100644
  	ar->num_started_vdevs++;
  	ath12k_dbg(ab, ATH12K_DBG_MAC,  "vdev %pM started, vdev_id %d\n",
  		   ahvif->vif->addr, arvif->vdev_id);
-diff --git a/drivers/net/wireless/ath/ath12k/vendor.c b/drivers/net/wireless/ath/ath12k/vendor.c
-index a7e379d2ebed..4323799b6fa9 100644
 --- a/drivers/net/wireless/ath/ath12k/vendor.c
 +++ b/drivers/net/wireless/ath/ath12k/vendor.c
-@@ -3425,6 +3425,7 @@ static int ath12k_vendor_reset_afc(struct wiphy *wiphy,
+@@ -3436,6 +3436,7 @@ static int ath12k_vendor_reset_afc(struc
  static const struct nla_policy
  ath12k_cfg80211_power_mode_set_policy[QCA_WLAN_VENDOR_ATTR_6GHZ_REG_POWER_MODE_MAX + 1] = {
  	[QCA_WLAN_VENDOR_ATTR_6GHZ_REG_POWER_MODE] = { .type = NLA_U8 },
@@ -315,7 +311,7 @@ index a7e379d2ebed..4323799b6fa9 100644
  };
  
  static int ath12k_vendor_6ghz_power_mode_change(struct wiphy *wiphy,
-@@ -3434,40 +3435,51 @@ static int ath12k_vendor_6ghz_power_mode_change(struct wiphy *wiphy,
+@@ -3445,40 +3446,51 @@ static int ath12k_vendor_6ghz_power_mode
  {
  	struct ath12k *ar;
  	u8 link_id = 0;
@@ -379,7 +375,7 @@ index a7e379d2ebed..4323799b6fa9 100644
  
  	ar = ath12k_get_ar_from_wdev(wdev, link_id);
  	if (!ar)
-@@ -3485,6 +3497,9 @@ static int ath12k_vendor_6ghz_power_mode_change(struct wiphy *wiphy,
+@@ -3496,6 +3508,9 @@ static int ath12k_vendor_6ghz_power_mode
  		return -EINVAL;
  	}
  
@@ -389,7 +385,7 @@ index a7e379d2ebed..4323799b6fa9 100644
  	err = ieee80211_6ghz_power_mode_change(wiphy, wdev,
  					       ap_6ghz_pwr_mode, link_id);
  
-@@ -3492,12 +3507,13 @@ static int ath12k_vendor_6ghz_power_mode_change(struct wiphy *wiphy,
+@@ -3503,12 +3518,13 @@ static int ath12k_vendor_6ghz_power_mode
  }
  
  int ath12k_vendor_send_6ghz_power_mode_update_complete(struct ath12k *ar,
@@ -405,15 +401,17 @@ index a7e379d2ebed..4323799b6fa9 100644
  
  	/* NOTE: lockdep_assert_held is called in ath12k_mac_bss_info_changed */
  	vendor_event =
-@@ -3518,8 +3534,15 @@ int ath12k_vendor_send_6ghz_power_mode_update_complete(struct ath12k *ar,
+@@ -3529,8 +3545,17 @@ int ath12k_vendor_send_6ghz_power_mode_u
  		goto out;
  	}
  
-+	ret = nla_put_u8(vendor_event,
-+			 QCA_WLAN_VENDOR_ATTR_6GHZ_LINK_ID, link_id);
-+	if (ret) {
-+		ath12k_warn(ar->ab, "6 GHZ link id vendor evt failed\n");
-+		goto out;
++	if (wdev->valid_links) {
++		ret = nla_put_u8(vendor_event,
++				 QCA_WLAN_VENDOR_ATTR_6GHZ_LINK_ID, link_id);
++		if (ret) {
++			ath12k_warn(ar->ab, "Failed to put 6 GHz link id\n");
++			goto out;
++		}
 +	}
 +
  	ath12k_dbg(ar->ab, ATH12K_DBG_REG,
@@ -422,11 +420,9 @@ index a7e379d2ebed..4323799b6fa9 100644
  	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
  out:
  	return ret;
-diff --git a/drivers/net/wireless/ath/ath12k/vendor.h b/drivers/net/wireless/ath/ath12k/vendor.h
-index de719cd8f884..3dc924b51781 100644
 --- a/drivers/net/wireless/ath/ath12k/vendor.h
 +++ b/drivers/net/wireless/ath/ath12k/vendor.h
-@@ -618,6 +618,7 @@ enum qca_wlan_vendor_6ghz_power_modes {
+@@ -620,6 +620,7 @@ enum qca_wlan_vendor_6ghz_power_modes {
  enum qca_wlan_vendor_set_6ghz_power_mode {
  	QCA_WLAN_VENDOR_ATTR_6GHZ_REG_POWER_MODE_INVALID = 0,
  	QCA_WLAN_VENDOR_ATTR_6GHZ_REG_POWER_MODE = 1,
@@ -434,7 +430,7 @@ index de719cd8f884..3dc924b51781 100644
  
  	/* Keep last */
  	QCA_WLAN_VENDOR_ATTR_6GHZ_REG_POWER_MODE_AFTER_LAST,
-@@ -631,9 +632,12 @@ enum qca_wlan_vendor_set_6ghz_power_mode {
+@@ -633,9 +634,12 @@ enum qca_wlan_vendor_set_6ghz_power_mode
   *
   * @ar - Pointer to ar
   * @wdev - Pointer to wdev
@@ -449,6 +445,3 @@ index de719cd8f884..3dc924b51781 100644
  
  enum qca_wlan_vendor_attr_sdwf_phy {
  	QCA_WLAN_VENDOR_ATTR_SDWF_PHY_INVALID = 0,
--- 
-2.34.1
-

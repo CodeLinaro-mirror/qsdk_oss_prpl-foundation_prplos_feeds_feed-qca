@@ -4,10 +4,10 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=ppecfg
 PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/nss-userspace
-PKG_MIRROR_HASH:=e8dc5b115216065b919545080fda971c71a9fcbb5839594b5142abb73e01203a
-PKG_VERSION:=144d832bcb7b3c680b1ce9914c49c5855a860d91
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=66523ce70507e2bf7db5540e23b3a3ba0324b288
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -52,6 +52,7 @@ define Package/ppecfg/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/ppecfg_acl_config.json $(1)/etc/ppecfg/ppecfg_acl_config.json
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/ppecfg_policer_config.json $(1)/etc/ppecfg/ppecfg_policer_config.json
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/mcast_policer_config.json $(1)/etc/ppecfg/policer_default_cfg.json
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/ppecfg_exception_config.json $(1)/etc/ppecfg/ppecfg_exception_config.json
 
 ifeq ($(CONFIG_TARGET_ipq95xx),y)
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/mcast_acl_ipq95xx_config.json $(1)/etc/ppecfg/acl_default_cfg.json

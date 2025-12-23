@@ -133,19 +133,30 @@ do_ftm_conf_override()
         local board_id_5g
         local board_id_6g
         local ker_ver=`uname -r |cut -d. -f1`
-
+        ath12k="/etc/modules.d/ath12k"
         if [ $ker_ver -ge 6 ]; then
             case "$board" in
                     ap-mi04.3*|ap-mi04.1*|ap-mi01.3*|ap-mi01.14)
-                    board_id_2g=`hexdump -C /proc/device-tree/soc@0/wifi@c0000000/qcom,board_id | awk '{print $5}'`
-                    board_id_5g=`hexdump -C /proc/device-tree/soc@0/wifi1@c0000000/qcom,board_id | awk '{print $5}'`
-                    board_id_6g=`hexdump -C /proc/device-tree/soc@0/wifi2@c0000000/qcom,board_id | awk '{print $5}'`
-                    case "$board" in
+                        board_id_2g=`hexdump -C /proc/device-tree/soc@0/wifi@c0000000/qcom,board_id | awk '{print $5}'`
+                        board_id_5g=`hexdump -C /proc/device-tree/soc@0/wifi1@c0000000/qcom,board_id | awk '{print $5}'`
+                        board_id_6g=`hexdump -C /proc/device-tree/soc@0/wifi2@c0000000/qcom,board_id | awk '{print $5}'`
+                        case "$board" in
                             ap-mi01.14)
                             board_id_6g=`hexdump -C /proc/device-tree/soc@0/wifi3@f00000/board_id | awk '{print $5}'`
-                                    ;;
-                    esac
-                            ;;
+                        ;;
+                        esac
+                    ;;
+                    ap-al02-c4)
+                    if [ -e "$ath12k" ]; then
+                        board_id_2g=`hexdump -C /proc/device-tree/soc@0/pci@10000000/pcie@0/wifi@0/qcom,board_id | awk '{print $5}'`
+                        board_id_5g=`hexdump -C /proc/device-tree/soc@0/pci@18000000/pcie@0/wifi@0/qcom,board_id | awk '{print $5}'`
+                        board_id_6g=`hexdump -C /proc/device-tree/soc@0/pci@20000000/pcie@0/wifi@0/qcom,board_id | awk '{print $5}'`
+                    else
+                        board_id_2g=`hexdump -C /proc/device-tree/soc@0/wifi5@f00000/board_id | awk '{print $5}'`
+                        board_id_5g=`hexdump -C /proc/device-tree/soc@0/wifi7@f00000/board_id | awk '{print $5}'`
+                        board_id_6g=`hexdump -C /proc/device-tree/soc@0/wifi6@f00000/board_id | awk '{print $5}'`
+                    fi
+                    ;;
                     *)
                             echo "Board name is $board -do_ftm_conf_override API not applicable" > /dev/console && return
                     ;;
@@ -153,41 +164,68 @@ do_ftm_conf_override()
         else
             case "$board" in
                     ap-mi04.3*|ap-mi04.1*|ap-mi01.3*|ap-mi01.14)
-                    board_id_2g=`hexdump -C /proc/device-tree/soc/wifi@c0000000/qcom,board_id | awk '{print $5}'`
-                    board_id_5g=`hexdump -C /proc/device-tree/soc/wifi4@f00000/qcom,board_id | awk '{print $5}'`
-                    board_id_6g=`hexdump -C /proc/device-tree/soc/wifi5@f00000/qcom,board_id | awk '{print $5}'`
-                    case "$board" in
+                        board_id_2g=`hexdump -C /proc/device-tree/soc/wifi@c0000000/qcom,board_id | awk '{print $5}'`
+                        board_id_5g=`hexdump -C /proc/device-tree/soc/wifi4@f00000/qcom,board_id | awk '{print $5}'`
+                        board_id_6g=`hexdump -C /proc/device-tree/soc/wifi5@f00000/qcom,board_id | awk '{print $5}'`
+                        case "$board" in
                             ap-mi01.14)
                             board_id_5g=`hexdump -C /proc/device-tree/soc/wifi1@f00000/qcom,board_id | awk '{print $5}'`
                             board_id_6g=`hexdump -C /proc/device-tree/soc/wifi2@f00000/board_id | awk '{print $5}'`
-                                    ;;
-                    esac
-                            ;;
+                        ;;
+                        esac
+                    ;;
                     *)
                             echo "Board name is $board -do_ftm_conf_override API not applicable" > /dev/console && return
                     ;;
             esac
         fi
-        awk -F',' -v board=$board -v board_id_2g=$board_id_2g -v board_id_5g=$board_id_5g -v board_id_6g=$board_id_6g -v ftm_conf_path=$ftm_conf_path '{
-                if ($1 == board) {
-                        print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 "\t" NR
-                        lineNumber=NR
-                        if ($3 == 0){
+
+        case "$board" in
+            ap-mi04.3*|ap-mi04.1*|ap-mi01.3*|ap-mi01.14)
+                awk -F',' -v board=$board -v board_id_2g=$board_id_2g -v board_id_5g=$board_id_5g -v board_id_6g=$board_id_6g -v ftm_conf_path=$ftm_conf_path '{
+                    if ($1 == board) {
+                            print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 "\t" NR
+                            lineNumber=NR
+                            if ($3 == 0){
                                 print "2G slot Instance -lineNumber" lineNumber "DTS board ID - "board_id_2g
                                 cmd = "sed -i " lineNumber"s" "\/" $2 "\/" board_id_2g "\/ " ftm_conf_path "/ftm.conf"
-                        }
-                        if ($3 == 1){
+                            }
+                            if ($3 == 1){
                                 print "5G slot Instance -lineNumber" lineNumber "DTS board ID - "board_id_5g
                                 cmd = "sed -i " lineNumber"s" "\/" $2 "\/" "00" board_id_5g "\/ " ftm_conf_path "/ftm.conf"
-                        }
-                        else if($3 == 2)
-                        {
+                            }
+                            else if($3 == 2)
+                            {
                                 print "6G slot Instance -lineNumber" lineNumber "DTS board ID - "board_id_6g
                                 cmd = "sed -i " lineNumber"s" "\/" $2 "\/" "00" board_id_6g "\/ " ftm_conf_path "/ftm.conf"
-                        }
-                        system(cmd)
-                }
-        }' $ftm_conf_path/ftm.conf
+                            }
+                            system(cmd)
+                    }
+                }' $ftm_conf_path/ftm.conf
+            ;;
+            ap-al02-c4)
+                awk -F',' -v board=$board -v board_id_2g=$board_id_2g -v board_id_5g=$board_id_5g -v board_id_6g=$board_id_6g -v ftm_conf_path=$ftm_conf_path '{
+                    if ($1 == board) {
+                            print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 "\t" NR
+                            lineNumber=NR
+                            if ($3 == 2){
+                                print "2G slot Instance -lineNumber" lineNumber "DTS board ID - "board_id_2g
+                                cmd = "sed -i " lineNumber"s" "\/" $2 "\/" board_id_2g "\/ " ftm_conf_path "/ftm.conf"
+                            }
+                            if ($3 == 4){
+                                print "5G slot Instance -lineNumber" lineNumber "DTS board ID - "board_id_5g
+                                cmd = "sed -i " lineNumber"s" "\/" $2 "\/" "00" board_id_5g "\/ " ftm_conf_path "/ftm.conf"
+                            }
+                            else if($3 == 3)
+                            {
+                                print "6G slot Instance -lineNumber" lineNumber "DTS board ID - "board_id_6g
+                                cmd = "sed -i " lineNumber"s" "\/" $2 "\/" "00" board_id_6g "\/ " ftm_conf_path "/ftm.conf"
+                            }
+                            system(cmd)
+                    }
+                }' $ftm_conf_path/ftm.conf
+            ;;
+            esac
 }
 
 #create_cfg_caldata_mr is the new api added for multi radio support
@@ -234,8 +272,14 @@ create_cfg_caldata_mr()
             cmd=$(dd if=$1 of="$apdk"/"$DIR_LIB"/caldata.bin bs=1 count="$BDF_SIZE" skip="$OFFSET")
             cp -f "$apdk"/"$DIR_LIB"/caldata.bin /lib/firmware/"$DIR_LIB"/
         else
-            cmd=$(dd if=$1 of="$apdk"/"$DIR_LIB"/caldata_"$SLOT_ID".b"$BOARD_ID" bs=1 count="$BDF_SIZE" skip="$OFFSET")
-            cp -f "$apdk"/"$DIR_LIB"/caldata_"$SLOT_ID".b"$BOARD_ID" /lib/firmware/"$DIR_LIB"/
+            if [ "$DIR_LIB" == "qcn9160" ]
+            then
+                cmd=$(dd if=$1 of="$apdk"/"$DIR_LIB"/caldata_"$SLOT_ID".bin bs=1 count="$BDF_SIZE" skip="$OFFSET")
+                cp -f "$apdk"/"$DIR_LIB"/caldata_"$SLOT_ID".bin /lib/firmware/"$DIR_LIB"/
+            else
+                cmd=$(dd if=$1 of="$apdk"/"$DIR_LIB"/caldata_"$SLOT_ID".b"$BOARD_ID" bs=1 count="$BDF_SIZE" skip="$OFFSET")
+                cp -f "$apdk"/"$DIR_LIB"/caldata_"$SLOT_ID".b"$BOARD_ID" /lib/firmware/"$DIR_LIB"/
+            fi
         fi
 
         [ -f $ftm_conf_path/$2/caldata.bin ] || touch $ftm_conf_path/$2/caldata.bin

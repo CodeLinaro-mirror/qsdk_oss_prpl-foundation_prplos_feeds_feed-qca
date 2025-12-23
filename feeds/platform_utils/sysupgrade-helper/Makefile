@@ -4,11 +4,10 @@ PKG_DISTNAME:=sysupgrade-helper
 PKG_NAME:=u-boot
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
-PKG_SOURCE_VERSION:=1d7328184facd6bf1b84d6871abc3ea7d1407628
-PKG_BRANCH:=win.coretech.3.0.r29
+PKG_SOURCE_VERSION:=8953469f91044f46864b3a5905cbf392872b80da
+PKG_BRANCH:=win.coretech.3.0.r30
 PKG_RELEASE:=1
-PKG_VERSION:=1d732818
-PKG_MIRROR_HASH:=8707cf7dd8369898638c2382295efa7450dd346e36a6e4bf1e82379ee0bbaad9
+PKG_VERSION:=8953469f
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_DISTNAME)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
@@ -55,7 +54,7 @@ endef
 MAKE_FLAGS += \
 	CROSS_BUILD_TOOLS=y \
 	HOSTCFLAGS="$(SHA_FLAG) $(IMG_FLAG) -fPIC" \
-	HOSTLDFLAGS="$(HOSTLDFLAGS) -L$(STAGING_DIR_HOST)/lib -lpthread -lcrypto -lssl" \
+	HOSTLDFLAGS="$(HOSTLDFLAGS) -lpthread -lcrypto -lssl" \
 	HOSTEXTRACFLAGS="$(HOST_EXTRACFLAGS)" \
 	no-dot-config-targets=tools-only \
 	tools-only

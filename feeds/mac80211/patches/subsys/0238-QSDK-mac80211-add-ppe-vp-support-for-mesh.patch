@@ -22,11 +22,9 @@ Idle cpu
 
 Signed-off-by: Balamurugan Ramar <quic_bramar@quicinc.com>
 ---
- net/mac80211/rx.c | 36 ++++++++++++++++++------------------
+ net/mac80211/rx.c |   36 ++++++++++++++++++------------------
  1 file changed, 18 insertions(+), 18 deletions(-)
 
-diff --git a/net/mac80211/rx.c b/net/mac80211/rx.c
-index 5254f8a..f1a26aa 100644
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
 @@ -36,6 +36,10 @@
@@ -40,7 +38,7 @@ index 5254f8a..f1a26aa 100644
  static inline void ieee80211_rx_stats(struct net_device *dev, u32 len)
  {
  	struct pcpu_sw_netstats *tstats = this_cpu_ptr(netdev_tstats(dev));
-@@ -2654,30 +2658,28 @@ static bool ieee80211_frame_allowed(struct ieee80211_rx_data *rx, __le16 fc)
+@@ -2651,30 +2655,28 @@ static bool ieee80211_frame_allowed(stru
  }
  
  #ifdef CPTCFG_MAC80211_PPE_SUPPORT
@@ -50,7 +48,7 @@ index 5254f8a..f1a26aa 100644
 +					 struct sk_buff *skb)
  {
 -	struct ieee80211_sub_if_data *sdata = rx->sdata;
-+	u16 ppe_vp_num;
++	struct net_device *dev;
  
  	skb->next = NULL;
 +	if (u32_get_bits(skb->mark, IEEE80211_FSE_MAGIC_NUM_MASK) !=
@@ -76,15 +74,15 @@ index 5254f8a..f1a26aa 100644
 -		napi_gro_receive(rx->napi, skb);
 -	else
 -		netif_receive_skb(skb);
-+	ppe_vp_num = u32_get_bits(skb->mark, IEEE80211_PPE_VP_NUM);
-+	if (likely(ppe_vp_tx_to_ppe(ppe_vp_num, skb)))
++	dev = skb->dev;
++	if (dev->offload_ops->recv(dev, skb))
 +		return true;
  
 +	return false;
  }
  #endif
  
-@@ -5094,9 +5096,7 @@ static void ieee80211_rx_8023(struct ieee80211_rx_data *rx,
+@@ -5091,9 +5093,7 @@ static void ieee80211_rx_8023(struct iee
  #ifdef CPTCFG_MAC80211_PPE_SUPPORT
  	/* Do not deliver frames to PPE in fast rx incase of RFS
  	 * RFS is supported only in SFE Mode */
@@ -95,6 +93,3 @@ index 5254f8a..f1a26aa 100644
  		atomic_inc(&sta->rx_netif_pkts);
  		return;
  	}
--- 
-2.34.1
-

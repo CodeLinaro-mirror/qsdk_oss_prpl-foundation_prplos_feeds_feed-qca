@@ -605,7 +605,7 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
 @@ -769,7 +769,7 @@ ath12k_afc_power_event_update_or_get_len
  	nla_nest_end_checked(vendor_event, nla_attr);
  
- 	hw_idx = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy,
+ 	hw_idx = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy,
 -					      pwr_evt->afc_freq_info[0].low_freq + 10);
 +					      ar->freq_range.start_freq);
  	if (vendor_event &&
@@ -614,7 +614,7 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
 @@ -982,7 +982,7 @@ ath12k_afc_expiry_event_update_or_get_le
  	nla_nest_end_checked(vendor_event, nla_attr);
  
- 	hw_idx = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy,
+ 	hw_idx = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy,
 -					      afc_req->freq_lst->range_objs[0].lowfreq + 10);
 +					      ar->freq_range.start_freq);
  	if (vendor_event &&
@@ -640,8 +640,8 @@ Signed-off-by: Thirusenthil Kumaran J <thirusen@qti.qualcomm.com>
 -	}
 -
 -	freq_low = reg_cap->low_5ghz_chan;
--	hw_index = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy, freq_low);
-+	hw_index = ath12k_get_radio_idx_by_freq(ar->ah->hw->wiphy, ar->freq_range.start_freq);
+-	hw_index = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy, freq_low);
++	hw_index = ieee80211_get_radio_idx_by_freq(ar->ah->hw->wiphy, ar->freq_range.start_freq);
  	if (hw_index == -1) {
 -		ath12k_err(ab, "Failed to get hw index for freq %d\n", freq_low);
 +		ath12k_err(ab, "Failed to get hw index for freq %d\n",

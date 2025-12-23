@@ -1,18 +1,8 @@
 #!/bin/sh
 #
 # Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
-#
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
-#
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+# SPDX-License-Identifier: ISC
 #
 
 ECM_MODULE=${1:-ecm_state}
@@ -33,7 +23,7 @@ MOUNT_ROOT=/dev/ecm
 
 # this is one of the state files, which happens to be the
 # last module started in ecm
-ECM_STATE=/sys/kernel/debug/ecm/ecm_state/state_dev_major
+ECM_STATE=/proc/sys/net/ecm/ecm_state/state_dev_major
 
 # tests to see if ECM is up and ready to receive commands.
 # returns 0 if ECM is fully up and ready, else 1
@@ -52,7 +42,7 @@ ecm_is_ready() {
 module_state_mount() {
 	local module_name=$1
 	local mount_dir=$2
-	local state_file="/sys/kernel/debug/ecm/${module_name}/state_dev_major"
+	local state_file="/proc/sys/net/ecm/${module_name}/state_dev_major"
 
 	if [ -e "${mount_dir}/${module_name}" ]
 	then

@@ -3,11 +3,11 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-dscpstats
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-dscpstats
-PKG_MIRROR_HASH:=e02d6c0b996509b1a3b45d61fa36fed0a836d2e7377fe2a76bff955a8e721926
+PKG_MIRROR_HASH:=skip
 PKG_VERSION:=35f8409213188c5f2d820740b4b74eddf8c7a379
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

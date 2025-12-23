@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-netfn
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r29
+PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-netfn
-PKG_MIRROR_HASH:=4511373215a83394efecec9a0ffdac470b7cae3807e4fe362cc300e49b21e8c8
-PKG_VERSION:=408a028d887974ab59ba7845b27d6fe9f6cb1b06
+PKG_MIRROR_HASH:=skip
+PKG_VERSION:=5cf1b6cf1d10754f680d6fb96fc1eacea7178c5d
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
