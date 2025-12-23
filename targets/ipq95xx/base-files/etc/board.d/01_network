@@ -16,13 +16,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-[ -e /etc/config/network ] && exit 0
-
-touch /etc/config/network
-
-CFG=/etc/board.json
-
 . /lib/functions/uci-defaults.sh
+. /lib/functions/system.sh
 
 ipq95xx_setup_interfaces()
 {
@@ -69,6 +64,10 @@ ipq95xx_setup_interfaces()
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
 		ucidef_add_switch "switch1"
 		ucidef_add_switch_attr "switch1" "enable" false
+		;;
+	# prplos
+	prpl,freedom)
+		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
 		;;
 	*)
 		echo "Unsupported hardware. Network interfaces not intialized"
