@@ -12,4 +12,12 @@ DEFAULT_PACKAGES += \
 	uboot-ipq5332-norplusnand uboot-ipq5332-nand \
 	uboot-ipq5332-debug-mmc uboot-ipq5332-debug-norplusmmc \
 	uboot-ipq5332-debug-norplusnand uboot-ipq5332-debug-nand \
+	uboot-2025-ipq5332-mmc \
+	uboot-2025-ipq5332-norplusmmc \
+	uboot-2025-ipq5332-norplusnand \
+	uboot-2025-ipq5332-nand \
+	uboot-2025-ipq5332-debug-mmc \
+	uboot-2025-ipq5332-debug-norplusmmc \
+	uboot-2025-ipq5332-debug-norplusnand \
+	uboot-2025-ipq5332-debug-nand \
 	sysupgrade-helper

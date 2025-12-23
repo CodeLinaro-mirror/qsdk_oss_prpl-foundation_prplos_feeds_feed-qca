@@ -29,7 +29,9 @@ get_fw_name() {
 			wifi_ipq="ipq5332_qcn9224_v2_single_dualmac_squashfs.img"
 			;;
 		"qcom,ipq5332-ap-mi01.3"|\
-		"qcom,ipq5332-ap-mi04.1")
+		"qcom,ipq5332-ap-mi01.3-c5"|\
+		"qcom,ipq5332-ap-mi04.1"|\
+		"qcom,ipq5332-ap-mi04.5")
 			wifi_ipq="ipq5332_qcn6432cs_squashfs.img"
 			;;
 		"qcom,ipq5332-db-mi02.1"|\

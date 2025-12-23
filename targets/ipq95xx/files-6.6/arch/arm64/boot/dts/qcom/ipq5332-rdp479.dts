@@ -626,9 +626,7 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <2>;
-#ifdef __PCIE_QCOM_EARLY_CAL_SUPPORT__
-			qcom,early_cal_enabled = "okay";
-#endif
+			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x58800>;
 			qcom,board_id = <0x15>;
 
@@ -946,5 +944,6 @@
 	node_id=<0x1>;
 	board_id = <0x15>;
 	hw_link_id = <2 0>;
+	early_cal = <&pcie1>;
 	status = "okay";
 };

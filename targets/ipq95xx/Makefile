@@ -13,13 +13,9 @@ KERNELNAME:=Image dtbs
 
 KERNEL_PATCHVER:=6.6
 
-$(eval $(call TestHostCommand,coccinelle-spatch, \
-  Please install the spatch from coccinelle as its temporarily needed for mac80211 build (PCF-2142), \
-  spatch --version))
-
 include $(INCLUDE_DIR)/target.mk
 DEFAULT_PACKAGES += \
-	e2fsprogs uboot-envtools kmod-leds-gpio \
+	e2fsprogs uboot-envtools kmod-leds-gpio kmod-gpio-button-hotplug kmod-button-hotplug \
 	kmod-ata-core kmod-ata-ahci kmod-ata-ahci-platform kmod-usb3 \
 	kmod-usb-phy-ipq807x kmod-usb-dwc3-qcom-internal \
 	kmod-qca-nss-ppe kmod-qca-nss-ppe-ds kmod-qca-nss-ppe-vp \
@@ -29,7 +25,7 @@ DEFAULT_PACKAGES += \
 	kmod-leds-gpio swconfig kmod-fs-ext4 losetup \
 	libudebug libustream-mbedtls libubus-lua \
 	wififw_mount_script qca-wifi-scripts ath-wifi-scripts \
-	kmod-bonding wpad-qca-mesh-openssl \
+	kmod-bonding wpad-mesh-openssl \
 	kmod-qca-nss-drv kmod-qca-nss-drv-bridge-mgr kmod-qca-nss-drv-gre \
 	kmod-qca-nss-drv-igs kmod-qca-nss-drv-l2tpv2 kmod-qca-nss-drv-lag-mgr kmod-qca-nss-drv-map-t \
 	kmod-qca-nss-drv-match kmod-qca-nss-drv-mirror kmod-qca-nss-drv-mscs \
@@ -56,6 +52,13 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
 	ftm myftm diag cnssdiag \
 	libubox ubus udebug netifd-scripts kmod-qca-nss-netfn-tcpst  nss-tcp-st-cli nss-udp-st netstandby-drv
+
+GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
+
+override GENERIC_BACKPORT_DIR :=
+override GENERIC_PATCH_DIR :=
+override GENERIC_HACK_DIR :=
+override GENERIC_FILES_DIR :=
 
 define Kernel/Prepare
 	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)
