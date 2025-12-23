@@ -54,7 +54,7 @@ endef
 MAKE_FLAGS += \
 	CROSS_BUILD_TOOLS=y \
 	HOSTCFLAGS="$(SHA_FLAG) $(IMG_FLAG) -fPIC" \
-	HOSTLDFLAGS="$(HOSTLDFLAGS) -lpthread -lcrypto -lssl" \
+	HOSTLDFLAGS="$(HOSTLDFLAGS) -L$(STAGING_DIR_HOST)/lib -lpthread -lcrypto -lssl" \
 	HOSTEXTRACFLAGS="$(HOST_EXTRACFLAGS)" \
 	no-dot-config-targets=tools-only \
 	tools-only
