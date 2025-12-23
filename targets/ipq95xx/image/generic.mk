@@ -25,7 +25,7 @@ define Device/qcom_alxx
 	IMAGE_SIZE := 25344k
 	IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | append-metadata
 endef
-# TARGET_DEVICES += qcom_alxx
+TARGET_DEVICES += qcom_alxx
 
 define Device/qcom_rdp433
 	$(call Device/FitImage)
@@ -37,7 +37,7 @@ define Device/qcom_rdp433
 	DEVICE_PACKAGES += kmod-ath12k \
 		mkf2fs f2fsck kmod-fs-f2fs
 endef
-# TARGET_DEVICES += qcom_rdp433
+TARGET_DEVICES += qcom_rdp433
 
 define Device/qcom_rdp433-mht-phy
 	$(call Device/FitImage)
@@ -49,7 +49,7 @@ define Device/qcom_rdp433-mht-phy
 	DEVICE_PACKAGES += kmod-ath12k \
 		mkf2fs f2fsck kmod-fs-f2fs
 endef
-# TARGET_DEVICES += qcom_rdp433-mht-phy
+TARGET_DEVICES += qcom_rdp433-mht-phy
 
 define Device/qcom_rdp475
 	$(call Device/FitImage)
@@ -61,7 +61,7 @@ define Device/qcom_rdp475
 	DEVICE_PACKAGES += kmod-ath12k \
 		mkf2fs f2fsck kmod-fs-f2fs
 endef
-# TARGET_DEVICES += qcom_rdp475
+TARGET_DEVICES += qcom_rdp475
 
 define Device/qcom_rdp476
 	$(call Device/FitImage)
@@ -73,17 +73,17 @@ define Device/qcom_rdp476
 	DEVICE_PACKAGES += kmod-ath12k \
 		mkf2fs f2fsck kmod-fs-f2fs
 endef
-# TARGET_DEVICES += qcom_rdp476
+TARGET_DEVICES += qcom_rdp476
 
-define Device/prpl_freedom
-        $(call Device/FitImage)
-        $(call Device/EmmcImage)
-        DEVICE_VENDOR := Prpl
-        DEVICE_MODEL := Freedom
-        DEVICE_DTS := ipq9574-freedom
-        DEVICE_DTS_CONFIG := config@al02-c4
-        SOC := ipq9574
-        DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k \
-                mkf2fs f2fsck kmod-fs-f2fs
-endef
-TARGET_DEVICES += prpl_freedom
+#define Device/prpl_freedom
+#	$(call Device/FitImage)
+#	$(call Device/EmmcImage)
+#	DEVICE_VENDOR := Prpl
+#	DEVICE_MODEL := Freedom
+#	DEVICE_DTS := ipq9574-freedom
+#	DEVICE_DTS_CONFIG := config@al02-c4
+#	SOC := ipq9574
+#	DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k \
+#		mkf2fs f2fsck kmod-fs-f2fs
+#endef
+#TARGET_DEVICES += prpl_freedom

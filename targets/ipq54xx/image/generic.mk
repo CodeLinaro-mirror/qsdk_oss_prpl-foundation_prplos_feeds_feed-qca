@@ -36,6 +36,22 @@ define Device/qcom_rdp466
 endef
 TARGET_DEVICES += qcom_rdp466
 
+define Device/qcom_rdp485-c4
+	$(call Device/FitImage)
+	$(call Device/EmmcImage)
+	DEVICE_VENDOR := Qualcomm Technologies, Inc.
+	DEVICE_MODEL := RDP485-C4
+	DEVICE_VARIANT := AP-MR02.2
+	BOARD_NAME := ap-rdp485-c4
+	BUILD_DTS_ipq5424-rdp485-c4 := 1
+	SOC := ipq5424
+	KERNEL_INSTALL := 1
+	KERNEL_SIZE := $(if $(CONFIG_DEBUG),8680k,7000k)
+	IMAGE_SIZE := 25344k
+	IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-rootfs | pad-rootfs | append-metadata
+endef
+TARGET_DEVICES += qcom_rdp485-c4
+
 define Device/qcom_rdp485
 	$(call Device/FitImage)
 	$(call Device/EmmcImage)

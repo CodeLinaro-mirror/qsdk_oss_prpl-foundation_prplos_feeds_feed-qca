@@ -42,14 +42,13 @@ typedef struct ctx_save_tlv_msg {
 	bool is_panic;
 } ctx_save_tlv_msg_t;
 
-#ifdef CONFIG_QCA_MINIDUMP
 struct minidump_tlv_info {
 	uint64_t start;
 	uint64_t size;
 	enum minidump_crash_type crashtype;	/* stores crashtype when the tlv */
 						/*  to be dumped */
 } __packed;
-
+#ifdef CONFIG_QCA_MINIDUMP
 /* Metadata List for bookkeeping and managing entries and invalidation of
 * TLVs into the global crashdump buffer and the Metadata text file
 */
@@ -137,6 +136,7 @@ struct dump_segment {
  * @param:
  *   total_size - total size of dumps
  *   num_seg - total number of dump segments
+ *   dump_seg - number of segments to dump based on crash
  *   flag - size of dump segment
  *   type - array to store 'type' of dump segments
  *   seg_size - array to store segment size of
@@ -147,6 +147,7 @@ struct dump_segment {
 struct mini_hdr {
     int total_size;
     int num_seg;
+    int dump_seg_num;
     int flag;
     unsigned char *type;
     int *seg_size;
@@ -381,6 +382,7 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 			minidump.hdr.seg_size[index] = segment->size;
 			minidump.hdr.phy_addr[index] = cur_node->pa;
 			minidump.hdr.type[index] = cur_node->type;
+			minidump.hdr.dump_seg_num++;
 			index++;
 		}
 	}
@@ -480,17 +482,17 @@ static long mini_dump_ioctl(struct file *file, unsigned int ioctl_num,
 		case MINIDUMP_IOCTL_PREPARE_SEG:
 			ret = copy_to_user((void __user *)arg,
 			(const void *)(uintptr_t)((dfp->hdr.seg_size)),
-			(sizeof(int) * minidump.hdr.num_seg));
+			(sizeof(int) * minidump.hdr.dump_seg_num));
 			break;
 		case MINIDUMP_IOCTL_PREPARE_TYP:
 			ret = copy_to_user((void __user *)arg,
 			(const void *)(uintptr_t)((dfp->hdr.type)),
-			(sizeof(unsigned char) * minidump.hdr.num_seg));
+			(sizeof(unsigned char) * minidump.hdr.dump_seg_num));
 			break;
 		case MINIDUMP_IOCTL_PREPARE_PHY:
 			ret = copy_to_user((void __user *)arg,
 			(const void *)(uintptr_t)((dfp->hdr.phy_addr)),
-			(sizeof(unsigned long) * minidump.hdr.num_seg));
+			(sizeof(unsigned long) * minidump.hdr.dump_seg_num));
 			break;
 		default:
 			ret = -EINVAL;
@@ -538,6 +540,7 @@ int do_dump_minidump(enum minidump_crash_type crashtype)
 
 	mutex_lock(&g_minidump_lock);
 	minidump.hdr.total_size = 0;
+	minidump.hdr.dump_seg_num = 0;
 	if (!tlv_msg.msg_buffer) {
 		pr_err("\n Minidump: Crashdump buffer is empty");
 		mutex_unlock(&g_minidump_lock);
@@ -1031,7 +1034,7 @@ int minidump_traverse_module_list(const char *mod_name)
 		pr_err("Minidump: Invalid module name passed\n");
 		return -EINVAL;
 	}
-	if (minidump_modules_count > MINIDUMP_MODULE_COUNT) {
+	if (minidump_modules_count >= MINIDUMP_MODULE_COUNT) {
 		pr_err("Minidump: Module buffer is full, failed to add module %s\n", mod_name);
 		return -ENOMEM;
 	}
@@ -1417,9 +1420,15 @@ static int ctx_save_fill_log_dump_tlv(void)
 #endif /* CONFIG_QCA_MINIDUMP */
 	uname = utsname();
 
+	struct minidump_tlv_info uname_tlv;
+
+	uname_tlv.start = (uint64_t)(uintptr_t)__pa(uname);
+	uname_tlv.size = sizeof(*uname);
+	uname_tlv.crashtype = MINIDUMP_CRASH_TYPE_DEFAULT;
+
 	ret_val = ctx_save_add_tlv(QCA_WDT_LOG_DUMP_TYPE_UNAME,
-			    sizeof(*uname),
-			    (unsigned char *)uname);
+			    sizeof(uname_tlv),
+			    (unsigned char *)&uname_tlv);
 	if (ret_val)
 		return ret_val;
 

@@ -16,9 +16,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-# prplos
-. /lib/functions/system.sh
-
 . /lib/functions.sh
 . /lib/upgrade/common.sh
 . /usr/share/libubox/jshn.sh
@@ -380,15 +377,6 @@ erase_emmc_config() {
 }
 
 platform_check_image() {
-	# prplos
-	local magic_long="$(get_magic_long "$1")"
-	board=$(board_name)
-	case $board in
-	prpl,freedom)
-		[ "$magic_long" = "73797375" ] && return 0
-		;;
-	esac
-
 	local board=$(get_board_details "board_name")
 	local board_model=$(to_lower $(get_board_details "model_name"))
 	local mandatory_nand="ubi"
@@ -477,16 +465,6 @@ do_upgrade() {
 }
 
 platform_do_upgrade() {
-	board=$(board_name)
-	case $board in
-	prpl,freedom)
-		kernelname="0:HLOS"
-		rootfsname="rootfs"
-		mmc_do_upgrade "$1"
-		return
-		;;
-	esac
-
 	local upgrade_set=$(get_board_details "sysupgrade")
 	local alive=$(cat /tmp/.alive_upgrade)
 
