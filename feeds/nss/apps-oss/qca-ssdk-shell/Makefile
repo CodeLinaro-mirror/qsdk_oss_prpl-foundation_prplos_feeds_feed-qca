@@ -8,7 +8,7 @@ PKG_BRANCH:=win.nss.1.0.r30
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/ssdk-shell
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=2bde84c986c3ff834abecdcba6eaac543c3f3620d3a881f1bc4bc4e262d365fd
 PKG_VERSION:=fc85a49040264efbfc5993da1eb73dea68753ca9
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
