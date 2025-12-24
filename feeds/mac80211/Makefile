@@ -37,7 +37,7 @@ PKG_BUILD_PARALLEL:=1
 MKHASH ?= $(STAGING_DIR_HOST)/bin/mkhash
 PKG_BUILD_ID:=$(shell date | $(MKHASH) md5)
 
-EXTERNAL_HOSTAP_FILE_DIR:=$(TOPDIR)/feeds/feed_qca/feeds/hostapd/
+EXTERNAL_HOSTAP_FILE_DIR:=$(TOPDIR)/feeds/feed_qca/feeds/hostapd-qca/
 
 PKG_DRIVERS = \
 	mac80211-hwsim
@@ -186,7 +186,7 @@ define KernelPackage/mac80211
   $(call KernelPackage/mac80211/Default)
   TITLE:=Linux 802.11 Wireless Networking Stack
   # +kmod-crypto-cmac is a runtime only dependency of net/mac80211/aes_cmac.c
-  DEPENDS+= +kmod-cfg80211 +kmod-crypto-cmac +kmod-crypto-ccm +kmod-crypto-gcm +hostapd-common \
+  DEPENDS+= +kmod-cfg80211 +kmod-crypto-cmac +kmod-crypto-ccm +kmod-crypto-gcm +hostapd-qca-common \
 	+kmod-qca-nss-ppe \
 	+kmod-qca-nss-ppe-vp \
 	+kmod-qca-nss-ppe-ds \
