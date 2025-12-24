@@ -6,7 +6,7 @@ PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
 PKG_BRANCH:=win.nss.1.0.r30
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/nss-userspace
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=fd479ec6aa5eb016bc6c5a384b9e63cb00d83bafafc97381d79e18b82f09d9f7
 PKG_VERSION:=66523ce70507e2bf7db5540e23b3a3ba0324b288
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
