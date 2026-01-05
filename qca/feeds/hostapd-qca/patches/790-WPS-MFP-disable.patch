@@ -1,0 +1,24 @@
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -4375,7 +4375,8 @@ static int __check_assoc_ies(struct host
+ 
+ 	if (hapd->conf->mbo_enabled && (hapd->conf->wpa & 2) &&
+ 	    elems->mbo && sta->cell_capa && !(sta->flags & WLAN_STA_MFP) &&
+-	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
++	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION && !sta->wps_ie) {
++		/* Skip this check if the station has WPS assoc request */
+ 		wpa_printf(MSG_INFO,
+ 			   "MBO: Reject WPA2 association without PMF");
+ 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+--- a/src/ap/drv_callbacks.c
++++ b/src/ap/drv_callbacks.c
+@@ -746,7 +746,8 @@ skip_wpa_check:
+ #ifdef CONFIG_MBO
+ 	if (hapd->conf->mbo_enabled && (hapd->conf->wpa & 2) &&
+ 	    elems.mbo && sta->cell_capa && !(sta->flags & WLAN_STA_MFP) &&
+-	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
++	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION && !sta->wps_ie) {
++		/* Skip this check if the station has WPS assoc request */
+ 		wpa_printf(MSG_INFO,
+ 			   "MBO: Reject WPA2 association without PMF");
+ 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
