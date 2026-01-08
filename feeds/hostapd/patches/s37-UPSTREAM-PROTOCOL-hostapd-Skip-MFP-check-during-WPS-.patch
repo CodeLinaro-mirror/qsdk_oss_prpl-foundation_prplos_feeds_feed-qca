@@ -1,0 +1,40 @@
+From fa7dcaf9201d9f76b897ef70d7f42b56cb9d33bb Mon Sep 17 00:00:00 2001
+From: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
+Date: Tue, 23 Dec 2025 11:35:40 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:hostapd: Skip MFP check during WPS
+ association
+
+Currently, with MBO and WPS combination, during initial WPS association,
+association request will not contain RSN IE and hence parsing that will
+be skipped correctly. But, for MBO, management frame protection(MFP) is
+mandatory. Since, RSN IE not sent during initial WPS assoc, station
+f;ags will not have MFP set, which is leading to rejecting the assoc
+request from the client.
+
+Since, WPS association request will not have the RSN IE, skip the MFP
+check when WPS IE is set and proceed with association. This will be
+skipped only for the WPS association, for other request(s), usual
+validations will be followed.
+
+Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
+---
+ src/ap/ieee802_11.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 5810990b75eb..5fd6f4f394ed 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -4981,7 +4981,8 @@ skip_wpa_ies:
+ 
+ 	if (hapd->conf->mbo_enabled && (hapd->conf->wpa & 2) &&
+ 	    elems->mbo && sta->cell_capa && !(sta->flags & WLAN_STA_MFP) &&
+-	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
++	    hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION && !sta->wps_ie) {
++		/* Skip this check if the station has WPS assoc request */
+ 		wpa_printf(MSG_INFO,
+ 			   "MBO: Reject WPA2 association without PMF");
+ 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+-- 
+2.34.1
+
