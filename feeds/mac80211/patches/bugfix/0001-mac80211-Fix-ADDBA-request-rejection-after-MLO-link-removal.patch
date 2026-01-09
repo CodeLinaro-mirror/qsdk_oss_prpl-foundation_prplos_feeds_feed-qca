@@ -1,0 +1,124 @@
+From 87891166a71bd2ea18090a4400db2e88bf64736c Mon Sep 17 00:00:00 2001
+From: Hari Naraayana Desikan Kannan <hnaraaya@qti.qualcomm.com>
+Date: Fri, 05 Dec 2025 16:54:08 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:DP:wifi: mac80211: Fix ADDBA request rejection after MLO link removal
+
+When a link is removed during non-AP MLD initiated link reconfiguration,
+ADDBA requests on the remaining links are rejected with status code 0x0025
+(The request has been declined), preventing BA session establishment.
+
+BA sessions are maintained at the STA/MLD level and should persist across
+link changes. When an ADDBA update request arrives after link removal,
+mac80211 checks tid_rx which is NULL for drivers with
+IEEE80211_HW_SUPPORTS_REORDERING_BUFFER, and declines the request.
+
+For drivers with SUPPORTS_REORDERING_BUFFER, mac80211 maintains no
+reordering buffer state (tid_rx is always NULL), and the driver handles
+all BA session management. The driver can update BA parameters (such as
+buffer size) even after link changes, as it manages BA state on its
+active links.
+
+Call drv_ampdu_action() for ADDBA update requests when SUPPORTS_REORDERING_
+BUFFER is set. This allows the driver to handle the update.  The driver
+will return success if it can handle the update on the remaining links,
+allowing BA sessions to persist at the MLD level across link changes.
+
+Additionally, mark ADDBA Request/Response frames as link-agnostic per
+IEEE 802.11be Draft 7.0, Section 35.3.14. ADDBA Request/Response frames
+are among the individually addressed MMPDUs that shall be intended for
+an MLD. This allows firmware to transmit these frames on any available
+link based on link power state.
+
+Patch-work: None
+
+Patch-dependency: None
+
+Change-Id: I519406d97a7f864a9bdb6ace297f1e0f46d149d1
+Signed-off-by: Hari Naraayana Desikan Kannan <hnaraaya@qti.qualcomm.com>
+---
+
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index 9453aeb..5fbd04b 100644
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -14906,6 +14906,16 @@ static int ath12k_mac_mgmt_action_frame_fill_elem(struct ath12k_link_vif *arvif,
+ 			skb_cb->flags &= ~ATH12K_SKB_MGMT_LINK_AGNOSTIC;
+ 		}
+ 		break;
++	case WLAN_CATEGORY_BACK:
++		action_code = *buf++;
++		switch (action_code) {
++		case WLAN_ACTION_ADDBA_REQ:
++		case WLAN_ACTION_ADDBA_RESP:
++			break;
++		default:
++			skb_cb->flags &= ~ATH12K_SKB_MGMT_LINK_AGNOSTIC;
++		}
++		break;
+ 	default:
+ 		/* nothing to fill */
+ 		skb_cb->flags &= ~ATH12K_SKB_MGMT_LINK_AGNOSTIC;
+@@ -15134,6 +15144,19 @@ u8 ath12k_mac_get_tx_link(struct ieee80211_sta *sta, struct ieee80211_vif *vif,
+ 	    ieee80211_is_data(hdr->frame_control))
+ 		return ahsta->primary_link_id;
+ 
++	/* Check if this mgmt frame can be queued at MLD level, in that
++	 * case the FW can decide on which link it needs to be finally
++	 * transmitted based on the power state of that link.
++	 * The link param returned by this function still needs
++	 * to be valid to get queued to one of the valid link FW
++	 */
++	if (ath12k_mac_is_mgmt_link_agnostic(skb)) {
++		ATH12K_SKB_CB(skb)->flags |= ATH12K_SKB_MGMT_LINK_AGNOSTIC;
++		/* For action frames this will be reset if not needed
++		 * later based on action category.
++		 */
++	}
++
+ 	/* 802.11 frame cases */
+ 	if (link == IEEE80211_LINK_UNSPECIFIED)
+ 		link = ahsta->deflink.link_id;
+@@ -15166,19 +15189,6 @@ u8 ath12k_mac_get_tx_link(struct ieee80211_sta *sta, struct ieee80211_vif *vif,
+ 		}
+ 	}
+ 
+-	/* Check if this mgmt frame can be queued at MLD level, in that
+-	 * case the FW can decide on which link it needs to be finally
+-	 * transmitted based on the power state of that link.
+-	 * The link param returned by this function still needs
+-	 * to be valid to get queued to one of the valid link FW
+-	 */
+-	if (ath12k_mac_is_mgmt_link_agnostic(skb)) {
+-		ATH12K_SKB_CB(skb)->flags |= ATH12K_SKB_MGMT_LINK_AGNOSTIC;
+-		/* For action frames this will be reset if not needed
+-		 * later based on action category.
+-		 */
+-	}
+-
+ 	/* Perform address conversion for ML STA Tx */
+ 	bss_conf = rcu_dereference(vif->link_conf[link]);
+ 	link_sta = rcu_dereference(sta->link[link]);
+diff --git a/net/mac80211/agg-rx.c b/net/mac80211/agg-rx.c
+index b73d051..dacfb13 100644
+--- a/net/mac80211/agg-rx.c
++++ b/net/mac80211/agg-rx.c
+@@ -399,6 +399,19 @@ void __ieee80211_start_rx_ba_session(struct sta_info *sta,
+ 			ht_dbg_ratelimited(sta->sdata,
+ 					   "updated AddBA Req from %pM on tid %u\n",
+ 					   sta->sta.addr, tid);
++
++			/* For drivers with SUPPORTS_REORDERING_BUFFER, call the
++			 * driver to handle the update as it manages BA state.
++			 */
++			if (ieee80211_hw_check(&local->hw, SUPPORTS_REORDERING_BUFFER)) {
++				ret = drv_ampdu_action(local, sta->sdata, &params);
++				if (!ret)
++					status = WLAN_STATUS_SUCCESS;
++				else
++					status = WLAN_STATUS_REQUEST_DECLINED;
++				goto end;
++			}
++
+ 			/* We have no API to update the timeout value in the
+ 			 * driver so reject the timeout update if the timeout
+ 			 * changed. If it did not change, i.e., no real update,
