@@ -50,7 +50,7 @@ DEFAULT_PACKAGES += \
 	kmod-nss-udp-st-drv kmod-qca-nss-dscpstats kmod-qca-nss-nsm \
 	kmod-qca8084 kmod-qca81xx kmod-aqr-phy kmod-qca8xxx-phc kmod-qca8k \
 	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
-	ftm myftm diag cnssdiag
+	ftm myftm diag cnssdiag kmod-qca-nss-eip-ipsec
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
 
