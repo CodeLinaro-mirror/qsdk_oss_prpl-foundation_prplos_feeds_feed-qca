@@ -360,7 +360,14 @@
 				   <0 358 4>;			/* PPEDS Node #3(RxFill Desc ring id #3) Rx Fill IRQ info */
 
 		};
+	};
 
+	sysregister: sysregister {
+		compatible = "sysregister";
+		reg-names = "bootcount", "force-inactive";
+		reg = <0x0 0xC8 0x0 0x4>, <0x0 0xCC 0x0 0x4>;
+		bitmask = <0xFFFFFFFF>, <0xFFFFFFFF>;
+		syscon = <&imem>, <&imem>;
 	};
 };
 
