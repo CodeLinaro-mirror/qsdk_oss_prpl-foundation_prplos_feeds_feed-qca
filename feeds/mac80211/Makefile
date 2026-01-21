@@ -151,7 +151,8 @@ ifeq ($(CONFIG_KERNEL_ATHMEMDEBUG),y)
 	$(INSTALL_BIN) ./files/lib/memleak_check.sh $(1)/lib
 endif
 	$(INSTALL_BIN) ./files/coredump.sh $(1)/etc/hotplug.d/devcoredump
-	$(INSTALL_BIN) ./files/lib/wifi-config.sh $(1)/etc/hotplug.d/ieee80211/01-wifi-detect
+	# Using 10-wifi-detect from wifi-scripts; do not install legacy 01-wifi-detect to avoid duplicate triggers.
+	# $(INSTALL_BIN) ./files/lib/wifi-config.sh $(1)/etc/hotplug.d/ieee80211/01-wifi-detect
 	$(INSTALL_BIN) ./files/etc/init.d/ath11k_nss_enable.sh $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/ath11k_uboot_mod_params.sh $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/qca-nss-pbuf $(1)/etc/init.d
