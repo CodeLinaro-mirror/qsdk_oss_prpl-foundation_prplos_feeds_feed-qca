@@ -1,0 +1,113 @@
+From 642840bfb265427ee77371917c4b73c804ef945c Mon Sep 17 00:00:00 2001
+From: Stephan Raj Ignatious Durairaj <signatio@qti.qualcomm.com>
+Date: Wed, 14 Jan 2026 00:49:29 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:hostapd:wpa_supplicant: Add Multi-AP profile and VLAN ID tracking
+
+Add support for tracking and reporting Multi-AP profile and primary
+VLAN ID information in wpa_supplicant. This information is extracted
+from the Multi-AP IE in association responses and included in the
+connection event messages.
+
+Changes:
+- Store Multi-AP profile and primary VLAN ID from association response
+- Add new fields to wpa_supplicant structure for tracking these values
+- Include Multi-AP profile and VLAN ID in WPA_EVENT_CONNECTED messages
+- Add debug logging for Multi-AP profile and VLAN ID values
+- Reset values on new association attempts
+
+This enables upper layer applications to be aware of the Multi-AP
+configuration and VLAN segmentation being used, which is essential
+for proper EasyMesh network management and monitoring.
+
+Patch-dependency: none
+
+Patch-work:
+https://patchwork.ozlabs.org/project/hostap/patch/DM4PR19MB6173508761EFFA0E7E366CD8A88E2@DM4PR19MB6173.namprd19.prod.outlook.com/
+
+Change-Id: Ic290faf0fda7f55e23e2ffeb10a395ed07baa293
+Signed-off-by: Jurijs Soloveckis <jsoloveckis@maxlinear.com>
+Signed-off-by: Stephan Raj Ignatious Durairaj <signatio@qti.qualcomm.com>
+---
+
+diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
+index 11168fe..aa5954e 100644
+--- a/wpa_supplicant/events.c
++++ b/wpa_supplicant/events.c
+@@ -3146,6 +3146,8 @@
+ 	u16 status;
+ 
+ 	wpa_s->multi_ap_ie = 0;
++	wpa_s->multi_ap_profile = 0;
++	wpa_s->multi_ap_primary_vlanid = 0;
+ 
+ 	if (!ies ||
+ 	    ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed ||
+@@ -3162,6 +3164,13 @@
+ 	wpa_s->multi_ap_fronthaul = !!(multi_ap.capability &
+ 				       MULTI_AP_FRONTHAUL_BSS);
+ 	wpa_s->multi_ap_ie = 1;
++
++	/* Store Multi-AP profile and primary VLAN ID from association response */
++	wpa_s->multi_ap_profile = multi_ap.profile;
++	wpa_s->multi_ap_primary_vlanid = multi_ap.vlanid;
++
++	wpa_printf(MSG_DEBUG, "Multi-AP: profile=%u primary_vlan_id=%u",
++		   wpa_s->multi_ap_profile, wpa_s->multi_ap_primary_vlanid);
+ }
+ 
+ 
+diff --git a/wpa_supplicant/wpa_supplicant.c b/wpa_supplicant/wpa_supplicant.c
+index 0cc4ada..65253c9 100644
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -1240,12 +1240,31 @@
+ 			fils_hlp_sent = 1;
+ 
+ #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
+-		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_CONNECTED "- Connection to "
+-			MACSTR " completed [id=%d id_str=%s%s]%s",
+-			MAC2STR(wpa_s->bssid),
+-			ssid ? ssid->id : -1,
+-			ssid && ssid->id_str ? ssid->id_str : "",
+-			fils_hlp_sent ? " FILS_HLP_SENT" : "", mld_addr);
++		{
++			char multi_ap_info[100] = "";
++
++			/* Append Multi-AP profile and VLAN ID if available */
++			if (wpa_s->multi_ap_profile > 0 ) {
++				int ret = os_snprintf(multi_ap_info, sizeof(multi_ap_info),
++					    " multi_ap_profile=%d"
++					    " multi_ap_primary_vlanid=%d",
++					    wpa_s->multi_ap_profile,
++					    wpa_s->multi_ap_primary_vlanid);
++				if (ret < 0 || (size_t) ret >= sizeof(multi_ap_info)) {
++					wpa_printf(MSG_WARNING, "Multi-AP info truncated");
++					// Clear buffer to avoid using truncated data
++					multi_ap_info[0] = '\0';
++				}
++			}
++
++			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_CONNECTED "- Connection to "
++				MACSTR " completed [id=%d id_str=%s%s]%s%s",
++				MAC2STR(wpa_s->bssid),
++				ssid ? ssid->id : -1,
++				ssid && ssid->id_str ? ssid->id_str : "",
++				fils_hlp_sent ? " FILS_HLP_SENT" : "", mld_addr,
++				multi_ap_info);
++		}
+ #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
+ 		wpas_clear_temp_disabled(wpa_s, ssid, 1);
+ 		wpa_s->consecutive_conn_failures = 0;
+diff --git a/wpa_supplicant/wpa_supplicant_i.h b/wpa_supplicant/wpa_supplicant_i.h
+index a8d5b3e..f1a54f3 100644
+--- a/wpa_supplicant/wpa_supplicant_i.h
++++ b/wpa_supplicant/wpa_supplicant_i.h
+@@ -1583,6 +1583,8 @@
+ 	unsigned int multi_ap_ie:1;
+ 	unsigned int multi_ap_backhaul:1;
+ 	unsigned int multi_ap_fronthaul:1;
++	u8 multi_ap_profile;
++	u16 multi_ap_primary_vlanid;
+ 
+ #ifndef CONFIG_NO_ROBUST_AV
+ 	struct robust_av_data robust_av;
