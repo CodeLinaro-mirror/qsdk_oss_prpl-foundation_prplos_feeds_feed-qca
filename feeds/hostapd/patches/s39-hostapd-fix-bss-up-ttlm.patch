@@ -1,0 +1,36 @@
+Index: hostapd-qca-2025.03.10~95ad7115/src/ap/ieee802_11.c
+===================================================================
+--- hostapd-qca-2025.03.10~95ad7115.orig/src/ap/ieee802_11.c
++++ hostapd-qca-2025.03.10~95ad7115/src/ap/ieee802_11.c
+@@ -11439,8 +11439,17 @@ static u8 * hostapd_eid_mbssid_elem(stru
+ 		    mbssid_known_bss(i, known_bss, known_bss_len))
+ 			continue;
+ 		conf = bss->conf;
+-		bss_up_ttlm = &bss->mld->ttlm_ctx.upcoming_ttlm.ttlm;
+-		bss_est_ttlm = &bss->mld->ttlm_ctx.established_ttlm.ttlm;
++               /*
++               * For legacy BSSes (mld_ap = 0 or no mld struct),
++               * do not access TTLM fields.
++               */
++          if (!bss->conf->mld_ap || !bss->mld) {
++                  bss_up_ttlm = NULL;
++                  bss_est_ttlm = NULL;
++          } else {
++                       bss_up_ttlm = &bss->mld->ttlm_ctx.upcoming_ttlm.ttlm;
++                       bss_est_ttlm = &bss->mld->ttlm_ctx.established_ttlm.ttlm;
++          }
+ 
+ 		*eid++ = WLAN_MBSSID_SUBELEMENT_NONTRANSMITTED_BSSID_PROFILE;
+ 		eid_len_pos = eid++;
+@@ -11514,7 +11523,10 @@ static u8 * hostapd_eid_mbssid_elem(stru
+ 		eid += xrate_len;
+ 
+ 		/* TTLM IE */
+-		if (frame_type == WLAN_FC_STYPE_PROBE_RESP && tx_bss_ttlm_ctx) {
++        if (frame_type == WLAN_FC_STYPE_PROBE_RESP &&
++                       tx_bss_ttlm_ctx &&
++                       bss_up_ttlm &&
++                       bss_est_ttlm) {
+ 			/* if tx bss has non-default ttlm mapping, include ttlm element for non-tx
+ 			 * bss to avoid TTLM element inheritance. if non-tx vap does not have any
+ 			 * non-default mapping advertised, default ttlm element is included in this
