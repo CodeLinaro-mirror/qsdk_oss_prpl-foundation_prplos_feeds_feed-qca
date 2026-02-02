@@ -1,0 +1,51 @@
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 88b521b..2021740 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -11141,8 +11141,12 @@ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 	len = 1;
+ 
+ 	tx_xrate_len = hostapd_eid_ext_supp_rates(tx_bss, buf) - buf;
+-	tx_bss_ttlm_ctx = tx_bss->mld ? &tx_bss->mld->ttlm_ctx : NULL;
+ 
++	/* TTLM context is only valid for MLD APs */
++	if (!tx_bss->conf->mld_ap || !tx_bss->mld)
++		tx_bss_ttlm_ctx = NULL;
++	else
++		tx_bss_ttlm_ctx = &tx_bss->mld->ttlm_ctx;
+ 	for (i = *bss_index; i < num_bss; i++) {
+ 		struct hostapd_data *bss;
+ 		const u8 *auth, *rsn = NULL, *rsnx = NULL;
+@@ -11159,9 +11163,17 @@ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 		    mbssid_known_bss(i, known_bss, known_bss_len))
+ 			continue;
+ 
+-		bss_up_ttlm = &bss->mld->ttlm_ctx.upcoming_ttlm.ttlm;
+-		bss_est_ttlm = &bss->mld->ttlm_ctx.established_ttlm.ttlm;
+-
++		/*
++		* For legacy BSSes (mld_ap = 0 or no mld struct),
++		* do not access TTLM fields.
++		*/
++	   if (!bss->conf->mld_ap || !bss->mld) {
++		   bss_up_ttlm = NULL;
++		   bss_est_ttlm = NULL;
++	   } else {
++			bss_up_ttlm = &bss->mld->ttlm_ctx.upcoming_ttlm.ttlm;
++			bss_est_ttlm = &bss->mld->ttlm_ctx.established_ttlm.ttlm;
++	   }
+ 		/*
+ 		 * Sublement ID: 1 octet
+ 		 * Length: 1 octet
+@@ -11231,7 +11243,10 @@ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 		}
+ 
+ 		/* TTLM IE */
+-		if (frame_type == WLAN_FC_STYPE_PROBE_RESP && tx_bss_ttlm_ctx) {
++		if (frame_type == WLAN_FC_STYPE_PROBE_RESP &&
++			tx_bss_ttlm_ctx &&
++			bss_up_ttlm &&
++			bss_est_ttlm) {
+ 			if ((tx_bss_ttlm_ctx->established_ttlm.ttlm.expected_duration_present ||
+ 			     tx_bss_ttlm_ctx->upcoming_ttlm.ttlm.mapping_switch_time_present) ||
+ 			    (bss_est_ttlm->expected_duration_present ||
