@@ -57,8 +57,23 @@ update_ath12k_module_parameters()
 		esac
 	done
 
-	first_line="ath12k dyndbg=+p"
-	[ "$ftm_mode_enabled" -eq 1 ] && first_line="$first_line ftm_mode=1"
+	# Read the existing first line from the config file
+	first_line=$(head -n 1 "$ath12k_config_file")
+
+	# Check if dyndbg=+p is already present
+	if echo "$first_line" | grep -qw "dyndbg=+p"; then
+		# dyndbg=+p already exists, no modification needed
+		return
+	fi
+
+	# Add dyndbg=+p after ath12k, preserving existing parameters
+	first_line=$(echo "$first_line" | sed 's/^ath12k/ath12k dyndbg=+p/')
+
+	[ "$ftm_mode_enabled" -eq 1 ] && {
+		if ! echo "$first_line" | grep -qw "ftm_mode=1"; then
+			first_line="$first_line ftm_mode=1"
+		fi
+	}
 
 	# Append all unique ath12k_* parameters to the first line
 	for param in $module_params; do
