@@ -15,35 +15,12 @@ define Device/EmmcImage
 	IMAGE/sysupgrade.bin/squashfs := append-rootfs | pad-to 64k | sysupgrade-tar rootfs=$$$$@ | append-metadata
 endef
 
-define Build/swuimage
-	@echo "copy files to build itb ans swu image"
-	gzip -f -9n -c $(KDIR)/vmlinux > $(IMG_GEN_DIR)/build/vmlinux.gz
-	cp $(BUILD_DIR)/u-boot-freedom-*/u-boot-nodtb.bin $(IMG_GEN_DIR)/build/
-	cp $(BUILD_DIR)/u-boot-freedom-*/dts/dt.dtb $(IMG_GEN_DIR)/build/u-boot.dtb
-	cp $(KDIR)/root.squashfs $(IMG_GEN_DIR)/build/
-	cp $(KDIR)/image-$(DEVICE_DTS).dtb $(IMG_GEN_DIR)/build/kernel.dtb
-	cp $(BIN_DIR)/$(IMG_SECURE_INITRAMFS) $(IMG_GEN_DIR)/build/initramfs.cpio.gz
-	cd $(IMG_GEN_DIR) && ./scripts/gen_binman.sh
-	cd $(IMG_GEN_DIR) && ./scripts/gen_swu.sh
-	for image in u-boot.itb kernel.itb rootfs.itb image.swu ; do \
-		if [ -f $(IMG_GEN_DIR)/build/$${image} ] ; then \
-			cp $(IMG_GEN_DIR)/build/$${image} $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$${image} ; \
-		fi ; \
-	done
-	$(call Build/update-script)
-endef
-
 define Build/update-script
-    mkimage -A arm64 \
-        -O linux -T script -C none -a 0 -e 0 -n "update" -d update_script.txt update_script.scr
-    cp update_script.scr $(BIN_DIR)/$(DEVICE_IMG_PREFIX)-update_script.scr
+	@echo "Running Build/update-script"
+	mkimage -A x86_64 \
+		-O linux -T script -C none -a 0 -e 0 -n "update" -d update_script.txt \
+		$(KDIR)/tmp/$(DEVICE_IMG_PREFIX)-update_script.scr
 endef
-
-define Device/SwuImage
-	IMAGES += image.swu
-	IMAGE/image.swu := swuimage
-endef
-
 
 define Device/qcom_alxx
 	$(call Device/MultiDTBFitImage)
@@ -110,7 +87,6 @@ endef
 define Device/prpl_freedom
 	$(call Device/FitImage)
 	$(call Device/EmmcImage)
-	$(call Device/SwuImage)
 	DEVICE_VENDOR := Prpl
 	DEVICE_MODEL := Freedom
 	DEVICE_DTS := ipq9574-freedom
@@ -118,5 +94,22 @@ define Device/prpl_freedom
 	SOC := ipq9574
 	DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k-qca \
 		mkf2fs f2fsck kmod-fs-f2fs
+
+	IMG_GEN_DIR := $$(wildcard $$(BUILD_DIR_BASE)/hostpkg/imagegenerator-*)
+	BINMAN_INPUT := $$(IMG_GEN_DIR)/configs/binman/binman_qca_ipq95xx_freedom.dts \
+			$$(BUILD_DIR)/u-boot-freedom-*/u-boot.mbn \
+			$$(KDIR)/tmp/$$(DEVICE_IMG_PREFIX)-Image.gz \
+			$$(KDIR)/image-$$(DEVICE_DTS).dtb \
+			$$(BIN_DIR)/$$(IMG_SECURE_INITRAMFS) \
+			$$(KDIR)/root.squashfs
+	SWU_INPUT := $$(IMG_GEN_DIR)/configs/swugenerator/sw-description_qca_ipq95xx_freedom
+	ARTIFACT/Image.gz := copy-file $$(KDIR)/Image | libdeflate-gzip
+	ARTIFACT/image.swu := imagegenerator-init $$(BINMAN_INPUT) $$(SWU_INPUT) | \
+				binman binman_qca_ipq95xx_freedom.dts | \
+				swugenerator sw-description_qca_ipq95xx_freedom
+
+	ARTIFACT/update_script.scr := update-script
+
+	ARTIFACTS := Image.gz image.swu update_script.scr
 endef
 TARGET_DEVICES += prpl_freedom
