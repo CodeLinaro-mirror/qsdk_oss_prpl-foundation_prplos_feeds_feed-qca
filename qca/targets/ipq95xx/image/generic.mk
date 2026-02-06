@@ -85,5 +85,20 @@ define Device/prpl_freedom
 	SOC := ipq9574
 	DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k-qca \
 		mkf2fs f2fsck kmod-fs-f2fs
+
+	IMG_GEN_DIR := $$(wildcard $$(BUILD_DIR_BASE)/hostpkg/imagegenerator-*)
+	BINMAN_INPUT := $$(IMG_GEN_DIR)/configs/binman/binman_qca_ipq95xx_freedom.dts \
+			$$(BUILD_DIR)/u-boot-freedom-*/u-boot.mbn \
+			$$(KDIR)/tmp/$$(DEVICE_IMG_PREFIX)-Image.gz \
+			$$(KDIR)/image-$$(DEVICE_DTS).dtb \
+			$$(BIN_DIR)/$$(IMG_SECURE_INITRAMFS) \
+			$$(KDIR)/root.squashfs
+	SWU_INPUT := $$(IMG_GEN_DIR)/configs/swugenerator/sw-description_qca_ipq95xx_freedom
+	ARTIFACT/Image.gz := copy-file $$(KDIR)/Image | gzip
+	ARTIFACT/image.swu := imagegenerator-init $$(BINMAN_INPUT) $$(SWU_INPUT) | \
+				binman binman_qca_ipq95xx_freedom.dts | \
+				swugenerator sw-description_qca_ipq95xx_freedom
+
+	ARTIFACTS := Image.gz image.swu
 endef
 TARGET_DEVICES += prpl_freedom
