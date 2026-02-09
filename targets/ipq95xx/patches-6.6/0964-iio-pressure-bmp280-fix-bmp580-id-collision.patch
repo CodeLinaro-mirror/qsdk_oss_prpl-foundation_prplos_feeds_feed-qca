@@ -1,0 +1,13 @@
+--- a/drivers/iio/pressure/bmp280-core.c
++++ b/drivers/iio/pressure/bmp280-core.c
+@@ -382,6 +382,10 @@ int bmp280_common_probe(struct device *d
+ 		return ret;
+ 
+ 	for (i = 0; i < data->chip_info->num_chip_id; i++) {
++		/* BMP580 shares chip ID 0x50 with BMP380, avoid false positive */
++		if (data->chip_info == &bmp580_chip_info)
++			break;
++
+ 		/* BMP3xx requires soft-reset as part of initialization */
+ 		if (data->chip_info->chip_id[i] == BMP380_CHIP_ID) {
+ 			ret = bmp380_cmd(data, BMP380_CMD_SOFT_RESET);
