@@ -44,6 +44,15 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	reg_bmp_1v8: regulator-bmp-1v8 {
+        compatible = "regulator-fixed";
+        regulator-name = "bmp-supply";
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <1800000>;
+        regulator-always-on;
+        regulator-boot-on;
+    };
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -634,6 +643,19 @@
 		reg = <0x71>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		i2c@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			bmp580@46 {
+				compatible = "bosch,bmp580";
+				reg = <0x46>;
+				vddd-supply = <&reg_bmp_1v8>;
+                vdda-supply = <&reg_bmp_1v8>;
+			};
+		};
 
 		i2c@5 {
 			reg = <5>;
