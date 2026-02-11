@@ -3,3 +3,4 @@
 0003-uboot-set-mac-from-mfg.patch
 0004-uboot-cmd-bootm-preload.patch
 0005-Freedom-Allow-Legacy-Format-Image.patch
+0006-u-boot-pass-booted-bank-to-Linux.patch
