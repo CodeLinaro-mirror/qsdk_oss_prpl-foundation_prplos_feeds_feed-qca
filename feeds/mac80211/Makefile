@@ -351,7 +351,10 @@ define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(PKG_UNPACK)
 	cp -rf ./src/* $(PKG_BUILD_DIR)
-	$(PATCH) -d $(PKG_BUILD_DIR) -p1 < $(CURDIR)/patches/bugfix/0001-mac80211-Fix-ADDBA-request-rejection-after-MLO-link-removal.patch
+	for patch in $(CURDIR)/patches/bugfix/*.patch; do \
+		[ -f "$$$$patch" ] && $(PATCH) -d $(PKG_BUILD_DIR) -p1 < "$$$$patch"; \
+	done
+
 ifdef CONFIG_PACKAGE_QCN_EXTN
 	$(CP) $(CURDIR)/wlan-open-extns/subsys/src $(PKG_BUILD_DIR)/net/mac80211/qcn_extns
 	$(CP) $(CURDIR)/wlan-open-extns/ath/ath12k/src $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/qcn_extns
