@@ -1,0 +1,113 @@
+From 63aaa442fceb7987d6bf8b4f7e34d5290859644f Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Tue, 17 Feb 2026 17:56:56 +0530
+Subject: [PATCH] UPSTREAM:CP:wifi:mac80211: fix invalid link_id usage in
+ ieee80211_stop_mbssid
+
+ieee80211_stop_mbssid() performs cfg80211_stop_iface() call on the respective
+link based on MBSSID Tx or non-Tx config.
+
+Currently local link_id used for looping is wrongly passed to
+cfg80211_stop_iface() instead of appropriate MBSSID Tx or non-Tx link_id.
+
+Fix the link_id update and remove redundant link_id argument passed.
+
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+ net/mac80211/cfg.c         |  2 +-
+ net/mac80211/ieee80211_i.h |  2 +-
+ net/mac80211/iface.c       | 16 +++++-----------
+ 3 files changed, 7 insertions(+), 13 deletions(-)
+
+diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
+index 4e986cad5127..2b263f4bbdf3 100644
+--- a/net/mac80211/cfg.c
++++ b/net/mac80211/cfg.c
+@@ -1996,7 +1996,7 @@ static int ieee80211_stop_ap(struct wiphy *wiphy, struct net_device *dev,
+ 	 */
+ 	if ((rcu_access_pointer(link->conf->tx_bss_conf) == link->conf) ||
+ 	    wdev->is_netdev_going_down)
+-		ieee80211_stop_mbssid(sdata, link_id);
++		ieee80211_stop_mbssid(sdata);
+ 	RCU_INIT_POINTER(link_conf->tx_bss_conf, NULL);
+ 
+ 	link_conf->enable_beacon = false;
+diff --git a/net/mac80211/ieee80211_i.h b/net/mac80211/ieee80211_i.h
+index 475c9af12a3d..9dd87ee6579a 100644
+--- a/net/mac80211/ieee80211_i.h
++++ b/net/mac80211/ieee80211_i.h
+@@ -3040,7 +3040,7 @@ int ieee80211_mgd_assoc_ml_reconf(struct ieee80211_sub_if_data *sdata,
+ 
+ void ieee80211_process_ml_reconf_resp(struct ieee80211_sub_if_data *sdata,
+ 				      struct ieee80211_mgmt *mgmt, size_t len);
+-void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata, int _link_id);
++void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata);
+ 
+ #if IS_ENABLED(CPTCFG_MAC80211_KUNIT_TEST)
+ #define EXPORT_SYMBOL_IF_MAC80211_KUNIT(sym) EXPORT_SYMBOL_IF_KUNIT(sym)
+diff --git a/net/mac80211/iface.c b/net/mac80211/iface.c
+index dd7d13b0aea3..1196c1bb79ec 100644
+--- a/net/mac80211/iface.c
++++ b/net/mac80211/iface.c
+@@ -735,22 +735,15 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata, bool going_do
+ 		ieee80211_add_virtual_monitor(local);
+ }
+ 
+-void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata, int _link_id)
++void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata)
+ {
+ 	struct ieee80211_sub_if_data *tx_sdata;
+ 	struct ieee80211_bss_conf *link_conf, *tx_bss_conf;
+ 	struct ieee80211_link_data *tx_link, *link;
+-	unsigned long iter_valid_links;
+-	unsigned int link_id;
++	unsigned int link_id, tx_link_id;
+ 
+ 	lockdep_assert_wiphy(sdata->local->hw.wiphy);
+ 
+-	if (_link_id == -1)
+-		/* Check link 0 by default for non MLO. */
+-		iter_valid_links = sdata->vif.valid_links | BIT(0);
+-	else
+-		iter_valid_links = BIT(_link_id);
+-
+ 	/* Check if any of the links of current sdata is an MBSSID. */
+ 	for_each_vif_active_link(&sdata->vif, link_conf, link_id) {
+ 		tx_bss_conf = sdata_dereference(link_conf->tx_bss_conf, sdata);
+@@ -758,6 +751,7 @@ void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata, int _link_id)
+ 			continue;
+ 
+ 		tx_sdata = vif_to_sdata(tx_bss_conf->vif);
++		tx_link_id = tx_bss_conf->link_id;
+ 		RCU_INIT_POINTER(link_conf->tx_bss_conf, NULL);
+ 
+ 		/* If we are not tx sdata reset tx sdata's tx_bss_conf to avoid recusrion
+@@ -788,13 +782,13 @@ void ieee80211_stop_mbssid(struct ieee80211_sub_if_data *sdata, int _link_id)
+ 			 * removal can be supported.
+ 			 */
+ 			cfg80211_stop_iface(link_sdata->wdev.wiphy, &link_sdata->wdev,
+-					    GFP_KERNEL, link_id);
++					    GFP_KERNEL, link->link_id);
+ 		}
+ 
+ 		/* If we are not tx sdata, remove links of tx sdata and proceed */
+ 		if (sdata != tx_sdata && ieee80211_sdata_running(tx_sdata))
+ 			cfg80211_stop_iface(tx_sdata->wdev.wiphy,
+-					    &tx_sdata->wdev, GFP_KERNEL, link_id);
++					    &tx_sdata->wdev, GFP_KERNEL, tx_link_id);
+ 	}
+ }
+ 
+@@ -808,7 +808,7 @@ static int ieee80211_stop(struct net_device *dev)
+ 	 * terminating its partner links too in case of MLD.
+ 	 */
+ 	if (sdata->vif.type == NL80211_IFTYPE_AP)
+-		ieee80211_stop_mbssid(sdata, -1);
++		ieee80211_stop_mbssid(sdata);
+ 
+ 	ieee80211_do_stop(sdata, true);
+ 
+
+-- 
+2.25.1
+

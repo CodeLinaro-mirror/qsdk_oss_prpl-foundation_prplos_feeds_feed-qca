@@ -1,0 +1,38 @@
+From eaf2b0a23825f6756e5aa0f8e67375c79e0fad34 Mon Sep 17 00:00:00 2001
+From: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
+Date: Fri, 23 Jan 2026 11:47:12 +0530
+Subject: [PATCH] QSDK:CP: cfg80211: Set netdev_going_down flag only when link_id it not set
+
+With I5803068fb6a ("mac80211: wifi - WAR Add wdev specific flag to
+indicate NETDEV_GOING_DOWN to fix deadlock"), netdev_going_down will be
+set when cfg80211_leave is called with or without link_id set. But,
+in cases which involves MBSSID, if Tx BSS is going down, non-Tx BSSes
+will also be stopped. But, the partner link(s) of that non-Tx BSSes will
+continue to operate. Since netdev_going_down flag is set in these cases,
+any operations like channel change will not be successful as the flag is
+wrongly set.
+
+Fix this by checking if the link_id is not set, if yes then set the
+netdev_going_down flag otherwise follow the usual sequence.
+
+Signed-off-by: Manish Dharanenthiran <mdharane@qti.qualcomm.com>
+---
+
+diff --git a/net/wireless/core.c b/net/wireless/core.c
+index 9d0da55..badb6aa 100644
+--- a/net/wireless/core.c
++++ b/net/wireless/core.c
+@@ -1392,7 +1392,12 @@ void cfg80211_leave(struct cfg80211_registered_device *rdev,
+ 	struct cfg80211_sched_scan_request *pos, *tmp;
+ 
+ 	lockdep_assert_held(&rdev->wiphy.mtx);
+-	wdev->is_netdev_going_down = true;
++	/*
++	 * If link_id is set, only that link is going down, no need to set
++	 * netdev going down during that case.
++	 */
++	if (link_id == -1)
++		wdev->is_netdev_going_down = true;
+ 	cfg80211_pmsr_wdev_down(wdev);
+ 
+ 	cfg80211_stop_background_radar_detection(wdev);
