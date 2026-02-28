@@ -1,0 +1,23 @@
+Index: u-boot-freedom-2023.04.02-prpl/configs/ipq9574_wnc_freedom_mmc_defconfig
+===================================================================
+--- u-boot-freedom-2023.04.02-prpl.orig/configs/ipq9574_wnc_freedom_mmc_defconfig
++++ u-boot-freedom-2023.04.02-prpl/configs/ipq9574_wnc_freedom_mmc_defconfig
+@@ -110,3 +110,5 @@ CONFIG_CMD_UNTAR=y
+ CONFIG_LEGACY_IMAGE_FORMAT=y
+ CONFIG_CMD_BOOTPRPL=y
+ CONFIG_PRPL_RUN_BOARD_COMMAND=y
++CONFIG_ENV_WRITEABLE_LIST=y
++CONFIG_ENV_ACCESS_IGNORE_FORCE=y
+Index: u-boot-freedom-2023.04.02-prpl/include/configs/ipq9574.h
+===================================================================
+--- u-boot-freedom-2023.04.02-prpl.orig/include/configs/ipq9574.h
++++ u-boot-freedom-2023.04.02-prpl/include/configs/ipq9574.h
+@@ -113,3 +113,8 @@ extern uint32_t g_load_addr;
+ #undef CONFIG_NET_RETRY_COUNT
+ #define CONFIG_NET_RETRY_COUNT			500
+ #endif
++
++#if defined(CONFIG_ENV_WRITEABLE_LIST)
++#define CONFIG_ENV_FLAGS_LIST_STATIC "failover:sw"
++#endif
++

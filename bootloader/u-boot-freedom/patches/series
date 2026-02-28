@@ -5,3 +5,4 @@
 0005-Freedom-Allow-Legacy-Format-Image.patch
 0006-u-boot-pass-booted-bank-to-Linux.patch
 0007-add-new-prpl-bootcmd.patch
+0008-uboot-enable-env-writeable-list.patch
