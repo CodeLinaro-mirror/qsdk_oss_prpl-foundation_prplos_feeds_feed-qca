@@ -758,7 +758,7 @@ Index: u-boot-freedom-2023.04.02-prpl/lib/prpl/mfg.c
 +			const void *subnode_name;
 +
 +			do {
-+				subnode_name = fdt_get_name(mfg_fdt, subnode_offset, &node_len);
++				subnode_name = fdt_get_name(mfg_fdt, subnode_offset, &subnode_len);
 +				if (!subnode_name || subnode_len < 0) {
 +					printf("%s: Could not retrieve the name from subnode at offset 0x%x (%d)",
 +					       __func__, subnode_offset, subnode_len);
