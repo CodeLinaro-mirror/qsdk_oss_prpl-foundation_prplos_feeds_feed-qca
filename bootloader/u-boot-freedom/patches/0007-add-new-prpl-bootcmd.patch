@@ -136,11 +136,10 @@ index b28badaa..1edf8884 100644
  
  /**
   * set_root_bootargs() - Set bank information in the bootargs
-@@ -57,6 +74,190 @@ static int set_root_bootargs(int is_active_bank)
- 	return ret;
+@@ -58,6 +75,190 @@ static int set_root_bootargs(int is_acti
  }
  
-+/**
+ /**
 + * get_booted_bank() - Retrieve booted bank from U-Boot DT
 + * @fdt: Pointer to U-Boot device tree blob
 + *
@@ -324,10 +323,39 @@ index b28badaa..1edf8884 100644
 +}
 +
 +
- /**
++/**
   * ft_system_setup() - Overwrite ft_system_setup()
   *
-@@ -118,3 +319,44 @@ int ft_system_setup(void *blob, struct bd_info *bd)
+  * ft_system_setup() is used to pass the booted bank information in the Linux
+@@ -90,31 +291,50 @@ int ft_system_setup(void *blob, struct b
+ 		goto out;
+ 	}
+ 
+-	/* Update the bootargs in Linux device tree */
+-	if (!strncmp(booted_bank, "active", strlen("active"))) {
+-		if (set_root_bootargs(1)) {
+-			printf("%s: ERROR: Failed to set the bootargs\n", __func__);
+-			ret = -1;
+-			goto out;
+-		}
+-	}
+-	else if (!strncmp(booted_bank, "inactive", strlen("inactive"))) {
+-		if (set_root_bootargs(0)) {
+-			printf("%s: ERROR: Failed to set the bootargs\n", __func__);
+-			ret = -1;
+-			goto out;
+-		}
+-	}
+-	else {
+-		printf("%s: ERROR: Wrong booted bank information: %s)\n",
+-		       __func__, booted_bank);
+-		ret = -1;
+-		goto out;
+-	}
+-
+ 	/* Set u-boot,booted-bank in Linux device tree */
+ 	debug("%s: Setting u-boot,booted-bank to %s\n", __func__, booted_bank);
+ 	fdt_find_and_setprop(blob, "/chosen", "u-boot,booted-bank", booted_bank, len, 1);
   out:
  	return ret;
  }
