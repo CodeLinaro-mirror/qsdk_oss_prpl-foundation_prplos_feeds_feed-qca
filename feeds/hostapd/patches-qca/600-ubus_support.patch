@@ -720,7 +720,7 @@ probe/assoc/auth requests via object subscribe.
  
  	struct psk_list_entry *add_psk; /* From group formation */
 +
-+	struct ubus_object ubus_global;
++	//struct ubus_object ubus_global;
  };
  
  
