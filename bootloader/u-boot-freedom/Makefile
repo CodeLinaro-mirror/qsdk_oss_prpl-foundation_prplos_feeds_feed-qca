@@ -3,13 +3,10 @@ include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/version.mk
 
 PKG_NAME:=u-boot-freedom
-PKG_VERSION:=2023.04.02-prpl
-PKG_RELEASE:=1
-
+PKG_VERSION:=FEAT-29
+PKG_SOURCE_VERSION:=FEAT-29
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://gitlab.com/prpl-foundation/platform/qualcomm/u-boot-qca-freedom.git
-PKG_SOURCE_VERSION:=86af81895c3a4e5e6932f8e149563ea9567dea55
-PKG_MIRROR_HASH:=0c0cf675cba75fd74e586c7d013ba0f781865645bee3e19396b4ce449deb29d6
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_FILE_DEPENDS:=patches
