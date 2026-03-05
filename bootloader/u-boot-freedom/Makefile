@@ -50,6 +50,7 @@ define Build/Compile
 	HOSTLDFLAGS="$(HOST_LDFLAGS) -pthread -Werror" \
 	HOSTCFLAGS="$(HOST_CFLAGS)" \
 	DTC=${LINUX_DIR}/scripts/dtc/dtc \
+	QCA_ELF=1 \
 	all
 endef
 
