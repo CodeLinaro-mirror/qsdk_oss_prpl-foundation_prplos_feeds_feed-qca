@@ -1,0 +1,46 @@
+From d540bacd4e2cf4e5600f247e5a516b482a1dc646 Mon Sep 17 00:00:00 2001
+From: Manish Dharanenthiran <manish.dharanenthiran@oss.qualcomm.com>
+Date: Wed, 25 Feb 2026 13:07:08 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:hostapd: Fix avoiding mbo cell aware vendor
+ message
+
+Currently while adding MBO (Multi-Band Operation) element, mbo_enabled
+is checked along with OCE (Optimized Connectivity Experience). But, for
+MBO Wi-Fi Alliance vendor sub-element to indicate AP cellular aware
+capabilities, OCE is not mandatory. Because of this, station couldn't
+parse the MBO elemet properly thus leading to unnecessary MBO element
+inclusion in the (Re)Assoc request during WPS cases which leads to
+request getting denied.
+
+Fix this by checking only if MBO is enabled for the inclusion of AP
+cellular aware capabilities.
+
+Patch-work: None
+Patch-dependency: I3970ae988cd ("QSDK:PROTOCOL:hostapd: add MBO support")
+
+Signed-off-by: Manish Dharanenthiran <manish.dharanenthiran@oss.qualcomm.com>
+---
+ src/ap/ieee802_11_shared.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/ap/ieee802_11_shared.c b/src/ap/ieee802_11_shared.c
+index d579e5173c1a..140294ea97b6 100644
+--- a/src/ap/ieee802_11_shared.c
++++ b/src/ap/ieee802_11_shared.c
+@@ -901,10 +901,11 @@ u8 * hostapd_eid_mbo(struct hostapd_data *hapd, u8 *eid, size_t len)
+ 	    !OCE_STA_CFON_ENABLED(hapd) && !OCE_AP_ENABLED(hapd))
+ 		return eid;
+ 
+-	if (hapd->conf->mbo_enabled && hapd->conf->oce & OCE_AP) {
++	if (hapd->conf->mbo_enabled)  {
+ 		*mbo_pos++ = MBO_ATTR_ID_AP_CAPA_IND;
+ 		*mbo_pos++ = 1;
+-		 if (hapd->conf->mbo_ap_cap_ind & MBO_AP_CAPA_CELL_AWARE)
++		 if ((hapd->conf->oce & OCE_AP) &&
++		     (hapd->conf->mbo_ap_cap_ind & MBO_AP_CAPA_CELL_AWARE))
+ 			 *mbo_pos++ = MBO_AP_CAPA_CELL_AWARE;
+ 		 else
+ 			 *mbo_pos++ = 0;
+-- 
+2.34.1
+
