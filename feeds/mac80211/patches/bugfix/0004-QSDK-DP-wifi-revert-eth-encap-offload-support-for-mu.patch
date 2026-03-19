@@ -1,0 +1,143 @@
+From 2fb3affb4407634af7dc7bb0e6a600c46d31d4ce Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Thu, 19 Mar 2026 15:00:11 +0530
+Subject: [PATCH] QSDK:DP:wifi:revert eth encap offload support for multicast
+
+Disable 802.3 encap offload for multicast to rollback using mac80211
+multicast handling.
+
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+ drivers/net/wireless/ath/ath12k/mac.c      |  6 +-----
+ drivers/net/wireless/ath/ath12k/wifi7/hw.c | 24 ++++------------------
+ include/net/mac80211.h                     |  3 ---
+ net/mac80211/tx.c                          |  8 +-------
+ 4 files changed, 6 insertions(+), 35 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index 5af29cb55150..a85de461509e 100644
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -17004,12 +17004,8 @@ ppe_vp_config:
+ 		vif->hw_queue[i] = ATH12K_HW_DEFAULT_QUEUE;
+ 
+ 	vif->driver_flags |= IEEE80211_VIF_SUPPORTS_UAPSD;
+-	if (ath12k_frame_mode == ATH12K_HW_TXRX_ETHERNET) {
++	if (ath12k_frame_mode == ATH12K_HW_TXRX_ETHERNET)
+ 		vif->offload_flags |= IEEE80211_OFFLOAD_ENCAP_4ADDR;
+ 
+-		if (vif->type != NL80211_IFTYPE_AP_VLAN)
+-			vif->offload_flags |= IEEE80211_OFFLOAD_ENCAP_MCAST;
+-	}
+-
+ 	ath12k_dbg(NULL, ATH12K_DBG_MAC, "Add interface vif address:%pM netdev:%s",
+ 			 vif->addr, wdev->netdev->name);
+diff --git a/drivers/net/wireless/ath/ath12k/wifi7/hw.c b/drivers/net/wireless/ath/ath12k/wifi7/hw.c
+index f4c9d950da8c..70f694b6fd8f 100644
+--- a/drivers/net/wireless/ath/ath12k/wifi7/hw.c
++++ b/drivers/net/wireless/ath/ath12k/wifi7/hw.c
+@@ -1556,8 +1556,7 @@ static void ath12k_wifi7_mac_op_tx(struct ieee80211_hw *hw,
+ 	    ieee80211_has_protected(hdr->frame_control))
+ 		is_dvlan = true;
+ 
+-	if (!vif->valid_links || !is_mcast || is_dvlan ||
+-	    (is_eth && (!is_mcast || sta)) ||
++	if (!vif->valid_links || !is_mcast || is_dvlan || is_eth ||
+ 	    test_bit(ATH12K_GROUP_FLAG_RAW_MODE, &ar->ab->ag->flags)) {
+ 		ret = ath12k_mac_tx_check_max_limit(dp_pdev, skb);
+ 		if (ret) {
+@@ -1610,17 +1609,6 @@ static void ath12k_wifi7_mac_op_tx(struct ieee80211_hw *hw,
+ 				continue;
+ 			}
+ 
+-			if (is_eth) {
+-				msdu_copied = skb_clone(skb, GFP_ATOMIC);
+-				if (!msdu_copied) {
+-					ath12k_dbg(ar->ab, ATH12K_DBG_MAC,
+-						   "skb clone failure link_id 0x%X vdevid 0x%X\n",
+-						   link_id, tmp_arvif->vdev_id);
+-					continue;
+-				}
+-				skb_cb = ATH12K_SKB_CB(msdu_copied);
+-				goto skip_nwifi;
+-			}
+			msdu_copied = skb_copy(skb, GFP_ATOMIC);
+			if (!msdu_copied) {
+				ath12k_err(ar->ab,
+@@ -1635,7 +1622,6 @@ static void ath12k_wifi7_mac_op_tx(struct ieee80211_hw *hw,
+ 								info_flags);
+ 
+ 			skb_cb = ATH12K_SKB_CB(msdu_copied);
+-skip_nwifi:
+ 			skb_cb->link_id = link_id;
+ 			skb_cb->vif = vif;
+ 			skb_cb->u.ar = tmp_ar;
+@@ -1668,12 +1654,10 @@ skip_nwifi:
+ 				skb_cb->cipher = key->cipher;
+ 				skb_cb->flags |= ATH12K_SKB_CIPHER_SET;
+ 
+-				if (!is_eth) {
+-					hdr = (struct ieee80211_hdr *)msdu_copied->data;
+-					if (!ieee80211_has_protected(hdr->frame_control))
+-						hdr->frame_control |=
++				hdr = (struct ieee80211_hdr *)msdu_copied->data;
++				if (!ieee80211_has_protected(hdr->frame_control))
++					hdr->frame_control |=
+ 						cpu_to_le16(IEEE80211_FCTL_PROTECTED);
+-				}
+ 			}
+ 			spin_unlock_bh(&tmp_ar->ab->dp->dp_lock);
+ 
+diff --git a/include/net/mac80211.h b/include/net/mac80211.h
+index d6a93c471e96..4d47f3bc9ecc 100644
+--- a/include/net/mac80211.h
++++ b/include/net/mac80211.h
+@@ -1999,15 +1999,12 @@ enum ieee80211_vif_flags {
+  * @IEEE80211_OFFLOAD_DECAP_ENABLED: rx encapsulation offload is enabled
+  *	The driver supports passing received 802.11 frames as 802.3 frames to
+  *	mac80211.
+- * @IEEE80211_OFFLOAD_ENCAP_MCAST: support multicast packet encapsulation
+- *	offload.
+  */
+ 
+ enum ieee80211_offload_flags {
+ 	IEEE80211_OFFLOAD_ENCAP_ENABLED		= BIT(0),
+ 	IEEE80211_OFFLOAD_ENCAP_4ADDR		= BIT(1),
+ 	IEEE80211_OFFLOAD_DECAP_ENABLED		= BIT(2),
+-	IEEE80211_OFFLOAD_ENCAP_MCAST		= BIT(3),
+ };
+ 
+ /**
+diff --git a/net/mac80211/tx.c b/net/mac80211/tx.c
+index 54ae1987ab89..76ddb2ddb02a 100644
+--- a/net/mac80211/tx.c
++++ b/net/mac80211/tx.c
+@@ -5296,7 +5296,7 @@ netdev_tx_t __ieee80211_subif_start_xmit_8023(struct sk_buff *skb,
+ 	struct ethhdr *ehdr = (struct ethhdr *)skb->data;
+ 	struct ieee80211_key *key = NULL;
+ 	struct sta_info *sta;
+-	bool is_eapol, is_mcast_offload = false;
++	bool is_eapol;
+ 	bool tid_stats_disable = sdata->local->hw.tid_stats_disable;
+ 
+ #ifdef CPTCFG_MAC80211_NSS_SUPPORT
+@@ -5319,16 +5319,10 @@ netdev_tx_t __ieee80211_subif_start_xmit_8023(struct sk_buff *skb,
+ 	}
+ 
+ 	is_eapol = (sdata->control_port_protocol == ehdr->h_proto);
+-	is_mcast_offload = is_multicast_ether_addr(skb->data) &&
+-			   !!(sdata->vif.offload_flags & IEEE80211_OFFLOAD_ENCAP_MCAST);
+-
+ 	if (ieee80211_hw_check(&sdata->local->hw, SUPPORTS_NSS_OFFLOAD)) {
+ 		if (unlikely(IS_ERR_OR_NULL(sta) || !sta->uploaded))
+ 			sta = NULL;
+ 		goto tx_offload;
+-	} else if (unlikely((IS_ERR_OR_NULL(sta) && is_mcast_offload))) {
+-		sta = NULL;
+-		goto tx_offload;
+ 	} else if (unlikely(IS_ERR_OR_NULL(sta) || !sta->uploaded ||
+ 	    (!test_sta_flag(sta, WLAN_STA_AUTHORIZED) && !is_eapol) ||
+ 	    (is_eapol && !(sdata->vif.offload_flags & IEEE80211_OFFLOAD_ENCAP_ENABLED))))
+-- 
+2.34.1
+
