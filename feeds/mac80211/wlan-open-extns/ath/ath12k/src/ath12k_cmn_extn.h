@@ -8,7 +8,7 @@
 
 #include <linux/mhi.h>
 #include <linux/uuid.h>
-#include "../../net/mac80211/qcn_extns/cmn_extn.h"
+#include "../../../../../../net/mac80211/qcn_extns/cmn_extn.h"
 
 
 struct ath12k_base;
