@@ -5,10 +5,10 @@ include $(INCLUDE_DIR)/version.mk
 PKG_NAME:=u-boot-2025
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot-2025
-PKG_SOURCE_VERSION:=efcd999bea33e5f155c7ef82a365dee6904f35a8
+PKG_SOURCE_VERSION:=0e3d9dbe6fc4b2cdbef5eda835d8e824f144bffc
 PKG_BRANCH:=win.uboot.2025.00.r30
 PKG_RELEASE:=1
-PKG_VERSION:=efcd999b
+PKG_VERSION:=0e3d9dbe
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.zst
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 

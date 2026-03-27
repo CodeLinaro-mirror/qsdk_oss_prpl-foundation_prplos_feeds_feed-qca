@@ -506,11 +506,11 @@ Signed-off-by: Glenn Strauss <gstrauss@gluelogic.com>
 +else
 +ifeq ($(CONFIG_TLS),gnutls)
 +CFLAGS += -DCONFIG_TLS_GNUTLS
-+LLIBS += -lgnutls
++LLIBS += -lgnutls -lgpg-error -lgcrypt
 +else
 +ifeq ($(CONFIG_TLS),wolfssl)
 +CFLAGS += -DCONFIG_TLS_WOLFSSL
-+LLIBS += -lm
++LLIBS += -lwolfssl -lm
 +else
 +CFLAGS += -DCONFIG_TLS_INTERNAL
 +CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER

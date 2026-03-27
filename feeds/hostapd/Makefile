@@ -277,6 +277,7 @@ define Package/wpad/Default
   SUBMENU:=WirelessAPD
   TITLE:=IEEE 802.1x Auth/Supplicant
   DEPENDS:=$(DRV_DEPENDS) +hostapd-common $(CORE_DEPENDS)
+  EXTRA_DEPENDS:=hostapd-common (=$(PKG_VERSION)-r$(PKG_RELEASE))
   USERID:=network=101:network=101
   URL:=http://hostap.epitest.fi/
   PROVIDES:=hostapd wpa-supplicant
