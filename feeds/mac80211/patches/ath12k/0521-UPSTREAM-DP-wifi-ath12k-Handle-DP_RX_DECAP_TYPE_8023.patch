@@ -20,9 +20,10 @@ Signed-off-by: Tamizh Chelvam Raja <tamizhr@qti.qualcomm.com>
 
 --- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
 +++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
-@@ -883,6 +883,10 @@ static int ath12k_wifi7_dp_rx_h_undecap(
+@@ -883,7 +883,11 @@ static int ath12k_wifi7_dp_rx_h_undecap(
  		break;
  	case DP_RX_DECAP_TYPE_8023:
+ 		pkt_reason = ATH_RX_8023_PKTS;
 -		/* TODO: Handle undecap for these formats */
 +		/* Note that decap_format = 2 indicates that the decapped
 +		 * packet is either Ethernet 2 (DIX)  or 802.3 (uses SNAP/LLC).

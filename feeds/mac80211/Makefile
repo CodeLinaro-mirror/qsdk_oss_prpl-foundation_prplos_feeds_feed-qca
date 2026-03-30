@@ -16,8 +16,8 @@ PKG_VERSION:=5a4cd7fd
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/src/mac80211/wlan-open.git
 PKG_BRANCH:=win.wlan_host_opensource.4.0.r30
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=72cb24ebcfe173f9b2fc93807fa981b63a926fbe
-PKG_MIRROR_HASH:=434d8b721f1f2794c458864b97d8420a71bd7cd29973c13bb02fd134d0ec59f0
+PKG_SOURCE_VERSION:=a60919e3a76f24ad9a9ef2785e7d4cada7415295
+PKG_MIRROR_HASH:=skip
 
 PKG_KERNEL_VERSION:=9a0dddfb3
 PKG_KERNEL_SOURCE_URL:=http://git.codelinaro.org/clo/qsdk/kvalo/ath.git
@@ -152,7 +152,7 @@ ifeq ($(CONFIG_KERNEL_ATHMEMDEBUG),y)
 endif
 	$(INSTALL_BIN) ./files/coredump.sh $(1)/etc/hotplug.d/devcoredump
 	# Using 10-wifi-detect from wifi-scripts; do not install legacy 01-wifi-detect to avoid duplicate triggers.
-	# $(INSTALL_BIN) ./files/lib/wifi-config.sh $(1)/etc/hotplug.d/ieee80211/01-wifi-detect
+	#$(INSTALL_BIN) ./files/lib/wifi-config.sh $(1)/etc/hotplug.d/ieee80211/01-wifi-detect
 	$(INSTALL_BIN) ./files/etc/init.d/ath11k_nss_enable.sh $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/ath11k_uboot_mod_params.sh $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/qca-nss-pbuf $(1)/etc/init.d

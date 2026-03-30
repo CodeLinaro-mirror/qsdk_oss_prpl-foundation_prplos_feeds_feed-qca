@@ -277,6 +277,7 @@ define Package/wpad-qca/Default
   SUBMENU:=WirelessAPD
   TITLE:=IEEE 802.1x Auth/Supplicant
   DEPENDS:=$(DRV_DEPENDS) +hostapd-qca-common $(CORE_DEPENDS)
+  EXTRA_DEPENDS:=hostapd-qca-common (=$(PKG_VERSION)-r$(PKG_RELEASE))
   USERID:=network=101:network=101
   URL:=http://hostap.epitest.fi/
   PROVIDES:=hostapd-qca wpa-supplicant-qca
