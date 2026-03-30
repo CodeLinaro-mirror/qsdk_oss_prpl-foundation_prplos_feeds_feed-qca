@@ -17,7 +17,7 @@ PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/src/mac80211/wlan-open.g
 PKG_BRANCH:=win.wlan_host_opensource.4.0.r30
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_VERSION:=a60919e3a76f24ad9a9ef2785e7d4cada7415295
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=f4485cf2f25870677a40d529e8c3f37264816613260acac50b10115594a33bf0
 
 PKG_KERNEL_VERSION:=9a0dddfb3
 PKG_KERNEL_SOURCE_URL:=http://git.codelinaro.org/clo/qsdk/kvalo/ath.git
