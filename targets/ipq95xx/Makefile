@@ -51,7 +51,8 @@ DEFAULT_PACKAGES += \
 	kmod-qca8084 kmod-qca81xx kmod-aqr-phy kmod-qca8xxx-phc kmod-qca8k \
 	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
 	ftm myftm diag cnssdiag \
-	libubox ubus udebug netifd-scripts kmod-qca-nss-netfn-tcpst  nss-tcp-st-cli nss-udp-st netstandby-drv
+	libubox ubus udebug netifd-scripts kmod-qca-nss-netfn-tcpst  nss-tcp-st-cli nss-udp-st netstandby-drv \
+	kmod-qca-nss-eip-ipsec
 
 define Kernel/Prepare
 	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)
