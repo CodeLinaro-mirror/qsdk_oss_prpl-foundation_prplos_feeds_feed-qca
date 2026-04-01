@@ -1,0 +1,395 @@
+From c1be0bc7d8cb301dfe1df68e41125e74093c2f54 Mon Sep 17 00:00:00 2001
+From: Devi Priya <devipriy@qti.qualcomm.com>
+Date: Wed, 18 Feb 2026 14:31:58 +0530
+Subject: [PATCH] arch: arm: dts: Patch DTs with Booted bank info
+
+Read the booted bank info from IMEM and patch this information to
+the /chosen node in both the U-Boot and kernel device trees during
+their respective fixup stages.
+
+Additionally, append PARTLABEL=rootfs-active or
+PARTLABEL=rootfs-inactive to the kernel command line, depending on
+the boot bank value read from IMEM. This ensures the kernel selects
+the correct root filesystem based on the currently active boot bank.
+
+Change-Id: I5329f94910741a0f2df41d5af15023360fc6ed5c
+Signed-off-by: Devi Priya <devipriy@qti.qualcomm.com>
+---
+
+diff --git a/arch/arm/mach-ipq/Kconfig b/arch/arm/mach-ipq/Kconfig
+index bb69ca6..a2bede3 100644
+--- a/arch/arm/mach-ipq/Kconfig
++++ b/arch/arm/mach-ipq/Kconfig
+@@ -610,6 +610,13 @@
+ 	  Enable starting of coldboot calibration for QCN9224 PCIe EP
+ 	  from U-boot.
+ 
++config BOOT_BANK_FIXUP
++	bool "Enable the fixup of booted bank information"
++	default n
++	help
++	  Enable this config to fixup u-boot and kernel device tree with
++	  booted bank information.
++
+ choice
+ 	prompt "IPQ board select"
+ 
+@@ -698,6 +705,7 @@
+ 	imply PHY_QCOM_QMP_USB3 if IPQ_USB
+ 	imply SDX_ATTACH_SUPPORT
+ 	imply CB_CALIB
++	imply BOOT_BANK_FIXUP
+ 	help
+ 	  Support for IPQ95xx SoC.
+ 	  - Board Open Platform Specifications.
+diff --git a/arch/arm/mach-ipq/board.c b/arch/arm/mach-ipq/board.c
+index 8a597ef..4aa3bad 100644
+--- a/arch/arm/mach-ipq/board.c
++++ b/arch/arm/mach-ipq/board.c
+@@ -578,6 +578,9 @@
+ {
+ 	ipq_uboot_fdt_fixup(rw_fdt_blob, UBOOT_FIXUP_SMEM);
+ 	ipq_uboot_fdt_fixup(rw_fdt_blob, UBOOT_FIXUP_USB);
++#ifdef CONFIG_BOOT_BANK_FIXUP
++	ipq_uboot_fdt_fixup(rw_fdt_blob, UBOOT_FIXUP_BOOTED_BANK);
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/arch/arm/mach-ipq/cmd_bootipq.c b/arch/arm/mach-ipq/cmd_bootipq.c
+index df2baef..bcef043 100644
+--- a/arch/arm/mach-ipq/cmd_bootipq.c
++++ b/arch/arm/mach-ipq/cmd_bootipq.c
+@@ -428,6 +428,13 @@
+ 	}
+ #endif /* CONFIG_IPQ_CRASHDUMP_TO_NVMEMORY */
+ 
++#ifdef CONFIG_BOOT_BANK_FIXUP
++	/* Append PARTLABEL based on booted bank */
++	ret = append_partlabel_bootargs(cmd_line, CONFIG_SYS_CBSIZE);
++	if (ret)
++		printf("Failed to append PARTLABEL to bootargs\n");
++#endif /* CONFIG_BOOT_BANK_FIXUP */
++
+ 	set_fs_bootargs(cmd_line);
+ 	env_set("bootargs", NULL);
+ 	env_set("bootargs", cmd_line);
+diff --git a/arch/arm/mach-ipq/common.c b/arch/arm/mach-ipq/common.c
+index 8a28eea..c6280d6 100644
+--- a/arch/arm/mach-ipq/common.c
++++ b/arch/arm/mach-ipq/common.c
+@@ -1933,6 +1933,138 @@
+ 
+ 	return ret;
+ }
++#ifdef CONFIG_BOOT_BANK_FIXUP
++/* ipq_get_booted_bank_info() - Get booted bank string from IMEM
++ * @bank_str: Output pointer for bank string
++ *
++ * Reads booted bank enum from IMEM and converts to string:
++ * - 0 -> "active"
++ * - 1 -> "inactive"
++ * - 2 -> "inactive,forced"
++ *
++ * Return: 0 on success, negative error code on failure
++ */
++int ipq_get_booted_bank_info(const char **booted_bank_str)
++{
++	static const char *booted_bank[] = {
++		[BOOTED_BANK_ACTIVE] = "active",
++		[BOOTED_BANK_INACTIVE] = "inactive",
++		[BOOTED_BANK_INACTIVE_FORCED] = "inactive,forced",
++	};
++	uint32_t booted_bank_value;
++
++	if (!booted_bank_str)
++		return -EINVAL;
++
++	booted_bank_value = readl(BOOTED_BANK_ADDR_IMEM);
++
++	/* Validate enum value */
++	if (booted_bank_value < BOOTED_BANK_ACTIVE ||
++		booted_bank_value > BOOTED_BANK_INACTIVE_FORCED) {
++		debug("Invalid booted bank value: %u\n", booted_bank_value);
++		return -EINVAL;
++	}
++
++	*booted_bank_str = booted_bank[booted_bank_value];
++	debug("Booted bank: %s (enum=%u)\n", *booted_bank_str, booted_bank_value);
++
++	return 0;
++}
++
++/* append_partlabel_bootargs() - Append bootargs with partlabel information
++ * @bootargs: bootargs to append the partlabel information
++ * @buflen: Buffer length
++ *
++ * Reads booted bank info from IMEM and append the corresponding partlabel:
++ * - "active" -> rootfs-active
++ * - "inactive" / "inactive,forced" -> rootfs-inactive
++ *
++ * Return: 0 on success, negative error code on failure
++ */
++
++int append_partlabel_bootargs(char *bootargs, size_t buflen)
++{
++	const char *booted_bank_str;
++	const char *part_name;
++	char append_str[64];
++	size_t current_len, append_len, required_len;
++	int ret;
++
++	if (!bootargs || buflen == 0)
++		return -EINVAL;
++
++	ret = ipq_get_booted_bank_info(&booted_bank_str);
++	if (ret)
++		return ret;
++
++	/* Determine partition name based on booted bank */
++	if (strcmp(booted_bank_str, "inactive") == 0 ||
++	    strcmp(booted_bank_str, "inactive,forced") == 0) {
++		part_name = "rootfs-inactive";
++	} else if (strcmp(booted_bank_str, "active") == 0) {
++		part_name = "rootfs-active";
++	} else {
++		printf("Booted bank information not found\n");
++		return -EINVAL;
++	}
++
++	/* Append PARTLABEL=<partition> to bootargs */
++	snprintf(append_str, sizeof(append_str), " PARTLABEL=%s", part_name);
++
++	/* Check if we have enough space before appending */
++	current_len = strlen(bootargs);
++	append_len = strlen(append_str);
++	required_len = current_len + append_len + 1; /* +1 for null terminator */
++
++	if (required_len > buflen) {
++		printf("ERROR: bootargs buffer overflow!\n");
++		debug("required: %zu, available:%zu\n", required_len, buflen);
++		return -ENOSPC;
++	}
++
++	strlcat(bootargs, append_str, buflen);
++
++	return 0;
++}
++
++/**
++ * fdt_set_booted_bank_property() - Set booted-bank property in device tree
++ * @blob: Pointer to device tree blob
++ *
++ * Reads booted bank information from SMEM and sets the u-boot,booted-bank
++ * property under /chosen node.Creates the /chosen node if it doesn't exist.
++ * This helper function is used by both kernel and U-Boot device tree
++ * fixup functions.
++ *
++ * Return: 0 on success, -EFAULT on failure
++ */
++int fdt_set_booted_bank_property(void *blob)
++{
++	int ret;
++	const char *booted_bank_str;
++
++	if (!blob) {
++		printf("Invalid FDT blob pointer\n");
++		return -EINVAL;
++	}
++
++	ret = ipq_get_booted_bank_info(&booted_bank_str);
++	if(ret)
++		return ret;
++
++	/* patch the booted-bank information in dt blob */
++	ret = fdt_find_and_setprop(blob, "/chosen", "u-boot,booted-bank",
++			booted_bank_str, strlen(booted_bank_str) + 1,
++			1);
++	if (ret) {
++		printf("Failed to update u-boot,booted-bank: %d\n", ret);
++		return ret;
++	}
++
++	debug("Successfully set u-boot,booted-bank = %s\n", booted_bank_str);
++	return 0;
++}
++#endif /* CONFIG_BOOT_BANK_FIXUP */
+ 
+ #if defined(CONFIG_LMB)
+ void ipq_update_lmb_reservation(void)
+diff --git a/arch/arm/mach-ipq/fdt_fixup.c b/arch/arm/mach-ipq/fdt_fixup.c
+index 6679bd4..77ddd7a 100644
+--- a/arch/arm/mach-ipq/fdt_fixup.c
++++ b/arch/arm/mach-ipq/fdt_fixup.c
+@@ -306,6 +306,12 @@
+ 
+ __weak void ipq_fdt_fixup_atf(void *blob) {}
+ 
++#ifdef CONFIG_BOOT_BANK_FIXUP
++__weak void ipq_fdt_fixup_booted_bank(void *blob)
++{
++	fdt_set_booted_bank_property(blob);
++}
++#endif
+ __weak void ipq_fdt_fixup_flash(void *blob)
+ {
+ #ifdef CONFIG_MMC
+@@ -958,6 +964,9 @@
+ #endif
+ 	ipq_fdt_fixup_socinfo,
+ 	ipq_fdt_fixup_smem,
++#ifdef CONFIG_BOOT_BANK_FIXUP
++	ipq_fdt_fixup_booted_bank,
++#endif
+ #ifdef CONFIG_FDT_FIXUP_PARTITIONS
+ 	ipq_fdt_fixup_mtdparts,
+ #endif
+diff --git a/arch/arm/mach-ipq/include/mach/ipq.h b/arch/arm/mach-ipq/include/mach/ipq.h
+index 7d6281d..87fb50e 100644
+--- a/arch/arm/mach-ipq/include/mach/ipq.h
++++ b/arch/arm/mach-ipq/include/mach/ipq.h
+@@ -238,7 +238,10 @@
+ 
+ enum fixup_type{
+ 	UBOOT_FIXUP_SMEM,
+-	UBOOT_FIXUP_USB
++	UBOOT_FIXUP_USB,
++#ifdef CONFIG_BOOT_BANK_FIXUP
++	UBOOT_FIXUP_BOOTED_BANK,
++#endif
+ };
+ 
+ enum debug_component {
+@@ -970,6 +973,13 @@
+ uint32_t get_nand_block_size(uint8_t dev_id);
+ #endif
+ 
++#ifdef CONFIG_BOOT_BANK_FIXUP
++/* Booted bank enum values from SBL */
++#define BOOTED_BANK_ACTIVE          1
++#define BOOTED_BANK_INACTIVE        2
++#define BOOTED_BANK_INACTIVE_FORCED 3
++#endif
++
+ #ifdef CONFIG_CB_CALIB
+ /**
+  * cal_qcn9224() - Start calibration on QCN9224 PCIe attach
+@@ -1007,3 +1017,32 @@
+ void qcn92xx_global_soc_reset(uintptr_t bar0_base, bool force_reset);
+ #endif
+ #endif
++#ifdef CONFIG_BOOT_BANK_FIXUP
++/**
++ * ipq_get_booted_bank_info - Fetch the booted bank information from IMEM
++ *
++ * @booted_bank_str: Output pointer for booted bank string
++ * Return: 0 on success, negative error code on failure
++ */
++
++int ipq_get_booted_bank_info(const char **booted_bank_str);
++
++/**
++ * append_partlabel_bootargs - Append bootargs with partlabel information
++ *
++ * @bootargs: Bootargs to append the partlabel information
++ * @buflen: Buffer length
++ * Return: 0 on success, negative error code on failure
++ */
++
++int append_partlabel_bootargs(char *bootargs, size_t buflen);
++
++/**
++ * fdt_set_booted_bank_property - Set booted-bank property in device tree
++ *
++ * @blob: Pointer to device tree blob
++ * Return: 0 on success, negative error code on failure
++ */
++
++int fdt_set_booted_bank_property(void *blob);
++#endif /* CONFIG_BOOT_BANK_FIXUP */
+diff --git a/arch/arm/mach-ipq/include/mach/ipq9574.h b/arch/arm/mach-ipq/include/mach/ipq9574.h
+index cfada5a..db31b72 100644
+--- a/arch/arm/mach-ipq/include/mach/ipq9574.h
++++ b/arch/arm/mach-ipq/include/mach/ipq9574.h
+@@ -45,6 +45,10 @@
+ 
+ #define CRASH_DUMP_ADDR_IMEM			0x8600658
+ 
++#ifdef CONFIG_BOOT_BANK_FIXUP
++#define BOOTED_BANK_ADDR_IMEM			0x86000D0
++#endif
++
+ #if defined(CONFIG_IPQ_MINIDUMP_VERSION_V2)
+ #define TLV_BUF_OFFSET				(489 * 1024) - TME_CTXT_SIZE
+ #define CFG_TLV_DUMP_SIZE			(23 * 1024)
+diff --git a/board/qualcomm/ipq9574/ipq9574.c b/board/qualcomm/ipq9574/ipq9574.c
+index 02077e9..9ed5bce 100644
+--- a/board/qualcomm/ipq9574/ipq9574.c
++++ b/board/qualcomm/ipq9574/ipq9574.c
+@@ -646,6 +646,28 @@
+ #endif
+ }
+ 
++#ifdef CONFIG_BOOT_BANK_FIXUP
++int ipq_uboot_fdt_fixup_booted_bank(void *blob)
++{
++	return fdt_set_booted_bank_property(blob);
++}
++#endif
++
++int ipq_uboot_fdt_fixup(void *blob, enum fixup_type type)
++{
++	switch(type) {
++#ifdef CONFIG_BOOT_BANK_FIXUP
++	case UBOOT_FIXUP_BOOTED_BANK:
++		ipq_uboot_fdt_fixup_booted_bank(blob);
++		break;
++#endif
++	default:
++		break;
++	}
++
++	return 0;
++}
++
+ uint32_t is_board_support_image_auth(void)
+ {
+ 	uint32_t board_type = gd->board_type;
+diff --git a/configs/ipq9574_mmc32_defconfig b/configs/ipq9574_mmc32_defconfig
+index 0dfea57..19ad7c6 100644
+--- a/configs/ipq9574_mmc32_defconfig
++++ b/configs/ipq9574_mmc32_defconfig
+@@ -19,6 +19,7 @@
+ CONFIG_FIT_VERBOSE=y
+ CONFIG_BOOTDELAY=2
+ CONFIG_OF_BOARD_SETUP=y
++CONFIG_OF_BOARD_FIXUP=y
+ CONFIG_SYS_CBSIZE=1024
+ # CONFIG_EFI_LOADER is not set
+ CONFIG_MSM_GPIO=y
+diff --git a/configs/ipq9574_mmc_defconfig b/configs/ipq9574_mmc_defconfig
+index 06a2fc1..077b875 100644
+--- a/configs/ipq9574_mmc_defconfig
++++ b/configs/ipq9574_mmc_defconfig
+@@ -18,6 +18,7 @@
+ CONFIG_FIT_VERBOSE=y
+ CONFIG_BOOTDELAY=2
+ CONFIG_OF_BOARD_SETUP=y
++CONFIG_OF_BOARD_FIXUP=y
+ CONFIG_SYS_CBSIZE=1024
+ # CONFIG_EFI_LOADER is not set
+ CONFIG_MSM_GPIO=y
+diff --git a/dts/upstream/src/arm64/qcom/ipq9574-rdp-common-ub.dtsi b/dts/upstream/src/arm64/qcom/ipq9574-rdp-common-ub.dtsi
+index 953e4fa..d46c476 100644
+--- a/dts/upstream/src/arm64/qcom/ipq9574-rdp-common-ub.dtsi
++++ b/dts/upstream/src/arm64/qcom/ipq9574-rdp-common-ub.dtsi
+@@ -20,6 +20,9 @@
+ 
+ 	chosen {
+ 		stdout-path = "serial0:115200n8";
++#ifdef CONFIG_BOOT_BANK_FIXUP
++		u-boot,booted-bank = "unknown,bootbank";
++#endif
+ 	};
+ 
+ 	soc@0 {

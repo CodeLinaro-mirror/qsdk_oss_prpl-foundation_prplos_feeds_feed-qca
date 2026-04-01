@@ -77,6 +77,7 @@ define Build/Prepare
 	if [ -d "$(SRC_DIR)" ] && [ -d "$(PKG_FILES_BUILD_DIR)" ]; then \
 		cp -fpR $(BOOTLOADER_FILES_SRC) $(SRC_DIR)/ 2>/dev/null || true; \
 	fi
+	$(PATCH) -d $(PKG_BUILD_DIR) -p1 < $(CURDIR)/patch/0001-arch-arm-dts-Patch-DTs-with-Booted-bank-info.patch
 endef
 
 
