@@ -1,0 +1,63 @@
+From 2b1f7ff543ecd72cf74d9a102cb9b2f207020af9 Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Thu, 2 Apr 2026 10:46:30 +0530
+Subject: [PATCH] Debugs to print duplicate addresses found
+
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+ net/mac80211/iface.c |  5 ++++-
+ net/mac80211/link.c  | 12 ++++++++++--
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/net/mac80211/iface.c b/net/mac80211/iface.c
+index 5e276cb107bd..19c448337c86 100644
+--- a/net/mac80211/iface.c
++++ b/net/mac80211/iface.c
+@@ -377,8 +377,11 @@ static int ieee80211_check_concurrent_iface(struct ieee80211_sub_if_data *sdata,
+ 			 * check whether it may have the same address
+ 			 */
+ 			if (!identical_mac_addr_allowed(iftype,
+-							nsdata->vif.type))
++							nsdata->vif.type)) {
++				printk(KERN_ERR "DUP iftype %d, addr %pM, nsdata type %d, addr %pM\n",
++					iftype, sdata->vif.addr, nsdata->vif.type, nsdata->vif.addr);
+ 				return -ENOTUNIQ;
++			}
+ 
+ 			/*
+ 			 * can only add VLANs to enabled APs
+diff --git a/net/mac80211/link.c b/net/mac80211/link.c
+index 64970e4be20b..641f3ba041c4 100644
+--- a/net/mac80211/link.c
++++ b/net/mac80211/link.c
+@@ -283,8 +283,12 @@ static int ieee80211_check_dup_link_addrs(struct ieee80211_sub_if_data *sdata)
+ 			if (!is_same_sdata && !is_zero_ether_addr(addr2) &&
+ 			    ether_addr_equal(addr1, addr2) &&
+ 			    !identical_mac_addr_allowed(sdata->vif.type,
+-							other_sdata->vif.type))
++							other_sdata->vif.type)) {
++				printk(KERN_ERR "DUP iftype %d, addr %pM, other sdata type %d, addr %pM\n",
++					sdata->vif.type, link->conf->addr, other_sdata->vif.type,
++					other_sdata->vif.addr);
+ 				return -ENOTUNIQ;
++			}
+ 
+ 			for (o_link_id = 0;
+ 			     o_link_id < IEEE80211_MLD_MAX_NUM_LINKS;
+@@ -309,8 +313,12 @@ static int ieee80211_check_dup_link_addrs(struct ieee80211_sub_if_data *sdata)
+ 				if (ether_addr_equal(addr1, addr2) &&
+ 				    (is_same_sdata ||
+ 				    !identical_mac_addr_allowed(sdata->vif.type,
+-								other_sdata->vif.type)))
++								other_sdata->vif.type))) {
++					printk(KERN_ERR "DUP o iftype %d, addr %pM, other sdata link %d type %d, addr %pM\n",
++						sdata->vif.type, link->conf->addr, o_link_id,
++						other_sdata->vif.type, other_link->conf->addr);
+ 					return -ENOTUNIQ;
++				}
+ 			}
+ 		}
+ 	}
+-- 
+2.34.1
+
