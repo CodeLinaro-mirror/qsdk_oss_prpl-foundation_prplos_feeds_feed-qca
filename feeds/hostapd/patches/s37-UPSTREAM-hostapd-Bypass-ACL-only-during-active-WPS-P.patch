@@ -1,0 +1,39 @@
+From f15c92df2cde98d7ba97b15f645f245ccd3454d8 Mon Sep 17 00:00:00 2001
+From: Harish Rachakonda <rachakon@qti.qualcomm.com>
+Date: Wed, 25 Mar 2026 11:12:01 +0530
+Subject: [PATCH] UPSTREAM:hostapd: Bypass ACL only during active WPS PBC
+ session
+
+Currently, ACL is bypassed as soon as WPS is enabled in the
+configuration, even when no WPS session is in progress. Fix
+this by restricting the ACL bypass to the WPS PBC active window
+only.
+
+Patch-dependency: Ia91ecbdea (2373516: hostapd: disable MAC ACL if WPS
+is enabled)
+Patch-work: None
+
+Signed-off-by: Harish Rachakonda <rachakon@qti.qualcomm.com>
+---
+ src/ap/ieee802_11_auth.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/ap/ieee802_11_auth.c b/src/ap/ieee802_11_auth.c
+index 2d2d994..c56f952 100644
+--- a/src/ap/ieee802_11_auth.c
++++ b/src/ap/ieee802_11_auth.c
+@@ -214,9 +214,9 @@ int hostapd_check_acl(struct hostapd_data *hapd, const u8 *addr,
+ 
+ #ifdef CONFIG_WPS
+ 	 /* According to WPS spec 2.0, disable MAC address filtering
+-	  * if WPS is enabled on the AP.
++	  * if WPS is active on the AP.
+ 	  */
+-	 if (hapd->conf->wps_state)
++	 if (hapd->wps_stats.pbc_status == WPS_PBC_STATUS_ACTIVE)
+ 		 return HOSTAPD_ACL_ACCEPT;
+ #endif /*CONFIG_WPS */
+ 
+-- 
+2.34.1
+
