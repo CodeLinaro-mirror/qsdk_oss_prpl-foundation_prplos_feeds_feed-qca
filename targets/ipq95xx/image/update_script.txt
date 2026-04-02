@@ -1,25 +1,26 @@
 echo "=== prplOS Freedom-QCA95xx UPDATE ==="
 echo "Defining helper commands..."
 
-setenv kernel-active_block_start     0x00091422
+setenv u_boot_active_block_start     0x00004622
+setenv u_boot_active_block_size      0x00002000
+
+setenv u_boot_inactive_block_start   0x00006622
+setenv u_boot_inactive_block_size    0x00002000
+
+setenv kernel-active_block_start     0x00013422
 setenv kernel-active_block_size      0x00010000
 
-setenv kernel-inactive_block_start   0x000A1422
+setenv kernel-inactive_block_start   0x00023422
 setenv kernel-inactive_block_size    0x00010000
 
-setenv rootfs-active_block_start     0x000B1422
+setenv rootfs-active_block_start     0x00033422
 setenv rootfs-active_block_size      0x00080000
 
-setenv rootfs-inactive_block_start   0x00131422
+setenv rootfs-inactive_block_start   0x000b3422
 setenv rootfs-inactive_block_size    0x00080000
 
-setenv mfgdata_block_start           0x001B1422
+setenv mfgdata_block_start           0x00574022
 setenv mfgdata_block_size            0x00000800
-
-# setenv u_boot_active_block_start    0x00001422
-# setenv u_boot_active_block_size     0x00008000
-# setenv u_boot_inactive_block_start  0x00009422
-# setenv u_boot_inactive_block_size   0x00008000
 
 # ---------------------------------------------------------------------------
 # Generic helpers (functions) for flashing
