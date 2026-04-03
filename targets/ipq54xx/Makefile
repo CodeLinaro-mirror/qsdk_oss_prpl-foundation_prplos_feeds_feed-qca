@@ -43,16 +43,17 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-ppe-qdisc \
 	kmod-qca-nss-drv-pptp kmod-pptp kmod-emesh-sp \
 	kmod-qca-nss-ppe-mirror-test \
-	kmod-qca-nss-macsec kmod-qca-nss-crypto qca-wifi-hk-fw-hw1-10.4-asic kmod-qca-nss-ecm-wifi-plugin \
+	kmod-qca-nss-macsec qca-wifi-hk-fw-hw1-10.4-asic kmod-qca-nss-ecm-wifi-plugin \
 	kmod-qca-nss-sfe kmod-crypto-authenc kmod-qca-nss-ecm-premium  kmod-qca-ovsmgr \
 	-kmod-qca-nss-cfi-cryptoapi  -kmod-qca-nss-gmac \
-	-kmod-qca-nss-cfi-ocf kmod-qca-nss-ppe-mirror-test  \
+	-kmod-qca-nss-cfi-ocf kmod-qca-nss-ppe-mirror-test \
 	kmod-nss-udp-st-drv kmod-qca-nss-dscpstats kmod-qca-nss-nsm \
 	kmod-qca8084 kmod-qca81xx kmod-aqr-phy kmod-qca8xxx-phc kmod-qca8k \
 	kmod-qca-nss-ppe-dsa-mgr kmod-qca-nss-flowmgr kmod-qca-nss-ppe-netlink kmod-qca-nss-fls kmod-qca-nss-netfn-tcpst \
 	ftm myftm diag cnssdiag \
 	libubox ubus udebug netifd-scripts kmod-qca-nss-netfn-tcpst  nss-tcp-st-cli nss-udp-st netstandby-drv \
-	kmod-qca-nss-eip-ipsec
+	kmod-qca-nss-eip-ipsec qca-ssdk-shell wifi-helper-scripts kmod-telemetry-agent wifi-scripts ethtool tcpdump \
+	kmod-usb-storage kmod-usb-storage-extras kmod-usb-storage-uas kmod-fs-vfat hostapd-utils wpa-cli kmod-ath11k
 
 GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
 
