@@ -21,7 +21,7 @@
 	aliases {
 		serial0 = &blsp1_uart2;
 		serial1 = &blsp1_uart4;
-		serial2 = &blsp1_uart3;
+		serial2 = &blsp1_uart1;
 		ethernet0 = "/soc@0/dp1";
 		ethernet1 = "/soc@0/dp2";
 		ethernet2 = "/soc@0/dp3";
@@ -370,10 +370,10 @@
 	status = "okay";
 };
 
-&blsp1_uart3 {
-	pinctrl-0 = <&gps_pins>;
+&blsp1_uart1 {
+	pinctrl-0 = <&GNSS_UART_pins>;
 	pinctrl-names = "default";
-	status = "disabled";
+	status = "okay";
 };
 
 &blsp1_uart4 {
@@ -903,6 +903,15 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
+		};
+	};
+
+	GNSS_UART_pins: GNSS_UART_pins {
+		uart1_pins: uart1-pins {
+			pins = "gpio36", "gpio37";
+			function = "blsp1_uart";
+			drive-strength = <8>;
+			bias-disable;
 		};
 	};
 
