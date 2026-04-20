@@ -1,0 +1,45 @@
+From 53daa60324ca28e3441c39932bd0cba2a1f3ed8d Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Tue, 14 Apr 2026 15:03:06 +0530
+Subject: [PATCH] QSDK:DP:ath12k: allow 3addr IEEE1905 packets for Easymesh cert
+
+Currently multicast frames from Multi-AP agent is received as 3addr
+which is not right as WFA Easymesh specification.
+
+To WAR this AP side issue, adding check for 1905 packets not to be
+dropped even when sent in 3addr format since duplication of few
+frames is manageable.
+
+Change-Id: I153cacd089f981d0c3b52639fcbe00c1ac2ca018
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+
+diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
+index 5630857..bb93045 100644
+--- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
++++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
+@@ -787,6 +787,7 @@ static void ath12k_wifi7_dp_rx_h_undecap_eth(struct ath12k_pdev_dp *dp_pdev,
+ 	status->flag &= ~RX_FLAG_8023;
+ }
+ 
++#define ETH_P_1905 0x893a
+ static int ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+ 					struct sk_buff *msdu,
+ 					struct hal_rx_desc *desc,
+@@ -839,12 +840,13 @@ static int ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+ 			break;
+ 		}
+ 
+-
+ 		/* Drop the 3addr da_mcbc packets for 4addr sta as it will
+-		 * double the packet for connected clients.
++		 * double the packet for connected clients except IEEE1905
++		 * packets which are required for Easymesh.
+ 		 */
+ 		if (is_4addr_sta && rx_msdu_info->da_is_mcbc &&
+-		    !rx_msdu_info->to_ds) {
++		    !rx_msdu_info->to_ds &&
++		    ehdr->h_proto != cpu_to_be16(ETH_P_1905)) {
+ 			if (ath12k_dp_stats_enabled(dp_pdev) &&
+ 			    ath12k_tid_stats_enabled(dp_pdev)) {
+ 				rcu_read_lock();
