@@ -129,7 +129,7 @@ local ifname=$2
 				sae-ext-key)
 					hostapd_cli -i"$ifname" set wpa_key_mgmt "SAE-EXT-KEY"
 					hostapd_cli -i"$ifname" set rsn_pairwise "GCMP-256"
-					hostapd_cli -i"$ifname" set group_cipher "GCMP-256"
+					hostapd_cli -i"$ifname" set group_cipher "CCMP"
 					hostapd_cli -i"$ifname" set ieee80211w 2
 					hostapd_cli -i"$ifname" set sae_pwe 2
 					encryption="sae-ext-key"
@@ -200,8 +200,12 @@ local ifname=$2
 }
 
 is_mld() {
-	mld_group=$1
-	mld_iface=$(uci get wireless."$1".ifname)
+	local _group=$1
+	local _iface=$(uci get wireless."$1".ifname)
+	if [ "${IFNAME#*$_iface}" != "$IFNAME" ]; then
+		mld_iface=$_iface
+		mld_group=$_group
+	fi
 }
 
 if [[ "$CMD" == *DPP* ]]; then

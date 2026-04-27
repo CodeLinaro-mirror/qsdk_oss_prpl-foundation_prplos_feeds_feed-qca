@@ -1578,6 +1578,34 @@ enable_affinity_mr03() {
 	enable_affinity_ds
 }
 
+enable_affinity_hr01() {
+	#pci 0
+	#assign 4 rx interrupts to each cores
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_4' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 1 > /proc/irq/$irq_affinity_num/smp_affinity
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_5' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 2 > /proc/irq/$irq_affinity_num/smp_affinity
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_6' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 4 > /proc/irq/$irq_affinity_num/smp_affinity
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_7' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 8 > /proc/irq/$irq_affinity_num/smp_affinity
+
+	#assign 3 tcl completions to last 3 CPUs
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_0' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 1 > /proc/irq/$irq_affinity_num/smp_affinity
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_1' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 2 > /proc/irq/$irq_affinity_num/smp_affinity
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_2' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 4 > /proc/irq/$irq_affinity_num/smp_affinity
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_3' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 8 > /proc/irq/$irq_affinity_num/smp_affinity
+
+	irq_affinity_num=`grep -E -m1 'pci0_wlan_dp_8' /proc/interrupts | cut -d ':' -f 1 | tail -n1 | tr -d ' '`
+	[ -n "$irq_affinity_num" ] && echo 8 > /proc/irq/$irq_affinity_num/smp_affinity
+
+	enable_affinity_ds
+}
+
 ce_interrupt_affinity() {
         i=0
         cpu_mul=2
@@ -1655,7 +1683,8 @@ enable_smp_affinity_wifi() {
 			ap-al02-c4 | \
 			ap-al02-c8 | \
 			ap-al02-c10 | \
-			ap-al05)
+			ap-al05 | \
+			rdp492)
 					#case for rdp433 (QCN9274 2.4, 5, 6 GHz)
 					enable_affinity_al02_c4
 					;;
@@ -1727,6 +1756,10 @@ enable_smp_affinity_wifi() {
 			rdp487-c2)
 					#for RDP487 (IPQ5424(2.4GHz) + QCN9274(5 GHz))
 					enable_affinity_mr03
+					;;
+			rdp501)
+					#for RDP501 (QCN6432 2.4GHz + 5GHz)
+					enable_affinity_hr01
 					;;
 			*)
 					#no affinity settings

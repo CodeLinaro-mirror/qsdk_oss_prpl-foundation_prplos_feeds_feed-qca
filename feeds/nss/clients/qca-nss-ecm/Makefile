@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ecm
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-ecm
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=7b7ea2753e0918c6c82318b80b87e8d45a3495a3
+PKG_VERSION:=c572e64287c595297a907ad6196defb3e19eb0c1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -96,6 +96,8 @@ else ifeq ($(CONFIG_LOWMEM_FLASH),y)
 	echo 'net.netfilter.nf_conntrack_max=2048' >> $(1)/etc/sysctl.d/qca-nss-ecm.conf
 else ifeq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),512)
 	echo 'net.netfilter.nf_conntrack_max=8192' >> $(1)/etc/sysctl.d/qca-nss-ecm.conf
+else
+	echo 'net.netfilter.nf_conntrack_max=16384' >> $(1)/etc/sysctl.d/qca-nss-ecm.conf
 endif
 endef
 
@@ -107,9 +109,9 @@ define KernelPackage/qca-nss-ecm-standard
   DEPENDS+=	+TARGET_ipq95xx:kmod-qca-nss-sfe +TARGET_ipq95xx:kmod-qca-nss-ppe \
 	+TARGET_ipq53xx:kmod-qca-nss-sfe +TARGET_ipq53xx:kmod-qca-nss-ppe \
 	+TARGET_ipq54xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
-	+TARGET_ipq96xx:kmod-qca-nss-sfe +TARGET_ipq54xx:kmod-qca-nss-ppe \
+	+TARGET_ipq96xx:kmod-qca-nss-sfe +TARGET_ipq96xx:kmod-qca-nss-ppe \
 	+TARGET_ipq52xx:kmod-qca-nss-sfe +TARGET_ipq52xx:kmod-qca-nss-ppe \
-	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256)&&(TARGET_ipq53xx||TARGET_ipq54xx):kmod-bonding \
+	+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256Open||TARGET_ipq53xx_ipq53xx_32_QSDK_256Open)&&(TARGET_ipq53xx||TARGET_ipq54xx):kmod-bonding \
 	+TARGET_ipq95xx:kmod-bonding +PACKAGE_kmod-emesh-sp:kmod-emesh-sp
 endef
 
@@ -140,23 +142,6 @@ define KernelPackage/qca-nss-ecm-nonss
   $(call KernelPackage/qca-nss-ecm-nonss/Default)
   TITLE+= (with no-nss for host mode)
   VARIANT:=nonss
-endef
-
-define KernelPackage/qca-nss-ecm-wifi-plugin
-  TITLE+= (with no-nss for host mode)
-  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
-		+PACKAGE_kmod-ath:kmod-ath \
-		+PACKAGE_kmod-qca-nss-ecm-premium:kmod-qca-nss-ecm-premium \
-		+PACKAGE_kmod-qca-nss-ecm-standard:kmod-qca-nss-ecm-standard \
-		+PACKAGE_kmod-qca-nss-ecm-noload:kmod-qca-nss-ecm-noload \
-		+PACKAGE_kmod-ath12k:kmod-ath12k
-
-  FILES+=$(PKG_BUILD_DIR)/ecm_wifi_plugins/ecm-wifi-plugin.ko
-endef
-
-define KernelPackage/qca-nss-ecm-wifi-plugin/Description/Default
-$(call KernelPackage/qca-nss-ecm/Description/Default)
-with the ecm-wifi-plugin enabled
 endef
 
 define KernelPackage/qca-nss-ecm-premium/Description/Default
@@ -271,24 +256,18 @@ endif
 
 ifneq ($(CONFIG_PACKAGE_kmod-ath),)
 ECM_MAKE_OPTS+=ECM_OPEN_PROFILE_ENABLE=y
+# Set to y only if kernel config CONFIG_BRIDGE_MCAST_OFFLOAD is enabled
+ifneq ($(CONFIG_BRIDGE_MCAST_OFFLOAD),)
+ECM_MAKE_OPTS+=ECM_ATH_MCAST_ENABLE=y
+EXTRA_CFLAGS += -I$(LINUX_DIR)/net/bridge
+endif
 endif
 
-ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ecm-wifi-plugin),)
-CONFIG_QCA_NSS_ECM_WIFI_PLUGIN=y
-ifneq ($(CONFIG_PACKAGE_kmod-ath),)
-ifneq ($(CONFIG_PACKAGE_kmod-emesh-sp),)
-ECM_MAKE_OPTS+=ECM_WIFI_PLUGIN_OPEN_PROFILE_ENABLE=y
 ECM_MAKE_OPTS+=ECM_FRONT_END_FSE_ENABLE=y
 ECM_MAKE_OPTS+=ECM_CLASSIFIER_MSCS_ENABLE=y
-endif
-else
-ifneq ($(CONFIG_PACKAGE_kmod-emesh-sp),)
-ECM_MAKE_OPTS+=ECM_CLASSIFIER_MSCS_SCS_ENABLE=y
-EXTRA_CFLAGS+= -I$(STAGING_DIR)/usr/include/emesh-sp
-endif
+
 ECM_MAKE_OPTS+=ECM_FRONT_END_FSE_ENABLE=y
-endif
-endif
+ECM_MAKE_OPTS+=ECM_CLASSIFIER_MSCS_ENABLE=y
 
 ifeq ($(CONFIG_PACKAGE_kmod-qca-mcs), y)
 ECM_MAKE_OPTS+=ECM_MULTICAST_ENABLE=y
@@ -310,11 +289,21 @@ ECM_MAKE_OPTS+=ECM_INTERFACE_BOND_ENABLE=y
 endif
 endif
 
+ECM_MAKE_OPTS+=ECM_INTERFACE_PPP_ENABLE=y
+ECM_MAKE_OPTS+=ECM_INTERFACE_PPPOE_ENABLE=y
+
 ifeq ($(LOCAL_VARIANT),standard)
 ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),y)
-ifeq ($(CONFIG_TARGET_ipq53xx_ipq53xx_32_QSDK_256)$(CONFIG_TARGET_ipq54xx_ipq54xx_32_QSDK_256),)
+ifeq ($(CONFIG_TARGET_ipq53xx_ipq53xx_32_QSDK_256)$(CONFIG_TARGET_ipq54xx_ipq54xx_32_QSDK_256)$(CONFIG_TARGET_ipq54xx_ipq54xx_32_QSDK_256Open)$(CONFIG_TARGET_ipq53xx_ipq53xx_32_QSDK_256Open),)
 ECM_MAKE_OPTS+=ECM_INTERFACE_BOND_ENABLE=y
 endif
+endif
+endif
+
+# Enable ECM ESP SPI Passthrough support when kernel config is enabled
+ifneq ($(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx),)
+ifneq ($(CONFIG_NF_CT_PROTO_ESP),)
+ECM_MAKE_OPTS+=ECM_FRONT_END_ESP_SPI_PASSTHROUGH=y
 endif
 endif
 
@@ -331,7 +320,7 @@ ECM_MAKE_OPTS+=ECM_NON_PORTED_SUPPORT_ENABLE=y
 endif
 endif
 
-ifneq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),)
+ifneq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx)$(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx),)
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ecm-premium)$(CONFIG_PACKAGE_kmod-qca-nss-ecm-nonss),)
 ECM_MAKE_OPTS+=ECM_INTERFACE_VXLAN_ENABLE=y
 endif
@@ -443,14 +432,14 @@ ifneq ($(CONFIG_PACKAGE_kmod-macvlan),)
 ECM_MAKE_OPTS+=ECM_INTERFACE_MACVLAN_ENABLE=y
 endif
 
-ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx), y)
+ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx)$(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx), y)
 ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
 ECM_MAKE_OPTS+=ECM_INTERFACE_L2TPV3_ENABLE=y
 endif
 endif
 
-ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx), y)
-ECM_MAKE_OPTS+=ECM_FRONT_END_BRIDGE_ISOLATION_ENABLE=y
+ifeq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx)$(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx), y)
+ECM_MAKE_OPTS+=ECM_INTERFACE_BRIDGE_ISOLATION_ENABLE=y
 endif
 
 # Disable ECM IPv6 support when global IPv6 support is disabled.
@@ -489,7 +478,6 @@ define Build/Compile
 		EXAMPLES_BUILD_PCC="$(CONFIG_QCA_NSS_ECM_EXAMPLES_PCC)" \
 		EXAMPLES_BUILD_MARK="$(CONFIG_QCA_NSS_ECM_EXAMPLES_MARK)" \
 		EXAMPLES_BUILD_OVS="$(CONFIG_QCA_NSS_ECM_OVS)" \
-		BUILD_ECM_WIFI_PLUGIN="$(CONFIG_QCA_NSS_ECM_WIFI_PLUGIN)" \
 		EXAMPLES_BUILD_SDX="$(CONFIG_QCA_NSS_ECM_EXAMPLES_SDX)" \
 		modules
 endef
@@ -527,4 +515,3 @@ $(eval $(call KernelPackage,qca-nss-ecm-standard))
 $(eval $(call KernelPackage,qca-nss-ecm-premium-noload))
 $(eval $(call KernelPackage,qca-nss-ecm-premium))
 $(eval $(call KernelPackage,qca-nss-ecm-nonss))
-$(eval $(call KernelPackage,qca-nss-ecm-wifi-plugin))

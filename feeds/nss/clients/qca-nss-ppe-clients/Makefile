@@ -2,13 +2,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe-clients
+PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=d53eff24bf257a8bb1b2f68beb3aa06332bfd567
+PKG_VERSION:=658249b9f4c6e0dcb023ab28041283498c7e27eb
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -62,7 +63,7 @@ define KernelPackage/qca-nss-ppe-pppoe-mgr
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=Kernel driver for NSS PPE PPPoE manager
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx||TARGET_ipq52xx \
 		+kmod-qca-nss-ppe \
 		+kmod-pppoe @!LINUX_3_18 \
 		+PACKAGE_kmod-bonding:kmod-bonding
@@ -112,9 +113,8 @@ define KernelPackage/qca-nss-ppe-ath-clients
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=Kernel driver for NSS PPE ath clients
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
-		+kmod-qca-nss-ppe-vp \
-		+PACKAGE_kmod-ath12k:kmod-ath12k
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx||TARGET_ipq52xx \
+		+kmod-qca-nss-ppe-vp
   FILES:=$(PKG_BUILD_DIR)/clients/ath_client/qca-nss-ppe-ath-clients.ko
   AUTOLOAD:=$(call AutoLoad,52,qca-nss-ppe-ath-clients)
 endef
@@ -148,7 +148,7 @@ endif
 
 ifneq ($(CONFIG_PACKAGE_kmod-qca-nss-ppe-pppoe-mgr),)
 MAKE_OPTS+=pppoe-mgr=y
-ifneq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx),)
+ifneq ($(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq54xx)$(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx),)
 MAKE_OPTS+=PPPOE_MGR_FE_PPE_ENABLE=y
 endif
 endif

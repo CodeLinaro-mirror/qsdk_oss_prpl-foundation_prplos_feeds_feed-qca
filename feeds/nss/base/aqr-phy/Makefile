@@ -2,11 +2,11 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=aqr-phy
+PKG_LICENSE:=GPL-2.0
 PKG_RELEASE:=1
-PKG_LICENSE:=GPL-2.0-only
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/Aquantia/linux-aqr-phy-only.git
-PKG_SOURCE_VERSION:=47176a6e20ae1f432579380988e1d729941c7fb8
+PKG_SOURCE_VERSION:=bb019b0532f3b4f4b3db42415d83a4912a18b7c6
 PKG_SOURCE_SUBMODULES:=skip
 
 include $(INCLUDE_DIR)/package.mk

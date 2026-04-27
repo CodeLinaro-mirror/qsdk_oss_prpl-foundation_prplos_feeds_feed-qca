@@ -983,51 +983,13 @@ mac80211_generate_mac() {
 
 	macidx=$(($id + 1))
 
-	if [ "$multiple_bssid" == "3" ]; then
-		max_bssid_ind=0
-		local iter=$((mbssid_group_size-1))
-		while [ "$iter" -gt 0 ]
-		do
-			max_bssid_ind=$((max_bssid_ind+1))
-			iter=$((iter >> 1))
-		done
-		max_bssid=$((1 << max_bssid_ind))
-	fi
-
-	if [ "$mode" == "ap" ] && [ "$multiple_bssid" -ge 1 ] && [ "$id" -ge 0 ]; then
-		local ref_dec
-		local max_mbssid_mac="$(cat /tmp/${device}_mbssid_mac)"
-
-		if [ "$multiple_bssid" == "3" ] && [ "$id" -ge "$mbssid_group_size" ]; then
-			ref_dec=$((max_mbssid_mac+1))
-		else
-			ref_dec=$( printf '%d\n' $( echo "0x$ref" | tr -d ':' ) )
-		fi
+	if [ "$multiple_bssid" -ge 1 ] && [ "$multiple_bssid" -le 3 ] && [ "$has_ap" -gt 1 ]; then
+		ref_dec=$( printf '%d\n' $( echo "0x$ref" | tr -d ':' ) )
 
 		bssid_l_mask=$(((1 << $max_bssid_ind) - 1))
 		bssid_l=$(((($ref_dec & $bssid_l_mask) + $id) % $max_bssid))
 		bssid_h=$((($bssid_l_mask ^ 0xFFFFFFFFFFFF) & $ref_dec))
 		printf $( echo $( printf '%012x\n' $((bssid_h | bssid_l))) | sed 's!\(..\)!\1:!g;s!:$!!' )
-
-		if [ "$multiple_bssid" != "3" ]; then
-			return
-		fi
-
-		if [ "$id" -eq 0 ]; then
-			rm -rf /tmp/${device}_mbssid_mac
-			echo -n "$(($bssid_h | $bssid_l)) " > /tmp/${device}_mbssid_mac
-		fi
-		max_mbssid_mac="$(cat /tmp/${device}_mbssid_mac)"
-		if [ "$id" -lt "$mbssid_group_size" ]; then
-			if [ $((bssid_h | bssid_l)) -gt "$max_mbssid_mac" ]; then
-				echo -n "$((bssid_h | bssid_l)) " > /tmp/${device}_mbssid_mac
-			fi
-		else
-			if [ $((id % mbssid_group_size)) -eq $((mbssid_group_size-1)) ]; then
-				echo -n "$((bssid_h | bssid_l)) " > /tmp/${device}_mbssid_mac
-			fi
-		fi
-
 		return
 	fi
 

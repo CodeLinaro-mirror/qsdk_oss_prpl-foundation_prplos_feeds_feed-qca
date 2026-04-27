@@ -1,0 +1,288 @@
+From 6681a46af9fc85b89e4d17ae3231379d4ed322fb Mon Sep 17 00:00:00 2001
+From: Karthikeyan Kathirvel <karthikeyan.kathirvel@oss.qualcomm.com>
+Date: Tue, 15 Apr 2025 13:44:42 +0530
+Subject: [PATCH] UPSTREM:PROTOCOL: iw: Add support to parse UHR Capabilities
+
+Add support to parse UHR MAC and PHY capabilities.
+
+UHR Iftypes: AP
+        UHR MAC Capabilities (0xff):
+                DPS Supported
+                DPS Assisting Supported
+                DPS AP Static HCM Support
+                Multi-link Power Management Supported
+                NPCA Supported
+                BSR Enhancement Supported
+                Additional Mapped TID Supported
+                EOTSP Supported
+                DSO Supported
+                P_EDCA Supported
+                DBE Supported
+                UL LLI Supported
+                P2P LLI Supported
+                PUO Supported
+                AP PUO Supported
+                DUO Supported
+                OM Ctrl UL MU data disable RX Supported
+                AOM Supported
+                IFCS Supported
+                TRS Supported
+                TXSPG Supported
+                TXOP return INTXSPG Supported
+                UHR oper mode param update timeout
+                Param update adv notify int
+                Update ind in TIM int
+                Bounded ESS
+                BTM Assurance
+        UHR PHY Capabilities: (0xab):
+                Max Nss Rx for NDP sounding (<= 80 MHz)
+                Max Nss Rx for NDP sounding (= 160 MHz)
+                Max Nss Rx for NDP sounding (= 320 MHz)
+UHR Iftypes: managed
+        UHR MAC Capabilities (0xff):
+                DPS Supported
+                DPS Assisting Supported
+                DPS AP Static HCM Support
+                Multi-link Power Management Supported
+                NPCA Supported
+                BSR Enhancement Supported
+                Additional Mapped TID Supported
+                EOTSP Supported
+                DSO Supported
+                P_EDCA Supported
+                DBE Supported
+                UL LLI Supported
+                P2P LLI Supported
+                PUO Supported
+                AP PUO Supported
+                DUO Supported
+                OM Ctrl UL MU data disable RX Supported
+                AOM Supported
+                IFCS Supported
+                TRS Supported
+                TXSPG Supported
+                TXOP return INTXSPG Supported
+                UHR oper mode param update timeout
+                Param update adv notify int
+                Update ind in TIM int
+                Bounded ESS
+                BTM Assurance
+        UHR PHY Capabilities: (0xff):
+                Max Nss Rx for NDP sounding (<= 80 MHz)
+                Max Nss,total Rx for DL MUMIMO (<= 80 MHz)
+                Max Nss Rx for NDP sounding (= 160 MHz)
+                Max Nss,total Rx for DL MUMIMO (= 160 MHz)
+                Max Nss Rx for NDP sounding (= 320 MHz)
+                Max Nss,total Rx for DL MU-MIMO (= 320 MHz)
+                ELR Rx Supported
+                ELR Tx Supported
+UHR Iftypes: mesh point
+        UHR MAC Capabilities (0xff):
+                DPS Supported
+                DPS Assisting Supported
+                DPS AP Static HCM Support
+                Multi-link Power Management Supported
+                NPCA Supported
+                BSR Enhancement Supported
+                Additional Mapped TID Supported
+                EOTSP Supported
+                DSO Supported
+                P_EDCA Supported
+                DBE Supported
+                UL LLI Supported
+                P2P LLI Supported
+                PUO Supported
+                AP PUO Supported
+                DUO Supported
+                OM Ctrl UL MU data disable RX Supported
+                AOM Supported
+                IFCS Supported
+                TRS Supported
+                TXSPG Supported
+                TXOP return INTXSPG Supported
+                UHR oper mode param update timeout
+                Param update adv notify int
+                Update ind in TIM int
+                Bounded ESS
+                BTM Assurance
+        UHR PHY Capabilities: (0xff):
+                Max Nss Rx for NDP sounding (<= 80 MHz)
+                Max Nss,total Rx for DL MUMIMO (<= 80 MHz)
+                Max Nss Rx for NDP sounding (= 160 MHz)
+                Max Nss,total Rx for DL MUMIMO (= 160 MHz)
+                Max Nss Rx for NDP sounding (= 320 MHz)
+                Max Nss,total Rx for DL MU-MIMO (= 320 MHz)
+                ELR Rx Supported
+                ELR Tx Supported
+
+Signed-off-by: Karthikeyan Kathirvel <karthikeyan.kathirvel@oss.qualcomm.com>
+---
+ info.c    |  1 +
+ iw.h      |  1 +
+ nl80211.h |  6 +++++
+ util.c    | 81 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 89 insertions(+)
+
+--- a/info.c
++++ b/info.c
+@@ -493,6 +493,7 @@ static int print_phy_handler(struct nl_m
+ 						    rem_band) {
+ 					print_he_info(nl_iftype);
+ 					print_eht_info(nl_iftype, last_band);
++					print_uhr_info(nl_iftype);
+ 				}
+ 			}
+ 			if (tb_band[NL80211_BAND_ATTR_FREQS]) {
+--- a/iw.h
++++ b/iw.h
+@@ -470,6 +470,7 @@ void print_he_operation(const uint8_t *i
+ void print_he_info(struct nlattr *nl_iftype);
+ void print_eht_operation(const uint8_t *ie, int len);
+ void print_eht_info(struct nlattr *nl_iftype, int band);
++void print_uhr_info(struct nlattr *nl_iftype);
+ void print_s1g_capability(const uint8_t *caps);
+ 
+ char *channel_width_name(enum nl80211_chan_width width);
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -4305,6 +4305,10 @@ enum nl80211_mpath_info {
+  *	capabilities element
+  * @NL80211_BAND_IFTYPE_ATTR_EHT_CAP_PPE: EHT PPE thresholds information as
+  *	defined in EHT capabilities element
++ * @NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC: UHR MAC capabilities as in UHR
++ *	capabilities element
++ * @NL80211_BAND_IFTYPE_ATTR_UHR_CAP_PHY: UHR PHY capabilities as in UHR
++ *	capabilities element
+  * @__NL80211_BAND_IFTYPE_ATTR_AFTER_LAST: internal use
+  * @NL80211_BAND_IFTYPE_ATTR_MAX: highest band attribute currently defined
+  */
+@@ -4322,6 +4326,8 @@ enum nl80211_band_iftype_attr {
+ 	NL80211_BAND_IFTYPE_ATTR_EHT_CAP_PHY,
+ 	NL80211_BAND_IFTYPE_ATTR_EHT_CAP_MCS_SET,
+ 	NL80211_BAND_IFTYPE_ATTR_EHT_CAP_PPE,
++	NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC,
++	NL80211_BAND_IFTYPE_ATTR_UHR_CAP_PHY,
+ 
+ 	/* keep last */
+ 	__NL80211_BAND_IFTYPE_ATTR_AFTER_LAST,
+--- a/util.c
++++ b/util.c
+@@ -1742,6 +1742,118 @@ void print_eht_info(struct nlattr *nl_if
+ 			 he_phy_cap, true);
+ }
+ 
++static void __print_uhr_capa(const __u32 *mac_cap,
++			      const __u32 *phy_cap,
++			      bool indent)
++{
++	const char *pre = indent ? "\t" : "";
++	int i;
++
++	#define PRINT_UHR_CAP(_var, _idx, _bit, _str) \
++	do { \
++		if (_var[_idx] & BIT(_bit)) \
++			printf("%s\t\t\t" _str "\n", pre); \
++	} while (0)
++
++	#define PRINT_UHR_CAP_MASK(_var, _idx, _shift, _mask, _str) \
++	do { \
++		if ((_var[_idx] >> _shift) & _mask) \
++			printf("%s\t\t\t" _str ": %d\n", pre, (_var[_idx] >> _shift) & _mask); \
++	} while (0)
++
++	#define PRINT_UHR_MAC_CAP(...) PRINT_UHR_CAP(mac_cap, __VA_ARGS__)
++	#define PRINT_UHR_PHY_CAP(...) PRINT_UHR_CAP(phy_cap, __VA_ARGS__)
++	#define PRINT_UHR_MAC_CAP_MASK(...) PRINT_UHR_CAP_MASK(mac_cap, __VA_ARGS__)
++
++	printf("%s\t\tUHR MAC Capabilities (0x", pre);
++	for (i = 0; i < 8; i++)
++		printf("%02x", ((__u8 *)mac_cap)[i]);
++	printf("):\n");
++
++	PRINT_UHR_MAC_CAP(0, 0, "DPS Supported");
++	PRINT_UHR_MAC_CAP(0, 1, "DPS Assisting Supported");
++	PRINT_UHR_MAC_CAP(0, 2, "DPS AP Static HCM Support");
++	PRINT_UHR_MAC_CAP(0, 3, "Multi-link Power Management Supported");
++	PRINT_UHR_MAC_CAP(0, 4, "NPCA Supported");
++	PRINT_UHR_MAC_CAP(0, 5, "BSR Enhancement Supported");
++	PRINT_UHR_MAC_CAP(0, 6, "Additional Mapped TID Supported");
++	PRINT_UHR_MAC_CAP(0, 7, "EOTSP Supported");
++	PRINT_UHR_MAC_CAP(0, 8, "DSO Supported");
++	PRINT_UHR_MAC_CAP(0, 9, "P_EDCA Supported");
++	PRINT_UHR_MAC_CAP(0, 10, "DBE Supported");
++	PRINT_UHR_MAC_CAP(0, 11, "UL LLI Supported");
++	PRINT_UHR_MAC_CAP(0, 12, "P2P LLI Supported");
++	PRINT_UHR_MAC_CAP(0, 13, "PUO Supported");
++	PRINT_UHR_MAC_CAP(0, 14, "AP PUO Supported");
++	PRINT_UHR_MAC_CAP(0, 15, "DUO Supported");
++	PRINT_UHR_MAC_CAP(0, 16, "OM Ctrl UL MU data disable RX Supported");
++	PRINT_UHR_MAC_CAP(0, 17, "AOM Supported");
++	PRINT_UHR_MAC_CAP(0, 18, "IFCS Supported");
++	PRINT_UHR_MAC_CAP(0, 19, "TRS Supported");
++	PRINT_UHR_MAC_CAP(0, 20, "TXSPG Supported");
++	PRINT_UHR_MAC_CAP(0, 21, "TXOP return INTXSPG Supported");
++	PRINT_UHR_MAC_CAP_MASK(0, 22, 0xf, "UHR oper mode param update timeout");
++	PRINT_UHR_MAC_CAP_MASK(0, 26, 0x7, "Param update adv notify int");
++	PRINT_UHR_MAC_CAP_MASK(0, 29, 0x1f, "Update ind in TIM int");
++	PRINT_UHR_MAC_CAP(1, 2, "Bounded ESS");
++	PRINT_UHR_MAC_CAP(1, 3, "BTM Assurance");
++
++	printf("%s\t\tUHR PHY Capabilities: (0x", pre);
++	for (i = 0; i < 4; i++)
++		printf("%02x", ((__u8 *)phy_cap)[i]);
++	printf("):\n");
++
++	PRINT_UHR_PHY_CAP(0, 0, "Max Nss Rx for NDP sounding (<= 80 MHz)");
++	PRINT_UHR_PHY_CAP(0, 1, "Max Nss,total Rx for DL MUMIMO (<= 80 MHz)");
++	PRINT_UHR_PHY_CAP(0, 2, "Max Nss Rx for NDP sounding (= 160 MHz)");
++	PRINT_UHR_PHY_CAP(0, 3, "Max Nss,total Rx for DL MUMIMO (= 160 MHz)");
++	PRINT_UHR_PHY_CAP(0, 4, "Max Nss Rx for NDP sounding (= 320 MHz)");
++	PRINT_UHR_PHY_CAP(0, 5, "Max Nss,total Rx for DL MU-MIMO (= 320 MHz)");
++	PRINT_UHR_PHY_CAP(0, 6, "ELR Rx Supported");
++	PRINT_UHR_PHY_CAP(0, 7, "ELR Tx Supported");
++}
++
++void print_uhr_info(struct nlattr *nl_iftype)
++{
++	struct nlattr *tb[NL80211_BAND_IFTYPE_ATTR_MAX + 1];
++	__u32 mac_cap[2] = { 0 };
++	__u32 phy_cap[1] = { 0 };
++	size_t len;
++
++	nla_parse(tb, NL80211_BAND_IFTYPE_ATTR_MAX,
++		  nla_data(nl_iftype), nla_len(nl_iftype), NULL);
++
++	if (!tb[NL80211_BAND_IFTYPE_ATTR_IFTYPES] ||
++	    !tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC])
++		return;
++
++	printf("\t\tUHR Iftypes: ");
++	print_iftype_line(tb[NL80211_BAND_IFTYPE_ATTR_IFTYPES]);
++	printf("\n");
++
++	if (tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC]) {
++		len = nla_len(tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC]);
++		if (len > sizeof(mac_cap))
++			len = sizeof(mac_cap);
++		memcpy(mac_cap,
++		       nla_data(tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC]),
++		       len);
++	}
++
++	if (tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_PHY]) {
++		len = nla_len(tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_PHY]);
++
++		if (len > sizeof(phy_cap))
++			len = sizeof(phy_cap);
++
++		memcpy(phy_cap,
++		       nla_data(tb[NL80211_BAND_IFTYPE_ATTR_UHR_CAP_PHY]),
++		       len);
++	}
++
++	__print_uhr_capa(mac_cap, phy_cap, true);
++}
++
+ void print_he_capability(const uint8_t *ie, int len)
+ {
+ 	const void *mac_cap, *phy_cap, *mcs_set;

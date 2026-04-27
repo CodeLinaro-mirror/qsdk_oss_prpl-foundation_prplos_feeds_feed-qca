@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=telemetry-agent
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.wlan_host_opensource.4.0.r30
+PKG_BRANCH:=win.wlan_host_opensource.4.2.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/wifi/qca-telemetry-agent-oss
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=21f353b8dd68ed4b289e2035ff19e63415a057b4
+PKG_VERSION:=7f913647d4fc597f1ebbe5138d04b39c4a003606
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -29,7 +29,7 @@ endef
 MAKE_OPTS:= -C "$(PKG_BUILD_DIR)" \
 	CROSS_COMPILE="$(KERNEL_CROSS)" \
 	ARCH="$(LINUX_KARCH)" \
-	EXTRA_CFLAGS="-Wall -Werror -Wno-unused-variable" \
+	EXTRA_CFLAGS="-Wall -Werror -Wno-unused-variable -I$(STAGING_DIR)/usr/include/mac80211/ath/" \
 	KERNEL_PATH="${LINUX_DIR}" \
 	BUILD_PROFILE="Open" \
 	PWD="$(PKG_BUILD_DIR)"

@@ -4,10 +4,10 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=omciibc
 PKG_RELEASE:=1
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.pon.1.0.r30
+PKG_BRANCH:=win.pon.1.0.r37
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/trex/omciibc
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=869f7e80c39afd26cbcd62bc39a8556efe5fcf2d
+PKG_VERSION:=39d494c081e00fb416054164db445d93c29782a1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -19,7 +19,7 @@ define Package/$(PKG_NAME)
   SECTION:=OPTIC_DRIVERS
   CATEGORY:=OptiCore Packages
   SUBMENU:=Drivers
-  DEPENDS:=@TARGET_ipq53xx||TARGET_ipq95xx||TARGET_ipq54xx +kmod-qca-nss-dp +sw-hook
+  DEPENDS:=@TARGET_ipq53xx||TARGET_ipq95xx||TARGET_ipq54xx||TARGET_ipq96xx +kmod-qca-nss-dp +sw-hook
   TITLE:=omciibc ifp
 endef
 

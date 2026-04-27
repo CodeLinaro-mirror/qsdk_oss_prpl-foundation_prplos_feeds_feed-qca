@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=nss-udp-st-drv
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-speedtest
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=027a387ad7b2b5cb06ecbcb232376db26f2868cc
+PKG_VERSION:=9bfe0b78892bd14be99af26e4895585b3f6cd75e
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=emesh-sp
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/emesh-sp
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=d005c05690a1ccc9ceb64e68bc2f54567b4b23a8
+PKG_VERSION:=df14b1c189ff3e4ca199083bdeaf02ebc21cd1df
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -16,7 +16,7 @@ PKG_SOURCE_VERSION:=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
-ifeq ($(CONFIG_TARGET_sdx75),y)
+ifeq ($(CONFIG_TARGET_sdx75_cpe)$(CONFIG_TARGET_sdx85_cpe),y)
 ifeq ($(TARGET_VARIANT),perf)
   COMPILE_MODE :=perf
 else
@@ -47,7 +47,7 @@ EMESH_SP_HEADERS= \
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/emesh-sp
 	$(foreach header_file,$(EMESH_SP_HEADERS), $(CP) $(header_file) $(1)/usr/include/emesh-sp;)
-ifeq ($(CONFIG_TARGET_sdx75),y)
+ifeq ($(CONFIG_TARGET_sdx75_cpe)$(CONFIG_TARGET_sdx85_cpe),y)
 	$(INSTALL_DIR) $(STAGING_DIR)/usr/include/emesh-sp
 	$(CP) $(PKG_BUILD_DIR)/Module.symvers $(STAGING_DIR)/usr/include/emesh-sp
 endif
@@ -55,7 +55,7 @@ endef
 
 define Build/Compile
 
-ifeq ($(CONFIG_TARGET_sdx75),y)
+ifeq ($(CONFIG_TARGET_sdx75_cpe)$(CONFIG_TARGET_sdx85_cpe),y)
 	$(MAKE) -C "$(LINUX_DIR)" \
 		CROSS_COMPILE="$(TARGET_CROSS)" \
 		ARCH="$(LINUX_KARCH)" \
@@ -68,7 +68,7 @@ else
 endif
 endef
 
-ifeq ($(CONFIG_TARGET_sdx75),y)
+ifeq ($(CONFIG_TARGET_sdx75_cpe)$(CONFIG_TARGET_sdx85_cpe),y)
 define  KernelPackage/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/$(EXTRA_ADDR)/
 	$(INSTALL_DIR) $(TOPDIR)/bin/targets/$(TARGET_VARIANT)/modules

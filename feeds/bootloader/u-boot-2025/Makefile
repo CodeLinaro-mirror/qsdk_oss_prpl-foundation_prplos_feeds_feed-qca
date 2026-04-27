@@ -5,10 +5,10 @@ include $(INCLUDE_DIR)/version.mk
 PKG_NAME:=u-boot-2025
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot-2025
-PKG_SOURCE_VERSION:=0e3d9dbe6fc4b2cdbef5eda835d8e824f144bffc
-PKG_BRANCH:=win.uboot.2025.00.r30
+PKG_SOURCE_VERSION:=2b134826829e7e3af759cea7fe2529d334e183db
+PKG_BRANCH:=win.uboot.2025.00.r37
 PKG_RELEASE:=1
-PKG_VERSION:=0e3d9dbe
+PKG_VERSION:=2b134826
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.zst
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 
@@ -29,9 +29,10 @@ SRC_DIR:=$(TOPDIR)/qca/src/$(PKG_NAME)
 LOCAL_VARIANT=$(patsubst ipq9574_%,%,\
 	$(patsubst ipq5332_%,%,\
 	$(patsubst ipq5424_%,%,\
-	$(patsubst ipq5200_%,%,\
+	$(patsubst ipq5210_%,%,\
+	$(patsubst ipq9650_%,%,\
 	$(BUILD_VARIANT) \
-	))))
+	)))))
 TARGET_64BIT:=generic
 
 # copy files after download
@@ -109,6 +110,16 @@ define Packing/elf
 	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/openwrt-$(1)-$(SUBTARGET)-$(2)-u-boot.img
 endef
 
+define Packing/spl_elf
+	$(INSTALL_DIR) $(BIN_DIR)
+	@echo "$(SPL_LD_SCRIPT)" > $(PKG_BUILD_DIR)/$(SPL_LD_SCRIPT_NAME)
+	$(OBJCOPY) -I binary -O $(ARCH) --change-addresses $(SPL_TEXT_BASE) --set-start $(SPL_TEXT_BASE) $(PKG_BUILD_DIR)/spl/u-boot-spl.bin $(PKG_BUILD_DIR)/spl/u-boot-spl.o
+	$(LD) $(PKG_BUILD_DIR)/spl/u-boot-spl.o -T $(PKG_BUILD_DIR)/$(SPL_LD_SCRIPT_NAME)  -o $(BIN_DIR)/u-boot-spl.elf
+	$(CP) $(PKG_BUILD_DIR)/spl/u-boot-spl $(BIN_DIR)/u-boot-spl-unstripped.elf
+	$(CP) $(PKG_BUILD_DIR)/spl/u-boot-spl $(BIN_DIR)/u-boot-spl-stripped.elf
+	$(STRIP) $(BIN_DIR)/u-boot-spl-stripped.elf
+	$(CP) $(PKG_BUILD_DIR)/spl/u-boot-spl.bin $(BIN_DIR)/u-boot-spl.img
+endef
 
 define Build/Configure
 	$(call Build/Configure/$(DEBUG_NAME))
@@ -258,25 +269,56 @@ define Package/uboot-2025-ipq5424
   $$(eval $$(call BuildPackage,uboot-2025-ipq5424-$(1)))
 endef
 
-define Package/uboot-2025-ipq5200/common
-  define Package/uboot-2025-ipq5200-$(1)
+define Package/uboot-2025-ipq5210/common
+  define Package/uboot-2025-ipq5210-$(1)
     SECTION:=boot
     CATEGORY:=Boot Loaders
     DEPENDS:=@TARGET_ipq52xx
-    TITLE:=U-boot for IPQ5200 $(1)
+    TITLE:=U-boot for IPQ5210 $(1)
     URL:=http://www.denx.de/wiki/U-Boot
-    VARIANT:=ipq5200_$(1)
+    VARIANT:=ipq5210_$(1)
   endef
 endef
 
-define Package/uboot-2025-ipq5200
-  $(call Package/uboot-2025-ipq5200/common,$(1),$(2))
+define Package/uboot-2025-ipq5210-spl
+  $(call Package/uboot-2025-ipq5210/common,spl)
 
-  define Package/uboot-2025-ipq5200-$(1)/install
-	$(call Packing/elf,ipq5200,$(LOCAL_VARIANT))
+  define Package/uboot-2025-ipq5210-spl/install
+       $(call Packing/spl_elf,ipq5210,$(LOCAL_VARIANT))
   endef
 
-  $$(eval $$(call BuildPackage,uboot-2025-ipq5200-$(1)))
+  $$(eval $$(call BuildPackage,uboot-2025-ipq5210-spl))
+endef
+
+define Package/uboot-2025-ipq5210
+  $(call Package/uboot-2025-ipq5210/common,$(1),$(2))
+
+  define Package/uboot-2025-ipq5210-$(1)/install
+	$(call Packing/elf,ipq5210,$(LOCAL_VARIANT))
+  endef
+
+  $$(eval $$(call BuildPackage,uboot-2025-ipq5210-$(1)))
+endef
+
+define Package/uboot-2025-ipq9650/common
+  define Package/uboot-2025-ipq9650-$(1)
+    SECTION:=boot
+    CATEGORY:=Boot Loaders
+    DEPENDS:=@TARGET_ipq96xx
+    TITLE:=U-boot for IPQ9650 $(1)
+    URL:=http://www.denx.de/wiki/U-Boot
+    VARIANT:=ipq9650_$(1)
+  endef
+endef
+
+define Package/uboot-2025-ipq9650
+  $(call Package/uboot-2025-ipq9650/common,$(1),$(2))
+
+  define Package/uboot-2025-ipq9650-$(1)/install
+	$(call Packing/elf,ipq9650,$(LOCAL_VARIANT))
+  endef
+
+  $$(eval $$(call BuildPackage,uboot-2025-ipq9650-$(1)))
 endef
 
 $(eval $(call Package/uboot-2025-ipq5332,mmc))
@@ -348,11 +390,23 @@ $(eval $(call Package/uboot-2025-ipq5424-debug,norplusmmc32))
 $(eval $(call Package/uboot-2025-ipq5424-debug,tiny_nand32))
 $(eval $(call Package/uboot-2025-ipq5424-debug,tiny_norplusnand32))
 
-$(eval $(call Package/uboot-2025-ipq5200,mmc))
-$(eval $(call Package/uboot-2025-ipq5200,mmc32))
-$(eval $(call Package/uboot-2025-ipq5200,nand))
-$(eval $(call Package/uboot-2025-ipq5200,nand32))
-$(eval $(call Package/uboot-2025-ipq5200,norplusnand))
-$(eval $(call Package/uboot-2025-ipq5200,norplusnand32))
-$(eval $(call Package/uboot-2025-ipq5200,norplusmmc))
-$(eval $(call Package/uboot-2025-ipq5200,norplusmmc32))
+$(eval $(call Package/uboot-2025-ipq5210,mmc))
+$(eval $(call Package/uboot-2025-ipq5210,mmc32))
+$(eval $(call Package/uboot-2025-ipq5210,nand))
+$(eval $(call Package/uboot-2025-ipq5210,nand32))
+$(eval $(call Package/uboot-2025-ipq5210,norplusnand))
+$(eval $(call Package/uboot-2025-ipq5210,norplusnand32))
+$(eval $(call Package/uboot-2025-ipq5210,norplusmmc))
+$(eval $(call Package/uboot-2025-ipq5210,norplusmmc32))
+$(eval $(call Package/uboot-2025-ipq5210,tiny_nand32))
+$(eval $(call Package/uboot-2025-ipq5210,tiny_norplusnand32))
+$(eval $(call Package/uboot-2025-ipq5210-spl))
+
+$(eval $(call Package/uboot-2025-ipq9650,mmc))
+$(eval $(call Package/uboot-2025-ipq9650,mmc32))
+$(eval $(call Package/uboot-2025-ipq9650,nand))
+$(eval $(call Package/uboot-2025-ipq9650,nand32))
+$(eval $(call Package/uboot-2025-ipq9650,norplusnand))
+$(eval $(call Package/uboot-2025-ipq9650,norplusnand32))
+$(eval $(call Package/uboot-2025-ipq9650,norplusmmc))
+$(eval $(call Package/uboot-2025-ipq9650,norplusmmc32))

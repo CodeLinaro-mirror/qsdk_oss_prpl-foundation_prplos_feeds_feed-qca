@@ -21,7 +21,7 @@ create_soft_link()
 {
 	if [ -e /sys/firmware/devicetree/base/MP_256 ]; then
 		cp -f $*
-	elif [ ! -e /sys/firmware/devicetree/base/MP_256 ]; then
+	else
 		ln -s $*
 	fi
 }
@@ -33,6 +33,7 @@ caldata_symlink_creation(){
 		board=$(echo $line | cut -f1 -d',')
 		if [[ "$board" == "$1" ]]; then
 			var=$((var+1))
+			#$2 passed as an argument should be ftm.conf line index within the ftm.conf for a given board/RDP
 			if [[ $var == $2 ]]; then
 				local brdid=$(echo $line | cut -f2 -d',')
 				local art_slot=$(echo $line | cut -f3 -d',')
@@ -42,8 +43,12 @@ caldata_symlink_creation(){
 		fi
 	done < /lib/firmware/ftm.conf
 
-	if [ -e /lib/firmware/qcn9224/caldata_$art_slot.b$brdid ]; then
-			ln -sf /lib/firmware/qcn9224/caldata_$art_slot.b$brdid cal-pci-000$pciid:01:00.0.bin
+	if [ -e "/lib/firmware/qcn9224/caldata_${art_slot}.b${brdid}" ]; then
+		ln -sf "/lib/firmware/qcn9224/caldata_${art_slot}.b${brdid}" \
+			"cal-pci-000${pciid}:01:00.0.bin"
+	elif [ -e "/lib/firmware/qcn9625/caldata_${art_slot}.b${brdid}" ]; then
+		ln -sf "/lib/firmware/qcn9625/caldata_${art_slot}.b${brdid}" \
+			"cal-pci-000${pciid}:01:00.0.bin"
 	fi
 }
 
@@ -171,7 +176,7 @@ mount_wifi_fw (){
 	;;
 	esac
 
-	if [ "$arch" == "IPQ5424" ]; then
+	if [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]]; then
 		local index=$(get_partname $part_name $arch)
 		if [ "$index" == "1" ]; then
 			part_name=${part_name}_${index}
@@ -181,7 +186,7 @@ mount_wifi_fw (){
 		part_name=$(get_partname_legacy $part_name)
 	fi
 
-	if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "devsoc" ]]; then
+	if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]] || [[ "$arch" == "devsoc" ]]; then
 		wifi_on_rootfs="1"
 	fi
 
@@ -283,6 +288,22 @@ mount_wifi_fw (){
 		mkdir -p /lib/firmware/qcn6432 && cd /lib/firmware/qcn6432 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn6432/qdss* .
         fi
 
+	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
+		cd  $fwfolder && mkdir -p qcn9625 && mkdir -p /vendor/firmware/qcn9625
+		cd qcn9625 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9625/*.* .
+		cd /vendor/firmware/qcn9625 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9625/Data.msc .
+		create_soft_link Data.msc Data_dualmac.msc
+		mkdir -p /lib/firmware/qcn9625 && cd /lib/firmware/qcn9625 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9625/qdss* .
+	fi
+
+	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9589 ]; then
+		cd  $fwfolder && mkdir -p qcn9589 && mkdir -p /vendor/firmware/qcn9589
+		cd qcn9589 && ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/*.* .
+		cd /vendor/firmware/qcn9589 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9589/Data.msc .
+		create_soft_link Data.msc Data_dualmac.msc
+		mkdir -p /lib/firmware/qcn9589 && cd /lib/firmware/qcn9589 && create_soft_link /lib/firmware/$arch/WIFI_FW/qcn9589/qdss* .
+	fi
+
 	mkdir -p $fwfolder/$arch
 	cd  $fwfolder/$arch && ln -s /lib/firmware/$arch/WIFI_FW/*.* .
 	cd  /lib/firmware/$arch && create_soft_link /lib/firmware/$arch/WIFI_FW/qdss* .
@@ -323,12 +344,16 @@ mount_wifi_fw (){
 			IPQ5424)
 				mkdir -p /lib/firmware/ath12k/$arch/$hw
 				cd /lib/firmware/ath12k/$arch/$hw/
-				;;
+			;;
+			IPQ5210 |\
+			IPQ9650)
+				:   # no operation
+			;;
 			*)
 				mkdir -p /lib/firmware/ath11k/$arch/$hw
 				cd /lib/firmware/ath11k/$arch/$hw/
 				ln -s /lib/firmware/$arch/caldata.bin .
-				;;
+			;;
 		esac
 		ln -s /lib/firmware/$arch/WIFI_FW/board-2.bin .
 		ln -s /lib/firmware/$arch/qdss_trace_config.bin .
@@ -455,8 +480,14 @@ mount_wifi_fw (){
 
 	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9000 ]; then
 		if [ -e /lib/firmware/$arch/WIFI_FW/qcn9000/board-2.bin ]; then
-			mkdir -p /lib/firmware/ath11k/QCN9074/hw1.0/
-			cd /lib/firmware/ath11k/QCN9074/hw1.0/
+			if [[ "$board_name" == "ap-al02-c13" ]]; then
+				mkdir -p /lib/firmware/ath12k/QCN9074/hw1.0/
+				cd /lib/firmware/ath12k/QCN9074/hw1.0/
+			else
+				mkdir -p /lib/firmware/ath11k/QCN9074/hw1.0/
+				cd /lib/firmware/ath11k/QCN9074/hw1.0/
+			fi
+
 			ln -s /lib/firmware/$arch/WIFI_FW/qcn9000/board-2.bin .
 			ln -s /tmp/qcn9000/caldata*.bin .
 			ln -s /lib/firmware/$arch/WIFI_FW/qcn9000/m3.bin .
@@ -545,24 +576,29 @@ mount_wifi_fw (){
 			esac
 
 			case $board_name in
-                                rdp466* | rdp485* | rdp496)
-                                        caldata_symlink_creation "$board_name" "2"
-                                        caldata_symlink_creation "$board_name" "3"
+				rdp466* | rdp485* | rdp496)
+					caldata_symlink_creation "$board_name" "2"
+					caldata_symlink_creation "$board_name" "3"
 				;;
-                                rdp487* )
-                                        caldata_symlink_creation "$board_name" "2"
+				rdp487* )
+					caldata_symlink_creation "$board_name" "2"
 				;;
 				rdp464*)
 					caldata_symlink_creation "$board_name" "2"
 					caldata_symlink_creation "$board_name" "3"
 					caldata_symlink_creation "$board_name" "4"
 				;;
+				rdp498* | rdp500* | rdp501*)
+					caldata_symlink_creation "$board_name" "1"
+				;;
 				*)
 					#No sm links
 				;;
-                        esac
+			esac
 		fi
-	elif [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
+	fi
+
+	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9625 ]; then
 		if [ -e /lib/firmware/$arch/WIFI_FW/qcn9625/board-2.bin ]; then
 			mkdir -p /lib/firmware/ath12k/QCN9625/hw1.0/
 			cd /lib/firmware/ath12k/QCN9625/hw1.0/
@@ -581,10 +617,48 @@ mount_wifi_fw (){
 			fi
 
 			case $board_name in
-				rdp464*)
+				rdp492*|rdp488*|rdp489*|rdp506*)
+					caldata_symlink_creation "$board_name" "1"
 					caldata_symlink_creation "$board_name" "2"
 					caldata_symlink_creation "$board_name" "3"
-					caldata_symlink_creation "$board_name" "4"
+				;;
+				rdp499* | rdp502* | rdp505*)
+					caldata_symlink_creation "$board_name" "1"
+				;;
+				rdp503* | rdp504*)
+					caldata_symlink_creation "$board_name" "1"
+					caldata_symlink_creation "$board_name" "2"
+				;;
+				*)
+					#No sm links
+				;;
+                        esac
+		fi
+	fi
+
+	if [ -d /lib/firmware/$arch/WIFI_FW/qcn9589 ]; then
+		if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/board-2.bin ]; then
+			mkdir -p /lib/firmware/ath12k/QCN9589/hw1.0/
+			cd /lib/firmware/ath12k/QCN9589/hw1.0/
+			ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/m3.bin .
+			ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/amss.bin .
+			ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/board-2.bin .
+			if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/regdb.bin ]; then
+				ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/regdb.bin .
+			fi
+			ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/qdss_trace_config.bin .
+			if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/aux.bin ]; then
+				ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/aux.bin .
+			fi
+			if [ -e /lib/firmware/$arch/WIFI_FW/qcn9589/mcss.bin ]; then
+				ln -s /lib/firmware/$arch/WIFI_FW/qcn9589/mcss.bin .
+			fi
+
+			case $board_name in
+				rdp464*)
+					caldata_symlink_creation "$board_name" "1"
+					caldata_symlink_creation "$board_name" "2"
+					caldata_symlink_creation "$board_name" "3"
 				;;
 				*)
 					#No sm links
@@ -716,6 +790,10 @@ boot() {
 		mount_wifi_fw "IPQ5332"
 	elif [[ "$platform" == *IPQ5424* ]]; then
 		mount_wifi_fw "IPQ5424"
+	elif [[ "$platform" == *IPQ5210* ]]; then
+                mount_wifi_fw "IPQ5210"
+	elif [[ "$platform" == *IPQ9650* ]]; then
+		mount_wifi_fw "IPQ9650"
 	else
 		local emu=$(grep -o "EMULATION" /proc/device-tree/model)
 		if [ "$emu" == "EMULATION" ]; then
@@ -736,12 +814,12 @@ stop_wifi_fw() {
 	local nor_flash=""
 	arch=$1
 
-	if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]]; then
+	if [[ "$arch" == "IPQ6018" ]] || [[ "$arch" == "IPQ5018" ]] || [[ "$arch" == "IPQ9574" ]] || [[ "$arch" == "IPQ5332" ]] || [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]]; then
 		part_name="rootfs"
 		wifi_on_rootfs="1"
 	fi
 
-	if [ "$arch" == "IPQ5424" ]; then
+	if [[ "$arch" == "IPQ5424" ]] || [[ "$arch" == "IPQ5210" ]] || [[ "$arch" == "IPQ9650" ]]; then
                 local index=$(get_partname $part_name $arch)
                 if [ "$index" == "1" ]; then
                         part_name=${part_name}_${index}
@@ -845,6 +923,10 @@ stop() {
 		stop_wifi_fw "IPQ5332"
 	elif [[ "$platform" == *IPQ5424* ]]; then
 		stop_wifi_fw "IPQ5424"
+	elif [[ "$platform" == *IPQ5210* ]]; then
+                stop_wifi_fw "IPQ5210"
+	elif [[ "$platform" == *IPQ9650* ]]; then
+		stop_wifi_fw "IPQ9650"
 	else
 		local emu=$(grep -o "EMULATION" /proc/device-tree/model)
 		if [ "$emu" == "EMULATION" ]; then

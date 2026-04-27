@@ -4,10 +4,10 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=ppecfg
 PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/nss-userspace
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=66523ce70507e2bf7db5540e23b3a3ba0324b288
+PKG_VERSION:=9c5a44c82e068eb751e994721ce2eb9c716d0ce5
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -19,7 +19,7 @@ define Package/ppecfg
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Userspace utility for configuring PPE functions such as ACL and Policers
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx +libpthread +libnl +kmod-qca-nss-ppe-netlink +libnl-ppe +libjson-c
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq96xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq52xx +libpthread +libnl +kmod-qca-nss-ppe-netlink +libnl-ppe +libjson-c
 endef
 
 #TODO: Remove dependency on ppe-netlink module
@@ -36,13 +36,32 @@ TOOL_CFLAGS:= $(TARGET_CFLAGS) -I$(STAGING_DIR)/usr/include/qca-nss-ppe \
 	      -I$(STAGING_DIR)/usr/include/libnl3 \
 	      -I$(STAGING_DIR)/usr/include/libnl-ppe \
 
-TOOL_LDFLAGS:= $(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/include/libnl-ppe
+ifeq ($(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx), y)
+TOOL_CFLAGS+= -I$(STAGING_DIR)/usr/include/qca-nss-dp
+endif
+
+TOOL_LDFLAGS:= $(TARGET_LDFLAGS) -L$(STAGING_DIR)/ppe/ppenl_lib
+
+ifeq ($(CONFIG_TARGET_ipq),y)
+subtarget:=$(SUBTARGET)
+else
+subtarget:=$(CONFIG_TARGET_BOARD)
+endif
+
+ifneq ($(CONFIG_TARGET_ipq52xx)$(CONFIG_TARGET_ipq96xx),)
+ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
+ifneq ($(CONFIG_LOWMEM_FLASH),y)
+MAKE_OPTS+=PPE_TUN_RPS_ENABLED=y
+endif
+endif
+endif
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR)/ppe/ppecfg \
 		CC="$(TARGET_CC)" \
 		CFLAGS="$(TOOL_CFLAGS)" \
-		LD_LIBRARY_PATH="$(TOOL_LDFLAGS)"
+		LD_LIBRARY_PATH="$(TOOL_LDFLAGS)" \
+		SoC="$(subtarget)"
 endef
 
 define Package/ppecfg/install
@@ -53,6 +72,13 @@ define Package/ppecfg/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/ppecfg_policer_config.json $(1)/etc/ppecfg/ppecfg_policer_config.json
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/mcast_policer_config.json $(1)/etc/ppecfg/policer_default_cfg.json
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/ppecfg_exception_config.json $(1)/etc/ppecfg/ppecfg_exception_config.json
+ifneq ($(CONFIG_TARGET_ipq52xx)$(CONFIG_TARGET_ipq96xx),)
+ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
+ifneq ($(CONFIG_LOWMEM_FLASH),y)
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/ppecfg_tun_rps_config.json $(1)/etc/ppecfg/ppecfg_tun_rps_config.json
+endif
+endif
+endif
 
 ifeq ($(CONFIG_TARGET_ipq95xx),y)
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ppe/ppecfg/mcast_acl_ipq95xx_config.json $(1)/etc/ppecfg/acl_default_cfg.json

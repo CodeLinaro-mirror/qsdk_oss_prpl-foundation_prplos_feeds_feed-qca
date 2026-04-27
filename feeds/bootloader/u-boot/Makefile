@@ -6,10 +6,10 @@ PKG_NAME:=u-boot
 BINARY_PATH:=u-boot-2023
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
-PKG_SOURCE_VERSION:=8e23d91dac2c63da9f2ab08bcb0cbeeccb744567
-PKG_BRANCH:=win.coretech.3.0.r30
+PKG_SOURCE_VERSION:=2450c5cf9a228aabc43bc06db24e996d16aa8c7d
+PKG_BRANCH:=win.coretech.3.0.r37
 PKG_RELEASE:=1
-PKG_VERSION:=8e23d91d
+PKG_VERSION:=2450c5cf
 
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 CONFIG_NAME=$(shell echo $(BUILD_VARIANT) | sed 's/.*-//')

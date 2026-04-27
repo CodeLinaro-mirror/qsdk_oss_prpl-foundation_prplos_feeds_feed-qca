@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-phy
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-nss-phy
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=ad5f76af81697d6d2f0864b8c72a6f38da5079a9
+PKG_VERSION:=1ef7f0ccbab1dae5b63dec884efcdb8abc3318b3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -21,9 +21,13 @@ define KernelPackage/qca-nss-phy
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=QCA-NSS-PHY driver
-  FILES:=$(PKG_BUILD_DIR)/nss_ext/qca-nss-phy.ko
+  FILES:=$(PKG_BUILD_DIR)/nss_ext/qca-nss-phy.ko \
+	    $(if $(filter m, $(CONFIG_SFP)),$(LINUX_DIR)/drivers/net/phy/sfp.ko)
+
   PROVIDES:=qca-nss-phy
-  AUTOLOAD:=$(call AutoLoad,08,qca-nss-phy)
+  DEPENDS:=+kmod-qca-mdio
+  AUTOLOAD:=$(call AutoLoad,08,qca-nss-phy \
+	    $(if $(filter m, $(CONFIG_SFP)),sfp))
 endef
 
 define KernelPackage/qca-mdio
@@ -34,12 +38,19 @@ define KernelPackage/qca-mdio
   KCONFIG:= \
 	CONFIG_MDIO_BITBANG \
 	CONFIG_MDIO_GPIO \
-	CONFIG_MDIO_IPQ4019
+	CONFIG_MDIO_IPQ4019 \
+	CONFIG_MDIO_I2C
   FILES:= \
-	$(LINUX_DIR)/drivers/net/mdio/mdio-gpio.ko \
-	$(LINUX_DIR)/drivers/net/mdio/mdio-bitbang.ko \
-	$(LINUX_DIR)/drivers/net/mdio/mdio-ipq4019.ko
-  AUTOLOAD:=$(call AutoLoad,01,mdio-ipq4019 mdio-bitbang mdio-gpio)
+	$(if $(filter m, $(CONFIG_MDIO_GPIO)),$(LINUX_DIR)/drivers/net/mdio/mdio-gpio.ko) \
+	$(if $(filter m, $(CONFIG_MDIO_BITBANG)),$(LINUX_DIR)/drivers/net/mdio/mdio-bitbang.ko) \
+	$(if $(filter m, $(CONFIG_MDIO_IPQ4019)),$(LINUX_DIR)/drivers/net/mdio/mdio-ipq4019.ko) \
+	$(if $(filter m, $(CONFIG_MDIO_I2C)),$(LINUX_DIR)/drivers/net/mdio/mdio-i2c.ko) \
+	$(PKG_BUILD_DIR)/linux_std/mdio_ahb/mdio-ahb.ko
+  AUTOLOAD:=$(call AutoLoad,01,$(if $(filter m, $(CONFIG_MDIO_IPQ4019)),mdio-ipq4019) \
+	$(if $(filter m, $(CONFIG_MDIO_BITBANG)),mdio-bitbang) \
+	$(if $(filter m, $(CONFIG_MDIO_GPIO)),mdio-gpio) \
+	$(if $(filter m, $(CONFIG_MDIO_I2C)),mdio-i2c) \
+	mdio-ahb)
 endef
 
 define KernelPackage/qca-mdio/description
@@ -52,20 +63,20 @@ It also contains vendor specific extensions for QCA PHYs which are not supported
 by upstream drivers.
 endef
 
-define KernelPackage/qca81xx
+define KernelPackage/qcom-lnx-phy
   SECTION:=kernel
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=QCA81XX PHY driver
-  FILES:=$(PKG_BUILD_DIR)/linux_std/qca81xx/qca81xx-phy.ko
+  FILES:=$(PKG_BUILD_DIR)/linux_std/qcom-lnx-phy.ko
   DEPENDS:=+kmod-hwmon-core
-  PROVIDES:=qca81xx
-  AUTOLOAD:=$(call AutoLoad,07,qca81xx-phy)
+  PROVIDES:=qcom-lnx-phy
+  AUTOLOAD:=$(call AutoLoad,07,qcom-lnx-phy)
 endef
 
-define KernelPackage/qca81xx/Description
-This package contains qca81xx linux phy driver, it will be upstream PHY driver
-of LAGUNA PHY.
+define KernelPackage/qcom-lnx-phy/Description
+This package contains qca81xx, qce1204 linux phy driver, it will be upstream PHY driver
+of QCA8111 PHY, QCE1204 PHY.
 endef
 
 define KernelPackage/qca8084
@@ -88,7 +99,7 @@ define KernelPackage/qca8xxx-phc
   CATEGORY:=Kernel modules
   SUBMENU:=Network Devices
   TITLE:=QCA8xxx PHC driver
-  DEPENDS:=+kmod-qca81xx
+  DEPENDS:=+kmod-qcom-lnx-phy
   FILES:=$(PKG_BUILD_DIR)/linux_std/ptp/qca8xxx-phc.ko
   AUTOLOAD:=$(call AutoLoad, 31, qca8xxx-phc)
 endef
@@ -110,6 +121,22 @@ define KernelPackage/qca8k-cc/Description
 Clock driver for QCA8386 and QCA8084 devices.
 endef
 
+define KernelPackage/qcom-lnx-phy-macsec
+  SECTION:=kernel
+  CATEGORY:=Kernel modules
+  SUBMENU:=Network Devices
+  TITLE:=Linux MACsec offloading to PHY driver
+  FILES:=$(if $(filter y m,$(CONFIG_MACSEC)),$(PKG_BUILD_DIR)/linux_std/macsec/qcom-lnx-phy-macsec.ko)
+  DEPENDS:=+kmod-macsec
+  KCONFIG:=CONFIG_MACSEC
+  AUTOLOAD:=$(if $(filter y m,$(CONFIG_MACSEC)),$(call AutoLoad,33,qcom-lnx-phy-macsec))
+endef
+
+define KernelPackage/qcom-lnx-phy-macsec/Description
+This package includes the QCOM Linux MACsec driver, which will
+become the upstream driver for MACsec offloading to PHY in Linux kernel.
+endef
+
 ifdef CONFIG_TARGET_NAME
 QCA_NSS_PHY_CONFIG_OPTS+= \
 	TARGET_NAME=$(CONFIG_TARGET_NAME)
@@ -126,10 +153,15 @@ QCA_NSS_PHY_CONFIG_OPTS+= nss-phy-ptp=y
 endif
 endif
 
-SUPPORTED_PHYS = CONFIG_NSSPHY_QCA808X CONFIG_NSSPHY_QCA81XX CONFIG_NSSPHY_QCA803X
+SUPPORTED_PHYS = CONFIG_NSSPHY_QCA808X CONFIG_NSSPHY_QCA81XX CONFIG_NSSPHY_QCA803X \
+		 CONFIG_NSSPHY_QCE1204
 
 ifneq (, $(findstring $(CONFIG_TARGET_BOARD), "ipq95xx" "ipq52xx" "ipq96xx"))
     SUPPORTED_PHYS+=CONFIG_NSSPHY_QCA807X
+endif
+
+ifneq (, $(findstring $(CONFIG_TARGET_BOARD), "ipq52xx"))
+    SUPPORTED_PHYS+=CONFIG_NSSPHY_IPQ52XX
 endif
 
 QCA_NSS_PHY_CONFIG_OPTS+= supported_phys="$(SUPPORTED_PHYS)"
@@ -146,6 +178,7 @@ define Build/InstallDev
 	$(CP) -rf $(PKG_BUILD_DIR)/nss_ext/*h $(STAGING_DIR)/usr/include/qca-nss-phy
 	$(CP) -rf $(PKG_BUILD_DIR)/linux_std/clock/*h $(STAGING_DIR)/usr/include/qca-nss-phy
 	$(CP) -rf $(PKG_BUILD_DIR)/linux_std/*h $(STAGING_DIR)/usr/include/qca-nss-phy
+	$(CP) -rf $(PKG_BUILD_DIR)/linux_std/mdio_ahb/*h $(STAGING_DIR)/usr/include/qca-nss-phy
 endef
 
 define KernelPackage/qca-nss-phy/install
@@ -156,6 +189,7 @@ endef
 $(eval $(call KernelPackage,qca-mdio))
 $(eval $(call KernelPackage,qca8k-cc))
 $(eval $(call KernelPackage,qca8084))
-$(eval $(call KernelPackage,qca81xx))
+$(eval $(call KernelPackage,qcom-lnx-phy))
 $(eval $(call KernelPackage,qca8xxx-phc))
 $(eval $(call KernelPackage,qca-nss-phy))
+$(eval $(call KernelPackage,qcom-lnx-phy-macsec))

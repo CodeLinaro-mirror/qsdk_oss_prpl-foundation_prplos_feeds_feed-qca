@@ -1,0 +1,747 @@
+From 0b4fcefec4b46dfdb1931d102e93a85e15c4a30a Mon Sep 17 00:00:00 2001
+From: Suraj P Kizhakkethil <suraj.kizhakkethil@oss.qualcomm.com>
+Date: Sun, 30 Nov 2025 17:26:11 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:iw: Add support for UHR in set bitrate
+ command
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add support for UHR rates and UHR UEQM pattern in set bitrate command.
+The command format follows the same structure as EHT, with an
+additional optional argument UEQMP, which specifies the UEQM pattern
+to use. If this argument is not provided, the rates follow EQM.
+
+Draft P802.11bn_D1.4 Table 38-33 and Table 38-34 defines the allowed
+combinations of NSS, MCS and UEQM pattern.
+
+Valid UEQM pattern values: 0 to 3
+NSS range supporting UEQM: 2 to 4
+Valid UEQM pattern values for an NSS: 0 to NSS-1
+
+Allowed MCS values,
+When UEQM pattern = 0: MCS = 3, 4, …, 13, 19 and 23
+When UEQM pattern = 1 2 or 3: MCS = 5, 6, 8, 9, …, 13, and 23
+
+Command format:
+iw dev wlan0 set bitrates -l<link_id>
+ [uhr-mcs-<2.4|5|6> <NSS:MCSx[:UEMP],MCSy[:UEQMP]... | NSS:MCSx-MCSy[:UEQMP]>*]
+ [uhr-gi-<2.4|5|6> <0.8|1.6|3.2>]
+ [uhr-ltf-<2.4|5|6> <1|2|4>]
+
+Examples:
+iw dev wlan0 set bitrates -l 0 uhr-mcs-6 2:3-10 uhr-gi-6 0.8 uhr-ltf-6 2
+iw dev wlan0 set bitrates -l 0 uhr-mcs-5 2:0
+iw dev wlan0 set bitrates -l 0 uhr-mcs-6 4:8-13:1
+iw dev wlan0 set bitrates -l 0 uhr-mcs-5 4:8:2
+iw dev wlan0 set bitrates -l 0 uhr-mcs-5 4:8:2,3:0,5
+
+Change-Id: Iee84ffeeff24691c6ad6af31b5d07c75db2bd3ed
+Signed-off-by: Suraj P Kizhakkethil <suraj.kizhakkethil@oss.qualcomm.com>
+---
+ bitrate.c | 371 ++++++++++++++++++++++++++++++++++++++++++++++++++----
+ nl80211.h |  53 ++++++++
+ 2 files changed, 397 insertions(+), 27 deletions(-)
+
+diff --git a/bitrate.c b/bitrate.c
+index 34d19d1..313eefd 100644
+--- a/bitrate.c
++++ b/bitrate.c
+@@ -3,16 +3,122 @@
+ #include "nl80211.h"
+ #include "iw.h"
+ 
++static int parse_ueqm_pattern(const char *arg, unsigned int *pattern)
++{
++	char *fc = strchr(arg, ':');
++	char *lc = strrchr(arg, ':');
++
++	if (!fc || !lc)
++		return 0;
++
++	if ((fc != lc) &&
++	    (strchr(fc + 1, ':') == lc)) {
++		if (!sscanf(lc + 1, "%u", pattern))
++			return 0;
++	} else {
++		return 0;
++	}
++
++	return 1;
++}
++
++static bool allowed_ueqm_pattern(__u8 nss, __u8 mcs, int pattern)
++{
++	/*
++	 * Per IEEE P802.11bn D1.4 (Tables 38‑33/38‑34):
++	 * UEQM applies only when using 2 to 4 spatial streams.
++	 * UEQM pattern 0 allows only MCS 3 to 13, 19, 23.
++	 * UEQM patterns 1 to 3 allow only MCS 5, 6, 8 to 13, 23.
++	 */
++
++	if (pattern > 3)
++		return false;
++
++	if (nss < 2 || nss > 4)
++		return false;
++
++	if ((nss == 2 && pattern > 1) ||
++	    (nss == 3 && pattern > 2) ||
++	    (nss == 4 && pattern > 3))
++		return false;
++
++	if (pattern == 0 &&
++	    (!((mcs >= 3 && mcs <= 13) || mcs == 19 || mcs == 23)))
++			return false;
++	else if (pattern != 0 &&
++		 (!(mcs == 5 || mcs == 6 ||
++		    (mcs >= 8 && mcs <= 13) || mcs == 23)))
++			return false;
++
++	return true;
++}
++
++static int parse_uhr_rates(const char *arg, __u8 *nss, __u32 *mcs,
++			   struct nl80211_uhr_ueqm_pattern *ueqm_pattern)
++{
++	unsigned int count;
++	char *chunk;
++	int imcs, pattern;
++	int inss;
++	char buf[128] = {};
++	size_t size;
++	char *p, *s;
++
++	if (sscanf(arg, "%d", &inss) != 1)
++		return 0;
++
++	s = strchr(arg, ':');
++	if (!s)
++		return 0;
++	s++;
++	p = buf;
++	size = ((strlen(s) < sizeof(buf) - 1) ?
++		strlen(s) : sizeof(buf) - 1) + 1;
++	if (!size)
++		return 0;
++	memcpy(p, s, size);
++
++	*nss = inss;
++	while ((chunk = strsep(&p, ",")) != NULL) {
++		count = sscanf(chunk, "%d:%d", &imcs, &pattern);
++		if (imcs > 13 &&
++		    !(imcs == 15 || imcs == 17 || imcs == 19 ||
++		      imcs == 20 || imcs == 23))
++			return 0;
++
++		if (count == 2) {
++			/* MCS:UEQMP*/
++			if (!allowed_ueqm_pattern(inss, imcs, pattern))
++				return 0;
++
++			*mcs |= 1 << imcs;
++			ueqm_pattern->pattern[inss - 2][imcs/2] |=
++					BIT(pattern) << (imcs & BIT(0)) * 4;
++		} else if (count == 1) {
++			/* MCS only*/
++			*mcs |= 1 << imcs;
++		} else {
++			return 0;
++		}
++	}
+ 
+-static int parse_rate_chunk(const char *arg, __u8 *nss, __u16 *mcs, unsigned int mode)
++	return 1;
++}
++
++static int parse_rate_chunk(const char *arg, __u8 *nss, __u32 *mcs,
++			    struct nl80211_uhr_ueqm_pattern *ueqm_pattern, unsigned int mode)
+ {
+ 	unsigned int count, i;
+-	unsigned int inss, mcs_start, mcs_end, tab[14];
++	unsigned int inss, mcs_start, mcs_end, tab[18];
+ 	unsigned int max_mcs = 0, max_nss = 0;
++	unsigned int pattern;
+ 
+ 	*nss = 0; *mcs = 0;
+ 
+-	if (mode == NL80211_TXRATE_EHT) {
++	if (mode == NL80211_TXRATE_UHR) {
++		max_mcs = 23;
++		max_nss = NL80211_UHR_NSS_MAX;
++	} else if (mode == NL80211_TXRATE_EHT) {
+ 		max_mcs = 15;
+ 		max_nss = NL80211_EHT_NSS_MAX;
+ 	} else if (mode == NL80211_TXRATE_HE) {
+@@ -40,12 +146,34 @@ static int parse_rate_chunk(const char *arg, __u8 *nss, __u16 *mcs, unsigned int
+ 			return 0;
+ 
+ 		*nss = inss;
+-		for (i = mcs_start; i <= mcs_end; i++)
++		for (i = mcs_start; i <= mcs_end; i++) {
++			if (i > 15 &&
++			    !(i == 17 || i == 19 || i == 20 || i == 23))
++				continue;
++
++			if (i == 14 && mode == NL80211_TXRATE_UHR)
++				continue;
++
+ 			*mcs |= 1 << i;
++		}
++
++		if (mode == NL80211_TXRATE_UHR) {
++			if (!parse_ueqm_pattern(arg, &pattern))
++				return 1;
+ 
++			for (i = mcs_start; i <= mcs_end; i++) {
++				if (!allowed_ueqm_pattern(inss, i, pattern))
++					return 0;
++
++				ueqm_pattern->pattern[inss - 2][i/2] |=
++					BIT(pattern) << (i & BIT(0)) * 4;
++			}
++		}
+ 	} else {
+ 		/* Format: NSS:MCSx,MCSy,... */
+-		if (mode == NL80211_TXRATE_EHT) {
++		if (mode == NL80211_TXRATE_UHR) {
++			return parse_uhr_rates(arg, nss, mcs, ueqm_pattern);
++		} else if (mode == NL80211_TXRATE_EHT) {
+ 			count = sscanf(arg, "%u:%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u",
+ 				       &inss, &tab[0], &tab[1], &tab[2], &tab[3],
+ 				       &tab[4], &tab[5], &tab[6], &tab[7], &tab[8],
+@@ -69,35 +197,44 @@ static int parse_rate_chunk(const char *arg, __u8 *nss, __u16 *mcs, unsigned int
+ 
+ 		*nss = inss;
+ 		for (i = 0; i < count - 1; i++) {
+-			if (tab[i] > max_mcs)
++			if (tab[i] > max_mcs ||
++			    (tab[i] > 15 &&
++			    !(tab[i] == 17 || tab[i] == 19 ||
++			      tab[i] == 20 || tab[i] == 23)))
+ 				return 0;
+ 			*mcs |= 1 << tab[i];
+ 		}
+ 	}
+-
+ 	return 1;
+ }
+ 
+-static int parse_vht_chunk(const char *arg, __u8 *nss, __u16 *mcs)
++static int parse_vht_chunk(const char *arg, __u8 *nss, __u32 *mcs)
+ {
+-	return parse_rate_chunk(arg, nss, mcs, NL80211_TXRATE_VHT);
++	return parse_rate_chunk(arg, nss, mcs, NULL, NL80211_TXRATE_VHT);
+ }
+ 
+-static int parse_he_chunk(const char *arg, __u8 *nss, __u16 *mcs)
++static int parse_he_chunk(const char *arg, __u8 *nss, __u32 *mcs)
+ {
+-	return parse_rate_chunk(arg, nss, mcs, NL80211_TXRATE_HE);
++	return parse_rate_chunk(arg, nss, mcs, NULL, NL80211_TXRATE_HE);
+ }
+ 
+-static int parse_eht_chunk(const char *arg, __u8 *nss, __u16 *mcs)
++static int parse_eht_chunk(const char *arg, __u8 *nss, __u32 *mcs)
+ {
+-	return parse_rate_chunk(arg, nss, mcs, NL80211_TXRATE_EHT);
++	return parse_rate_chunk(arg, nss, mcs, NULL, NL80211_TXRATE_EHT);
++}
++
++static int parse_uhr_chunk(const char *arg, __u8 *nss, __u32 *mcs,
++			   struct nl80211_uhr_ueqm_pattern *ueqm_pattern)
++{
++	return parse_rate_chunk(arg, nss, mcs, ueqm_pattern,
++				NL80211_TXRATE_UHR);
+ }
+ 
+ static int setup_vht(struct nl80211_txrate_vht *txrate_vht,
+ 		     int argc, char **argv)
+ {
+ 	__u8 nss;
+-	__u16 mcs;
++	__u32 mcs;
+ 	int i;
+ 
+ 	memset(txrate_vht, 0, sizeof(*txrate_vht));
+@@ -107,7 +244,7 @@ static int setup_vht(struct nl80211_txrate_vht *txrate_vht,
+ 			return 0;
+ 
+ 		nss--;
+-		txrate_vht->mcs[nss] |= mcs;
++		txrate_vht->mcs[nss] |= (mcs & 0xFFFF);
+ 	}
+ 
+ 	return 1;
+@@ -117,7 +254,7 @@ static int setup_he(struct nl80211_txrate_he *txrate_he,
+ 		    int argc, char **argv)
+ {
+ 	__u8 nss;
+-	__u16 mcs;
++	__u32 mcs;
+ 	int i;
+ 
+ 	memset(txrate_he, 0, sizeof(*txrate_he));
+@@ -127,7 +264,7 @@ static int setup_he(struct nl80211_txrate_he *txrate_he,
+ 			return 0;
+ 
+ 		nss--;
+-		txrate_he->mcs[nss] |= mcs;
++		txrate_he->mcs[nss] |= (mcs & 0xFFFF);
+ 	}
+ 
+ 	return 1;
+@@ -137,7 +274,7 @@ static int setup_eht(struct nl80211_txrate_eht *txrate_eht,
+ 		    int argc, char **argv)
+ {
+ 	__u8 nss;
+-	__u16 mcs;
++	__u32 mcs;
+ 	int i;
+ 
+ 	memset(txrate_eht, 0, sizeof(*txrate_eht));
+@@ -147,7 +284,38 @@ static int setup_eht(struct nl80211_txrate_eht *txrate_eht,
+ 			return 0;
+ 
+ 		nss--;
+-		txrate_eht->mcs[nss] |= mcs;
++		txrate_eht->mcs[nss] |= (mcs & 0xFFFF);
++	}
++
++	return 1;
++}
++
++static int setup_uhr(struct nl80211_txrate_uhr *txrate_uhr,
++		     int argc, char **argv,
++		     struct nl80211_uhr_ueqm_pattern *ueqm_pattern,
++		     int *has_uhr_up)
++{
++	__u8 nss;
++	__u32 mcs;
++	int i,j;
++
++	memset(txrate_uhr, 0, sizeof(*txrate_uhr));
++
++	for (i = 0; i < argc; i++) {
++		if (!parse_uhr_chunk(argv[i], &nss, &mcs, ueqm_pattern))
++			return 0;
++
++		nss--;
++		txrate_uhr->mcs[nss] |= mcs;
++	}
++
++	for (i = 0; i < NL80211_UHR_UEQM_NSS_COUNT; i++) {
++		for (j = 0; j < NL80211_UHR_UEQM_MCS_COL_COUNT; j++) {
++			if (ueqm_pattern->pattern[i][j]) {
++				*has_uhr_up = 1;
++				break;
++			}
++		}
+ 	}
+ 
+ 	return 1;
+@@ -191,6 +359,24 @@ static int parse_eht_gi(char *eht_gi)
+ 	return -1;
+ }
+ 
++#define UHR_GI_STR_MAX	16
++#define UHR_GI_08_STR "0.8"
++#define UHR_GI_16_STR "1.6"
++#define UHR_GI_32_STR "3.2"
++static int parse_uhr_gi(char *uhr_gi)
++{
++	if (uhr_gi == NULL)
++		return 0;
++
++	if (!strncmp(uhr_gi, UHR_GI_08_STR, sizeof(UHR_GI_08_STR)))
++		return NL80211_RATE_INFO_UHR_GI_0_8;
++	if (!strncmp(uhr_gi, UHR_GI_16_STR, sizeof(UHR_GI_16_STR)))
++		return NL80211_RATE_INFO_UHR_GI_1_6;
++	if (!strncmp(uhr_gi, UHR_GI_32_STR, sizeof(UHR_GI_32_STR)))
++		return NL80211_RATE_INFO_UHR_GI_3_2;
++
++	return -1;
++}
+ 
+ #define VHT_ARGC_MAX	100
+ 
+@@ -212,6 +398,8 @@ int set_bitrates(struct nl_msg *msg,
+ 	bool have_he_mcs_6 = false;
+ 	bool have_eht_mcs_24 = false, have_eht_mcs_5 = false;
+ 	bool have_eht_mcs_6 = false;
++	bool have_uhr_mcs_24 = false, have_uhr_mcs_5 = false;
++	bool have_uhr_mcs_6 = false;
+ 	uint8_t ht_mcs_24[77], ht_mcs_5[77];
+ 	int n_ht_mcs_24 = 0, n_ht_mcs_5 = 0;
+ 	struct nl80211_txrate_vht txrate_vht_24 = {};
+@@ -224,6 +412,9 @@ int set_bitrates(struct nl_msg *msg,
+ 	struct nl80211_txrate_eht txrate_eht_24 = {};
+ 	struct nl80211_txrate_eht txrate_eht_5 = {};
+ 	struct nl80211_txrate_eht txrate_eht_6 = {};
++	struct nl80211_txrate_uhr txrate_uhr_24 = {};
++	struct nl80211_txrate_uhr txrate_uhr_5 = {};
++	struct nl80211_txrate_uhr txrate_uhr_6 = {};
+ 	uint8_t *mcs = NULL;
+ 	int *n_mcs = NULL;
+ 	char *vht_argv_5[VHT_ARGC_MAX] = {}; char *vht_argv_24[VHT_ARGC_MAX] = {};
+@@ -232,15 +423,19 @@ int set_bitrates(struct nl_msg *msg,
+ 	char *he_ul_argv_5[VHT_ARGC_MAX] = {}; char *he_ul_argv_24[VHT_ARGC_MAX] = {};
+ 	char *eht_argv_5[VHT_ARGC_MAX] = {}; char *eht_argv_24[VHT_ARGC_MAX] = {};
+ 	char *eht_argv_6[VHT_ARGC_MAX] = {};
++	char *uhr_argv_24[VHT_ARGC_MAX] = {};
++	char *uhr_argv_5[VHT_ARGC_MAX] = {};
++	char *uhr_argv_6[VHT_ARGC_MAX] = {};
+ 	char **vht_argv = NULL, **he_argv = NULL, **he_ul_argv = NULL;
+-	char **eht_argv = NULL;
++	char **eht_argv = NULL, **uhr_argv = NULL;
+ 	int vht_argc_5 = 0; int vht_argc_24 = 0;
+ 	int he_argc_5 = 0; int he_argc_24 = 0;
+ 	int he_argc_6 = 0;
+ 	int he_ul_argc_5 = 0; int he_ul_argc_24 = 0;
+ 	int eht_argc_5 = 0; int eht_argc_24 = 0; int eht_argc_6 = 0;
++	int uhr_argc_5 = 0; int uhr_argc_24 = 0; int uhr_argc_6 = 0;
+ 	int *vht_argc = NULL, *he_argc = NULL, *he_ul_argc = NULL;
+-	int *eht_argc = NULL;
++	int *eht_argc = NULL, *uhr_argc = NULL;
+ 	int sgi_24 = 0, sgi_5 = 0, lgi_24 = 0, lgi_5 = 0;
+ 	int has_he_gi_24 = 0, has_he_gi_5 = 0, has_he_ltf_24 = 0, has_he_ltf_5 = 0;
+ 	int has_he_gi_6 = 0, has_he_ltf_6 = 0;
+@@ -250,6 +445,14 @@ int set_bitrates(struct nl_msg *msg,
+ 	int has_eht_gi_6 = 0, has_eht_ltf_6 = 0;
+ 	int eht_gi = 0, eht_ltf = 0;
+ 	char *eht_gi_argv = NULL;
++	int has_uhr_gi_24 = 0, has_uhr_gi_5 = 0, has_uhr_gi_6 = 0;
++	int has_uhr_ltf_24 = 0, has_uhr_ltf_5 = 0, has_uhr_ltf_6 = 0;
++	int uhr_gi = 0, uhr_ltf = 0;
++	char *uhr_gi_argv = NULL;
++	struct nl80211_uhr_ueqm_pattern uhr_ueqm_p_24 = {};
++	struct nl80211_uhr_ueqm_pattern uhr_ueqm_p_5 = {};
++	struct nl80211_uhr_ueqm_pattern uhr_ueqm_p_6 = {};
++	int has_uhr_up_24 = 0, has_uhr_up_5 = 0, has_uhr_up_6 = 0;
+ 
+ 	enum {
+ 		S_NONE,
+@@ -264,6 +467,9 @@ int set_bitrates(struct nl_msg *msg,
+ 		S_EHT,
+ 		S_EHT_GI,
+ 		S_EHT_LTF,
++		S_UHR,
++		S_UHR_GI,
++		S_UHR_LTF,
+ 	} parser_state = S_NONE;
+ 
+ 	if (!strcmp(argv[0], "-l")) {
+@@ -370,6 +576,27 @@ int set_bitrates(struct nl_msg *msg,
+ 			eht_argv = eht_argv_6;
+ 			eht_argc = &eht_argc_6;
+ 			have_eht_mcs_6 = true;
++		} else if (strcmp(argv[i], "uhr-mcs-2.4") == 0) {
++			if (have_uhr_mcs_24 || have_eht_mcs_24)
++				return 1;
++			parser_state = S_UHR;
++			uhr_argv = uhr_argv_24;
++			uhr_argc = &uhr_argc_24;
++			have_uhr_mcs_24 = true;
++		} else if (strcmp(argv[i], "uhr-mcs-5") == 0) {
++			if (have_uhr_mcs_5 || have_eht_mcs_5)
++				return 1;
++			parser_state = S_UHR;
++			uhr_argv = uhr_argv_5;
++			uhr_argc = &uhr_argc_5;
++			have_uhr_mcs_5 = true;
++		} else if (strcmp(argv[i], "uhr-mcs-6") == 0) {
++			if (have_uhr_mcs_6 || have_eht_mcs_6)
++				return 1;
++			parser_state = S_UHR;
++			uhr_argv = uhr_argv_6;
++			uhr_argc = &uhr_argc_6;
++			have_uhr_mcs_6 = true;
+ 		} else if (strcmp(argv[i], "sgi-2.4") == 0) {
+ 			sgi_24 = 1;
+ 			parser_state = S_GI;
+@@ -418,6 +645,24 @@ int set_bitrates(struct nl_msg *msg,
+ 		} else if (strcmp(argv[i], "eht-ltf-6") == 0) {
+ 			has_eht_ltf_6 = 1;
+ 			parser_state = S_EHT_LTF;
++		} else if (strcmp(argv[i], "uhr-gi-2.4") == 0) {
++			has_uhr_gi_24 = 1;
++			parser_state = S_UHR_GI;
++		} else if (strcmp(argv[i], "uhr-gi-5") == 0) {
++			has_uhr_gi_5 = 1;
++			parser_state = S_UHR_GI;
++		} else if (strcmp(argv[i], "uhr-gi-6") == 0) {
++			has_uhr_gi_6 = 1;
++			parser_state = S_UHR_GI;
++		} else if (strcmp(argv[i], "uhr-ltf-2.4") == 0) {
++			has_uhr_ltf_24 = 1;
++			parser_state = S_UHR_LTF;
++		} else if (strcmp(argv[i], "uhr-ltf-5") == 0) {
++			has_uhr_ltf_5 = 1;
++			parser_state = S_UHR_LTF;
++		} else if (strcmp(argv[i], "uhr-ltf-6") == 0) {
++			has_uhr_ltf_6 = 1;
++			parser_state = S_UHR_LTF;
+ 		} else if (strcmp(argv[i], "he-ul-mcs-2.4") == 0) {
+                          if (have_he_ul_mcs_24)
+                                 return 1;
+@@ -493,6 +738,22 @@ int set_bitrates(struct nl_msg *msg,
+ 				return 1;
+ 			eht_ltf = eht_ltf >> 1;
+ 			break;
++		case S_UHR:
++			if (*uhr_argc >= VHT_ARGC_MAX)
++				return 1;
++			uhr_argv[(*uhr_argc)++] = argv[i];
++			break;
++		case S_UHR_GI:
++			uhr_gi_argv = argv[i];
++			break;
++		case S_UHR_LTF:
++			uhr_ltf = strtol(argv[i], &end, 0);
++			if (*end != '\0')
++				return 1;
++			if (uhr_ltf < 0 || uhr_ltf > 4)
++				return 1;
++			uhr_ltf = uhr_ltf >> 1;
++			break;
+ 		default:
+ 			if (attr != NL80211_ATTR_TX_RATES)
+ 				goto next;
+@@ -536,6 +797,21 @@ next:
+ 		if (!setup_eht(&txrate_eht_6, eht_argc_6, eht_argv_6))
+ 			return -EINVAL;
+ 
++	if (have_uhr_mcs_24)
++		if (!setup_uhr(&txrate_uhr_24, uhr_argc_24, uhr_argv_24,
++			       &uhr_ueqm_p_24, &has_uhr_up_24))
++			return -EINVAL;
++
++	if (have_uhr_mcs_5)
++		if (!setup_uhr(&txrate_uhr_5, uhr_argc_5, uhr_argv_5,
++			       &uhr_ueqm_p_5, &has_uhr_up_5))
++			return -EINVAL;
++
++	if (have_uhr_mcs_6)
++		if (!setup_uhr(&txrate_uhr_6, uhr_argc_6, uhr_argv_6,
++			       &uhr_ueqm_p_6, &has_uhr_up_6))
++			return -EINVAL;
++
+ 	if (sgi_5 && lgi_5)
+ 		return 1;
+ 
+@@ -554,6 +830,12 @@ next:
+ 			return 1;
+ 	}
+ 
++	if (uhr_gi_argv) {
++		uhr_gi = parse_uhr_gi(uhr_gi_argv);
++		if (uhr_gi < 0)
++			return 1;
++	}
++
+ 	if (have_he_ul_mcs_24)
+                 if (!setup_he(&txrate_he_ul_24, he_ul_argc_24, he_ul_argv_24))
+                         return -EINVAL;
+@@ -568,7 +850,8 @@ next:
+ 
+ 	if (have_legacy_24 || have_ht_mcs_24 || have_vht_mcs_24 || have_he_mcs_24 ||
+ 	    sgi_24 || lgi_24 || has_he_gi_24 || has_he_ltf_24 || have_he_ul_mcs_24 ||
+-	    have_eht_mcs_24 || has_eht_gi_24 || has_eht_ltf_24) {
++	    have_eht_mcs_24 || has_eht_gi_24 || has_eht_ltf_24 ||
++	    have_uhr_mcs_24 || has_uhr_gi_24 || has_uhr_ltf_24) {
+ 		nl_band = nla_nest_start(msg, NL80211_BAND_2GHZ);
+ 		if (!nl_band)
+ 			goto nla_put_failure;
+@@ -592,10 +875,21 @@ next:
+ 		if (have_eht_mcs_24)
+ 			nla_put(msg, NL80211_TXRATE_EHT, sizeof(txrate_eht_24),
+ 				&txrate_eht_24);
++		if (have_uhr_mcs_24) {
++			nla_put(msg, NL80211_TXRATE_UHR, sizeof(txrate_uhr_24),
++				&txrate_uhr_24);
++			if (has_uhr_up_24)
++				nla_put(msg, NL80211_TXRATE_UHR_UEQM_P,
++					sizeof(uhr_ueqm_p_24), &uhr_ueqm_p_24);
++		}
+ 		if (has_eht_gi_24)
+ 			nla_put_u8(msg, NL80211_TXRATE_EHT_GI, eht_gi);
++		if (has_uhr_gi_24)
++			nla_put_u8(msg, NL80211_TXRATE_UHR_GI, uhr_gi);
+ 		if (has_eht_ltf_24)
+ 			nla_put_u8(msg, NL80211_TXRATE_EHT_LTF, eht_ltf);
++		if (has_uhr_ltf_24)
++			nla_put_u8(msg, NL80211_TXRATE_UHR_LTF, uhr_ltf);
+ 		if (have_he_ul_mcs_24)
+                         nla_put(msg, NL80211_TXRATE_HE_UL, sizeof(txrate_he_ul_24),
+                                 &txrate_he_ul_24);
+@@ -604,7 +898,8 @@ next:
+ 
+ 	if (have_legacy_5 || have_ht_mcs_5 || have_vht_mcs_5 || have_he_mcs_5 ||
+ 	    sgi_5 || lgi_5 || has_he_gi_5 || has_he_ltf_5 || have_he_ul_mcs_5 ||
+-	    have_eht_mcs_5 || has_eht_gi_5 || has_eht_ltf_5) {
++	    have_eht_mcs_5 || has_eht_gi_5 || has_eht_ltf_5 ||
++	    have_uhr_mcs_5 || has_uhr_gi_5 || has_uhr_ltf_5) {
+ 		nl_band = nla_nest_start(msg, NL80211_BAND_5GHZ);
+ 		if (!nl_band)
+ 			goto nla_put_failure;
+@@ -628,10 +923,21 @@ next:
+ 		if (have_eht_mcs_5)
+ 			nla_put(msg, NL80211_TXRATE_EHT, sizeof(txrate_eht_5),
+ 				&txrate_eht_5);
++		if (have_uhr_mcs_5) {
++			nla_put(msg, NL80211_TXRATE_UHR, sizeof(txrate_uhr_5),
++				&txrate_uhr_5);
++			if (has_uhr_up_5)
++				nla_put(msg, NL80211_TXRATE_UHR_UEQM_P,
++					sizeof(uhr_ueqm_p_5), &uhr_ueqm_p_5);
++		}
+ 		if (has_eht_gi_5)
+-        		nla_put_u8(msg, NL80211_TXRATE_EHT_GI, eht_gi);
++			nla_put_u8(msg, NL80211_TXRATE_EHT_GI, eht_gi);
++		if (has_uhr_gi_5)
++			nla_put_u8(msg, NL80211_TXRATE_UHR_GI, uhr_gi);
+ 		if (has_eht_ltf_5)
+ 			nla_put_u8(msg, NL80211_TXRATE_EHT_LTF, eht_ltf);
++		if (has_uhr_ltf_5)
++			nla_put_u8(msg, NL80211_TXRATE_UHR_LTF, uhr_ltf);
+ 		if (have_he_ul_mcs_5)
+                         nla_put(msg, NL80211_TXRATE_HE_UL, sizeof(txrate_he_ul_5),
+                                 &txrate_he_ul_5);
+@@ -639,7 +945,7 @@ next:
+ 	}
+ 
+ 	if (have_he_mcs_6 || has_he_gi_6 || has_he_ltf_6 || have_eht_mcs_6 ||
+-	    has_eht_gi_6 || has_eht_ltf_6) {
++	    has_eht_gi_6 || has_eht_ltf_6 || have_uhr_mcs_6 || has_uhr_gi_6 || has_uhr_ltf_6) {
+ 		nl_band = nla_nest_start(msg, NL80211_BAND_6GHZ);
+ 		if (!nl_band)
+ 			goto nla_put_failure;
+@@ -653,10 +959,21 @@ next:
+ 		if (have_eht_mcs_6)
+ 			nla_put(msg, NL80211_TXRATE_EHT, sizeof(txrate_eht_6),
+ 				&txrate_eht_6);
++		if (have_uhr_mcs_6) {
++			nla_put(msg, NL80211_TXRATE_UHR, sizeof(txrate_uhr_6),
++				&txrate_uhr_6);
++			if (has_uhr_up_6)
++				nla_put(msg, NL80211_TXRATE_UHR_UEQM_P,
++					sizeof(uhr_ueqm_p_6), &uhr_ueqm_p_6);
++		}
+ 		if (has_eht_gi_6)
+ 			nla_put_u8(msg, NL80211_TXRATE_EHT_GI, eht_gi);
++		if (has_uhr_gi_6)
++			nla_put_u8(msg, NL80211_TXRATE_UHR_GI, uhr_gi);
+ 		if (has_eht_ltf_6)
+ 			nla_put_u8(msg, NL80211_TXRATE_EHT_LTF, eht_ltf);
++		if (has_uhr_ltf_6)
++			nla_put_u8(msg, NL80211_TXRATE_UHR_LTF, uhr_ltf);
+ 		nla_nest_end(msg, nl_band);
+ 	}
+ 
+@@ -676,9 +993,9 @@ static int handle_bitrates(struct nl80211_state *state,
+ }
+ 
+ #define DESCR_LEGACY "[legacy-<2.4|5> <legacy rate in Mbps>*]"
+-#define DESCR DESCR_LEGACY " [ht-mcs-<2.4|5> <MCS index>*] [vht-mcs-<2.4|5>  [he-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [sgi-2.4|lgi-2.4] [sgi-5|lgi-5] [he-ul-mcs-<2.4|5> <NSS:MCS>] [eht-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [eht-gi-<2.4|5|6> <0.8|1.6|3.2>] [eht-ltf-<2.4|5|6> <1|2|4>]"
++#define DESCR DESCR_LEGACY " [ht-mcs-<2.4|5> <MCS index>*] [vht-mcs-<2.4|5>  [he-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [sgi-2.4|lgi-2.4] [sgi-5|lgi-5] [he-ul-mcs-<2.4|5> <NSS:MCS>] [eht-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [eht-gi-<2.4|5|6> <0.8|1.6|3.2>] [eht-ltf-<2.4|5|6> <1|2|4>] [uhr-mcs-<2.4|5|6> <NSS:MCSx,MCSy...[:UEQM_Px,UEQM_Py...|:UEQM_Px-UEQM_Py] | NSS:MCSx-MCSy[:UEQM_Px,UEQM_Py...|:UEQM_Px-UEQM_Py]>*] [uhr-gi-<2.4|5|6> <0.8|1.6|3.2>] [uhr-ltf-<2.4|5|6> <1|2|4>]"
+ 
+-COMMAND(set, bitrates, "[legacy-<2.4|5> <legacy rate in Mbps>*] [ht-mcs-<2.4|5> <MCS index>*] [vht-mcs-<2.4|5> [he-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [sgi-2.4|lgi-2.4] [sgi-5|lgi-5] [he-gi-<2.4|5|6> <0.8|1.6|3.2>] [he-ltf-<2.4|5|6> <1|2|4>] [he-ul-mcs-<2.4|5> <NSS:MCS>] [eht-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [eht-gi-<2.4|5|6> <0.8|1.6|3.2>] [eht-ltf-<2.4|5|6> <1|2|4>]",
++COMMAND(set, bitrates, "[legacy-<2.4|5> <legacy rate in Mbps>*] [ht-mcs-<2.4|5> <MCS index>*] [vht-mcs-<2.4|5> [he-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [sgi-2.4|lgi-2.4] [sgi-5|lgi-5] [he-gi-<2.4|5|6> <0.8|1.6|3.2>] [he-ltf-<2.4|5|6> <1|2|4>] [he-ul-mcs-<2.4|5> <NSS:MCS>] [eht-mcs-<2.4|5|6> <NSS:MCSx,MCSy... | NSS:MCSx-MCSy>*] [eht-gi-<2.4|5|6> <0.8|1.6|3.2>] [eht-ltf-<2.4|5|6> <1|2|4>] [uhr-mcs-<2.4|5|6> <NSS:MCSx[:UEQMPx],MCSy[:UEQMPy]... | NSS:MCSx-MCSy[:UEQMP]>*] [uhr-gi-<2.4|5|6> <0.8|1.6|3.2>] [uhr-ltf-<2.4|5|6> <1|2|4>]",
+ 	NL80211_CMD_SET_TX_BITRATE_MASK, 0, CIB_NETDEV, handle_bitrates,
+ 	"Sets up the specified rate masks.\n"
+ 	"Not passing any arguments would clear the existing mask (if any).");
+diff --git a/nl80211.h b/nl80211.h
+index 62c1b2d..b6b892f 100644
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -3914,6 +3914,30 @@ enum nl80211_eht_ltf {
+ 	NL80211_RATE_INFO_EHT_4XLTF,
+ };
+ 
++/**
++ * enum nl80211_uhr_gi - UHR guard interval
++ * @NL80211_RATE_INFO_UHR_GI_0_8: 0.8 usec
++ * @NL80211_RATE_INFO_UHR_GI_1_6: 1.6 usec
++ * @NL80211_RATE_INFO_UHR_GI_3_2: 3.2 usec
++ */
++enum nl80211_uhr_gi {
++	NL80211_RATE_INFO_UHR_GI_0_8,
++	NL80211_RATE_INFO_UHR_GI_1_6,
++	NL80211_RATE_INFO_UHR_GI_3_2,
++};
++
++/**
++ * enum nl80211_uhr_ltf - UHR long training field
++ * @NL80211_RATE_INFO_UHR_1xLTF: 3.2 usec
++ * @NL80211_RATE_INFO_UHR_2xLTF: 6.4 usec
++ * @NL80211_RATE_INFO_UHR_4xLTF: 12.8 usec
++ */
++enum nl80211_uhr_ltf {
++	NL80211_RATE_INFO_UHR_1XLTF,
++	NL80211_RATE_INFO_UHR_2XLTF,
++	NL80211_RATE_INFO_UHR_4XLTF,
++};
++
+ /**
+  * enum nl80211_eht_ru_alloc - EHT RU allocation values
+  * @NL80211_RATE_INFO_EHT_RU_ALLOC_26: 26-tone RU allocation
+@@ -5726,6 +5750,11 @@ enum nl80211_key_attributes {
+  * 	see &struct nl80211_txrate_eht
+  * @NL80211_TXRATE_EHT_GI: configure EHT GI, 0.8us, 1.6us and 3.2us.
+  * @NL80211_TXRATE_EHT_LTF: configure EHT LTF, 1XLTF, 2XLTF and 4XLTF.
++ * @NL80211_TXRATE_UHR: UHR rates allowed for TX rate selection (same payload
++ *\tas EHT MCS/NSS bitmap), used with UHR-specific rate mask.
++ * @NL80211_TXRATE_UHR_GI: configure UHR GI, 0.8us, 1.6us and 3.2us.
++ * @NL80211_TXRATE_UHR_LTF: configure UHR LTF, 1XLTF, 2XLTF and 4XLTF.
++ * @NL80211_TXRATE_UHR_UEQM_P: configure UHR UEQM Pattern, 0..3.
+  * @__NL80211_TXRATE_AFTER_LAST: internal
+  * @NL80211_TXRATE_MAX: highest TX rate attribute
+  */
+@@ -5742,6 +5771,10 @@ enum nl80211_tx_rate_attributes {
+ 	NL80211_TXRATE_EHT,
+ 	NL80211_TXRATE_EHT_GI,
+ 	NL80211_TXRATE_EHT_LTF,
++	NL80211_TXRATE_UHR,
++	NL80211_TXRATE_UHR_GI,
++	NL80211_TXRATE_UHR_LTF,
++	NL80211_TXRATE_UHR_UEQM_P,
+ 
+ 	/* keep last */
+ 	__NL80211_TXRATE_AFTER_LAST,
+@@ -5761,6 +5794,7 @@ struct nl80211_txrate_vht {
+ 
+ #define NL80211_HE_NSS_MAX		8
+ #define NL80211_EHT_NSS_MAX             16
++#define NL80211_UHR_NSS_MAX             16
+ /**
+  * struct nl80211_txrate_he - HE MCS/NSS txrate bitmap
+  * @mcs: MCS bitmap table for each NSS (array index 0 for 1 stream, etc.)
+@@ -5783,6 +5817,25 @@ struct nl80211_txrate_eht {
+ 	__u16 mcs[NL80211_EHT_NSS_MAX];
+ };
+ 
++/**
++ * struct nl80211_txrate_uhr - UHR MCS/NSS txrate bitmap
++ * @mcs: MCS bitmap table for each NSS (array index 0 for 1 stream, etc.)
++ */
++struct nl80211_txrate_uhr {
++	__u32 mcs[NL80211_UHR_NSS_MAX];
++};
++
++#define NL80211_UHR_UEQM_NSS_COUNT      3
++#define NL80211_UHR_UEQM_MCS_COL_COUNT  12
++
++/**
++ * struct nl80211_uhr_ueqm_pattern - UHR UEQM pattern bitmap
++ * @mcs: UEQM pattern bitmap for each NSS (array index 0 for pattern 0, etc.)
++ */
++struct nl80211_uhr_ueqm_pattern {
++	__u8 pattern[NL80211_UHR_UEQM_NSS_COUNT][NL80211_UHR_UEQM_MCS_COL_COUNT];
++};
++
+ /**
+  * enum nl80211_band - Frequency band
+  * @NL80211_BAND_2GHZ: 2.4 GHz ISM band
+-- 
+2.34.1
+

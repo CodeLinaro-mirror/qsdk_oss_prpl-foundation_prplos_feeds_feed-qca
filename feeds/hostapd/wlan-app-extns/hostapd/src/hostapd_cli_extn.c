@@ -1,0 +1,164 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include "includes.h"
+#include <dirent.h>
+
+#include "common/wpa_ctrl.h"
+#include "common/ieee802_11_defs.h"
+#include "hostapd_cli_extn.h"
+#include "utils/os.h"
+
+/* Add your cli handling for extensions here */
+int hostapd_cli_cmd_set_esp_extn(struct wpa_ctrl *ctrl, int argc,
+				 char *argv[])
+{
+	char buf[128] = {'\0'};
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid 'set_esp' command - usage: set_esp <param> <value>\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "SET_ESP %s=%s", argv[0], argv[1]);
+	if (os_snprintf_error(sizeof(buf), res)) {
+		printf("Too long SET_ESP command.\n");
+		return -1;
+	}
+
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+int hostapd_cli_cmd_get_esp_extn(struct wpa_ctrl *ctrl, int argc,
+				 char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "GET_ESP");
+}
+
+int hostapd_cli_cmd_set_non_prior_penalty_extn(struct wpa_ctrl *ctrl, int argc,
+					       char *argv[])
+{
+	char buf[64] = {'\0'};
+	int res;
+
+	if (argc != 1) {
+		printf("Usage: set_vlp_non_prior_penalty <0-100>\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "SET_VLP_NON_PRIOR_PENALTY %s", argv[0]);
+	if (os_snprintf_error(sizeof(buf), res)) {
+		printf("Too long SET_VLP_NON_PRIOR_PENALTY command.\n");
+		return -1;
+	}
+
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+int hostapd_cli_cmd_get_non_prior_penalty_extn(struct wpa_ctrl *ctrl, int argc,
+					       char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "GET_VLP_NON_PRIOR_PENALTY");
+}
+
+int hostapd_cli_cmd_set_rnr_6ghz_colocated_extn(struct wpa_ctrl *ctrl,
+						int argc, char *argv[])
+{
+	return hostapd_cli_cmd(ctrl, "RNR_6GHZ_COLOCATED", 2, argc, argv);
+}
+
+int hostapd_cli_cmd_get_rnr_6ghz_colocated_extn(struct wpa_ctrl *ctrl,
+						int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "GET_RNR_6GHZ_COLOCATED");
+}
+
+int hostapd_cli_acs_extn(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	if (argc < 1) {
+		printf("Invalid ACS command: needs 1 argument atleast\n");
+	}
+
+	return hostapd_cli_cmd(ctrl, "ACS", 1, argc, argv);
+}
+
+#ifdef CONFIG_IEEE80211AC
+int hostapd_cli_cmd_get_mu_cap_war_extn(struct wpa_ctrl *ctrl,
+					     int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "GET_MU_CAP_WAR");
+}
+
+int hostapd_cli_cmd_mu_cap_war_extn(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	char buf[32];
+	int res;
+
+	if (argc != 1) {
+		printf("Usage: mu_cap_war <1/0>\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "MU_CAP_WAR %s", argv[0]);
+
+	if (os_snprintf_error(sizeof(buf), res)) {
+		printf("mu_cap_war cmd failed\n");
+		return -1;
+	}
+
+	return wpa_ctrl_command(ctrl, buf);
+}
+#endif /* CONFIG_IEEE80211AC */
+
+int hostapd_cli_cmd_dcs_extn(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	if (argc < 1) {
+		printf("Invalid dcs_enable command: need atleast 1 argument\n");
+		return -1;
+	}
+
+	return hostapd_cli_cmd(ctrl, "DCS", 1, argc, argv);
+}
+
+static int hostapd_cli_send_dcs_param_values(struct wpa_ctrl *ctrl,
+					     const char *base,
+					     int argc, char *argv[])
+{
+	char buf[1024];
+	int pos, i, r;
+
+	pos = os_snprintf(buf, sizeof(buf), "%s", base);
+
+	if (os_snprintf_error(sizeof(buf), pos))
+		return -1;
+
+	for (i = 0; i < argc; i++) {
+		r = os_snprintf(buf + pos, sizeof(buf) - pos, "%s%s",
+				    (pos > 0 ? " " : ""), argv[i]);
+		if (os_snprintf_error(sizeof(buf), pos + r))
+			return -1;
+		pos += r;
+	}
+
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+int hostapd_cli_cmd_set_dcs_wlan_intr_params(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	if (argc < 2) {
+		printf("Invalid dcs_params: need <key> <val> \n");
+		return -1;
+	}
+
+	/* Allow odd argc so users can pass tokens like 'phyerr_penalty
+	 * 10' etc.
+	 * We'll send through as provided; ctrl side will validate.
+	 */
+	return hostapd_cli_send_dcs_param_values(ctrl, "DCS_PARAMS", argc,
+						 argv);
+}

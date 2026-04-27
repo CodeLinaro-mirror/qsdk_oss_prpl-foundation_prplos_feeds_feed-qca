@@ -162,7 +162,7 @@ function iface_freq_info(iface, config, params)
 
 	return hostapd.freq_info(freq, sec_offset, width, params.chan_width,
 				 params.center_freq1, params.center_freq2,
-				 params.punct_bitmap);
+				 params.punct_bitmap, params.is_dfs);
 }
 
 function iface_add(phy, config, phy_status)
@@ -190,6 +190,48 @@ function iface_add(phy, config, phy_status)
 	let freq_info = iface_freq_info(iface, config, phy_status);
 
 	return iface.start(freq_info) >= 0;
+}
+
+function get_sta_channel_per_band(iface, band)
+{
+	if (!iface) {
+		hostapd.printf(`get_sta_channel_per_band: iface is null`);
+		return null;
+	}
+
+	if (band == null || band < 0 || band > 2) {
+		hostapd.printf(`get_sta_channel_per_band: invalid band=${band}`);
+		return null;
+	}
+
+	hostapd.printf(`get_sta_channel_per_band: band=${band}`);
+
+	let resp;
+	try {
+		resp = ubus.call("wpa_supplicant", "get_sta_channel_per_band", {
+				 band: band});
+	} catch (e) {
+		hostapd.printf(`get_sta_channel_per_band: ubus call failed: ${e}`);
+		return null;
+	}
+
+	if (!resp) {
+		hostapd.printf("get_sta_channel_per_band: no response from supplicant");
+		return null;
+	}
+
+	if (resp.channel != null) {
+		hostapd.printf(`get_sta_channel_per_band(): resp.channel=${resp.channel}`);
+		return resp;
+	}
+
+	if (resp.channel_info != null) {
+		hostapd.printf(`get_sta_channel_per_band: resp.channel_info=${resp.channel_info}`);
+		return { channel: resp.channel_info };
+	}
+
+	hostapd.printf("get_sta_channel_per_band: no channel info in response");
+	return { channel: null };
 }
 
 function iface_config_macaddr_list(config)
@@ -935,6 +977,11 @@ function get_bw(curr_chan_width) {
         }
 }
 
+function notify_csa_finish_event(freq) {
+        hostapd.printf(`notify_chan_switch_compl_event ${freq}`);
+        ubus.defer("wpa_supplicant", "csa_finish_event", {freq: freq} );
+}
+
 let main_obj = {
 	reload: {
 		args: {
@@ -966,6 +1013,9 @@ let main_obj = {
 			csa_count: 0,
 			punct_bitmap: 0,
 			mon_ifaces: "",
+			is_dfs: false,
+			wpa_state: "",
+			vap_type: 0,
 		},
 		call: ex_wrap(function(req) {
 			let phy = phy_name(req.args.phy, req.args.radio);
@@ -977,11 +1027,17 @@ let main_obj = {
 			let config = hostapd.data.config[phy];
 			if (!config || !config.bss || !config.bss[0] || !config.bss[0].ifname) {
 				hostapd.printf(`apsta_state: config not found for radio ${req.args.radio}`);
+				notify_csa_finish_event(req.args.frequency);
 				return 0;
 			}
 
 			let iface = hostapd.interfaces[phy];
 			if (!iface) {
+				if (req.args.wpa_state == "PRE_CONNECT") {
+					hostapd.printf(`apsta_state: iface not found, In pre-connect state notify wpa_supplicant`);
+					notify_csa_finish_event(req.args.frequency);
+				}
+
 				hostapd.printf(`apsta_state: iface not found for radio ${req.args.radio}`);
 				return 0;
 			}
@@ -989,7 +1045,8 @@ let main_obj = {
 			let ret;
 			if (!req.args.up) {
 				hostapd.printf(`apsta_state: Stopping interfaces for radio ${req.args.radio}`);
-				iface.stop();
+				iface.stop({ wpa_state: req.args.wpa_state,
+					     vap_type: req.args.vap_type });
 				for (let mon in mon_if_names) {
 					if (mon == null)
 						continue;
@@ -1010,6 +1067,11 @@ let main_obj = {
 				return libubus.STATUS_UNKNOWN_ERROR;
 
 			hostapd.printf(`apsta_state: freq_info for radio ${req.args.radio} is ${freq_info}`);
+			if (req.args.wpa_state) {
+				hostapd.printf(`apsta_state: received wpa_state ${req.args.wpa_state} for radio ${req.args.radio}`);
+				freq_info.wpa_state = req.args.wpa_state;
+			}
+			freq_info.vap_type = req.args.vap_type;
 			if (req.args.csa) {
 				freq_info.csa_count = req.args.csa_count ?? 10;
 				ret = iface.switch_channel(freq_info);
@@ -1175,6 +1237,24 @@ function bss_event(type, name, data) {
 	data.name = name;
 	hostapd.data.obj.notify(`bss.${type}`, data, null, null, null, -1);
 	ubus.call("service", "event", { type: `hostapd.${name}.${type}`, data: {} });
+}
+
+function iface_channel_switch(phy, radio, iface, info)
+{
+	let msg = {
+		phy: phy,
+		radio: radio,
+		frequency: info.frequency,
+		channel: info.channel,
+		csa_count: info.csa_count,
+		new_ch_width: info.new_ch_width,
+		ch_seg_0: info.ch_seg_0,
+		ch_seg_1: info.ch_seg_1,
+	};
+	hostapd.printf(`notify supplicant ${msg}`);
+	let status = ubus.defer("wpa_supplicant", "uplink_csa_notify", msg);
+	if (!status)
+	    hostapd.printf(`Failed to notify wpa_supplicant about channel switch for phy ${phy}`);
 }
 
 return {
@@ -1363,4 +1443,56 @@ return {
 
 		return true;
 	},
+	notify_chan_switch_compl_event: function(freq) {
+		notify_csa_finish_event(freq);
+	},
+	notify_acs_completed: function(iface, success, channel, freq) {
+		hostapd.printf(`Send acs_completed event success=${success} channel=${channel} freq=${freq}`);
+		ubus.call("rptr_mgr", "acs_completed", {
+			event: "ACS-COMPLETED",
+			success: success,
+			channel: channel,
+			freq: freq
+		});
+	},
+	event: function(phy, radio, iface, ev, info) {
+		let intf = hostapd.interfaces[phy];
+		if (!intf) {
+			hostapd.printf(`no PHY for ifname ${phy}`);
+			return;
+		}
+		let phy_data = hostapd.data.config[phy];
+		if (!phy_data) {
+			hostapd.printf(`no PHY data for ifname ${phy} ${ev}`);
+			return;
+		}
+
+		hostapd.printf(`received event for ${phy} ${ev}`);
+
+		if (ev == "DFS_UPLINK_CHANNEL_SELECTED")
+			iface_channel_switch(phy, radio, intf, info);
+		 },
+	disconnect_backhaul: function(phy, radio, iface) {
+		let intf = hostapd.interfaces[phy];
+		if (!intf) {
+			hostapd.printf(`no PHY for ifname ${phy}`);
+			return;
+		}
+		let phy_data = hostapd.data.config[phy];
+		if (!phy_data) {
+			 hostapd.printf(`no PHY data for ifname ${phy} ${radio}`);
+			 return;
+		}
+		hostapd.printf(`disconnect backhaul for ${phy} ${radio}`);
+		let msg = {
+			phy: phy,
+			radio: radio,
+		};
+
+		ubus.call("wpa_supplicant", "disconnect_request", msg);
+	},
+	get_sta_channel_per_band: function(iface, band) {
+		return get_sta_channel_per_band(iface, band);
+	}
+
 };

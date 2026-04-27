@@ -16,7 +16,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-START=03
+START=04
 STOP=94
 
 boot()
@@ -26,7 +26,22 @@ boot()
 		echo "Failed to set path for ini framework" > /dev/console
 	fi
 
+	ath12k_struct_layout="/lib/wifi/ath12k_struct_layout.txt.lzma"
+	[ -e "$ath12k_struct_layout" ] && {
+		echo "INFO:layout present at $ath12k_struct_layout" > /dev/console
+		lzma -d $ath12k_struct_layout
+	}
+
 	update_ath12k_module_parameters
+	board_name=$(cat /tmp/sysinfo/board_name)
+	case "$board_name" in
+		ap-sdxkova*)
+			create_caldata
+			caldata_symlink_creation "$board_name" "1"
+			caldata_symlink_creation "$board_name" "2"
+			caldata_symlink_creation "$board_name" "3"
+		;;
+	esac
 }
 
 # this function is to parse the bootargs and update ath12k
@@ -74,4 +89,41 @@ update_ath12k_module_parameters()
 		cat /tmp/ath12k_rest
 	} > "$ath12k_config_file"
 	rm -f /tmp/ath12k_rest
+
+	# Set board name for sdx kobuk single-phy and split-phy
+	if [ ! -f /tmp/sysinfo/model ] || [ $(grep -c "SDXKOVA" /sys/firmware/devicetree/base/model) != 0 ]; then
+		if [ ! -f /tmp/sysinfo/model ] || [ $(grep -c "V2" /tmp/sysinfo/model) = 0 ]; then
+			echo "ap-sdxkova-qcn9224-V1" > /tmp/sysinfo/board_name
+		else
+			echo "ap-sdxkova-qcn9224-V2" > /tmp/sysinfo/board_name
+		fi
+	fi
+}
+
+create_caldata() {
+	if [ -e /lib/read_caldata_to_fs.sh ]; then
+		. /lib/read_caldata_to_fs.sh
+		do_load_ipq4019_board_bin
+	fi
+}
+
+caldata_symlink_creation(){
+	var=0
+	while read -r line
+	do
+		board=$(echo $line | cut -f1 -d',')
+		if [[ "$board" == "$1" ]]; then
+			var=$((var+1))
+			if [[ $var == $2 ]]; then
+				local brdid=$(echo $line | cut -f2 -d',')
+				local art_slot=$(echo $line | cut -f3 -d',')
+				local pciid=$(echo $line | cut -f6 -d',')
+				break
+			fi
+		fi
+	done < /lib/firmware/ftm.conf
+
+	if [ -e /lib/firmware/qcn9224/caldata_$art_slot.b$brdid ]; then
+		ln -sf /lib/firmware/qcn9224/caldata_$art_slot.b$brdid /lib/firmware/ath12k/QCN92XX/hw1.0/cal-pci-000$pciid:01:00.0.bin
+	fi
 }

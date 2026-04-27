@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-wifi-nss-plugins
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-wifi-plugins
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=b93f1ef72701b0645bfabcf939634ab39f0e03c2
+PKG_VERSION:=e06e7b603bb70e7c8f9ba1e8a67a1aa25a4fbcdc
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -23,8 +23,10 @@ define KernelPackage/qca-wifi-nss-plugins
  CATEGORY:=Kernel modules
  SUBMENU:=Network Devices
  TITLE:=Wifi Plugin module
- DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx \
+ DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq52xx||TARGET_ipq96xx \
 		  +kmod-qca-nss-ecm +kmod-qca-nss-ppe @!LINUX_3_18 \
+		  +PACKAGE_kmod-qca-wifi-unified-profile:kmod-qca-wifi \
+		  +PACKAGE_kmod-qca-wifi-lowmem-profile:kmod-qca-wifi \
 		  +PACKAGE_kmod-ath12k:kmod-ath12k
  FILES:=$(PKG_BUILD_DIR)/qca-wifi-nss-plugins.ko
 endef

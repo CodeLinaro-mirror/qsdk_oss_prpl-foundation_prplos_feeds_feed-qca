@@ -3,13 +3,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-ssdk
+PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ssdk
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=4a51edc04910792fde91098b6c1a1655e63800b6
+PKG_VERSION:=16f3f5a82d1cf8c22d96efa7255251ef1f4c435e
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

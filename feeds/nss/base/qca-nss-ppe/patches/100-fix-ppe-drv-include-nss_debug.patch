@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Build Fix <fix@local>
+Date: Thu, 25 Apr 2026 00:00:00 +0000
+Subject: [PATCH] qca-nss-ppe: ppe_drv add include path for nss_debug/exports
+
+ppe_drv includes <nss_debug.h> which is provided within this tree under
+nss_debug/exports. Ensure ppe_drv adds the correct include directory so the
+header resolves during build.
+
+Signed-off-by: Build Fix <fix@local>
+---
+ drv/ppe_drv/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drv/ppe_drv/Makefile b/drv/ppe_drv/Makefile
+index 1111111..2222222 100644
+--- a/drv/ppe_drv/Makefile
++++ b/drv/ppe_drv/Makefile
+@@ -1,6 +1,7 @@
+ # Makefile for PPE driver
+ 
+ ccflags-y := -I$(obj)/../exports -I$(obj)/..
++ccflags-y += -I$(obj)/../../nss_debug/exports
+ ccflags-y += -DPPE_DRV_BUILD_ID="$(BUILD_ID)"
+ ifeq ($(SoC),$(filter $(SoC),ipq53xx))
+ ccflags-y += -DNSS_PPE_IPQ53XX

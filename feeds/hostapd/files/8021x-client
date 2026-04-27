@@ -1,0 +1,657 @@
+#!/bin/sh
+#
+# Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+# SPDX-License-Identifier: ISC
+#
+# 8021x-client - Lifecycle management utility for 802.1X wired supplicant
+#
+# Deploy target:
+#   /usr/sbin/8021x-client
+#
+# Commands:
+#   8021x-client start  -i <ifname> -c <conf> [-- <extra_args...>]
+#   8021x-client stop   -i <ifname>
+#   8021x-client status -i <ifname>
+#
+# Notes:
+# - Coordinates wpa_supplicant + wpa_cli -a action script listener
+# - stop will also cleanup 8021x_action throttle/tail state files
+
+set -u
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+WPA_SUPPLICANT="${WPA_SUPPLICANT:-wpa_supplicant-macsec}"
+WPA_CLI="${WPA_CLI:-wpa_cli}"
+
+# Default driver for wpa_supplicant
+WPA_DRIVER="${WPA_DRIVER:-macsec_qca}"
+
+# Control socket dir passed to wpa_cli -p (must match 8021x_action WPA_CTRL_DIR default)
+CTRL_INTERFACE="${CTRL_INTERFACE:-/var/run/wpa_supplicant}"
+
+# Action script path
+ACTION_SCRIPT="${ACTION_SCRIPT:-/etc/802.1x/8021x_action.sh}"
+
+# PID file directory
+PID_DIR="${PID_DIR:-/var/run}"
+
+# 8021x_action state dir (must match 8021x_action STATE_DIR default)
+STATE_DIR="${STATE_DIR:-/tmp/8021x_state}"
+
+LOG_TAG="8021x-client"
+
+# =============================================================================
+# Logging
+# =============================================================================
+log_msg()  { logger -t "$LOG_TAG" "$*"; }
+log_error(){ logger -t "$LOG_TAG" "ERROR: $*"; }
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+usage() {
+  cat <<'EOF'
+Usage: 8021x-client <command> [options]
+
+Commands:
+  start   -i <ifname> -c <conf> [-- <extra_args...>]
+          Start wpa_supplicant and event listener
+
+  stop    -i <ifname>
+          Stop wpa_supplicant and event listener
+
+  status  -i <ifname>
+          Query supplicant status and process health
+
+Options:
+  -i <ifname>   Network interface name (required)
+  -c <conf>     wpa_supplicant config file (required for start)
+  --            Pass remaining args to wpa_supplicant
+
+Examples:
+  8021x-client start -i eth0 -c /tmp/wpa-tls.conf
+  8021x-client start -i eth0 -c /tmp/wpa-tls.conf -- -dd
+  8021x-client stop -i eth0
+  8021x-client status -i eth0
+EOF
+  exit 1
+}
+
+get_pid_file() {
+  ifname="$1"
+  echo "$PID_DIR/8021x_client_${ifname}.pid"
+}
+
+get_listener_pid_file() {
+  ifname="$1"
+  echo "$PID_DIR/8021x_client_${ifname}_listener.pid"
+}
+
+check_process_running() {
+  pid="$1"
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+# Verify PID belongs to wpa_supplicant for the specified interface
+# Returns 0 if PID is our wpa_supplicant, 1 otherwise
+is_our_supplicant() {
+  pid="$1"
+  ifname="$2"
+
+  [ -z "$pid" ] && return 1
+  [ -z "$ifname" ] && return 1
+
+  # Check if process is running
+  check_process_running "$pid" || return 1
+
+  # Try to get command line (prefer /proc for BusyBox compatibility)
+  if [ -f "/proc/$pid/cmdline" ]; then
+    cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || echo "")
+  else
+    # Fallback to ps (may not be available on minimal systems)
+    cmdline=$(ps -p "$pid" -o args= 2>/dev/null || echo "")
+  fi
+
+  # Verify it's wpa_supplicant with our interface
+  echo "$cmdline" | grep -q "wpa_supplicant" || return 1
+  echo "$cmdline" | grep -q -- "-i $ifname" || return 1
+
+  return 0
+}
+
+# Verify PID belongs to wpa_cli listener for the specified interface
+# Returns 0 if PID is our wpa_cli, 1 otherwise
+is_our_listener() {
+  pid="$1"
+  ifname="$2"
+
+  [ -z "$pid" ] && return 1
+  [ -z "$ifname" ] && return 1
+
+  # Check if process is running
+  check_process_running "$pid" || return 1
+
+  # Try to get command line
+  if [ -f "/proc/$pid/cmdline" ]; then
+    cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || echo "")
+  else
+    cmdline=$(ps -p "$pid" -o args= 2>/dev/null || echo "")
+  fi
+
+  # Verify it's wpa_cli with our interface, action script, and control path
+  echo "$cmdline" | grep -q "wpa_cli" || return 1
+  echo "$cmdline" | grep -q -- "-i $ifname" || return 1
+  echo "$cmdline" | grep -q -- "-a $ACTION_SCRIPT" || return 1
+  echo "$cmdline" | grep -q -- "-p $CTRL_INTERFACE" || return 1
+
+  return 0
+}
+
+# best-effort: read KEY=VALUE from state file safely
+read_state_kv() {
+  file="$1"
+  key="$2"
+  grep "^${key}=" "$file" 2>/dev/null | head -n 1 | cut -d= -f2
+}
+
+read_pid_file() {
+  # prints pid or empty, validating it is numeric
+  file="$1"
+  # Read file, strip all whitespace
+  pid=$(cat "$file" 2>/dev/null | tr -d '[:space:]' || printf '')
+
+  # Validate PID is strictly numeric and positive
+  if echo "$pid" | grep -Eq '^[0-9]+$' && [ "$pid" -gt 0 ]; then
+    printf '%s' "$pid"
+  else
+    printf ''
+  fi
+}
+
+strip_cr() {
+  # strip possible CR (\r) from pasted args
+  # Use ${1:-} to avoid unbound variable error if set -u is active
+  printf '%s' "${1:-}" | tr -d '\r'
+}
+
+validate_ifname() {
+  # Validate interface name: only allow alphanumeric, underscore, dot, hyphen
+  # Explicitly reject colon to prevent path traversal attacks
+  name="$1"
+  if ! echo "$name" | grep -Eq '^[A-Za-z0-9_.-]+$'; then
+    log_error "Invalid interface name: '$name' (only alphanumeric, _, ., - allowed)"
+    return 1
+  fi
+  # Additional safety: reject if it looks like a path
+  if echo "$name" | grep -q '/'; then
+    log_error "Invalid interface name: '$name' (path separators not allowed)"
+    return 1
+  fi
+  # Reject names starting with dot or hyphen (hidden files or option-like names)
+  if echo "$name" | grep -Eq '^[.-]'; then
+    log_error "Invalid interface name: '$name' (cannot start with . or -)"
+    return 1
+  fi
+  # Reject consecutive dots to prevent path traversal
+  if echo "$name" | grep -q '\.\.'; then
+    log_error "Invalid interface name: '$name' (consecutive dots not allowed)"
+    return 1
+  fi
+  return 0
+}
+
+# Parse only "-i <ifname>" for stop/status
+PARSED_IFNAME=""
+parse_ifname_only_args() {
+  PARSED_IFNAME=""
+  while [ $# -gt 0 ]; do
+    case "${1:-}" in
+      -i)
+        [ $# -ge 2 ] || { log_error "Option -i requires a value (e.g. -i eth0)"; usage; }
+        PARSED_IFNAME="$2"
+        shift 2
+        ;;
+      "")
+        shift
+        ;;
+      *)
+        log_error "Unknown option: '$1' (expected: -i <ifname>)"
+        usage
+        ;;
+    esac
+  done
+  PARSED_IFNAME="$(strip_cr "$PARSED_IFNAME")"
+  [ -n "$PARSED_IFNAME" ] || { log_error "Interface name (-i) is required"; usage; }
+  validate_ifname "$PARSED_IFNAME" || usage
+}
+
+# ============================================================================
+# Command: start
+# ============================================================================
+
+cmd_start() {
+  ifname=""
+  conf=""
+
+  # Parse: -i <ifname> -c <conf> [-- extra...]
+  while [ $# -gt 0 ]; do
+    case "${1:-}" in
+      -i)
+        [ $# -ge 2 ] || { log_error "Option -i requires a value (e.g. -i eth0)"; usage; }
+        ifname="$2"; shift 2
+        ;;
+      -c)
+        [ $# -ge 2 ] || { log_error "Option -c requires a value (e.g. -c /tmp/wpa.conf)"; usage; }
+        conf="$2"; shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      "")
+        shift
+        ;;
+      *)
+        log_error "Unknown option: '$1' (did you forget '--' before wpa_supplicant extra args?)"
+        usage
+        ;;
+    esac
+  done
+
+  ifname="$(strip_cr "$ifname")"
+  conf="$(strip_cr "$conf")"
+
+  [ -n "$ifname" ] || { log_error "Interface name (-i) is required"; usage; }
+  [ -n "$conf" ]   || { log_error "Configuration file (-c) is required"; usage; }
+
+  # Validate interface name
+  validate_ifname "$ifname" || usage
+
+  [ -f "$conf" ]   || { log_error "Configuration file not found: $conf"; exit 1; }
+
+  PID_FILE="$(get_pid_file "$ifname")"
+  LISTENER_PID_FILE="$(get_listener_pid_file "$ifname")"
+
+  # Treat each explicit start as a new session and clear any
+  # leftover 8021x_action throttle/tail state from a previous run.
+  if [ -d "$STATE_DIR" ]; then
+    rm -f "$STATE_DIR/${ifname}.state" 2>/dev/null || true
+    rm -f "$STATE_DIR/${ifname}.lock"  2>/dev/null || true
+    rm -f "$STATE_DIR/${ifname}.stop"  2>/dev/null || true
+    # compatibility: old versions used a lock *directory*
+    rmdir "$STATE_DIR/${ifname}.lock"  2>/dev/null || true
+    log_msg "Cleared stale 8021x_action state for $ifname"
+  fi
+
+  # Remove stale PID file with ownership verification
+  if [ -f "$PID_FILE" ]; then
+    pid="$(read_pid_file "$PID_FILE")"
+    if [ -n "$pid" ]; then
+      if is_our_supplicant "$pid" "$ifname"; then
+        log_error "Supplicant already running on $ifname (PID: $pid)"
+        exit 1
+      elif check_process_running "$pid"; then
+        # PID exists but is not our wpa_supplicant (PID reuse)
+        log_msg "PID $pid exists but is not wpa_supplicant for $ifname, removing stale PID file"
+      fi
+    fi
+    # Remove PID file (either stale, invalid, or PID reused by another process)
+    if ! rm -f "$PID_FILE" 2>/dev/null; then
+      log_msg "Warning: Failed to remove PID file $PID_FILE"
+    fi
+  fi
+
+  if [ -f "$LISTENER_PID_FILE" ]; then
+    lpid="$(read_pid_file "$LISTENER_PID_FILE")"
+    if [ -n "$lpid" ]; then
+      if is_our_listener "$lpid" "$ifname"; then
+        log_error "Listener already running on $ifname (PID: $lpid)"
+        exit 1
+      elif check_process_running "$lpid"; then
+        # PID exists but is not our wpa_cli listener (PID reuse)
+        log_msg "PID $lpid exists but is not wpa_cli listener for $ifname, removing stale PID file"
+      fi
+    fi
+    # Remove PID file
+    if ! rm -f "$LISTENER_PID_FILE" 2>/dev/null; then
+      log_msg "Warning: Failed to remove listener PID file $LISTENER_PID_FILE"
+    fi
+  fi
+
+  log_msg "Starting wpa_supplicant on $ifname (conf: $conf)"
+
+  # Remaining args after '--' are passed as-is to wpa_supplicant
+  if ! "$WPA_SUPPLICANT" -D "$WPA_DRIVER" -i "$ifname" -c "$conf" -B -P "$PID_FILE" "$@"; then
+    log_error "Failed to start wpa_supplicant"
+    rm -f "$PID_FILE" 2>/dev/null || true
+    exit 1
+  fi
+
+  # Fail-fast: ensure PID file exists and process is alive
+  if [ ! -f "$PID_FILE" ]; then
+    log_error "wpa_supplicant started but PID file not created: $PID_FILE"
+    exit 1
+  fi
+
+  pid="$(read_pid_file "$PID_FILE")"
+  if ! is_our_supplicant "$pid" "$ifname"; then
+    log_error "wpa_supplicant failed to start or exited immediately (pid=$pid). Check config/driver with: $WPA_SUPPLICANT -D $WPA_DRIVER -i $ifname -c $conf -dd"
+    rm -f "$PID_FILE" 2>/dev/null || true
+    exit 1
+  fi
+
+  # Wait for control socket to be ready
+  max_wait=5
+  waited=0
+  while [ $waited -lt $max_wait ]; do
+    [ -S "$CTRL_INTERFACE/$ifname" ] && break
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  if [ ! -S "$CTRL_INTERFACE/$ifname" ]; then
+    log_error "Control socket not ready after ${max_wait}s"
+    # Try to clean up
+    if [ -f "$PID_FILE" ]; then
+      pid="$(read_pid_file "$PID_FILE")"
+      if check_process_running "$pid"; then
+        kill "$pid" 2>/dev/null || true
+      fi
+      rm -f "$PID_FILE" 2>/dev/null || true
+    fi
+    exit 1
+  fi
+
+  log_msg "wpa_supplicant started (PID: $pid)"
+
+  # Start wpa_cli listener
+  if [ ! -x "$ACTION_SCRIPT" ]; then
+    log_error "Action script not found or not executable: $ACTION_SCRIPT"
+    # Clean up supplicant directly (minimal cleanup, avoid full cmd_stop side effects)
+    if [ -f "$PID_FILE" ]; then
+      pid="$(read_pid_file "$PID_FILE")"
+      if [ -n "$pid" ] && check_process_running "$pid"; then
+        log_msg "Cleaning up wpa_supplicant (PID: $pid)"
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+        check_process_running "$pid" && kill -9 "$pid" 2>/dev/null || true
+      fi
+      rm -f "$PID_FILE" 2>/dev/null || true
+    fi
+    exit 1
+  fi
+
+  log_msg "Starting wpa_cli listener on $ifname (action: $ACTION_SCRIPT)"
+
+  # Start listener in background and capture PID
+  if ! "$WPA_CLI" -i "$ifname" -p "$CTRL_INTERFACE" -a "$ACTION_SCRIPT" -B -P "$LISTENER_PID_FILE"; then
+    log_error "wpa_cli command failed"
+    # Clean up supplicant directly
+    if [ -f "$PID_FILE" ]; then
+      pid="$(read_pid_file "$PID_FILE")"
+      if [ -n "$pid" ] && check_process_running "$pid"; then
+        log_msg "Cleaning up wpa_supplicant (PID: $pid)"
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+        check_process_running "$pid" && kill -9 "$pid" 2>/dev/null || true
+      fi
+      rm -f "$PID_FILE" 2>/dev/null || true
+    fi
+    exit 1
+  fi
+
+  lwait_max=3
+  lwaited=0
+  while [ ! -f "$LISTENER_PID_FILE" ] && [ $lwaited -lt $lwait_max ]; do
+    sleep 1
+    lwaited=$((lwaited + 1))
+  done
+
+  if [ ! -f "$LISTENER_PID_FILE" ]; then
+    log_error "Failed to start wpa_cli listener (pidfile not created after ${lwait_max}s)"
+    # Clean up supplicant directly
+    if [ -f "$PID_FILE" ]; then
+      pid="$(read_pid_file "$PID_FILE")"
+      if [ -n "$pid" ] && check_process_running "$pid"; then
+        log_msg "Cleaning up wpa_supplicant (PID: $pid)"
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+        check_process_running "$pid" && kill -9 "$pid" 2>/dev/null || true
+      fi
+      rm -f "$PID_FILE" 2>/dev/null || true
+    fi
+    exit 1
+  fi
+
+  listener_pid="$(read_pid_file "$LISTENER_PID_FILE")"
+  if ! is_our_listener "$listener_pid" "$ifname"; then
+    log_error "wpa_cli listener failed to start or is not our process"
+    rm -f "$LISTENER_PID_FILE" 2>/dev/null || true
+    # Clean up supplicant directly
+    if [ -f "$PID_FILE" ]; then
+      pid="$(read_pid_file "$PID_FILE")"
+      if [ -n "$pid" ] && check_process_running "$pid"; then
+        log_msg "Cleaning up wpa_supplicant (PID: $pid)"
+        kill "$pid" 2>/dev/null || true
+        sleep 1
+        check_process_running "$pid" && kill -9 "$pid" 2>/dev/null || true
+      fi
+      rm -f "$PID_FILE" 2>/dev/null || true
+    fi
+    exit 1
+  fi
+
+  # Clear any previous stop flag so tail worker can run normally
+  rm -f "$STATE_DIR/${ifname}.stop" 2>/dev/null || true
+  log_msg "wpa_cli listener started successfully (PID: $listener_pid)"
+  log_msg "802.1X client started on $ifname"
+
+  exit 0
+}
+
+# ============================================================================
+# Command: stop
+# ============================================================================
+
+cmd_stop() {
+  ifname="$1"
+  [ -n "$ifname" ] || { log_error "Interface name is required"; usage; }
+
+  PID_FILE="$(get_pid_file "$ifname")"
+  LISTENER_PID_FILE="$(get_listener_pid_file "$ifname")"
+
+  log_msg "Stopping 802.1X client on $ifname"
+
+  # 1) stop flag for 8021x_action tail worker
+  if ! mkdir -p "$STATE_DIR" 2>/dev/null; then
+    log_msg "Warning: Failed to create state directory $STATE_DIR"
+  fi
+  STOP_FILE="$STATE_DIR/${ifname}.stop"
+  if ! echo "stop $(date +%s)" > "$STOP_FILE" 2>/dev/null; then
+    log_msg "Warning: Failed to write stop flag to $STOP_FILE"
+  fi
+
+  # 2) try kill tail worker by reading TAIL_PID from state file
+  STATE_FILE="$STATE_DIR/${ifname}.state"
+  if [ -f "$STATE_FILE" ]; then
+    tail_pid="$(read_state_kv "$STATE_FILE" "TAIL_PID")"
+    if echo "$tail_pid" | grep -Eq '^[0-9]+$' && [ "$tail_pid" -gt 0 ]; then
+      if check_process_running "$tail_pid"; then
+        log_msg "Stopping tail worker (PID: $tail_pid)"
+        kill "$tail_pid" 2>/dev/null || true
+        sleep 1
+        if check_process_running "$tail_pid"; then
+          kill -9 "$tail_pid" 2>/dev/null || true
+        fi
+      fi
+    fi
+  fi
+
+  # 3) Stop supplicant via wpa_cli terminate (graceful shutdown)
+  if [ -S "$CTRL_INTERFACE/$ifname" ]; then
+    log_msg "Sending terminate command to wpa_supplicant"
+    "$WPA_CLI" -i "$ifname" -p "$CTRL_INTERFACE" terminate >/dev/null 2>&1 || true
+
+    # Wait for process to exit
+    max_wait=5
+    waited=0
+    while [ $waited -lt $max_wait ]; do
+      if [ -f "$PID_FILE" ]; then
+        pid="$(read_pid_file "$PID_FILE")"
+        if ! check_process_running "$pid"; then
+          break
+        fi
+      else
+        break
+      fi
+      sleep 1
+      waited=$((waited + 1))
+    done
+  fi
+
+  # 4) force kill if still running
+  if [ -f "$PID_FILE" ]; then
+    pid="$(read_pid_file "$PID_FILE")"
+    if check_process_running "$pid"; then
+      log_msg "Force killing wpa_supplicant (PID: $pid)"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+    rm -f "$PID_FILE" 2>/dev/null || true
+  fi
+
+  # 5) Clean up listener (should exit automatically when socket disappears)
+  if [ -f "$LISTENER_PID_FILE" ]; then
+    listener_pid="$(read_pid_file "$LISTENER_PID_FILE")"
+    if check_process_running "$listener_pid"; then
+      log_msg "Stopping wpa_cli listener (PID: $listener_pid)"
+      kill "$listener_pid" 2>/dev/null || true
+
+      # Wait briefly
+      sleep 1
+
+      # Force kill if still running
+      if check_process_running "$listener_pid"; then
+        kill -9 "$listener_pid" 2>/dev/null || true
+      fi
+    fi
+    rm -f "$LISTENER_PID_FILE" 2>/dev/null || true
+  fi
+
+  # 6) cleanup 8021x_action state/lock/stop files (best-effort)
+  if [ -d "$STATE_DIR" ]; then
+    log_msg "Cleaning up 8021x_action state for $ifname"
+    if ! rm -f "$STATE_DIR/${ifname}.state" 2>/dev/null; then
+      log_msg "Warning: Failed to remove state file $STATE_DIR/${ifname}.state"
+    fi
+    if ! rm -f "$STATE_DIR/${ifname}.lock" 2>/dev/null; then
+      log_msg "Warning: Failed to remove lock file $STATE_DIR/${ifname}.lock"
+    fi
+    if ! rm -f "$STATE_DIR/${ifname}.stop" 2>/dev/null; then
+      log_msg "Warning: Failed to remove stop file $STATE_DIR/${ifname}.stop"
+    fi
+
+    # compatibility: old versions used lock *directory*
+    rmdir "$STATE_DIR/${ifname}.lock" 2>/dev/null || true
+
+    rmdir "$STATE_DIR" 2>/dev/null || true
+  fi
+
+  log_msg "802.1X client stopped on $ifname"
+
+  exit 0
+}
+
+# ============================================================================
+# Command: status
+# ============================================================================
+
+cmd_status() {
+  ifname="$1"
+  [ -n "$ifname" ] || { log_error "Interface name is required"; usage; }
+
+  PID_FILE="$(get_pid_file "$ifname")"
+  LISTENER_PID_FILE="$(get_listener_pid_file "$ifname")"
+
+  echo "=== 802.1X Client Status (ifname: $ifname) ==="
+  echo
+
+  echo "[Supplicant Process]"
+  if [ -f "$PID_FILE" ]; then
+    pid="$(read_pid_file "$PID_FILE")"
+    if check_process_running "$pid"; then
+      echo " Status: Running"
+      echo " PID: $pid"
+      echo " Binary: $WPA_SUPPLICANT"
+    else
+      echo " Status: Dead (stale PID file)"
+      echo " PID file: $PID_FILE"
+    fi
+  else
+    echo " Status: Not running"
+  fi
+  echo
+
+  # Check listener process
+  echo "[Listener Process]"
+  if [ -f "$LISTENER_PID_FILE" ]; then
+    listener_pid="$(read_pid_file "$LISTENER_PID_FILE")"
+    if check_process_running "$listener_pid"; then
+      echo "  Status: Running"
+      echo "  PID: $listener_pid"
+      echo "  Action Script: $ACTION_SCRIPT"
+    else
+      echo "  Status: Dead (stale PID file)"
+      echo "  PID file: $LISTENER_PID_FILE"
+    fi
+  else
+    echo "  Status: Not running"
+  fi
+  echo
+
+  # Query authentication state
+  echo "[Authentication State]"
+  if [ -S "$CTRL_INTERFACE/$ifname" ]; then
+    status_output="$("$WPA_CLI" -i "$ifname" -p "$CTRL_INTERFACE" status 2>/dev/null)"
+    if [ -n "$status_output" ]; then
+      echo "$status_output" | grep -E '^(wpa_state|suppPortStatus|EAP state|selectedMethod|key_mgmt|identity)=' | sed 's/^/ /'
+    else
+      echo "  Unable to query (no response from wpa_cli)"
+    fi
+  else
+    echo "  Unable to query (control socket not available)"
+  fi
+  echo
+
+  exit 0
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+[ $# -ge 1 ] || usage
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+  start)
+    cmd_start "$@"
+    ;;
+  stop)
+    parse_ifname_only_args "$@"
+    cmd_stop "$PARSED_IFNAME"
+    ;;
+  status)
+    parse_ifname_only_args "$@"
+    cmd_status "$PARSED_IFNAME"
+    ;;
+  *)
+    log_error "Unknown command: $COMMAND"
+    usage
+    ;;
+esac

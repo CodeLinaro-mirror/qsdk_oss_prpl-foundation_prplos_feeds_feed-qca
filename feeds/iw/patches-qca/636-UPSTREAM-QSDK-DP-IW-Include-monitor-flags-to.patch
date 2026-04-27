@@ -1,0 +1,65 @@
+From 830d8e565c03e1b1fb60f7291de0b1076068f1cb Mon Sep 17 00:00:00 2001
+From: Reshma Immaculate Rajkumar <rrajkuma@qti.qualcomm.com>
+Date: Fri, 21 Nov 2025 12:30:32 +0530
+Subject: [PATCH] QSDK:DP:IW: Include monitor flags to enable or
+ disable TX and RX monitor mode in run-time
+
+Include skip_tx and skip_rx monitor flags in iw dev
+userspace command to enable or disable TX monitor
+and RX monitor in run-time.
+
+Patch-dependency: None
+
+Signed-off-by: Reshma Immaculate Rajkumar <rrajkuma@qti.qualcomm.com>
+---
+ interface.c | 6 +++++-
+ nl80211.h   | 2 ++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/interface.c b/interface.c
+index b65819d..9314981 100644
+--- a/interface.c
++++ b/interface.c
+@@ -18,7 +18,9 @@
+ 			"cook:     use cooked mode\n"\
+ 			"active:   use active mode (ACK incoming unicast packets)\n"\
+ 			"mumimo-groupid <GROUP_ID>: use MUMIMO according to a group id\n"\
+-			"mumimo-follow-mac <MAC_ADDRESS>: use MUMIMO according to a MAC address"
++			"mumimo-follow-mac <MAC_ADDRESS>: use MUMIMO according to a MAC address\n"\
++			"skip_tx:  do not pass local tx packets\n"\
++			"skip_rx:  do not pass local rx packets"
+ 
+ SECTION(interface);
+ 
+@@ -30,6 +32,8 @@ static char *mntr_flags[NL80211_MNTR_FLAG_MAX + 1] = {
+ 	"otherbss",
+ 	"cook",
+ 	"active",
++	"skip_tx",
++	"skip_rx",
+ };
+ 
+ static int parse_mumimo_options(int *_argc, char ***_argv, struct nl_msg *msg)
+diff --git a/nl80211.h b/nl80211.h
+index faf8f4d..5620b1e 100644
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -4945,6 +4945,7 @@ enum nl80211_survey_info {
+  * @NL80211_MNTR_FLAG_ACTIVE: use the configured MAC address
+  *	and ACK incoming unicast packets.
+  * @NL80211_MNTR_FLAG_SKIP_TX: do not pass local tx packets
++ * @NL80211_MNTR_FLAG_SKIP_RX: do not pass local rx packets
+  *
+  * @__NL80211_MNTR_FLAG_AFTER_LAST: internal use
+  * @NL80211_MNTR_FLAG_MAX: highest possible monitor flag
+@@ -4958,6 +4959,7 @@ enum nl80211_mntr_flags {
+ 	NL80211_MNTR_FLAG_COOK_FRAMES,
+ 	NL80211_MNTR_FLAG_ACTIVE,
+ 	NL80211_MNTR_FLAG_SKIP_TX,
++	NL80211_MNTR_FLAG_SKIP_RX,
+ 
+ 	/* keep last */
+ 	__NL80211_MNTR_FLAG_AFTER_LAST,
+-- 
+2.34.1
+

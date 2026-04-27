@@ -4,12 +4,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-ssdk-shell
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/ssdk-shell
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=fc85a49040264efbfc5993da1eb73dea68753ca9
+PKG_VERSION:=f2b17e0074dcb29760bc0113123a03a384effda6
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)

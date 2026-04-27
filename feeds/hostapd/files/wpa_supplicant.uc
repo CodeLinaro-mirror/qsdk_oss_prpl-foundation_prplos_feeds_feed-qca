@@ -185,6 +185,119 @@ function start_pending(phy_name)
 		iface_start(phydev, phy.data[ifname]);
 }
 
+
+function get_sta_channel_info_per_band(band)
+{
+	/* band: 0 = 2G, 1 = 5G, 2 = 6G */
+	wpas.printf(`get_sta_channel_info_per_band: band=${band}`);
+	for (let phy_name, phy_data in wpas.data.config) {
+		if (!phy_data || !phy_data.data)
+			continue;
+
+		for (let ifname in phy_data.data) {
+			let iface_data = phy_data.data[ifname];
+			if (!iface_data || !iface_data.config)
+				continue;
+
+			if (iface_data.config.mode != "sta")
+				continue;
+
+			if (!wpas.interfaces) {
+				wpas.printf(`get_sta_channel_info_per_band: `
+					    `wpas.interfaces is null`);
+				continue;
+			}
+
+			let iface = wpas.interfaces[ifname];
+			if (!iface) {
+				wpas.printf(`get_sta_channel_info_per_band: `
+					    `no iface object for ${ifname}`);
+				continue;
+			}
+
+			/* Log and use configured radio if present, else 0 */
+			let cfg_radio = iface_data.config.radio;
+			let radio = cfg_radio != null ? cfg_radio : 0;
+			wpas.printf(`get_sta_channel_info_per_band: ${ifname} `
+				    `cfg_radio=${cfg_radio} using_radio=${radio}`);
+
+			let status = iface.status(radio);
+			if (!status) {
+				wpas.printf(`get_sta_channel_info_per_band: ${ifname} `
+					    `status(null) on radio ${radio}`);
+				continue;
+			}
+
+			wpas.printf(`get_sta_channel_info_per_band: ${ifname} status on `
+				    `radio ${radio}: state=${status.state} `
+				    `freq=${status.frequency}`);
+
+			/* STRICT: only accept if STA is COMPLETED */
+			if (status.state != "COMPLETED") {
+				wpas.printf(`get_sta_channel_info_per_band: `
+					    `${ifname} not COMPLETED`);
+				continue;
+			}
+
+			let freq = status.frequency;
+			if (freq == null) {
+				wpas.printf(`get_sta_channel_info_per_band: `
+					    `${ifname} has no frequency`);
+				continue;
+			}
+
+			if (band == 0 && !(freq >= 2400 && freq <= 2484))
+				continue;
+			if (band == 1 && !(freq >= 5150 && freq <= 5885))
+				continue;
+			if (band == 2 && !(freq >= 5935 && freq <= 7115))
+				continue;
+
+			let bandwidth;
+			switch (status.chan_width) {
+			case 0: /* CHAN_WIDTH_20_NOHT */
+			case 1: /* CHAN_WIDTH_20 */
+				bandwidth = 20;
+				break;
+			case 2: /* CHAN_WIDTH_40 */
+				bandwidth = 40;
+				break;
+			case 3: /* CHAN_WIDTH_80 */
+				bandwidth = 80;
+				break;
+			case 4: /* CHAN_WIDTH_80P80 */
+				/* Effective per-segment bandwidth is 80 MHz */
+				bandwidth = 80;
+				break;
+			case 5: /* CHAN_WIDTH_160 */
+				bandwidth = 160;
+				break;
+			case 10: /* CHAN_WIDTH_320 */
+				bandwidth = 320;
+				break;
+			default:
+				/* Very wide EHT widths or UNKNOWN */
+				bandwidth = null;
+				break;
+			}
+
+			let result = {
+				frequency: status.frequency,
+				bandwidth: bandwidth,
+				sec_channel_offset: status.sec_chan_offset,
+				center_freq1: status.center_freq1,
+				center_freq2: status.center_freq2,
+				punct_bitmap: status.punct_bitmap
+			};
+                        wpas.printf(`get_sta_channel_info_per_band: `
+				    `${ifname} COMPLETED: ${result}`);
+                        return result;
+                }
+        }
+
+        return null;
+}
+
 let main_obj = {
 	phy_set_state: {
 		args: {
@@ -265,6 +378,32 @@ let main_obj = {
 			}
 
 			return libubus.STATUS_NOT_FOUND;
+		}
+	},
+	get_sta_channel_per_band: {
+		args: {
+			band: 0,
+		},
+		call: function(req) {
+			let band = req.args.band;
+			wpas.printf(`get_sta_channel_per_band ubus call: band=${band}`);
+
+			if (band == null)
+				return libubus.STATUS_INVALID_ARGUMENT;
+
+			try {
+				let info = get_sta_channel_info_per_band(band);
+				wpas.printf(`get_sta_channel_per_band ubus call: info=${info}`);
+				if (!info)
+					return libubus.STATUS_NOT_FOUND;
+				return { channel_info: info };
+			} catch (e) {
+				wpas.printf(`get_sta_channel_info_per_band call exception: ${e}`);
+				if (e && e.stacktrace && e.stacktrace[0])
+					wpas.printf(`get_sta_channel_info_per_band ubus `
+						    `stack: ${e.stacktrace[0].context}`);
+				return libubus.STATUS_UNKNOWN_ERROR;
+			}
 		}
 	},
 	config_set: {
@@ -364,6 +503,97 @@ let main_obj = {
 			return ret;
 		}
 	},
+	csa_finish_event: {
+		args: {
+			freq: 0
+		},
+		call: function(req) {
+			wpas.printf(`csa_finish_event req.args.freq ${req.args.freq}`);
+			wpas.recvd_ch_sw_comp_ev(req.args.freq);
+			return 0;
+		}
+	},
+	start_scan_post_acs: {
+		args: {
+			success: 0
+		},
+		call: function(req) {
+			wpas.printf(`start_scan_post_acs received from rptr_mgr with status: ${req.args.success}`);
+			wpas.start_scan_post_acs();
+			return 0;
+		}
+	},
+	uplink_csa_notify: {
+		args: {
+			phy: "",
+			radio: 0,
+			frequency: 0,
+			channel: 0,
+			csa_count: 0,
+			new_ch_width: 0,
+			ch_seg_0: 0,
+			ch_seg_1: 0,
+		},
+		call: function(req) {
+			wpas.printf(`uplink_csa_notify received for ${req.args.phy} ${req.args.radio}`);
+			if (!req.args.frequency)
+				return libubus.STATUS_INVALID_ARGUMENT;
+
+			let phy_data = wpas.data.config[req.args.phy];
+			if (!phy_data) {
+				wpas.printf(`uplink_csa_notify: interface not found`);
+				return libubus.STATUS_INVALID_ARGUMENT;
+			}
+
+			let ret = false;
+			for (let ifname in phy_data.data) {
+				let iface = wpas.interfaces[ifname];
+				if (!iface)
+					continue;
+				let status = iface.status(req.args.radio);
+				if (!status)
+					continue;
+				wpas.printf(`uplink_csa_notify: state is ${status.state} ${req.args.csa}`);
+				if (status.state == "INTERFACE_DISABLED")
+					continue;
+				let freq_info = {};
+				freq_info.frequency = req.args.frequency;
+				freq_info.csa_count = req.args.csa_count ?? 10;
+				freq_info.channel = req.args.channel;
+				freq_info.new_ch_width = req.args.new_ch_width;
+				freq_info.ch_seg_0 = req.args.ch_seg_0;
+				freq_info.ch_seg_1 = req.args.ch_seg_1;
+				wpas.printf(`notify: freq_info ${freq_info}`);
+				ret = iface.notify_uplink_csa(freq_info);
+			}
+			if (!ret)
+				return libubus.STATUS_UNKNOWN_ERROR;
+			return 0;
+		}
+	},
+	disconnect_request: {
+		args: {
+			phy: "",
+			radio: 0,
+		},
+		call: function(req) {
+			wpas.printf(`reconnect request received for ${req.args.phy} ${req.args.radio}`);
+			let phy_data = wpas.data.config[req.args.phy];
+			if (!phy_data)
+				return libubus.STATUS_INVALID_ARGUMENT;
+			let ret = false;
+			for (let ifname in phy_data.data) {
+				let iface = wpas.interfaces[ifname];
+				if (!iface)
+					continue;
+				wpas.printf(`trigger reconnect`);
+				ret = iface.reconnect(req.args.radio);
+			}
+			if (!ret)
+				return libubus.STATUS_UNKNOWN_ERROR;
+			return 0;
+		}
+	}
 };
 
 wpas.data.ubus = ubus;
@@ -379,11 +609,14 @@ function iface_event(type, name, data) {
 	ubus.call("service", "event", { type: `wpa_supplicant.${name}.${type}`, data: {} });
 }
 
-function iface_hostapd_notify(phy, radio, ifname, iface, state)
+function iface_hostapd_notify(phy, radio, ifname, iface, state, vap_type)
 {
 	let ubus = wpas.data.ubus;
 	let status = iface.status(radio);
 	let msg = { phy: phy, radio: radio, mon_ifaces: mon_ifaces[radio]};
+
+	msg.wpa_state = state;
+	msg.vap_type = vap_type;
 
 	switch (state) {
 	case "DISCONNECTED":
@@ -409,6 +642,8 @@ function iface_hostapd_notify(phy, radio, ifname, iface, state)
 			msg.center_freq2 = status.center_freq2;
 		if (status.punct_bitmap != null)
 			msg.punct_bitmap = status.punct_bitmap;
+		if (status.is_dfs != null)
+			msg.is_dfs = status.is_dfs;
 		break;
 	default:
 		return;
@@ -418,7 +653,7 @@ function iface_hostapd_notify(phy, radio, ifname, iface, state)
 	ubus.call("hostapd", "apsta_state", msg);
 }
 
-function iface_channel_switch(phy, radio, ifname, iface, info)
+function iface_channel_switch(phy, radio, ifname, iface, info, vap_type)
 {
 	let msg = {
 		phy: phy,
@@ -432,8 +667,38 @@ function iface_channel_switch(phy, radio, ifname, iface, info)
 		csa: true,
 		csa_count: info.csa_count ? info.csa_count - 1 : 0,
 		punct_bitmap: info.punct_bitmap,
+		is_dfs: info.is_dfs,
+		wpa_state: info.wpa_state,
 	};
+	msg.vap_type = vap_type;
+	wpas.printf(`channel switch ${msg}`);
+
 	ubus.call("hostapd", "apsta_state", msg);
+}
+
+function iface_pre_connect_hostapd_notify(phy, radio, ifname, iface, state, info, vap_type)
+{
+	let ubus = wpas.data.ubus;
+	let msg = {
+		phy: phy,
+		radio: radio,
+		up: true,
+		frequency: info.frequency,
+		chan_width: info.chan_width,
+		sec_chan_offset: info.sec_chan_offset,
+		center_freq1: info.center_freq1,
+		center_freq2: info.center_freq2,
+		csa: true,
+		csa_count: 10,
+		punct_bitmap: info.punct_bitmap,
+		mon_ifaces: "",
+		is_dfs: info.is_dfs,
+		wpa_state: state,
+	 };
+
+	msg.vap_type = vap_type;
+	wpas.printf(`apsta_state:iface_pre_connect_hostapd_notify message passed ${msg}`);
+	ubus.defer("hostapd", "apsta_state", msg);
 }
 
 return {
@@ -448,7 +713,7 @@ return {
 	iface_remove: function(name, obj) {
 		iface_event("remove", name);
 	},
-	state: function(ifname, radio, iface, state) {
+	state: function(ifname, radio, iface, state, vap_type) {
 		let phy = wpas.data.iface_phy[ifname];
 		if (!phy) {
 			wpas.printf(`no PHY for ifname ${ifname}`);
@@ -460,12 +725,12 @@ return {
                         return;
 
 		if (!radio)
-			iface_hostapd_notify(phy_data.name, -1, ifname, iface, state);
+			iface_hostapd_notify(phy_data.name, -1, ifname, iface, state, vap_type);
 
 		let radio_id = 0;
 		while (radio) {
 			if (radio & 1) {
-				iface_hostapd_notify(phy_data.name, radio_id, ifname, iface, state);
+				iface_hostapd_notify(phy_data.name, radio_id, ifname, iface, state, vap_type);
 			}
 			radio >>= 1;
 			radio_id++;
@@ -484,7 +749,7 @@ return {
 
 		wdev_set_mesh_params(ifname, wdev_config);
 	},
-	event: function(ifname, radio, iface, ev, info) {
+	event: function(ifname, radio, iface, ev, info, vap_type) {
 		let phy = wpas.data.iface_phy[ifname];
 		if (!phy) {
 			wpas.printf(`no PHY for ifname ${ifname}`);
@@ -494,7 +759,22 @@ return {
 		if (!phy_data)
 			return;
 
-		if (ev == "CH_SWITCH_STARTED")
-			iface_channel_switch(phy_data.name, radio, ifname, iface, info);
+		if (ev == "CH_SWITCH_STARTED" || ev == "LINK_CH_SWITCH_STARTED")
+			iface_channel_switch(phy_data.name, radio, ifname, iface, info, vap_type);
+	},
+	pre_connect_state: function(ifname, radio, iface, state, info, vap_type) {
+		let phy = wpas.data.iface_phy[ifname];
+		if (!phy) {
+			wpas.printf(`no PHY for ifname ${ifname}`);
+			return;
+		}
+		if (state != "PRE_CONNECT")
+			return;
+
+		let phy_data = wpas.data.config[phy];
+		if (!phy_data)
+			return;
+
+		iface_pre_connect_hostapd_notify(phy_data.name, radio, ifname, iface, state, info, vap_type);
 	}
 };

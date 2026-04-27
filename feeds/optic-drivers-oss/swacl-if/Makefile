@@ -4,7 +4,7 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=swacl-if
 PKG_RELEASE:=1
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.pon.1.0.r30
+PKG_BRANCH:=win.pon.1.0.r37
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/trex/swacl-if
 PKG_MIRROR_HASH:=skip
 PKG_VERSION:=332443f284e2ae6cbfdb4b7e3fc0b7fb532c0dd9
@@ -19,7 +19,7 @@ define Package/$(PKG_NAME)
   SECTION:=OPTIC_DRIVERS
   CATEGORY:=OptiCore Packages
   SUBMENU:=Drivers
-  DEPENDS:=@TARGET_ipq53xx||TARGET_ipq95xx||TARGET_ipq54xx +sw-hook
+  DEPENDS:=@TARGET_ipq53xx||TARGET_ipq95xx||TARGET_ipq54xx||TARGET_ipq96xx +sw-hook
   TITLE:=swacl if
 endef
 

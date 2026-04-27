@@ -48,6 +48,9 @@ config-$(CONFIG_PACKAGE_ATH12K_TEST_FW_FOR_11S_MLO) += ATH12K_TEST_FW_FOR_11S_ML
 ifeq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),512)
 config-y += ATH12K_MEM_PROFILE_512M
 endif
+ifeq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
+config-y += ATH12K_MEM_PROFILE_256M
+endif
 
 config-$(call config_package,carl9170) += CARL9170
 config-$(call config_package,ar5523) += AR5523
@@ -147,7 +150,12 @@ define KernelPackage/ath12k
   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath12k
   DEPENDS+= +kmod-ath +@DRIVER_11N_SUPPORT +@DRIVER_11W_SUPPORT +@DRIVER_11AC_SUPPORT +@DRIVER_11AX_SUPPORT
   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ath12k.ko \
-         $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7/ath12k_wifi7.ko
+         $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi7/ath12k_wifi7.ko \
+	 $(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/wifi8/ath12k_wifi8.ko
+
+ifeq ($(CONFIG_PACKAGE_QCN_EXTN),y)
+  FILES+=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/qcn_extns/wifi6/ath12k_wifi6.ko
+endif
 
 ifeq ($(CONFIG_PACKAGE_MAC80211_ATHDEBUG),y)
   FILES+=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath12k/ath_debug/ath_debug.ko

@@ -195,7 +195,7 @@ case "$CMD" in
 				ieee80211w=2
 				sae_pwe=2
 				wpa_cli -i"$ifname" set_network 0 pairwise "GCMP-256"
-				wpa_cli -i"$ifname" set_network 0 group "GCMP-256"
+				wpa_cli -i"$ifname" set_network 0 group "CCMP"
 				;;
 		esac
 		wpa_cli -i"$ifname"  set_network 0 ieee80211w "$ieee80211w"

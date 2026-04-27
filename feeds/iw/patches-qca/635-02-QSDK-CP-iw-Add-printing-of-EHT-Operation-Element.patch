@@ -1,0 +1,140 @@
+From 75e78639b636a3e5b5efe5ff7f3c3e2ae29dcd19 Mon Sep 17 00:00:00 2001
+From: Aleksander Jan Bajkowski <olek2@wp.pl>
+Date: Wed, 19 Nov 2025 14:29:31 +0530
+Subject: [PATCH] QSDK:CP: iw: Add printing of EHT Operation Element
+
+Add ability to print out EHT capabilities from AP beacons.
+
+Patch-dependency: None
+
+Signed-off-by: Aleksander Jan Bajkowski <olek2@wp.pl>
+Signed-off-by: Rajat Soni <rajson@qti.qualcomm.com>
+---
+ iw.h   |  1 +
+ scan.c |  8 +++++++
+ util.c | 75 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 84 insertions(+)
+
+diff --git a/iw.h b/iw.h
+index bcf2e53..2ab0a03 100644
+--- a/iw.h
++++ b/iw.h
+@@ -468,6 +468,7 @@ void print_vht_info(__u32 capa, const __u8 *mcs);
+ void print_he_capability(const uint8_t *ie, int len);
+ void print_he_operation(const uint8_t *ie, int len);
+ void print_he_info(struct nlattr *nl_iftype);
++void print_eht_operation(const uint8_t *ie, int len);
+ void print_eht_info(struct nlattr *nl_iftype, int band);
+ void print_s1g_capability(const uint8_t *caps);
+ 
+diff --git a/scan.c b/scan.c
+index 419c8c7..ec24cdd 100644
+--- a/scan.c
++++ b/scan.c
+@@ -2426,9 +2426,17 @@ static void print_he_oper(const uint8_t type, uint8_t len, const uint8_t *data,
+ 	print_he_operation(data, len);
+ }
+ 
++static void print_eht_oper(const uint8_t type, uint8_t len, const uint8_t *data,
++			   const struct print_ies_data *ie_buffer)
++{
++	printf("\n");
++	print_eht_operation(data, len);
++}
++
+ static const struct ie_print ext_printers[] = {
+ 	[35] = { "HE capabilities", print_he_capa, 21, 54, BIT(PRINT_SCAN), },
+ 	[36] = { "HE Operation", print_he_oper, 6, 15, BIT(PRINT_SCAN), },
++	[106] = { "EHT Operation", print_eht_oper, 5, 10, BIT(PRINT_SCAN), },
+ };
+ 
+ static void print_extension(unsigned char len, unsigned char *ie,
+diff --git a/util.c b/util.c
+index 0c671ba..03275ad 100644
+--- a/util.c
++++ b/util.c
+@@ -1867,6 +1867,81 @@ void print_he_operation(const uint8_t *ie, int len)
+ 	}
+ }
+ 
++void print_eht_operation(const uint8_t *ie, int len)
++{
++	uint8_t oper_parameters = ie[0];
++	uint8_t disabled_subchannel_info_present = oper_parameters & 0x02;
++	uint8_t eht_operation_info_present = oper_parameters & 0x01;
++
++	printf("\t\tEHT Operation Parameters: (0x%02x)\n",
++	       oper_parameters);
++
++	if (oper_parameters & 0x04)
++		printf("\t\t\tEHT Default PE Duration\n");
++
++	if (oper_parameters & 0x08)
++		printf("\t\t\tGroup Addressed BU Indication Limit\n");
++
++	printf("\t\t\tGroup Addressed BU Indication Exponent: 0x%01x\n",
++	       (oper_parameters >> 4 & 3));
++
++	printf("\t\tBasic EHT-MCS And Nss Set: 0x");
++	for (uint8_t i = 0; i < 4; i++)
++		printf("%02x", ie[1 + i]);
++
++	printf("\n");
++
++	if (eht_operation_info_present) {
++		uint8_t offset = 5;
++		const uint8_t control = ie[offset];
++		uint8_t eht_operation_info_len = 3;
++
++		if (disabled_subchannel_info_present)
++			eht_operation_info_len += 2;
++
++		if (len - offset < eht_operation_info_len) {
++			printf("\t\tEHT Operation Info: Invalid\n");
++			return;
++		}
++
++		printf("\t\tEHT Operation Info: 0x");
++		for (uint8_t i = 0; i < eht_operation_info_len; i++)
++			printf("%02x", ie[offset + i]);
++
++		printf("\n");
++		printf("\t\t\tChannel Width: ");
++		switch (control & 0x7) {
++		case 0:
++			printf("20 MHz\n");
++			break;
++		case 1:
++			printf("40 MHz\n");
++			break;
++		case 2:
++			printf("80 MHz\n");
++			break;
++		case 3:
++			printf("160 MHz\n");
++			break;
++		case 4:
++			printf("320 MHz\n");
++			break;
++		default:
++			printf("invalid bandwidth (%d)\n", control & 0x7);
++			break;
++		}
++
++		printf("\t\t\tCenter Frequency Segment 0: %hhu\n",
++		       ie[offset + 1]);
++		printf("\t\t\tCenter Frequency Segment 1: %hhu\n",
++		       ie[offset + 2]);
++
++		if (disabled_subchannel_info_present)
++			printf("\t\t\tDisabled Subchannel Bitmap: 0x%02x%02x\n",
++			       ie[offset + 3], ie[offset + 4]);
++	}
++}
++
+ void iw_hexdump(const char *prefix, const __u8 *buf, size_t size)
+ {
+ 	size_t i;
+-- 
+2.34.1
+

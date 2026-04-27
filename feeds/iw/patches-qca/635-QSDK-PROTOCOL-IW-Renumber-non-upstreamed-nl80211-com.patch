@@ -1,0 +1,47 @@
+From 92fba9c89db4f5738540204c309f720311a70b6f Mon Sep 17 00:00:00 2001
+From: Roopni Devanathan <rdevanat@qti.qualcomm.com>
+Date: Fri, 7 Nov 2025 15:11:31 +0530
+Subject: [PATCH] QSDK:PROTOCOL:IW: Renumber non-upstreamed nl80211
+ commands/attributes
+
+Currently, every non-upstreamed commands and attributes has to be
+renumbered every time during upgrade. In order to avoid repeated
+renumbering, move the private nl80211 commands and attributes to a
+different series.
+
+Signed-off-by: Roopni Devanathan <rdevanat@qti.qualcomm.com>
+---
+ nl80211.h | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -1616,6 +1616,10 @@ enum nl80211_commands {
+ 
+ 	NL80211_CMD_SET_TID_TO_LINK_MAPPING,
+ 
++	NL80211_CMD_ASSOC_MLO_RECONF,
++	NL80211_CMD_EPCS_CFG,
++
++	/* NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS = 158 */
+ 	NL80211_CMD_UPDATE_HE_MUEDCA_PARAMS,
+ 
+ 	/* To be Deprecated from ATH QSDK, once we upstream
+@@ -3548,6 +3552,8 @@ enum nl80211_attrs {
+ 	NL80211_ATTR_MLO_RECONF_REM_LINKS,
+ 	NL80211_ATTR_EPCS,
+ 
++	NL80211_ATTR_ASSOC_MLD_EXT_CAPA_OPS,
++
+ 	NL80211_ATTR_WIPHY_RADIO_INDEX,
+ 
+ 	NL80211_ATTR_WIPHY_ANTENNA_GAIN,
+@@ -3589,8 +3595,6 @@ enum nl80211_attrs {
+ 
+ 	NL80211_ATTR_QOS_MGMT,
+ 
+-	NL80211_ATTR_ASSOC_MLD_EXT_CAPA_OPS,
+-
+ 	NL80211_ATTR_6GHZ_DEVICE_DEPLOYMENT_TYPE,
+ 	/* add attributes here, update the policy in nl80211.c */
+ 

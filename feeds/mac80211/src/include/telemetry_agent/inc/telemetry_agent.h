@@ -22,11 +22,13 @@
 #include <linux/proc_fs.h>
 #include <linux/device.h>
 #include <linux/debugfs.h>
-#include "telemetry_agent_wifi_driver_if.h"
-#include "telemetry_agent_app_if.h"
+#include <telemetry_agent_wifi_driver_if.h>
+#include "../inc/telemetry_agent_app_if.h"
 
 #define STATUS_SUCCESS 0
 #define STATUS_FAIL -1
+
+#define ATH12K_MAX_PEER_ID 2048
 /* Maximum buffer size that is requied to transfer stats between
 agent and APP */
 #define EMESH_MAX_SUB_BUFFERS 2
@@ -131,6 +133,7 @@ struct agent_soc_db {
 	uint8_t soc_id;
 	uint8_t num_pdevs;
 	struct agent_pdev_db pdev_db[MAX_PDEV_LINKS_DB];
+	unsigned long breach_notified_mask[ATH12K_MAX_PEER_ID];
 };
 
 struct agent_telemtry_db {
@@ -186,6 +189,20 @@ struct agent_rm_telemetry {
 	struct delayed_work stats_work_dynamic_init_main;
 };
 
+struct agent_rssi_rate_thresholds {
+	int32_t rssi_min_threshold;
+	int32_t rssi_max_threshold;
+	int32_t ackrssi_min_threshold;
+	int32_t ackrssi_max_threshold;
+	uint32_t txrate_min_threshold;
+	uint32_t txrate_max_threshold;
+	uint32_t rxrate_min_threshold;
+	uint32_t rxrate_max_threshold;
+	uint8_t enabled_mask;
+	uint32_t rssi_hysteresis;
+	uint32_t rate_hysteresis;
+};
+
 struct telemetry_agent_object {
 	/* RelayFS */
 	uint32_t num_subbufs;
@@ -204,8 +221,21 @@ struct telemetry_agent_object {
 	spinlock_t agent_lock;
 	struct timer_list peer_stats_timer;
 	bool peer_stats_timer_enabled;
+	struct agent_rssi_rate_thresholds rssi_rate_thresh;
 };
 
+/* Breach type enums for NL event */
+enum telemetry_breach_type {
+	BREACH_TYPE_RSSI_MIN = 0,
+	BREACH_TYPE_RSSI_MAX = 1,
+	BREACH_TYPE_ACKRSSI_MIN = 2,
+	BREACH_TYPE_ACKRSSI_MAX = 3,
+	BREACH_TYPE_TXRATE_MIN = 4,
+	BREACH_TYPE_TXRATE_MAX = 5,
+	BREACH_TYPE_RXRATE_MIN = 6,
+	BREACH_TYPE_RXRATE_MAX = 7,
+	BREACH_TYPE_MAX,
+};
 
 extern int register_telemetry_agent_ops(struct telemetry_agent_ops *agent_ops);
 extern int unregister_telemetry_agent_ops(struct telemetry_agent_ops *agent_ops);

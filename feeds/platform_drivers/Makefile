@@ -205,6 +205,26 @@ endef
 
 $(eval $(call KernelPackage,usb-phy-ipq807x))
 
+define KernelPackage/usb-phy-ipq96xx
+  TITLE:=DWC3 USB QTI PHY drivers for IPQ96xx based targets
+  DEPENDS:=@TARGET_ipq96xx
+  KCONFIG:= \
+	CONFIG_PHY_QCOM_USB_FEMTO_HS \
+	CONFIG_PHY_QCOM_QMP=y \
+	CONFIG_PHY_QCOM_QMP_USB
+  FILES:= \
+	$(LINUX_DIR)/drivers/phy/qualcomm/phy-qcom-usb-femto-hs.ko \
+	$(LINUX_DIR)/drivers/phy/qualcomm/phy-qcom-qmp-usb.ko
+  AUTOLOAD:=$(call AutoLoad,85,phy-qcom-usb-femto-hs phy-qcom-qmp-usb)
+  $(call AddPlatformDepends/usb)
+endef
+
+define KernelPackage/usb-phy-ipq96xx/description
+  Support for USB PHY drivers in IPQ96xx based SoCs.
+endef
+
+$(eval $(call KernelPackage,usb-phy-ipq96xx))
+
 define KernelPackage/usb-dwc3-internal
   TITLE:=DWC3 USB controller driver
   DEPENDS:=+USB_GADGET_SUPPORT:kmod-usb-gadget +USB_GADGET_SUPPORT:kmod-usb-roles
@@ -230,7 +250,7 @@ $(eval $(call KernelPackage,usb-dwc3-internal))
 
 define KernelPackage/usb-dwc3-qcom-internal
   TITLE:=DWC3 QTI USB driver
-  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq52xx +kmod-usb-dwc3-internal
+  DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq52xx||TARGET_ipq96xx +kmod-usb-dwc3-internal
   KCONFIG:= CONFIG_USB_DWC3_QCOM
   FILES:= $(LINUX_DIR)/drivers/usb/dwc3/dwc3-qcom.ko
   AUTOLOAD:=$(call AutoLoad,83,dwc3-qcom)
@@ -280,7 +300,7 @@ $(eval $(call KernelPackage,leds-tlc591xx))
 define KernelPackage/mhitest_mod
   SUBMENU:=$(OTHER_MENU)
   TITLE:=MHI Test Module for qcn9000.
-  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx
+  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq52xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx
   KCONFIG:=CONFIG_MHI_BUS_TEST
   FILES:=$(LINUX_DIR)/drivers/bus/mhi/test/mhitest_mod.ko
 endef
@@ -294,7 +314,7 @@ $(eval $(call KernelPackage,mhitest_mod))
 define KernelPackage/mhi_fuse_blower_mod
   SUBMENU:=$(OTHER_MENU)
   TITLE:=MHI Fuse Blower Module for qcn9224.
-  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx
+  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq52xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx
   KCONFIG:=
   FILES:=$(LINUX_DIR)/drivers/bus/mhi/fuse_blower/mhi_fuse_blower_mod.ko
 endef
@@ -308,7 +328,7 @@ $(eval $(call KernelPackage,mhi_fuse_blower_mod))
 define KernelPackage/qmi_sample_client
   SUBMENU:=$(OTHER_MENU)
   TITLE:= Sample qmi test application.
-  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx
+  DEPENDS+=@TARGET_ipq95xx||TARGET_ipq52xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx
 
   KCONFIG:= \
 	  CONFIG_SAMPLE_QMI_CLIENT
@@ -371,3 +391,35 @@ define KernelPackage/qcom_eud/description
 endef
 
 $(eval $(call KernelPackage,qcom_eud))
+
+define KernelPackage/updtest_mod
+  SUBMENU:=$(OTHER_MENU)
+  TITLE:=User PD Test Module
+  DEPENDS+=@TARGET_ipq53xx||TARGET_ipq54xx
+  KCONFIG:=CONFIG_QCOM_Q6V5_UPD
+  FILES:=$(LINUX_DIR)/drivers/remoteproc/qcom_q6v5_upd.ko
+endef
+
+define KernelPackage/updtest_mod/description
+  User PD test module
+endef
+
+$(eval $(call KernelPackage,updtest_mod))
+
+define Package/rproc-fw-mount
+  SECTION:=utils
+  CATEGORY:=Utilities
+  TITLE:=Remote Processor Firmware Mount Script
+  DEPENDS:=@TARGET_ipq96xx
+endef
+
+define Package/rproc-fw-mount/description
+  Init script to mount CDSP and Prime firmware partitions for IPQ9650
+endef
+
+define Package/rproc-fw-mount/install
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/etc/init.d/rproc_fw_mount $(1)/etc/init.d/
+endef
+
+$(eval $(call BuildPackage,rproc-fw-mount))

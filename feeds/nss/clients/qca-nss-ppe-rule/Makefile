@@ -2,13 +2,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe-rule
+PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=d53eff24bf257a8bb1b2f68beb3aa06332bfd567
+PKG_VERSION:=658249b9f4c6e0dcb023ab28041283498c7e27eb
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -43,8 +44,17 @@ endef
 define KernelPackage/qca-nss-ppe-rule/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/acl_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/policer_dump.sh $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/mcast_hammer.sh $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/json_mcast_hammer.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/pm_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/vlan_rule_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/dscp_pcp_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/dot1p_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/gemport_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/cos_map_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/qos_dump.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/mcast_dump.sh $(1)/usr/bin/
 endef
 
 define Build/InstallDev/qca-nss-ppe-rule
@@ -77,6 +87,24 @@ ifneq ($(CONFIG_LOWMEM_FLASH),y)
 MAKE_OPTS+=PPE_ACL_ENABLED=y
 MAKE_OPTS+=PPE_POLICER_ENABLED=y
 MAKE_OPTS+=PPE_QOS_ENABLED=y
+MAKE_OPTS+=PPE_COS_MAP_ENABLED=y
+endif
+
+ifeq ($(CONFIG_TARGET_ipq52xx),y)
+MAKE_OPTS+=PPE_VLAN_ENABLED=y
+MAKE_OPTS+=PPE_DSCP_ENABLED=y
+MAKE_OPTS+=PPE_PM_ENABLED=y
+MAKE_OPTS+=PPE_PORT_MGMT_ENABLED=y
+MAKE_OPTS+=PPE_DOT1P_ENABLED=y
+MAKE_OPTS+=PPE_GEMPORT_ENABLED=y
+MAKE_OPTS+=PPE_MCAST_ENABLED=y
+endif
+
+ifeq ($(CONFIG_TARGET_ipq96xx),y)
+MAKE_OPTS+=PPE_VLAN_ENABLED=y
+MAKE_OPTS+=PPE_DSCP_ENABLED=y
+MAKE_OPTS+=PPE_PM_ENABLED=y
+MAKE_OPTS+=PPE_PORT_MGMT_ENABLED=y
 endif
 
 ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
@@ -96,6 +124,14 @@ endif
 ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
 ifneq ($(CONFIG_LOWMEM_FLASH),y)
 MAKE_OPTS+=PPE_MIRROR_ENABLED=y
+endif
+endif
+
+ifneq ($(CONFIG_TARGET_ipq52xx)$(CONFIG_TARGET_ipq96xx),)
+ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
+ifneq ($(CONFIG_LOWMEM_FLASH),y)
+MAKE_OPTS+=PPE_TUN_RPS_ENABLED=y
+endif
 endif
 endif
 

@@ -1,0 +1,78 @@
+From 514a27593306c6d990de286adb3a58fd483aadc4 Mon Sep 17 00:00:00 2001
+From: Zong-Zhe Yang <kevin_yang@realtek.com>
+Date: Mon, 22 Sep 2025 15:10:14 +0800
+Subject: [PATCH] iw: util: support parsing link id
+
+For NL80211_FLAG_MLO_VALID_LINK_ID cases, MLD needs to assign link id,
+but non-MLD doesn't. Add support of parsing link id where the pattern
+is as below. To avoid mess where some fields could have "link-id" as a
+value, this pattern is only parsed at the beginning of argv.
+
+	[link-id <LINK ID>]
+
+If found, put NL80211_ATTR_MLO_LINK_ID and remove the assignment from
+the argv range.
+
+Signed-off-by: Zong-Zhe Yang <kevin_yang@realtek.com>
+Link: https://patch.msgid.link/20250922071017.11954-2-kevin_yang@realtek.com
+Signed-off-by: Johannes Berg <johannes.berg@intel.com>
+Signed-off-by: Muna Sinada <muna.sinada@oss.qualcomm.com>
+---
+ iw.h   |  1 +
+ util.c | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/iw.h b/iw.h
+index f9c2630..0454c35 100644
+--- a/iw.h
++++ b/iw.h
+@@ -529,6 +529,7 @@ int set_bitrates(struct nl_msg *msg, int argc, char **argv,
+ 		 enum nl80211_attrs attr);
+ 
+ int calc_s1g_ch_center_freq(__u8 ch_index, __u8 s1g_oper_class);
++int parse_link_id(struct nl_msg *msg, int *argc, char ***argv);
+ 
+ /* sections */
+ DECLARE_SECTION(ap);
+diff --git a/util.c b/util.c
+index d8f2d28..abcdf92 100644
+--- a/util.c
++++ b/util.c
+@@ -2393,3 +2393,34 @@ void print_s1g_capability(const uint8_t *caps)
+ 	/* Last 2 bits are reserved */
+ #undef PRINT_S1G_CAP
+ }
++
++int parse_link_id(struct nl_msg *msg, int *argc, char ***argv)
++{
++	unsigned int link_id;
++	char *endptr;
++
++	if (*argc < 1)
++		return 0;
++
++	if (strcmp((*argv)[0], "link-id") != 0)
++		return 0;
++
++	if (*argc == 1)
++		goto usage;
++
++	link_id = strtol((*argv)[1], &endptr, 0);
++	if (*endptr != '\0')
++		goto usage;
++
++	*argv += 2;
++	*argc -= 2;
++
++	NLA_PUT_U8(msg, NL80211_ATTR_MLO_LINK_ID, link_id);
++	return 0;
++
++usage:
++	return HANDLER_RET_USAGE;
++
++nla_put_failure:
++	return -ENOBUFS;
++}
+-- 
+2.34.1
+

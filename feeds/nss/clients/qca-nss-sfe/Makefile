@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-sfe
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/shortcut-fe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=5818706ab48c7a8bf45ffeee8bc3a5f5bcbc38b0
+PKG_VERSION:=c0fb732c887ffca15422a43dadaf5893b8ad1143
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -50,6 +50,13 @@ SFE_MAKE_OPTS+=SFE_PROCESS_LOCAL_OUT=y
 # Disable SFE Bridge VLAN Filtering support when global kernel config is disabled
 ifneq ($(CONFIG_BRIDGE_VLAN_FILTERING),)
 SFE_MAKE_OPTS+=SFE_BRIDGE_VLAN_FILTERING_ENABLE=y
+endif
+
+# Enable SFE ESP SPI Passthrough support when kernel config is enabled
+ifneq ($(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx),)
+ifneq ($(CONFIG_NF_CT_PROTO_ESP),)
+SFE_MAKE_OPTS+=SFE_ESP_SPI_PASSTH_ENABLE=y
+endif
 endif
 
 EXTRA_CFLAGS+= -I$(PKG_BUILD_DIR)/exports
@@ -96,11 +103,9 @@ EXTRA_CFLAGS+= -DSFE_TSO_MAX_SEG_LIMIT_ENABLE=y
 EXTRA_CFLAGS+= -DSFE_TSO_SEG_MAX=48
 endif
 
-#L2TPv3 is supported only on Alder, Miami and Marina Premium and 512M profile
-ifeq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq54xx), y)
+#L2TPv3 is supported only on Premium and 512M profile
 ifneq ($(CONFIG_KERNEL_IPQ_MEM_PROFILE),256)
 SFE_MAKE_OPTS+=SFE_L2TPV3_SUPPORTED=y
-endif
 endif
 
 define Build/Compile

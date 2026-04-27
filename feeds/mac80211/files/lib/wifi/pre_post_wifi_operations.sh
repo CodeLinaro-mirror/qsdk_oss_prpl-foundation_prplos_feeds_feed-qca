@@ -218,7 +218,7 @@ mlo_add_link() {
 		5gl)
 		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -lt "65" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -236,7 +236,7 @@ mlo_add_link() {
 		5gh)
 		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -gt "65" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -265,7 +265,7 @@ mlo_add_link() {
 		6gl)
 		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -lt "100" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -283,7 +283,7 @@ mlo_add_link() {
 		6gh)
 		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -gt "100" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -353,11 +353,11 @@ mlo_add_link() {
 			iter_links=$(echo $partner_link $default_link)
 			for iter_link in $iter_links; do
 				interface_freq=$(hostapd_cli -i $iter -l $iter_link status | grep 'freq=' | cut -d "=" -f 2 | head -1) 2> /dev/null
-				if [ "$interface_freq" -ge "$start_freq" ] && [ "$interface_freq" -le "$end_freq" ]; then
+				if [ -n "$interface_freq" ] && [ "$interface_freq" -ge "$start_freq" ] && [ "$interface_freq" -le "$end_freq" ]; then
 					interface_channel=$(hostapd_cli -i $iter -l $iter_link status | grep 'channel' | cut -d "=" -f 2 | head -1) 2> /dev/null
 					if [ "$2" != "2g" ] && [ -n "$interface_channel" ]; then
 						interface_punct_bitmap=$(hostapd_cli -i $iter -l $iter_link status | grep "punct_bitmap=" | cut -d "=" -f 2) 2> /dev/null
-						echo "ru_punct_bitmap=$interface_punct_bitmap" >> $output_file
+						echo "punct_bitmap=$interface_punct_bitmap" >> $output_file
 					fi
 					found=1
 					break;
@@ -398,7 +398,7 @@ mlo_add_link() {
 			echo "mbssid_group_size=4" >> "$input_file"
 		fi
 		[ -n "$interface_channel" ] && echo "channel=$interface_channel" >> $output_file
-		[ -n "$interface_punct_bitmap" ] && echo "ru_punct_bitmap=$interface_punct_bitmap" >> $output_file
+		[ -n "$interface_punct_bitmap" ] && echo "punct_bitmap=$interface_punct_bitmap" >> $output_file
 		if [ -z "$hw_idx" ]; then
 			result=$(hostapd_cli -i $3 mld_add_link bss_config=${1}:"$output_file")
 		else
@@ -427,11 +427,11 @@ mlo_add_link() {
 			iter_links=$(echo $partner_link $default_link)
 			for iter_link in $iter_links; do
 				interface_freq=$(hostapd_cli -i $iter -l $iter_link status | grep 'freq=' | cut -d "=" -f 2 | head -1) 2> /dev/null
-				if [ "$interface_freq" -ge "$start_freq" ] && [ "$interface_freq" -le "$end_freq" ]; then
+				if [ -n "$interface_freq" ] && [ "$interface_freq" -ge "$start_freq" ] && [ "$interface_freq" -le "$end_freq" ]; then
 					interface_channel=$(hostapd_cli -i $iter -l $iter_link status | grep 'channel' | cut -d "=" -f 2 | head -1) 2> /dev/null
 					if [ "$2" != "2g" ] && [ -n "$interface_channel" ]; then
 						interface_punct_bitmap=$(hostapd_cli -i $iter -l $iter_link status | grep "punct_bitmap=" | cut -d "=" -f 2) 2> /dev/null
-						echo "ru_punct_bitmap=$interface_punct_bitmap" >> $output_file
+						echo "punct_bitmap=$interface_punct_bitmap" >> $output_file
 					fi
 					found=1
 					break;
@@ -447,11 +447,11 @@ mlo_add_link() {
 		#Get partner band hostapd config, to fetch the interface config
 		for iface in $iface_data; do
 			check_band=$(uci show wireless.${iface}.device | awk -F"'" '{print $2}' | cut -d'.' -f2) 2> /dev/null
-			hw_idx=$(uci show wireless.$check_band.radio | cut -d "'" -f 2)
+			search_hw_idx=$(uci show wireless.$check_band.radio | cut -d "'" -f 2)
 			band=$(echo $check_band | cut -d "_" -f 2)
 			partner_input_file=/var/run/hostapd-${1}_${band}.conf
 			if [ ! -f "$partner_input_file" ]; then
-				partner_input_file=/var/run/hostapd-${1}.${hw_idx}.conf
+				partner_input_file=/var/run/hostapd-${1}.${search_hw_idx}.conf
 			fi
 			if [ -f "$partner_input_file" ]; then
 				check_config=$(cat $partner_input_file | grep "$3$" | wc -l) 2> /dev/null
@@ -500,7 +500,7 @@ mlo_add_link() {
 			echo "mbssid_group_size=4" >> "$input_file"
 		fi
 		[ -n "$interface_channel" ] && echo "channel=$interface_channel" >> $output_file
-		[ -n "$interface_punct_bitmap" ] && echo "ru_punct_bitmap=$interface_punct_bitmap" >> $output_file
+		[ -n "$interface_punct_bitmap" ] && echo "punct_bitmap=$interface_punct_bitmap" >> $output_file
 		if [ -z "$hw_idx" ]; then
 			result=$(hostapd_cli -i $3 mld_add_link bss_config=${1}:"$output_file")
 		else
@@ -535,6 +535,9 @@ mlo_add_link() {
 		json_select "${link}"
 		_wdev_handler_1 "$data" "mac80211" "setup" "$link" 2> /dev/null
 		json_select ..
+
+		sed -i '/^chanlist=/d' "$input_file"
+		echo "chanlist=$channels" >> "$input_file"
 
 		echo "bridge=br-lan" >>"$input_file"
 		echo "wds_bridge=" >>"$input_file"
@@ -626,7 +629,7 @@ mlo_remove_link() {
 		5gl)
 		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -lt "65" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -644,7 +647,7 @@ mlo_remove_link() {
 		5gh)
 		test_band=$(uci show wireless | grep "'5g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -gt "65" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -673,7 +676,7 @@ mlo_remove_link() {
 		6gl)
 		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -lt "100" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -691,7 +694,7 @@ mlo_remove_link() {
 		6gh)
 		test_band=$(uci show wireless | grep "'6g'" | cut -d "." -f 2)
 		for iter in $test_band; do
-			local_channel=$(uci show wireless.$iter.channel | cut -d "'" -f 2)
+			local_channel=$(uci show wireless.$iter.channels | cut -d "'" -f 2 | cut -d "-" -f 1)
 			if [ "$local_channel" -gt "100" ]; then
 				test_band=$(echo $iter)
 				break;
@@ -742,7 +745,7 @@ mlo_remove_link() {
 	iter_links=$(echo $partner_link $default_link)
 	for iter_link in $iter_links; do
 		interface_freq=$(hostapd_cli -i $3 -l $iter_link status | grep 'freq=' | cut -d "=" -f 2 | head -1) 2> /dev/null
-		if [ "$interface_freq" -ge "$start_freq" ] && [ "$interface_freq" -le "$end_freq" ]; then
+		if [ -n "$interface_freq" ] && [ "$interface_freq" -ge "$start_freq" ] && [ "$interface_freq" -le "$end_freq" ]; then
 			link_id=$(($iter_link))
 			found=1
 			break;
@@ -873,6 +876,14 @@ configure_service_class() {
 		configure_service_param "$svc_class_json" "$enable_svc" "$phy"
 		svc_class_index=$((svc_class_index+1))
 	done
+
+	if [ "$enable_svc" -eq 1 ]; then
+                touch /tmp/svc_configured
+        else
+                if [ -f "/tmp/svc_configured" ]; then
+                        rm /tmp/svc_configured
+                fi
+        fi
 }
 
 configure_sla_param() {
@@ -1020,7 +1031,6 @@ pre_mac80211() {
 			fi
 			if [ -f "/tmp/svc_configured" ]; then
 				configure_service_class 0
-				rm /tmp/svc_configured
 			fi
 			if [ -f "/tmp/apsta_mode.pid" ]; then
 				pid=$(cat /tmp/apsta_mode.pid)
@@ -1048,7 +1058,6 @@ post_mac80211() {
 		enable)
 			if [ ! -f "/tmp/svc_configured" ]; then
 				configure_service_class 1
-				touch /tmp/svc_configured
 				configure_telemetry_sla_samples
 				configure_telemetry_sla_thersholds
 				configure_telemetry_sla_detect

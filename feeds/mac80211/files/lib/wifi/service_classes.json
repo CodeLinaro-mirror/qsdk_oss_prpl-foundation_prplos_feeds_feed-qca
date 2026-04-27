@@ -163,7 +163,9 @@
 			"delay_bound": 200,
 			"msdu_ttl": 10000,
 			"tid": 5,
-			"msdu_rate_loss": 1
+			"msdu_rate_loss": 1,
+			"ul_service_interval": 20,
+			"ul_burst_size": 500
 		},
 		{
 			"svc_id": 125,

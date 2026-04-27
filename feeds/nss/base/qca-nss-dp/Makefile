@@ -2,13 +2,14 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-dp
+PKG_LICENSE:=ISC
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-dp
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=23928147cfb6f55638cc0a27f700831623ed679c
+PKG_VERSION:=7b2d736bfb1c656844904819c5da5f9136d991a3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -73,10 +74,14 @@ endif
 ifneq ($(CONFIG_TARGET_ipq95xx)$(CONFIG_TARGET_ipq53xx)$(CONFIG_TARGET_ipq54xx),)
 EXTRA_CFLAGS+= -DNSS_DP_NETSTANDBY
 MAKE_OPTS+=dp-net-standby=y
-MAKE_OPTS+=dp-ppe-ds=y
 ifneq ($(CONFIG_TARGET_ipq95xx_generic_QSDK_MinEnt)$(CONFIG_TARGET_ipq95xx_generic_QSDK_MinEntOpen), y)
 MAKE_OPTS+=dp-loopback=y
 endif
+endif
+
+MAKE_OPTS+=dp-ppe-ds=y
+ifneq ($(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx),)
+MAKE_OPTS+=dp-ddrq=y
 endif
 
 NSS_DP_HAL_DIR:=$(PKG_BUILD_DIR)/hal
@@ -98,7 +103,7 @@ define KernelPackage/qca-nss-dp/install
 	$(INSTALL_BIN) ./files/edma_dump $(1)/usr/bin/edma_dump
 	$(INSTALL_BIN) ./files/edma_recover.sh $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/edma_hang_inj.sh $(1)/usr/bin/
-	$(INSTALL_BIN) ./files/nss_cfg.ini $(1)/etc/config/
+	$(INSTALL_BIN) ./files/nss_cfg_$(hal_arch).ini $(1)/etc/config/nss_cfg.ini
 endef
 endif
 

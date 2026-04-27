@@ -6,6 +6,19 @@
 #ifndef CMN_H
 #define CMN_H
 
+#include "includes.h"
+
+#ifdef CONFIG_QCN_APP_EXTN
+#include "qacs/qacs.h"
+#endif
+
+#include "includes.h"
+#include "utils/list.h"
+#include "utils/common.h"
+#include "common/ieee802_11_defs.h"
+#include "repurpose.h"
+#include "../src/common/qca-vendor.h"
+
 struct hostapd_config;
 struct sta_info;
 struct hostapd_iface;
@@ -17,6 +30,28 @@ enum bw_type;
 struct hostapd_freq_params;
 struct hostapd_data;
 struct ieee802_11_elems;
+enum oper_chan_width;
+enum chan_width;
+struct wpa_ctrl;
+struct hostapd_bss_config;
+struct i802_bss;
+enum wpa_event_type;
+struct nlattr;
+struct wpa_ctrl;
+union wpa_event_data;
+struct ieee80211_neighbor_ap_info;
+struct wpa_supplicant;
+struct wpa_bss;
+struct wpa_connect_work;
+struct csa_settings;
+struct ubus_context;
+struct blob_buf;
+struct uc_value;
+struct uc_vm;
+struct ieee80211_mgmt;
+struct wpa_driver_scan_params;
+struct dl_list;
+struct hostapd_hw_modes;
 
 struct ieee80211_240mhz_vendor_oper_extn {
 	u8 ccfs1;
@@ -30,9 +65,73 @@ struct ieee80211_240mhz_vendor_oper_extn {
 	u8 mcs_map_320mhz[3];
 } STRUCT_PACKED;
 
+/*
+ * Introduced ieee80211_240mhz_vendor_oper_extn_v2 to correct field
+ * ordering (ccfs0 before ccfs1) as per spec. The legacy struct
+ * ieee80211_240mhz_vendor_oper_extn is retained for backward compatibility
+ * until a broader review decides on its deprecation. New code should use
+ * ieee80211_240mhz_vendor_oper_v2.
+ */
+struct ieee80211_240mhz_vendor_oper_extn_v2 {
+	u8 ccfs0;
+	u8 ccfs1;
+	u16 punct_bitmap;
+	u16 is5ghz240mhz      :1,
+	bfmess320mhz          :3,
+	numsound320mhz        :3,
+	nonofdmaulmumimo320mhz:1,
+	mubfmr320mhz          :1;
+	u8 mcs_map_320mhz[3];
+} STRUCT_PACKED;
+
+
 struct ieee80211_240mhz_params_extn {
 	struct ieee80211_240mhz_vendor_oper_extn *eht_240mhz_capab;
 	size_t eht_240mhz_capab_len;
+};
+
+struct driver_dcs_config {
+	u8 cmd_type;
+	u16 dcs_enable;
+
+	/* Bitmask indicating which fields below are valid */
+	u32 valid_mask;
+
+	/* DCS configuration parameters */
+	u32 intr_detection_threshold;
+	u32 phyerr_penalty;
+	u32 phyerr_threshold;
+	u32 radarerr_threshold;
+	u32 txerr_threshold;
+	u32 sample_size;
+	u8 coch_intr_threshold;
+	u8 user_max_cu;
+};
+
+enum dcs_cmd_type {
+	GET_DCS_CONFIG,
+	SET_DCS_CONFIG,
+};
+
+#define DCS_CSA_TBTT_DEFAULT        5
+#define DCS_CSA_TBTT_MAX            30
+#define DCS_CSA_TBTT_MIN            1
+
+/* valid_mask bits for driver_dcs_config */
+#define DCS_VALID_INTR_DET_THR      BIT(0)
+#define DCS_VALID_PHYERR_PENALTY    BIT(1)
+#define DCS_VALID_PHYERR_THR        BIT(2)
+#define DCS_VALID_RADARERR_THR      BIT(3)
+#define DCS_VALID_TXERR_THR         BIT(4)
+#define DCS_VALID_SAMPLE_SIZE       BIT(5)
+#define DCS_VALID_COCH_THR          BIT(6)
+#define DCS_VALID_USER_MAX_CU       BIT(7)
+
+#define BASE_6G_FREQ 5950
+
+struct driver_dcs_sim {
+	u16 type;
+	u32 intf_bitmap;
 };
 
 struct  hostapd_sta_add_params_extn {
@@ -41,6 +140,42 @@ struct  hostapd_sta_add_params_extn {
 
 struct sta_info_extn {
 	struct ieee80211_240mhz_params_extn params_240mhz;
+#ifdef CONFIG_IEEE80211AC
+	unsigned int mu_cap_war_mu_force_join:1;
+	unsigned int mu_cap_war_mu_capable:1;
+	unsigned int mu_cap_war_su_join:1;
+#endif /* CONFIG_IEEE80211AC */
+};
+
+/**
+ * struct esp_update_event - Data for EVENT_ESP_UPDATE
+ * @link_id: Link for which ESP airtime update was received
+ * @airtime: Airtime fraction computed in the firmware
+ */
+struct esp_update_event {
+	u8 link_id;
+	u8 airtime;
+};
+
+struct dcs_intf_event {
+	u32 freq;
+	enum chan_width chan_width;
+	u32 cf1;
+	u32 cf2;
+	u32 chan_bw_interference_bitmap;
+	u8 link_id;
+	u16 type;
+};
+
+struct chan_params {
+	u32 cf1;
+	u32 cf2;
+	enum chan_width chan_width;
+};
+
+union wpa_event_data_extn {
+	struct esp_update_event esp_update_event;
+	struct dcs_intf_event dcs_intf_event;
 };
 
 struct ieee802_11_elems_extn {
@@ -48,6 +183,162 @@ struct ieee802_11_elems_extn {
 	u8 eht_240mhz_capab_len;
 };
 
+#ifndef CONFIG_QCN_APP_EXTN
+struct qacs_conf_extn {
+	bool rank_en;	/* Channel ranking enable (1) / disable (0) */
+	bool wradar;	/* Wideband radar handling enable (1) / disable (0) */
+	int rep_txpower_policy;/* Report/tx power policy: accepts only 1 or 2 */
+
+	/* Dwell time bounds and current dwell time in milliseconds */
+	u16 min_dwell;
+	u16 max_dwell;
+	u16 dwelltime;
+
+	/* Debug/trace controls:
+	 * - upper 0xFF00: module bitmap
+	 * - lower 0x00FF: debug level
+	 */
+	u16 dbg_module_bitmap;
+	u8 dbg_level;
+};
+#endif
+
+struct hostapd_data_extn {
+#ifdef CONFIG_IEEE80211AC
+	/* Per-BSS control for MU-MIMO capability override WAR */
+	bool mu_cap_war;
+	bool mu_cap_war_override;
+	struct dl_list mu_cap_war_sta_list;
+#endif /* CONFIG_IEEE80211AC */
+};
+
+
+#ifdef CONFIG_IEEE80211AC
+struct hostapd_mu_cap_war_sta_entry_extn {
+	struct dl_list list;
+	u8 addr[ETH_ALEN];
+	struct os_reltime last_probe_time;
+};
+
+#define is_mu_cap_war_active(hapd)				\
+({								\
+	struct hostapd_data_extn *h_ext = &(hapd)->hapd_extn;   \
+	(h_ext->mu_cap_war && !h_ext->mu_cap_war_override);	\
+})
+
+#define is_sta_vht_only(sta) \
+	((sta)->flags & WLAN_STA_VHT) && \
+	!((sta)->flags & (WLAN_STA_HE | WLAN_STA_EHT))
+
+#define is_sta_elems_vht_only(elems) \
+	((elems)->vht_capabilities || (elems)->vendor_vht) && \
+	!(elems)->he_capabilities && !(elems)->eht_capabilities
+
+#define MU_CAP_WAR_DB_ENTRY_TIMEOUT_SEC 300
+
+#endif /* CONFIG_IEEE80211AC */
+
+struct dcs_conf_extn {
+	/* Last configured DCS enable value */
+	u16 enable_bitmap;
+
+	u16 bw_reduction_ctrl;
+
+	/* CSA TBTT value */
+	u32 dcs_csa_tbtt;
+
+	/* Stored DCS WLAN interference parameters */
+	u32 intr_detection_threshold;
+	u32 phyerr_penalty;
+	u32 phyerr_threshold;
+	u32 radarerr_threshold;
+	u32 txerr_threshold;
+	u32 sample_size;
+	u8 coch_intr_threshold;
+	u8 user_max_cu;
+
+	/* Random channel selection enable bitmap
+	 * 0 = Disabled.
+	 * BIT(0) = CW, BIT(1) = WLAN, BIT(2) = AWGN, BIT(4) = OBSS
+	 * BITs 5..7 reserved.
+	 */
+	u8 dcs_random_chan_bitmap;
+};
+
+struct hostapd_config_extn {
+	/* Add Per-radio configuration for extn here */
+
+	/* Manages RNR advertisement of 6 GHz BSS information for both
+	 * in-band and out-of-band for each frame type includes Beacon,
+	 * Probe Response and FILS discovery frame.
+	 */
+	u8 rnr_6ghz_colocated_enable;
+	bool rnr_ess_colocated_en;
+	bool rnr_6ghz_override;
+	bool skip_cac;    /* Skip DFS CAC for Repeater AP */
+	int ind_rptr;    /* 1 - Independent Rep; 0 - Dependent */
+	bool qacs_enable;
+	bool uplink_csa;
+	struct qacs_conf_extn qacs_conf;
+	struct chan_params cur_chan_params;
+	struct dcs_conf_extn dcs_conf;
+};
+
+struct hostapd_bss_config_extn {
+	/* Add Per-BSS configuration for extn here */
+	u8 nontx_vendor_elem_size;
+	u8 nontx_optional_elem_size;
+	enum repurpose_mode repurpose_mode;
+	enum qca_wlan_vendor_vap_submode_type vap_submode;
+};
+
+struct esp_extn {
+	u8 airtime;
+	u8 ppdu_dur;
+	u8 ba_window;
+	u8 enable;
+	u32 computed_airtime;
+};
+
+enum dynamic_acs_action_extn {
+	DYNAMIC_ACS_DISABLE = 0,
+	CHANNEL_CHANGE_CSA = 1,  // Perform CSA
+	NO_CHANNEL_CHANGE = 2,  // Report-only
+};
+
+struct hostapd_iface_extn {
+	struct esp_extn esp;
+	u16 csa_bitmap;
+	bool acs_success;
+	bool acs_failed;
+	enum dynamic_acs_action_extn dynamic_acs_action;
+	bool dfs_available_from_sta;
+
+	/* Penalty percentage to be applied for non-priority channels in QACS */
+	u8 vlp_non_prior_penalty;
+
+	char sta_wpa_state[32]; /* Stores the STA WPA state, in case of repeater */
+	bool acs_dfs_cac_pending;  /* ACS picked DFS channel, waiting for CAC */
+	int vap_type;
+	u16 vlp_threshold_freq; /* Stores 6 GHz VLP priority threshold frequency */
+};
+
+struct hostapd_hw_modes_extn {
+#ifdef CONFIG_QCN_APP_EXTN
+	struct qacs_data_extn qacs_extn;
+#endif
+};
+
+enum hostapd_dcs_intf_type {
+	DCS_CW_INTF     = 0x0001,
+	DCS_WLAN_INTF   = 0x0002,
+	DCS_AWGN_INTF   = 0x0004,
+	DCS_AFC_INTF    = 0x0008,
+	DCS_OBSS_INTF   = 0x0010,
+};
+
+int get_centre_freq_6g(int chan_idx, int chan_width, int *centre_freq);
+int get_next_max_width(int chan_width);
 
 #ifndef CONFIG_QCN_EXTN
 
@@ -192,6 +483,32 @@ wpa_driver_nl80211_sta_add_extn(void *priv,
 	return;
 }
 
+static inline int
+hostapd_drv_fetch_and_set_vendor_bssid_extn(struct hostapd_data *hapd)
+{
+	return -1;
+}
+
+static inline void
+hostapd_free_bss_index_extn(struct hostapd_data *hapd)
+{
+	return;
+}
+
+inline int wpa_driver_nl80211_dcs_config_extn(void *priv,
+					      u8 link_id,
+					      struct driver_dcs_config *params)
+{
+	return -1;
+}
+
+inline int wpa_driver_nl80211_dcs_sim_extn(void *priv,
+					   u8 link_id,
+					   struct driver_dcs_sim *params)
+{
+	return -1;
+}
+
 static inline bool
 hostapd_dfs_get_valid_punc_bitmap_extn(int chan_freq,
 				       u16 punct_bitmap,
@@ -224,6 +541,348 @@ hostapd_modify_supported_op_class_for_320mhz_extn(int freq,
 	return;
 }
 
+static inline bool
+hostapd_skip_rnr_6ghz_colocated_extn(struct hostapd_data *hapd, u32 type)
+{
+	return false;
+}
+
+static inline bool
+hostapd_rnr_colocated_ess_indication_extn(struct hostapd_data *hapd, u32 type)
+{
+	return false;
+}
+
+static inline int
+hostapd_ctrl_iface_receive_process_extn(struct hostapd_data *hapd,
+					char *buf, char *reply,
+					int reply_size,
+					struct sockaddr_storage *from,
+					socklen_t fromlen, int *reply_len)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline void
+hostapd_config_defaults_extn(struct hostapd_config *conf)
+{
+	return;
+}
+
+static inline void
+hostapd_config_defaults_bss_extn(struct hostapd_bss_config *bss)
+{
+	return;
+}
+
+static inline int
+hostapd_config_fill_extn(struct hostapd_config *conf,
+			 struct hostapd_bss_config *bss,
+			 const char *buf, char *pos, int line)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+hostapd_ctrl_iface_set_extn(struct hostapd_data *hapd, char *cmd, char *value)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+hostapd_ctrl_iface_status_extn(struct hostapd_data *hapd, char *buf,
+			       size_t buflen, size_t curr_len)
+{
+	return curr_len;
+}
+
+static inline int
+wpa_ctrl_get_freq_list_extn(struct wpa_supplicant *wpa_s,
+			    char *reply, int reply_size)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+wpa_ctrl_chan_sw_finished_notify_extn(struct wpa_supplicant *wpa_s,
+				      const char *buf, char *reply,
+				      int reply_size)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+compute_sec_channel_offset_extn(int primary_freq, int center_freq1,
+				enum chan_width width)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline void
+wpa_get_bss_channel_oper_info_extn(struct wpa_supplicant *wpa_s,
+				   struct wpa_bss *bss)
+{
+	return;
+}
+
+static inline bool
+compute_dfs_for_chanwidth_extn(int freq, int chanwidth)
+{
+	return false;
+}
+
+static inline void
+wpa_supp_pre_connect_state_handle_extn(struct wpa_supplicant *wpa_s,
+				       struct wpa_bss *bss)
+{
+	return;
+}
+
+static inline void
+sme_pre_connect_timer_extn(void *eloop_ctx, void *timeout_ctx)
+{
+	return;
+}
+
+static inline void
+wpa_bss_update_link_rnr_ap_info_extn(struct wpa_supplicant *wpa_s,
+				     struct wpa_bss *bss,
+				     const u8 *bssid_ptr,
+				     const struct ieee80211_neighbor_ap_info *ap_info,
+				     const u8 *mld_params, u8 link_id)
+{
+	return;
+}
+
+static inline void
+hostapd_csa_bitmap_update_extn(struct hostapd_iface *iface, int freq)
+{
+	return;
+}
+
+static inline int
+uc_hostapd_iface_switch_channel_extn(struct hostapd_iface *iface,
+				     bool is_dfs, char *wpa_state,
+				     struct csa_settings *csa)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline void
+hostapd_iface_set_supplicant_channel_extn(struct hostapd_iface *hapd_iface)
+{
+	return;
+}
+
+static inline int
+nl80211_vendor_event_qca_extn(struct i802_bss *bss,
+			      u32 subcmd, u8 *data, size_t len)
+{
+	return -1;
+}
+
+static inline int
+hostapd_wpa_event_extn(void *ctx, int event,
+		       union wpa_event_data *data)
+{
+	return -1;
+}
+
+static inline int
+qca_nl80211_handle_wifi_config_evt_extn(struct i802_bss *bss,
+					u8 *data, size_t len)
+{
+	return -1;
+}
+
+static inline
+u8 * hostapd_eid_esp_extn(struct hostapd_data *hapd, u8 *eid, size_t len)
+{
+       return eid;
+}
+
+static inline
+size_t hostapd_esp_ie_len_extn(struct hostapd_data *hapd)
+{
+       return 0;
+}
+
+static inline void
+acs_process_hostapd_scan_data(struct hostapd_iface *iface) {}
+
+static inline int hostapd_ctrl_iface_get_extn(struct hostapd_data *hapd, char *cmd,
+					      char *buf, size_t buflen)
+{
+	return -1;
+}
+
+static inline void
+acs_request_scan_add_freqs_extn(struct hostapd_channel_data *chan,
+				int **freq) {}
+
+static inline void
+acs_modify_scan_params_extn(struct hostapd_iface *iface,
+			    struct wpa_driver_scan_params *params) {}
+
+static inline void
+hostapd_ml_acs_check_and_notify(struct hostapd_iface *iface, bool status)
+{
+	return;
+}
+
+static inline void
+wpa_supplicant_start_sta_scan(void *eloop_ctx, void *timeout_ctx)
+{
+	return;
+}
+
+static inline int
+acs_handle_channel_change_extn(struct hostapd_iface *iface,
+			       struct hostapd_channel_data *chan,
+			       int err)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+acs_handle_channel_change_failed_extn(struct hostapd_iface *iface, int err)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+qca_nl80211_handle_dcs_config_evt_extn(struct i802_bss *bss,
+				       u8 *data, size_t len)
+
+{
+	return -1;
+}
+
+static inline int
+intf_awgn_find_channel_list(struct hostapd_iface *iface, int chan_width,
+			    struct hostapd_channel_data ***chandef_list,
+			    int *awgn_interference_freqs)
+{
+	return -1;
+}
+
+static inline void
+update_chan_params(struct hostapd_data *hapd, int cf1, int cf2,
+		   enum chan_width chwidth)
+{
+}
+
+static inline int
+hostapd_ctrl_iface_dcs_extn(struct hostapd_data *hapd, const char *cmd, char *reply,
+			    int reply_size)
+{
+	return -1;
+}
+
+static bool
+dcs_get_bw_reduction_ctrl_extn(struct hostapd_config *conf, u16 dcs_intf_type)
+{
+	return false;
+}
+
+static struct hostapd_channel_data *
+get_chan_data_by_freq(struct hostapd_hw_modes *mode, int freq)
+{
+	return NULL;
+}
+
+static inline int
+is_chan_range_available(struct hostapd_hw_modes *mode,
+			int first_chan_idx, int num_chans)
+{
+	return -1;
+}
+
+static inline void
+reduced_chan_width(int *new_chan_width, int chan_width, int freq,
+		   struct hostapd_hw_modes *mode,
+		   u32 chan_bw_interference_bitmap)
+{
+}
+
+static inline int
+hostapd_get_6g_chan_list_extn(struct hostapd_iface *iface,
+			      char *buf, size_t buflen)
+{
+	return -1;
+}
+
+static inline int
+intf_chan_range_available_5g(struct hostapd_hw_modes *mode,
+			     int first_chan_idx, int num_chans)
+{
+	return -1;
+}
+
+static inline int
+intf_chan_range_available_2g(struct hostapd_hw_modes *mode,
+			     int first_chan_idx, int num_chans)
+{
+	return -1;
+}
+
+static inline int
+get_centre_freq(struct hostapd_channel_data *first_chan,
+		int chan_width, int *centre_freq)
+{
+	return -1;
+}
+
+static inline int
+intf_chan_range_available_6g(struct hostapd_hw_modes *mode,
+			     int first_chan_idx, int num_chans)
+{
+	return -1;
+}
+
+static bool
+is_chan_disabled(struct hostapd_hw_modes *mode, int chan_num)
+{
+	return false;
+}
+
+static inline int
+chan_pri_allowed(const struct hostapd_channel_data *chan)
+{
+	return -1;
+}
+
+static inline int
+hostapd_trigger_dynamic_acs(struct hostapd_data *hapd,
+			    enum dynamic_acs_action_extn acs_action)
+{
+	return -1;
+}
+
+static inline int
+hostapd_drv_dcs_config(struct hostapd_data *hapd, u8 link_id,
+		       struct driver_dcs_config *params)
+{
+	return -1;
+}
+
+static inline bool
+hostapd_is_bh_sta_connecting_or_connected_extn(struct hostapd_iface *iface)
+{
+	return false;
+}
+
+static inline void
+dcs_enable_init(struct hostapd_data *hapd, u16 enable_bitmap)
+{
+}
+
+static inline bool
+hostapd_5ghz_eht_320_channel_bw_extn(struct hostapd_hw_modes *mode,
+				     int channel_idx)
+{
+	return false;
+}
 #else
 
 void hostapd_get_oper_center_freq_seg_extn(struct hostapd_config *conf,
@@ -288,6 +947,12 @@ void hostapd_copy_sta_add_params_extn(struct hostapd_sta_add_params_extn
 				      struct sta_info_extn *sta_extn);
 void wpa_driver_nl80211_sta_add_extn(void *priv,
 				     struct hostapd_sta_add_params *params);
+int wpa_driver_nl80211_dcs_config_extn(void *priv, u8 link_id,
+				       struct driver_dcs_config *params);
+int wpa_driver_nl80211_dcs_sim_extn(void *priv, u8 link_id,
+				    struct driver_dcs_sim *params);
+int hostapd_drv_fetch_and_set_vendor_bssid_extn(struct hostapd_data *hapd);
+void hostapd_free_bss_index_extn(struct hostapd_data *hapd);
 bool hostapd_dfs_get_valid_punc_bitmap_extn(int chan_freq,
 					    u16 punct_bitmap,
 					    int center_freq,
@@ -300,5 +965,255 @@ int hostapd_is_dfs_overlap_extn(struct hostapd_iface *iface,
 				int center_freq, u16 punct_bitmap);
 void hostapd_modify_supported_op_class_for_320mhz_extn(int freq, u8 *op_class);
 
+/* static declaration of this function is present in hostapd */
+u16 get_lower_bandwidth_puncture_pattern(u16 prifreq, u16 cur_pat,
+					 u16 cur_cenfreq, u16 cur_bw,
+					 u16 target_bw);
+
+/**
+ * hostapd_handle_5ghz_320mhz_bw_indication_extn - Update BW Indication IE
+ * parameters for non-standard 5 GHz 320 MHz operation
+ * @hapd: hostapd data structure
+ * @chan1: Pointer to CCFS0 (input: 320 MHz CCFS0, output: effective CCFS0)
+ * @chan2: Pointer to CCFS1 (input: 320 MHz CCFS1, output: effective CCFS1)
+ * @punct_bitmap: Pointer to puncture bitmap (input: 320 MHz, output: effective)
+ * @bandwidth: Pointer to bandwidth (output: effective bandwidth in MHz)
+ *
+ * Caller is expected to invoke this only for non-standard 5 GHz 320 MHz
+ * operation with puncturing. The function derives the effective standard
+ * bandwidth (160/80/40/20 MHz) and the corresponding puncture bitmap.
+ *
+ * Returns: 0 on success, -1 on error
+ */
+int hostapd_handle_5ghz_320mhz_bw_indication_extn(struct hostapd_data *hapd,
+						  u8 *chan1, u8 *chan2,
+						  u16 *punct_bitmap,
+						  int *bandwidth);
+bool hostapd_skip_rnr_6ghz_colocated_extn(struct hostapd_data *hapd, u32 type);
+bool hostapd_rnr_6ghz_override_extn(struct hostapd_data *hapd);
+bool hostapd_rnr_colocated_ess_indication_extn(struct hostapd_data *hapd);
+int
+hostapd_ctrl_iface_receive_process_extn(struct hostapd_data *hapd,
+					char *buf, char *reply,
+					int reply_size,
+					struct sockaddr_storage *from,
+					socklen_t fromlen, int *reply_len);
+void
+hostapd_config_defaults_extn(struct hostapd_config *conf);
+void
+hostapd_config_defaults_bss_extn(struct hostapd_bss_config *bss);
+int
+hostapd_config_fill_extn(struct hostapd_config *conf,
+			 struct hostapd_bss_config *bss,
+			 const char *buf, char *pos, int line);
+int nl80211_vendor_event_qca_extn(struct i802_bss *bss,
+				  u32 subcmd, u8 *data, size_t len);
+int hostapd_ctrl_iface_set_extn(struct hostapd_data *hapd, char *cmd, char *value);
+int hostapd_wpa_event_extn(void *ctx, enum wpa_event_type event,
+			   union wpa_event_data *data);
+int hostapd_ctrl_iface_status_extn(struct hostapd_data *hapd, char *buf,
+				   size_t buflen, size_t curr_len);
+int wpa_ctrl_get_freq_list_extn(struct wpa_supplicant *wpa_s,
+				char *reply, int reply_size);
+int wpa_ctrl_chan_sw_finished_notify_extn(struct wpa_supplicant *wpa_s,
+					  const char *buf, char *reply,
+					  int reply_size);
+int compute_sec_channel_offset_extn(int primary_freq, int center_freq1,
+				    enum chan_width width);
+void wpa_get_bss_channel_oper_info_extn(struct wpa_supplicant *wpa_s,
+					struct wpa_bss *bss);
+bool compute_dfs_for_chanwidth_extn(int freq, int chanwidth);
+void wpa_supp_pre_connect_state_handle_extn(struct wpa_supplicant *wpa_s,
+					    struct wpa_bss *bss);
+void sme_pre_connect_timer_extn(void *eloop_ctx, void *timeout_ctx);
+void wpa_bss_update_link_rnr_ap_info_extn(struct wpa_supplicant *wpa_s,
+					  struct wpa_bss *bss,
+					  const u8 *bssid_ptr,
+					  const struct ieee80211_neighbor_ap_info *ap_info,
+					  const u8 *mld_params, u8 link_id);
+void hostapd_csa_bitmap_update_extn(struct hostapd_iface *iface, int freq);
+int hostapd_send_uplink_csa_extn(struct hostapd_iface *iface,
+				 int channel, int freq,
+				 int secondary_channel,
+				 u8 current_vht_oper_chwidth,
+				 u8 oper_centr_freq_seg0_idx,
+				 u8 oper_centr_freq_seg1_idx,
+				 u16 punct_bitmap);
+void hostapd_uplink_cancel_disconnect_timeout_extn(struct hostapd_iface *iface);
+void hostapd_ucode_trigger_bhsta_disconnect_extn(struct hostapd_iface *iface);
+struct ubus_context *ubus_ap_fetch_context_extn(void);
+struct blob_buf *ubus_ap_fetch_bbuf_extn(void);
+struct uc_value *ucode_ap_fetch_iface_reg_extn(void);
+struct uc_vm *ucode_ap_fetch_vm_extn(void);
+bool hostapd_uplink_csa_hdl_extn(struct hostapd_data *hapd,
+				 const u8 *buf, size_t len);
+int hostapd_dfs_request_channel_switch(struct hostapd_iface *iface,
+				       int channel, int freq,
+				       int secondary_channel,
+				       u8 current_vht_oper_chwidth,
+				       u8 oper_centr_freq_seg0_idx,
+				       u8 oper_centr_freq_seg1_idx,
+				       u16 punct_bitmap);
+int set_dfs_state(struct hostapd_iface *iface, int freq, int ht_enabled,
+		  int chan_offset, int chan_width, int cf1,
+		  int cf2, u32 state, u16 radar_bitmap);
+
+struct uc_value *uc_wpas_notify_uplink_csa_extn(struct uc_vm *vm, size_t nargs);
+struct uc_value *uc_wpas_iface_reconnect_extn(struct uc_vm *vm, size_t nargs);
+bool hostapd_uplink_csa_hdl(struct hostapd_data *hapd,
+			    const u8 *buf, size_t len);
+int handle_action_extn(struct hostapd_data *hapd,
+		       const struct ieee80211_mgmt *mgmt, size_t len,
+		       unsigned int freq);
+int uc_hostapd_iface_switch_channel_extn(struct hostapd_iface *iface,
+					 bool is_dfs, char *wpa_state,
+					 struct csa_settings *csa);
+void hostapd_iface_set_supplicant_channel_extn(struct hostapd_iface *hapd_iface);
+int acs_get_bw_center_chan(int freq, enum bw_type bw);
+void hostapd_ml_acs_check_and_notify(struct hostapd_iface *iface, bool status);
+void wpa_supplicant_start_sta_scan(void *eloop_ctx, void *timeout_ctx);
+bool hostapd_is_bh_sta_connecting_or_connected_extn(struct hostapd_iface *iface);
+#ifdef HOSTAPD
+struct hostapd_data *
+switch_link_hapd(struct hostapd_data *hapd, int link_id);
+#else
+static inline struct hostapd_data *
+switch_link_hapd(struct hostapd_data *hapd, int link_id)
+{
+    return hapd;
+}
+#endif
+int qca_nl80211_handle_wifi_config_evt_extn(struct i802_bss *bss,
+					    u8 *data, size_t len);
+size_t hostapd_esp_ie_len_extn(struct hostapd_data *hapd);
+u8 * hostapd_eid_esp_extn(struct hostapd_data *hapd, u8 *eid, size_t len);
+size_t hostapd_esp_ie_len_extn(struct hostapd_data *hapd);
+int hostapd_ctrl_iface_get_extn(struct hostapd_data *hapd, char *cmd,
+				char *buf, size_t buflen);
+int hostapd_handle_cli_acs_extn(struct hostapd_data *hapd, char *pos,
+				char *buf, size_t buflen);
+
+#ifndef CONFIG_QCN_APP_EXTN
+static inline struct hostapd_channel_data *
+qacs_find_ideal_chan(struct hostapd_iface *iface)
+{
+	wpa_printf(MSG_ERROR, "QACS is not supported");
+	return NULL;
+}
+
+static inline int
+acs_process_hostapd_scan_data(struct hostapd_iface *iface)
+{
+	wpa_printf(MSG_ERROR, "QACS is not supported");
+	return -EOPNOTSUPP;
+}
+#else
+struct hostapd_channel_data *
+qacs_find_ideal_chan(struct hostapd_iface *iface);
+int acs_process_hostapd_scan_data(struct hostapd_iface *iface);
+#endif /*CONFIG_QCN_APP_EXTN */
+
+int hostapd_set_nontx_optional_vendor_elem_size_extn(struct hostapd_bss_config *conf,
+						     char *value);
+
+void acs_request_scan_add_freqs_extn(struct hostapd_channel_data *chan,
+				     int **freq);
+void acs_modify_scan_params_extn(struct hostapd_iface *iface,
+				 struct wpa_driver_scan_params *params);
+#ifdef CONFIG_IEEE80211AC
+void hostapd_mu_cap_war_state_init_extn(struct hostapd_data *hapd);
+void hostapd_mu_cap_war_update_db_extn(struct hostapd_data *hapd,
+				       const u8 *addr, const u8 *vht_cap_offset);
+void hostapd_mu_cap_war_mu_state_changed_extn(struct hostapd_data *hapd);
+void hostapd_mu_cap_war_sta_list_flush_extn(struct hostapd_data *hapd);
+void hostapd_mu_cap_war_kickout_timer_extn(void *eloop_ctx, void *timeout_ctx);
+void hostapd_mu_cap_war_client_cap_extn(struct hostapd_data *hapd,
+					struct sta_info *sta);
+void hostapd_mu_cap_war_expire_queries(struct hostapd_data *hapd);
+#endif /* CONFIG_IEEE80211AC */
+
+int hostapd_ctrl_iface_dcs_extn(struct hostapd_data *hapd, const char *cmd, char *reply,
+				int reply_size);
+int
+acs_handle_channel_change_extn(struct hostapd_iface *iface,
+			       struct hostapd_channel_data *chan,
+			       int err);
+int
+acs_handle_channel_change_failed_extn(struct hostapd_iface *iface, int err);
+bool
+acs_usable_bw_chan(const struct hostapd_channel_data *chan, enum bw_type bw);
+int qca_nl80211_handle_dcs_config_evt_extn(struct i802_bss *bss,
+					   u8 *data, size_t len);
+int intf_awgn_find_channel_list(struct hostapd_iface *iface, int chan_width,
+				struct hostapd_channel_data ***chandef_list,
+				int *awgn_interference_freqs);
+void update_chan_params(struct hostapd_data *hapd, int cf1, int cf2,
+			enum chan_width chwidth);
+bool dcs_get_bw_reduction_ctrl_extn(struct hostapd_config *conf, u16 dcs_intf_type);
+struct hostapd_channel_data *
+get_chan_data_by_freq(struct hostapd_hw_modes *mode, int freq);
+int is_chan_range_available(struct hostapd_hw_modes *mode,
+				 int first_chan_idx, int num_chans);
+void reduced_chan_width(int *new_chan_width, int chan_width, int freq,
+			struct hostapd_hw_modes *mode,
+			u32 chan_bw_interference_bitmap);
+int hostapd_get_6g_chan_list_extn(struct hostapd_iface *iface,
+				  char *buf, size_t buflen);
+/**
+ * hostapd_get_6ghz_thresh_priority_freq_extn() - Helper function to fetch the
+ * VLP priority threshold frequency from driver
+ * @iface: Pointer to hostapd interface data
+ *
+ * Return: 0 if threshold frequency was fetched successfully, else error code.
+ */
+int hostapd_get_6ghz_thresh_priority_freq_extn(struct hostapd_iface *iface);
+int intf_chan_range_available_5g(struct hostapd_hw_modes *mode,
+				 int first_chan_idx, int num_chans);
+int intf_chan_range_available_2g(struct hostapd_hw_modes *mode,
+				 int first_chan_idx, int num_chans);
+int get_centre_freq(struct hostapd_channel_data *first_chan,
+		    int chan_width, int *centre_freq);
+int intf_chan_range_available_6g(struct hostapd_hw_modes *mode,
+				 int first_chan_idx, int num_chans);
+bool is_chan_disabled(struct hostapd_hw_modes *mode, int chan_num);
+int chan_pri_allowed(const struct hostapd_channel_data *chan);
+int hostapd_trigger_dynamic_acs(struct hostapd_data *hapd,
+				enum dynamic_acs_action_extn acs_action);
+int hostapd_drv_dcs_config(struct hostapd_data *hapd, u8 link_id,
+			   struct driver_dcs_config *params);
+void dcs_enable_init(struct hostapd_data *hapd, u16 enable_bitmap);
+int hostapd_get_channel_idx(struct hostapd_hw_modes *mode, int channel_num);
+
+#ifdef HOSTAPD
+/**
+ * hostapd_5ghz_eht_320_channel_bw_extn() - Helper function to check whether to
+ * report "320MHz" on 5 GHz.
+ * @mode: HW mode with regulatory channel list
+ * @channel_idx: Index into @mode->channels[] for the queried channel
+ *
+ * Return true only if:
+ *  - @channel advertises HOSTAPD_CHAN_WIDTH_320 in allowed_bw,
+ *  - channel number is in {100..144 step 4}, and
+ *  - all channels in that set exist in @mode and are not HOSTAPD_CHAN_DISABLED.
+ *
+ * Return: true if "320MHz" can be shown for this channel; false otherwise.
+ */
+bool hostapd_5ghz_eht_320_channel_bw_extn(struct hostapd_hw_modes *mode,
+					  int channel_idx);
+#else
+static inline bool
+hostapd_5ghz_eht_320_channel_bw_extn(struct hostapd_hw_modes *mode,
+				     int channel_idx)
+{
+	return false;
+}
+#endif /* HOSTAPD */
+
+int hostapd_drv_mark_vap_submode(struct hostapd_data *hapd,
+				 enum qca_wlan_vendor_vap_submode_type submode);
+int hostapd_drv_mark_vap_submode_extn(void *priv, unsigned int vendor_id,
+				      unsigned int subcmd,
+				      const char *ifname,
+				      u8 vap_submode);
 #endif /* CONFIG_QCN_EXTN */
 #endif /* CMN_H */

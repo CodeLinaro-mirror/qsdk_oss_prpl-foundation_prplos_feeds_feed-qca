@@ -1,0 +1,37 @@
+From d13ac335486182de9993b4c2a1eb870e1a5a4cf6 Mon Sep 17 00:00:00 2001
+From: Rameshkumar Sundaram <ramess@qti.qualcomm.com>
+Date: Mon, 12 Jan 2026 16:44:40 +0530
+Subject: [PATCH] QSDK:PROTOCOL: iw: emit per link SSID if MLD has repurposed links
+
+With MLO link repurposing support, individual links within an MLD may be
+configured with different SSIDs. To support this, drivers can send a
+per-link SSID attribute in addition to the ML-level SSID attribute.
+
+Add support to parse and print the per-link SSID when present.
+
+Signed-off-by: Rameshkumar Sundaram <ramess@qti.qualcomm.com>
+---
+ interface.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/interface.c b/interface.c
+index 93149812cf30..43eb1b03ac4e 100644
+--- a/interface.c
++++ b/interface.c
+@@ -476,6 +476,13 @@ static int print_iface_handler(struct nl_msg *msg, void *arg)
+ 					mac_addr_n2a(link_addr, nla_data(link[NL80211_ATTR_MAC]));
+ 					printf("%s\t  addr %s\n", indent, link_addr);
+ 				}
++				/* Print per-link SSID if present (e.g., for repurposed links) */
++				if (link[NL80211_ATTR_SSID]) {
++					printf("%s\t  ssid ", indent);
++					print_ssid_escaped(nla_len(link[NL80211_ATTR_SSID]),
++							   nla_data(link[NL80211_ATTR_SSID]));
++					printf("\n");
++				}
+ 				print_channel_txpower(link, "  ");
+ 
+ 				if (link[NL80211_ATTR_6G_REG_POWER_MODE]) {
+-- 
+2.34.1
+

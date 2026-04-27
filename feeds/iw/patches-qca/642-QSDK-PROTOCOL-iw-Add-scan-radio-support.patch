@@ -1,0 +1,64 @@
+From f603f143c1e0ab8874900f2ace3d7bd49ffada1c Mon Sep 17 00:00:00 2001
+From: Abhinav Raghunandan <abhiragh@qti.qualcomm.com>
+Date: Thu, 22 Jan 2026 21:27:30 +0530
+Subject: [PATCH] QSDK:PROTOCOL:iw: Modify ap start to make head param optional
+
+Scan radios do not require beacon information to create the
+VAP. Currently, the ap start command marks beacon head and hex
+data as mandatory. This change allows a graceful exit incase
+beacon head information has been skipped in the command.
+
+The check for scan radio is done later on in the mac/cfg80211 layer
+and allows this beacon header information to be skipped only in
+the case for scan radio. If we are trying to bring up a normal
+VAP using this command, the beacon information will also be
+required.
+
+Signed-off-by: Abhinav Raghunandan <abhiragh@qti.qualcomm.com>
+---
+ ap.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/ap.c b/ap.c
+index 748576d..1db8b38 100644
+--- a/ap.c
++++ b/ap.c
+@@ -19,7 +19,7 @@ static int handle_start_ap(struct nl80211_state *state,
+ 	int val, len;
+ 	char buf[2304];
+ 
+-	if (argc < 6)
++	if (argc < 5)
+ 		return 1;
+ 
+ 	/* SSID */
+@@ -55,19 +55,23 @@ static int handle_start_ap(struct nl80211_state *state,
+ 	argv++;
+ 	argc--;
+ 
+-	if (strcmp(argv[0], "hidden-ssid") == 0) {
++	if (argc > 0 && strcmp(argv[0], "hidden-ssid") == 0) {
+ 		argc--;
+ 		argv++;
+ 		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
+ 			    NL80211_HIDDEN_SSID_ZERO_LEN);
+-	} else if (strcmp(argv[0], "zeroed-ssid") == 0) {
++	} else if (argc > 0 && strcmp(argv[0], "zeroed-ssid") == 0) {
+ 		argc--;
+ 		argv++;
+ 		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
+ 			    NL80211_HIDDEN_SSID_ZERO_CONTENTS);
+ 	}
+ 
+-	/* beacon head must be provided */
++	/* Command completed in case of scan radio */
++	if (argc == 0)
++		return 0;
++
++	/* beacon head must be provided for normal radios */
+ 	if (strcmp(argv[0], "head") != 0)
+ 		return 1;
+ 	argv++;
+-- 
+2.34.1
+

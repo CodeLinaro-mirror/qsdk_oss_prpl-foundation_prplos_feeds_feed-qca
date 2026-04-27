@@ -1,0 +1,34 @@
+From 72addd2911f5e64651c6200ac4bd4a1283f41875 Mon Sep 17 00:00:00 2001
+From: Johannes Berg <johannes.berg@intel.com>
+Date: Wed, 29 Oct 2025 15:48:57 +0530
+Subject: [PATCH] update nl80211.h
+
+Signed-off-by: Johannes Berg <johannes.berg@intel.com>
+Signed-off-by: Aman Mehta <amanmeht@qti.qualcomm.com>
+---
+ nl80211.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/nl80211.h b/nl80211.h
+index 3172603..faf8f4d 100644
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -4944,6 +4944,7 @@ enum nl80211_survey_info {
+  *	overrides all other flags.
+  * @NL80211_MNTR_FLAG_ACTIVE: use the configured MAC address
+  *	and ACK incoming unicast packets.
++ * @NL80211_MNTR_FLAG_SKIP_TX: do not pass local tx packets
+  *
+  * @__NL80211_MNTR_FLAG_AFTER_LAST: internal use
+  * @NL80211_MNTR_FLAG_MAX: highest possible monitor flag
+@@ -4956,6 +4957,7 @@ enum nl80211_mntr_flags {
+ 	NL80211_MNTR_FLAG_OTHER_BSS,
+ 	NL80211_MNTR_FLAG_COOK_FRAMES,
+ 	NL80211_MNTR_FLAG_ACTIVE,
++	NL80211_MNTR_FLAG_SKIP_TX,
+ 
+ 	/* keep last */
+ 	__NL80211_MNTR_FLAG_AFTER_LAST,
+-- 
+2.34.1
+

@@ -1,0 +1,53 @@
+From 8983a3937352443da90f336a86a44acbdb6dec4c Mon Sep 17 00:00:00 2001
+From: Kiran Venkatappa <kiran.venkatappa@oss.qualcomm.com>
+Date: Tue, 27 Jan 2026 18:46:01 +0530
+Subject: [PATCH v3] iw: util: Fix incorrect EHT PHY capabilities field size
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The 802.11be-2024 spec defines the EHT PHY Capabilities field as 9
+bytes. The __print_eht_capa() helper prints a 9‑byte array, but the
+underlying code only supplied 8 bytes. Adjust the EHT PHY capabilities
+size to the correct 9 bytes to align with the specification and avoid
+truncation.
+
+Signed-off-by: Kiran Venkatappa <kiran.venkatappa@oss.qualcomm.com>
+---
+ util.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/util.c b/util.c
+index e6d42e5..4d09c22 100644
+--- a/util.c
++++ b/util.c
+@@ -1552,7 +1552,7 @@ void print_he_info(struct nlattr *nl_iftype)
+ 
+ static void __print_eht_capa(int band,
+ 			     const __u8 *mac_cap,
+-			     const __u32 *phy_cap,
++			     const __u8 *phy_cap,
+ 			     const __u8 *mcs_set, size_t mcs_len,
+ 			     const __u8 *ppet, size_t ppet_len,
+ 			     const __u16 *he_phy_cap,
+@@ -1609,7 +1609,7 @@ static void __print_eht_capa(int band,
+ 
+ 	printf("%s\t\tEHT PHY Capabilities (0x", pre);
+ 	for (i = 0; i < 9; i++)
+-		printf("%02x", ((__u8 *)phy_cap)[i]);
++		printf("%02x", phy_cap[i]);
+ 	printf("):\n");
+ 
+ 	PRINT_EHT_PHY_CAP(0, 1, "320MHz in 6GHz Supported");
+@@ -1742,7 +1742,7 @@ void print_eht_info(struct nlattr *nl_iftype, int band)
+ {
+ 	struct nlattr *tb[NL80211_BAND_IFTYPE_ATTR_MAX + 1];
+ 	__u8 mac_cap[2] = { 0 };
+-	__u32 phy_cap[2] = { 0 };
++	__u8 phy_cap[9] = { 0 };
+ 	__u8 mcs_set[13] = { 0 };
+ 	__u8 ppet[31] = { 0 };
+ 	__u16 he_phy_cap[6] = { 0 };
+-- 
+2.34.1
+

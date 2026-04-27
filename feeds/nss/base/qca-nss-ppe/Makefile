@@ -3,12 +3,12 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=qca-nss-ppe
 PKG_SOURCE_PROTO:=git
-PKG_BRANCH:=win.nss.1.0.r30
+PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=skip
-PKG_VERSION:=d53eff24bf257a8bb1b2f68beb3aa06332bfd567
+PKG_VERSION:=658249b9f4c6e0dcb023ab28041283498c7e27eb
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -30,7 +30,7 @@ define KernelPackage/qca-nss-ppe
   DEPENDS:=@TARGET_ipq95xx||TARGET_ipq53xx||TARGET_ipq54xx||TARGET_ipq96xx||TARGET_ipq52xx\
 		+kmod-qca-ssdk-nohnat \
 		+!(TARGET_ipq53xx_ipq53xx_32_QSDK_256||TARGET_ipq54xx_ipq54xx_32_QSDK_256):kmod-nat46
-  FILES:=$(PKG_BUILD_DIR)/drv/ppe_drv/qca-nss-ppe.ko
+  FILES:=$(PKG_BUILD_DIR)/drv/ppe_drv/qca-nss-ppe.ko $(PKG_BUILD_DIR)/nss_debug/qca-nss-debug.ko
   AUTOLOAD:=$(call AutoLoad,31,qca-nss-ppe)
 endef
 
@@ -80,6 +80,13 @@ endif
 
 ifeq ($(CONFIG_TARGET_ipq95xx_generic_QSDK_MinEnt), y)
 EXTRA_CFLAGS+= -DPPE_V4_BAD_LEN_EXCEP_DIS
+endif
+
+# Enable PPE ESP SPI Passthrough support when kernel config is enabled
+ifneq ($(CONFIG_TARGET_ipq96xx)$(CONFIG_TARGET_ipq52xx),)
+ifneq ($(CONFIG_NF_CT_PROTO_ESP),)
+MAKE_OPTS+=PPE_DRV_ESP_SPI_PASSTH_ENABLE=y
+endif
 endif
 
 define Build/Compile

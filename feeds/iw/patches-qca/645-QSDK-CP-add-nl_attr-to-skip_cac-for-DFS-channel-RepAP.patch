@@ -1,0 +1,26 @@
+From fdb583b8e92dd3b542236abba9b11f75ec079166 Mon Sep 17 00:00:00 2001
+From: sivaraman <sivad@qti.qualcomm.com>
+Date: Fri, 30 Jan 2026 17:33:36 +0530
+Subject: [PATCH] Add NL80211_ATTR_SKIP_CAC to skip_cac for DFS channel for
+ Repeater AP
+
+Signed-off-by: sivaraman <sivad@qti.qualcomm.com>
+---
+ nl80211.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/nl80211.h b/nl80211.h
+index a2fa840..83cbad8 100644
+--- a/nl80211.h
++++ b/nl80211.h
+@@ -3595,6 +3595,8 @@ enum nl80211_attrs {
+ 
+ 	NL80211_ATTR_QOS_MGMT,
+ 
++	NL80211_ATTR_SKIP_CAC,
++
+ 	NL80211_ATTR_6GHZ_DEVICE_DEPLOYMENT_TYPE,
+ 	/* add attributes here, update the policy in nl80211.c */
+ 
+-- 
+2.34.1

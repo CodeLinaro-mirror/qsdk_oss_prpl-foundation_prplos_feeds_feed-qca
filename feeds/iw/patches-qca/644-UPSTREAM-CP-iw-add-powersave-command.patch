@@ -1,0 +1,391 @@
+From 70ff6b8126fad7be955aff2e8ebc12e5fbc1b9ee Mon Sep 17 00:00:00 2001
+From: Muna Sinada <muna.sinada@oss.qualcomm.com>
+Date: Mon, 9 Feb 2026 19:02:13 -0800
+Subject: [PATCH] UPSTREAM:CP:iw: add powersave command
+
+Add poswersave command to iw. This new command allows configurations
+for powersave features.
+
+Enable three features to be configured with powersave command:
+PCIe GenxLan, Dynamic Clock and Voltage Scaling and DPS Assist
+Support.
+
+iw dev <devname> set powersave link-id <id> PCIe genxlane
+	[enable|disbale] [0|1:config_type:CBW|Static] [gen] [lane]
+
+iw dev <devname> set powersave link-id <id> DCVS [on|off|no_limit]
+
+iw dev <devname> set powersave link-id <id> dps_assist [enable|disbale]
+
+Signed-off-by: Muna Sinada <muna.sinada@oss.qualcomm.com>
+---
+ nl80211.h   |  67 ++++++++++++++
+ powersave.c | 251 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 318 insertions(+)
+ create mode 100644 powersave.c
+
+Index: iw-6.9/nl80211.h
+===================================================================
+--- iw-6.9.orig/nl80211.h
++++ iw-6.9/nl80211.h
+@@ -1358,6 +1358,8 @@
+  * @NL80211_CMD_LINK_REMOVAL_COMPLETED: Once last beacon with reconfiguration
+  *	MLE is sent, userspace is notified with completion.
+  *
++ * @NL80211_CMD_AP_POWER_SAVE: Command to configure AP powersave parameters.
++ *
+  * @NL80211_CMD_MAX: highest used command number
+  * @__NL80211_CMD_AFTER_LAST: internal use
+  */
+@@ -1634,6 +1636,8 @@ enum nl80211_commands {
+ 	NL80211_CMD_LINK_REMOVAL_STARTED,
+ 
+ 	NL80211_CMD_LINK_REMOVAL_COMPLETED,
++
++	NL80211_CMD_AP_POWER_SAVE,
+ 	/* add new commands above here */
+ 
+ 	/* used to define NL80211_CMD_MAX below */
+@@ -2997,6 +3001,15 @@ enum nl80211_commands {
+  * @NL80211_ATTR_6GHZ_DEVICE_DEPLOYMENT_TYPE: Attribute that denotes the 6 GHz
+  *	device deployment type.
+  *
++ * @NL80211_ATTR_PCIE: Nested attributes associated with PCIe low power and
++ *	gen/lane mode transitions. See &enum nl80211_pcie_attrs
++ *
++ * @NL80211_ATTR_DCVS: (u32) Dynamic Clock and Voltage Scaling (DCVS) modes.
++ *	See @enum nl80211_dcvs_attrs.
++ *
++ * @NL80211_ATTR_DPS_ASSIST: flag to enable/disable DPS assisting role. See
++ *	&enum nl80211_dps_assist_attrs
++ *
+  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
+  * @NL80211_ATTR_MAX: highest attribute number currently defined
+  * @__NL80211_ATTR_AFTER_LAST: internal use
+@@ -3596,6 +3609,10 @@ enum nl80211_attrs {
+ 	NL80211_ATTR_QOS_MGMT,
+ 
+ 	NL80211_ATTR_6GHZ_DEVICE_DEPLOYMENT_TYPE,
++
++	NL80211_ATTR_PCIE,
++	NL80211_ATTR_DCVS,
++	NL80211_ATTR_DPS_ASSIST,
+ 	/* add attributes here, update the policy in nl80211.c */
+ 
+ 	__NL80211_ATTR_AFTER_LAST,
+@@ -8664,4 +8681,54 @@ enum nl80211_6ghz_txpower_attr {
+ 		__NL80211_6GHZ_TXPOWER_ATTR_AFTER_LAST - 1
+ };
+ 
++/**
++ * enum nl80211_pcie_attrs - set PCIe attributes
++ *
++ * @NL80211_PCIE_ATTR_TYPE: (u8) PCIe transition type
++ * @NL80211_PCIE_ATTR_ENABLE: (flag) enable/disable PCIe transition
++ *	type
++ * @NL80211_PCIE_ATTR_CONFIG_TYPE: (u8) configuration of PCIe transition type
++ * @NL80211_PCIE_ATTR_GEN: (u8)
++ * @NL80211_PCIE_ATTR_LANE: (u8)
++ *
++ * @__NL80211_PCIE_ATTR_LAST : internal use
++ * @NL80211_PCIE_ATTR_MAX : maximum PCIe attributes
++ *
++ */
++enum nl80211_pcie_attrs {
++	__NL80211_PCIE_ATTR_INVALID,
++
++	NL80211_PCIE_ATTR_TYPE,
++	NL80211_PCIE_ATTR_ENABLE,
++	NL80211_PCIE_ATTR_CONFIG_TYPE,
++	NL80211_PCIE_ATTR_GEN,
++	NL80211_PCIE_ATTR_LANE,
++
++	/* keep last */
++	__NL80211_PCIE_ATTR_LAST,
++	NL80211_PCIE_ATTR_MAX = __NL80211_PCIE_ATTR_LAST - 1
++};
++
++/**
++ * enum nl80211_dcvs_attrs - set DCVS attributes
++ *
++ * @NL80211_DCVS_ATTR_ON: (flag) turn on radio DCVS in driver.
++ * @NL80211_DCVS_ATTR_OFF: (flag) turn off radio DCVS in driver.
++ * @NL80211_DCVS_ATTR_NO_LIMIT: (flag) operate with no limitation.
++ *
++ * @__NL80211_DCVS_ATTR_LAST : internal use
++ * @NL80211_DCVS_ATTR_MAX : maximum DCVS attributes
++ *
++ */
++enum nl80211_dcvs_attrs {
++	__NL80211_DCVS_ATTR_INVALID,
++
++	NL80211_DCVS_ATTR_ON,
++	NL80211_DCVS_ATTR_OFF,
++	NL80211_DCVS_ATTR_NO_LIMIT,
++
++	/* keep last */
++	__NL80211_DCVS_ATTR_LAST,
++	NL80211_DCVS_ATTR_MAX = __NL80211_DCVS_ATTR_LAST - 1
++};
+ #endif /* __LINUX_NL80211_H */
+Index: iw-6.9/powersave.c
+===================================================================
+--- /dev/null
++++ iw-6.9/powersave.c
+@@ -0,0 +1,256 @@
++/*
++ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
++ * SPDX-License-Identifier: ISC
++ */
++
++#include <errno.h>
++#include <limits.h>
++#include <stdbool.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <strings.h>
++
++#include <netlink/genl/genl.h>
++#include <netlink/msg.h>
++#include <netlink/attr.h>
++
++#include "nl80211.h"
++#include "iw.h"
++
++enum pcie_type {
++	PCI_TYPE_INVALID,
++	PCI_TYPE_GEN_X_LANE,
++	PCI_TYPE_LOW_POWER,
++};
++
++static const struct cmd *powersave_cmd_pcie;
++static const struct cmd *powersave_cmd_dcvs;
++static const struct cmd *powersave_cmd_dps;
++
++static bool token_eq(const char *a, const char *b)
++{
++	return strcasecmp(a, b) == 0;
++}
++
++static int parse_u8_arg(const char *arg, const char *name,
++			unsigned int max, __u8 *value)
++{
++	unsigned long tmp;
++	char *end;
++
++	errno = 0;
++	tmp = strtoul(arg, &end, 0);
++	if (errno || !end || *end) {
++		fprintf(stderr, "Invalid %s value '%s'\n", name, arg);
++		return -EINVAL;
++	}
++
++	if (tmp > max) {
++		fprintf(stderr, "%s value '%s' out of range (max %u)\n",
++			name, arg, max);
++		return -EINVAL;
++	}
++
++	*value = tmp;
++	return 0;
++}
++
++static enum pcie_type parse_pcie_type(const char *arg)
++{
++	if (token_eq(arg, "genxlane"))
++		return PCI_TYPE_GEN_X_LANE;
++
++	if (token_eq(arg, "low_power") || token_eq(arg, "low-power"))
++		return PCI_TYPE_LOW_POWER;
++
++	return PCI_TYPE_INVALID;
++}
++
++static const struct cmd *select_powersave_cmd(int argc, char **argv)
++{
++	if (argc < 4)
++		return NULL;
++
++	if (strcmp(argv[0], "link-id") != 0)
++		return NULL;
++
++	argc -= 2;
++	argv += 2;
++
++	if (!argc)
++		return NULL;
++
++	if (token_eq(argv[0], "PCIe"))
++		return powersave_cmd_pcie;
++
++	if (token_eq(argv[0], "DCVS"))
++		return powersave_cmd_dcvs;
++
++	if (token_eq(argv[0], "dps_assist"))
++		return powersave_cmd_dps;
++
++	return NULL;
++}
++
++static int handle_pcie_powersave(struct nl80211_state *state,
++				 struct nl_msg *msg,
++				 int argc, char **argv,
++				 enum id_input id)
++{
++	struct nlattr *pcie_attrs;
++	enum pcie_type type;
++	__u8 enable, config_type;
++	__u8 pcie_gen = 0, pcie_lane = 0;
++	int ret;
++
++	ret = parse_link_id(msg, &argc, &argv);
++	if (ret)
++		return ret;
++
++	if (argc < 3)
++		return HANDLER_RET_USAGE;
++
++	if (!token_eq(argv[0], "PCIe"))
++		return HANDLER_RET_USAGE;
++
++	argc--;
++	argv++;
++
++	type = parse_pcie_type(argv[0]);
++	if (type == PCI_TYPE_INVALID)
++		return HANDLER_RET_USAGE;
++
++	argc--;
++	argv++;
++
++	if (token_eq(argv[0], "enable"))
++		enable = 1;
++	else if (token_eq(argv[0], "disable"))
++		enable = 0;
++	else
++		return -EINVAL;
++
++	if (parse_u8_arg(argv[1], "config type", UCHAR_MAX, &config_type))
++		return -EINVAL;
++
++	if (type == PCI_TYPE_GEN_X_LANE) {
++		if (argc != 4)
++			return HANDLER_RET_USAGE;
++
++		if (parse_u8_arg(argv[2], "pcie gen", UCHAR_MAX, &pcie_gen) ||
++		    parse_u8_arg(argv[3], "pcie lane", UCHAR_MAX, &pcie_lane))
++			return -EINVAL;
++	} else {
++		if (argc != 2)
++			return HANDLER_RET_USAGE;
++	}
++
++	pcie_attrs = nla_nest_start(msg, NL80211_ATTR_PCIE);
++	if (!pcie_attrs)
++		return -ENOBUFS;
++
++	NLA_PUT_U8(msg, NL80211_PCIE_ATTR_TYPE, type);
++	NLA_PUT_U8(msg, NL80211_PCIE_ATTR_ENABLE, enable);
++	NLA_PUT_U8(msg, NL80211_PCIE_ATTR_CONFIG_TYPE, config_type);
++
++	if (type == PCI_TYPE_GEN_X_LANE) {
++		NLA_PUT_U8(msg, NL80211_PCIE_ATTR_GEN, pcie_gen);
++		NLA_PUT_U8(msg, NL80211_PCIE_ATTR_LANE, pcie_lane);
++	}
++
++	nla_nest_end(msg, pcie_attrs);
++
++	return 0;
++ nla_put_failure:
++	return -ENOBUFS;
++}
++
++static int handle_dcvs_powersave(struct nl80211_state *state,
++				 struct nl_msg *msg,
++				 int argc, char **argv,
++				 enum id_input id)
++{
++	__u32 mode;
++	int ret;
++
++	ret = parse_link_id(msg, &argc, &argv);
++	if (ret)
++		return ret;
++
++	if (argc != 2 || !token_eq(argv[0], "DCVS"))
++		return HANDLER_RET_USAGE;
++
++	if (token_eq(argv[1], "on"))
++		mode = NL80211_DCVS_ATTR_ON;
++	else if (token_eq(argv[1], "off"))
++		mode = NL80211_DCVS_ATTR_OFF;
++	else if (token_eq(argv[1], "no_limit") || token_eq(argv[1], "no-limit"))
++		mode = NL80211_DCVS_ATTR_NO_LIMIT;
++	else
++		return -EINVAL;
++
++	NLA_PUT_U32(msg, NL80211_ATTR_DCVS, mode);
++
++	return 0;
++ nla_put_failure:
++	return -ENOBUFS;
++}
++
++
++#define DPS_ASSIST_DISABLE 0
++#define DPS_ASSIST_ENABLE 1
++
++static int handle_dps_powersave(struct nl80211_state *state,
++				struct nl_msg *msg,
++				int argc, char **argv,
++				enum id_input id)
++{
++	__u8 state_val;
++	int ret;
++
++	ret = parse_link_id(msg, &argc, &argv);
++	if (ret)
++		return ret;
++
++	if (argc != 2 || !token_eq(argv[0], "dps_assist"))
++		return HANDLER_RET_USAGE;
++
++	if (token_eq(argv[1], "enable"))
++		state_val = DPS_ASSIST_ENABLE;
++	else if (token_eq(argv[1], "disable"))
++		state_val = DPS_ASSIST_DISABLE;
++	else
++		return -EINVAL;
++
++	NLA_PUT_U8(msg, NL80211_ATTR_DPS_ASSIST, state_val);
++
++	return 0;
++ nla_put_failure:
++	return -ENOBUFS;
++}
++
++COMMAND_ALIAS(set, powersave,
++	      "link-id <link id> PCIe <genxlane|low_power> "
++	      "<enable> <config type> [<pcie gen> <pcie lane>]",
++	      NL80211_CMD_AP_POWER_SAVE, 0, CIB_NETDEV, handle_pcie_powersave,
++	      "Configure PCIe powersave transitions for a specific MLO link.\n"
++	      "Example:\n"
++	      "\tiw dev <devname> set powersave link-id <id> PCIe genxlane 1 0 4 1",
++	      select_powersave_cmd, powersave_cmd_pcie);
++
++COMMAND_ALIAS(set, powersave,
++	      "link-id <link id> DCVS <on|off|no_limit|config type>",
++	      NL80211_CMD_AP_POWER_SAVE, 0, CIB_NETDEV, handle_dcvs_powersave,
++	      "Configure Dynamic Clock and Voltage Scaling mode for a link.\n"
++	      "Example:\n"
++	      "\tiw dev <devname> set powersave link-id <id> DCVS on",
++	      select_powersave_cmd, powersave_cmd_dcvs);
++
++COMMAND_ALIAS(set, powersave,
++	      "link-id <link id> dps_assist <0|1>",
++	      NL80211_CMD_AP_POWER_SAVE, 0, CIB_NETDEV, handle_dps_powersave,
++	      "Enable or disable DPS assist role for a link.\n"
++	      "Example:\n"
++	      "\tiw dev <devname> set powersave link-id <id> dps_assist 1",
++	      select_powersave_cmd, powersave_cmd_dps);
