@@ -43,7 +43,6 @@
 
 #define MHISTATUS			0x48
 #define MHICTRL				0x38
-#define MHICTRL_RESET_MASK		0x2
 
 #define PCIE_SOC_GLOBAL_RESET_VALUE     0x5
 #define MAX_SOC_GLOBAL_RESET_WAIT_CNT   50 /* x 20msec */
@@ -56,7 +55,9 @@
 #define QTI_PCI_VENDOR_ID		0x17CB
 #define QCN90XX_DEVICE_ID		0x1104
 #define QCN92XX_DEVICE_ID		0x1109
+#define QCC20XX_DEVICE_ID		0x1112
 #define QCN96XX_DEVICE_ID		0x1113
+#define QCN95XX_DEVICE_ID		0x1114
 
 #define PCI_LINK_DOWN                   0
 
@@ -65,6 +66,8 @@
 					 ee == MHI_EE_WFW || \
 					 ee == MHI_EE_FP)
 
+#define QCN9625_WLAON_SOC_RESET_CAUSE_SHADOW_REG 0x1F80718
+#define QCN9625_RESET_CAUSE_Q6_BCR BIT(18)
 /*
  *Structure specific to mhitest module
  */
@@ -124,15 +127,16 @@ struct mhitest_ramdump_info {
 	struct mhitest_dump_data dump_data;
 };
 
-struct mhitest_dump_seg_list {
-	struct list_head node;
-	dma_addr_t da;
-	void *va;
-	size_t size;
-};
-
 struct mhitest_dump_desc {
 	void *data;
+	struct completion dump_done;
+};
+
+struct mhitest_pci_elf_coredump_state {
+	void *elf_hdr;
+	u32 elf_hdr_sz;
+	struct mhitest_dump_seg *chunks;
+	u32 num_chunks;
 	struct completion dump_done;
 };
 
@@ -146,6 +150,9 @@ struct mhitest_platform {
 	u16 def_link_width;
 	u8 pci_link_state;
 	struct pci_saved_state *pci_dev_default_state;
+#if IS_ENABLED(CONFIG_PCIEAER)
+	struct pci_saved_state *pci_dev_saved_state;
+#endif
 	void __iomem *bar;
 	char fw_name[30];
 /*mhi  msi */
@@ -164,7 +171,9 @@ struct mhitest_platform {
 /* klog level for mhitest driver */
 	bool soc_reset_requested;
 	struct completion soc_reset_request;
-	bool running;
+	atomic_t running;
+	atomic_t recovery_in_progress;
+	struct completion recovery_complete;
 	struct timer_list boot_debug_timer;
 };
 enum MHI_STATE {
@@ -201,7 +210,6 @@ int mhitest_pci_get_link_status(struct mhitest_platform *);
 int mhitest_prepare_pci_mhi_msi(struct mhitest_platform *);
 int mhitest_prepare_start_mhi(struct mhitest_platform *);
 int mhitest_dump_info(struct mhitest_platform *mplat, bool in_panic);
-int mhitest_dev_ramdump(struct mhitest_platform *mplat);
 int mhitest_post_event(struct mhitest_platform *,
 	struct mhitest_recovery_data *, enum mhitest_event_type, u32 flags);
 struct platform_device *get_plat_device(void);
@@ -219,3 +227,6 @@ int mhitest_pci_remove_all(struct mhitest_platform *);
 void mhitest_pci_soc_reset(struct mhitest_platform *mplat);
 void mhitest_reset_mhi_state(struct mhitest_platform *mplat);
 void mhitest_pci_dump_bl_sram_mem(struct mhitest_platform *mplat);
+int mhitest_pci_reg_read(struct mhitest_platform *mplat, u32 addr, u32 *val);
+int mhitest_pci_reg_write(struct mhitest_platform *mplat, u32 addr, u32 val);
+void mhitest_q6_bcr_reset(struct mhitest_platform *mplat);

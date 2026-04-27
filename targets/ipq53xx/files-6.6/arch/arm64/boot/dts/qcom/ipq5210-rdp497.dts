@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * IPQ5210 RDP497 board device tree source
+ *
+ * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+
+#include "ipq5210-rdp-common.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. IPQ5210 RDP497";
+	compatible = "qcom,ipq5210-rdp497", "qcom,ipq5210";
+
+	aliases {
+		serial0 = &uart1;
+		ethernet0 = "/soc/dp1";
+		ethernet1 = "/soc/dp2";
+		ethernet2 = "/soc/dp3";
+	};
+
+	soc@0 {
+		mdio@90000 {
+			status = "okay";
+			/* gpio reset for Laguna PHY */
+			phy-reset-gpio = <&tlmm 24 GPIO_ACTIVE_LOW>;
+
+			phy0: ethernet-phy@8 {
+				reg = <8>;
+				compatible ="ethernet-phy-ieee802.3-c45";
+			};
+		};
+
+		mdio_ahb: mdio-ahb@1400000 {
+			status = "okay";
+			compatible = "qcom,mdio-ahb-ipq52xx";
+			reg = <0x1400000 0x200000>;  /* Base address: 0x1400000, Size: 2MB */
+			clocks = <&gcc GCC_MDIO_GEPHY_AHB_CLK>,
+				<&gcc GCC_GEPHY_SYS_CLK>,
+				<&nsscc NSS_CC_EPHY_RX_CLK>,
+				<&nsscc NSS_CC_EPHY_TX_CLK>,
+				<&cmn_pll IPQ5210_EPHY_RAW_CLK>;
+			clock-names = "mdio_gephy_ahb_clk",
+				"gephy_sys_clk",
+				"gephy_rx_clk",
+				"gephy_tx_clk",
+				"gephy_raw_clk";
+
+			resets = <&gcc GCC_GEPHY_SYS_ARES>,
+				 <&nsscc NSS_CC_EPHY_RX_CLK_ARES>,
+				 <&nsscc NSS_CC_EPHY_TX_CLK_ARES>;
+			reset-names = "gephy_sys_reset",
+				 "gephy_rx_reset",
+				 "gephy_tx_reset";
+
+			pinctrl-0 = <&phy_led0>;
+			pinctrl-names = "default";
+		};
+
+		ess-instance {
+			num_devices = <0x1>;
+
+			ess_switch: ess-switch@3a000000 {
+				switch_lan_bmp = <0x12>; /* lan port bitmap */
+				switch_wan_bmp = <0x40>; /* wan port bitmap */
+				switch_mac_mode = <0xd>; /* USXGMII for Laguna PHY */
+				switch_mac_mode1 = <0xff>; /* unused */
+				switch_mac_mode2 = <0xff>;
+
+				qcom,port_phyinfo {
+					port@0 {
+						port_id = <1>;
+						phy_address = <8>;
+						phy-handle = <&phy0>;
+						phy-mode = "usxgmii";
+						ethernet-phy-ieee802.3-c45;
+					};
+					port@3 {
+						port_id = <4>;
+						phy-mode = "internal";
+					};
+					port@5 {
+						port_id = <6>;
+						forced-speed = <10000>;
+						forced-duplex = <1>;
+						fixed-link {
+							speed = <10000>;
+							full-duplex;
+							pause;
+						};
+					};
+				};
+			};
+		};
+
+		dp1 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <1>;
+			reg = <0x3a500000 0x4000>;
+			qcom,mactype = <1>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+			pinctrl-0 = <&pps_state>;
+			pinctrl-names = "default";
+			interrupts = <GIC_SPI 359 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "pps_in";
+			clocks = <&nsscc NSS_CC_XGMAC0_PTP_REF_CLK>;
+			clock-names = "ptp";
+		};
+
+		dp2 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <4>;
+			reg = <0x3a001600 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp3 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <6>;
+			reg = <0x3a508000 0x4000>;
+			qcom,mactype = <1>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+			qcom,gem_port = <1>;
+			clocks = <&nsscc NSS_CC_XGMAC2_PTP_REF_CLK>;
+			clock-names = "ptp";
+		};
+	};
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+
+	status = "okay";
+};
+
+&i2c2 {
+	pinctrl-0 = <&qup_i2c2_default>;
+	pinctrl-names = "default";
+	clock-frequency = <100000>;
+
+	status = "okay";
+};
+
+&nsscc {
+	assigned-clocks = <&nsscc NSS_CC_EPHY_RX_CLK_SRC>,
+			  <&nsscc NSS_CC_EPHY_TX_CLK_SRC>;
+	assigned-clock-parents = <&nsscc NSS_CC_PORT4_RX_DIV_CLK_SRC>,
+				 <&nsscc NSS_CC_PORT4_TX_DIV_CLK_SRC>;
+};
+
+&tlmm {
+	qup_i2c2_default: qup-i2c2-default-state {
+		qup_i2c2_scl {
+			pins = "gpio52";
+			function = "qup_se5_l01";
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+
+		qup_i2c2_sda {
+			pins = "gpio53";
+			function = "qup_se5_l11";
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+	};
+
+	phy_led0: phy-led0-state {
+		pins = "gpio23";
+		function = "Led00";
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+
+	mdio-state {
+		mux_0 {
+			drive-strength = <4>;
+		};
+
+		mux_1 {
+			drive-strength = <4>;
+		};
+	};
+};

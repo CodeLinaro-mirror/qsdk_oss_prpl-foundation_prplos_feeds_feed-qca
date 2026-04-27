@@ -1,0 +1,30 @@
+From 8bfa0dc58eeec1232fada68496eedf0b5ff70237 Mon Sep 17 00:00:00 2001
+From: Krithi D Shetty <kdshetty@qti.qualcomm.com>
+Date: Wed, 5 Nov 2025 14:27:11 +0530
+Subject: [PATCH] net: Enable IGMPv3 and MLDv2 by default
+
+Change-Id: I455147283d718941e2c4fd2f44d999a27ed2c1bf
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ net/bridge/br_multicast.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
+index 65d18dba889c..e1781fded7a8 100644
+--- a/net/bridge/br_multicast.c
++++ b/net/bridge/br_multicast.c
+@@ -4125,9 +4125,9 @@ void br_multicast_ctx_init(struct net_bridge *br,
+ 
+ 	brmctx->ip4_querier.port_ifidx = 0;
+ 	seqcount_spinlock_init(&brmctx->ip4_querier.seq, &br->multicast_lock);
+-	brmctx->multicast_igmp_version = 2;
++	brmctx->multicast_igmp_version = 3;
+ #if IS_ENABLED(CONFIG_IPV6)
+-	brmctx->multicast_mld_version = 1;
++	brmctx->multicast_mld_version = 2;
+ 	brmctx->ip6_querier.port_ifidx = 0;
+ 	seqcount_spinlock_init(&brmctx->ip6_querier.seq, &br->multicast_lock);
+ #endif
+-- 
+2.34.1
+

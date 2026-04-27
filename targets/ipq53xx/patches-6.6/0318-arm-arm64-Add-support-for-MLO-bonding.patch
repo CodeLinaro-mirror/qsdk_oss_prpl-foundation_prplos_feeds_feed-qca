@@ -16,11 +16,11 @@ Signed-off-by: Pavithra R <quic_pavir@quicinc.com>
  include/uapi/linux/if_bonding.h    |   1 +
  4 files changed, 210 insertions(+), 34 deletions(-)
 
-diff --git a/drivers/net/bonding/bond_main.c b/drivers/net/bonding/bond_main.c
-index 4aeae3330a36..11ab1920cacb 100644
---- a/drivers/net/bonding/bond_main.c
-+++ b/drivers/net/bonding/bond_main.c
-@@ -1863,6 +1863,8 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+Index: linux-6.6.116/drivers/net/bonding/bond_main.c
+===================================================================
+--- linux-6.6.116.orig/drivers/net/bonding/bond_main.c	2026-01-23 22:30:26.872156162 +0530
++++ linux-6.6.116/drivers/net/bonding/bond_main.c	2026-01-23 22:48:34.523064975 +0530
+@@ -1909,6 +1909,8 @@
  	int link_reporting;
  	int res = 0, i;
  
@@ -29,7 +29,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  	if (slave_dev->flags & IFF_MASTER &&
  	    !netif_is_bond_master(slave_dev)) {
  		BOND_NL_ERR(bond_dev, extack,
-@@ -1983,13 +1985,17 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+@@ -2029,13 +2031,17 @@
  	call_netdevice_notifiers(NETDEV_JOIN, slave_dev);
  
  	/* If this is the first slave, then we need to set the master's hardware
@@ -53,7 +53,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  	}
  
  	new_slave = bond_alloc_slave(bond, slave_dev);
-@@ -2018,18 +2024,21 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+@@ -2064,31 +2070,34 @@
  	bond_hw_addr_copy(new_slave->perm_hwaddr, slave_dev->dev_addr,
  			  slave_dev->addr_len);
  
@@ -63,31 +63,55 @@ index 4aeae3330a36..11ab1920cacb 100644
 -		 * set the master's mac address to that of the first slave
 -		 */
 -		memcpy(ss.__data, bond_dev->dev_addr, bond_dev->addr_len);
--		ss.ss_family = slave_dev->type;
--		res = dev_set_mac_address(slave_dev, (struct sockaddr *)&ss,
--					  extack);
--		if (res) {
--			slave_err(bond_dev, slave_dev, "Error %d calling set_mac_address\n", res);
--			goto err_restore_mtu;
+-	} else if (bond->params.fail_over_mac == BOND_FOM_FOLLOW &&
+-		   BOND_MODE(bond) == BOND_MODE_ACTIVEBACKUP &&
+-		   bond_has_slaves(bond) &&
+-		   memcmp(slave_dev->dev_addr, bond_dev->dev_addr, bond_dev->addr_len) == 0) {
+-		/* Set slave to random address to avoid duplicate mac
+-		 * address in later fail over.
+-		 */
+-		eth_random_addr(ss.__data);
+-	} else {
+-		goto skip_mac_set;
+-	}
 +	/* Set slave to master's mac address except for BOND_MODE_MLO
 +	 * as for MLO mode master's mac address is not same as slave's mac address.
 +	 * The application already set the master's mac address to that of the first slave
 +	 */
 +	if (BOND_MODE(bond) != BOND_MODE_MLO) {
 +		if (!bond->params.fail_over_mac ||
-+		    BOND_MODE(bond) != BOND_MODE_ACTIVEBACKUP) {
++	    	BOND_MODE(bond) != BOND_MODE_ACTIVEBACKUP) {
 +			memcpy(ss.__data, bond_dev->dev_addr, bond_dev->addr_len);
-+			ss.ss_family = slave_dev->type;
-+			res = dev_set_mac_address(slave_dev, (struct sockaddr *)&ss,
-+					extack);
-+			if (res) {
-+				slave_err(bond_dev, slave_dev, "Error %d calling set_mac_address\n", res);
-+				goto err_restore_mtu;
-+			}
- 		}
- 	}
++		} else if (bond->params.fail_over_mac == BOND_FOM_FOLLOW &&
++		   	BOND_MODE(bond) == BOND_MODE_ACTIVEBACKUP &&
++		   	bond_has_slaves(bond) &&
++		   	memcmp(slave_dev->dev_addr, bond_dev->dev_addr, bond_dev->addr_len) == 0) {
++			/* Set slave to random address to avoid duplicate mac
++		 	 * address in later fail over.
++		 	 */
++			eth_random_addr(ss.__data);
++		} else {
++			goto skip_mac_set;
++		}
  
-@@ -2386,6 +2395,7 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+-	ss.ss_family = slave_dev->type;
+-	res = dev_set_mac_address(slave_dev, (struct sockaddr *)&ss, extack);
+-	if (res) {
+-		slave_err(bond_dev, slave_dev, "Error %d calling set_mac_address\n", res);
+-		goto err_restore_mtu;
+-	}
++		ss.ss_family = slave_dev->type;
++		res = dev_set_mac_address(slave_dev, (struct sockaddr *)&ss, extack);
++		if (res) {
++			slave_err(bond_dev, slave_dev, "Error %d calling set_mac_address\n", res);
++			goto err_restore_mtu;
++		}
+ 
++	}
+ skip_mac_set:
+ 
+ 	/* set no_addrconf flag before open to prevent IPv6 addrconf */
+@@ -2448,6 +2457,7 @@
  
  	return res;
  }
@@ -95,7 +119,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  
  /* Try to release the slave device <slave> from the bond device <master>
   * It is legal to access curr_active_slave without a lock because all the function
-@@ -2581,6 +2591,7 @@ int bond_release(struct net_device *bond_dev, struct net_device *slave_dev)
+@@ -2649,6 +2659,7 @@
  {
  	return __bond_release_one(bond_dev, slave_dev, false, false);
  }
@@ -103,7 +127,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  
  /* First release a slave and then destroy the bond if no more slaves are left.
   * Must be under rtnl_lock when this function is called.
-@@ -2602,6 +2613,29 @@ static int bond_release_and_destroy(struct net_device *bond_dev,
+@@ -2670,6 +2681,29 @@
  	return ret;
  }
  
@@ -133,7 +157,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  static void bond_info_query(struct net_device *bond_dev, struct ifbond *info)
  {
  	struct bonding *bond = netdev_priv(bond_dev);
-@@ -4251,6 +4285,24 @@ static struct net_device *bond_xor_get_tx_dev(struct sk_buff *skb,
+@@ -4314,6 +4348,24 @@
  	return NULL;
  }
  
@@ -158,7 +182,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  /* bond_get_tx_dev - Calculate egress interface for a given packet.
   *
   * Supports 802.3AD and balance-xor modes
-@@ -4291,6 +4343,9 @@ struct net_device *bond_get_tx_dev(struct sk_buff *skb, uint8_t *src_mac,
+@@ -4354,6 +4406,9 @@
  		return bond_3ad_get_tx_dev(skb, src_mac, dst_mac,
  					   src, dst, protocol,
  					   bond_dev, layer4hdr);
@@ -168,7 +192,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  	default:
  		return NULL;
  	}
-@@ -5031,20 +5086,26 @@ static int bond_set_mac_address(struct net_device *bond_dev, void *addr)
+@@ -5094,20 +5149,26 @@
  	if (!is_valid_ether_addr(ss->__data))
  		return -EADDRNOTAVAIL;
  
@@ -209,7 +233,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  		}
  	}
  
-@@ -5689,6 +5750,27 @@ static netdev_tx_t bond_tls_device_xmit(struct bonding *bond, struct sk_buff *sk
+@@ -5752,6 +5813,27 @@
  }
  #endif
  
@@ -237,7 +261,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  static netdev_tx_t __bond_start_xmit(struct sk_buff *skb, struct net_device *dev)
  {
  	struct bonding *bond = netdev_priv(dev);
-@@ -5717,6 +5799,8 @@ static netdev_tx_t __bond_start_xmit(struct sk_buff *skb, struct net_device *dev
+@@ -5780,6 +5862,8 @@
  		return bond_alb_xmit(skb, dev);
  	case BOND_MODE_TLB:
  		return bond_tlb_xmit(skb, dev);
@@ -246,7 +270,7 @@ index 4aeae3330a36..11ab1920cacb 100644
  	default:
  		/* Should never happen, mode already checked */
  		netdev_err(dev, "Unknown bonding mode %d\n", BOND_MODE(bond));
-@@ -6711,6 +6795,70 @@ int bond_create(struct net *net, const char *name)
+@@ -6776,6 +6860,70 @@
  	return res;
  }
  
@@ -317,11 +341,11 @@ index 4aeae3330a36..11ab1920cacb 100644
  static int __net_init bond_net_init(struct net *net)
  {
  	struct bond_net *bn = net_generic(net, bond_net_id);
-diff --git a/drivers/net/bonding/bond_options.c b/drivers/net/bonding/bond_options.c
-index f3f27f0bd2a6..9abd9689840b 100644
---- a/drivers/net/bonding/bond_options.c
-+++ b/drivers/net/bonding/bond_options.c
-@@ -94,6 +94,7 @@ static const struct bond_opt_value bond_mode_tbl[] = {
+Index: linux-6.6.116/drivers/net/bonding/bond_options.c
+===================================================================
+--- linux-6.6.116.orig/drivers/net/bonding/bond_options.c	2026-01-23 22:30:26.872156162 +0530
++++ linux-6.6.116/drivers/net/bonding/bond_options.c	2026-01-23 22:30:26.872156162 +0530
+@@ -96,6 +96,7 @@
  	{ "802.3ad",       BOND_MODE_8023AD,       0},
  	{ "balance-tlb",   BOND_MODE_TLB,          0},
  	{ "balance-alb",   BOND_MODE_ALB,          0},
@@ -329,10 +353,10 @@ index f3f27f0bd2a6..9abd9689840b 100644
  	{ NULL,            -1,                     0},
  };
  
-diff --git a/include/net/bonding.h b/include/net/bonding.h
-index 7cbf28ca7f3f..ac2cd0da8192 100644
---- a/include/net/bonding.h
-+++ b/include/net/bonding.h
+Index: linux-6.6.116/include/net/bonding.h
+===================================================================
+--- linux-6.6.116.orig/include/net/bonding.h	2026-01-23 22:30:26.872156162 +0530
++++ linux-6.6.116/include/net/bonding.h	2026-01-23 22:30:26.872156162 +0530
 @@ -23,6 +23,7 @@
  #include <linux/etherdevice.h>
  #include <linux/reciprocal_div.h>
@@ -341,7 +365,7 @@ index 7cbf28ca7f3f..ac2cd0da8192 100644
  
  #include <net/bond_3ad.h>
  #include <net/bond_alb.h>
-@@ -209,6 +210,20 @@ struct bond_ipsec {
+@@ -211,6 +212,20 @@
  	struct xfrm_state *xs;
  };
  
@@ -362,7 +386,7 @@ index 7cbf28ca7f3f..ac2cd0da8192 100644
  /*
   * Here are the locking policies for the two bonding locks:
   * Get rcu_read_lock when reading or RTNL when writing slave list.
-@@ -264,6 +279,8 @@ struct bonding {
+@@ -266,6 +281,8 @@
  #endif /* CONFIG_XFRM_OFFLOAD */
  	struct bpf_prog *xdp_prog;
  	u32 id;
@@ -371,7 +395,7 @@ index 7cbf28ca7f3f..ac2cd0da8192 100644
  };
  
  #define bond_slave_get_rcu(dev) \
-@@ -644,6 +661,12 @@ static inline __be32 bond_confirm_addr(struct net_device *dev, __be32 dst, __be3
+@@ -667,6 +684,12 @@
  	return addr;
  }
  
@@ -384,7 +408,7 @@ index 7cbf28ca7f3f..ac2cd0da8192 100644
  struct bond_net {
  	struct net		*net;	/* Associated network namespace */
  	struct list_head	dev_list;
-@@ -656,15 +679,18 @@ struct bond_net {
+@@ -679,15 +702,18 @@
  int bond_rcv_validate(const struct sk_buff *skb, struct bonding *bond, struct slave *slave);
  netdev_tx_t bond_dev_queue_xmit(struct bonding *bond, struct sk_buff *skb, struct net_device *slave_dev);
  int bond_create(struct net *net, const char *name);
@@ -405,10 +429,10 @@ index 7cbf28ca7f3f..ac2cd0da8192 100644
  u32 bond_xmit_hash(struct bonding *bond, struct sk_buff *skb);
  int bond_set_carrier(struct bonding *bond);
  void bond_select_active_slave(struct bonding *bond);
-diff --git a/include/uapi/linux/if_bonding.h b/include/uapi/linux/if_bonding.h
-index d174914a837d..7b43536a8670 100644
---- a/include/uapi/linux/if_bonding.h
-+++ b/include/uapi/linux/if_bonding.h
+Index: linux-6.6.116/include/uapi/linux/if_bonding.h
+===================================================================
+--- linux-6.6.116.orig/include/uapi/linux/if_bonding.h	2026-01-23 22:30:26.872156162 +0530
++++ linux-6.6.116/include/uapi/linux/if_bonding.h	2026-01-23 22:30:26.872156162 +0530
 @@ -71,6 +71,7 @@
  #define BOND_MODE_8023AD        4
  #define BOND_MODE_TLB           5
@@ -417,6 +441,3 @@ index d174914a837d..7b43536a8670 100644
  
  /* each slave's link has 4 states */
  #define BOND_LINK_UP    0           /* link is up and running */
--- 
-2.34.1
-

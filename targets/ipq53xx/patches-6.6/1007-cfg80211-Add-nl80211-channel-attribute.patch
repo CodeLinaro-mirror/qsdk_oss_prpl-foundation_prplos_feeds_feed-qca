@@ -1,0 +1,73 @@
+From 1717a753c034e912ff8d1bf01dea32109f2ec0cc Mon Sep 17 00:00:00 2001
+From: Lokitha Thangavel <lthangav@qti.qualcomm.com>
+Date: Tue, 9 Dec 2025 10:30:02 +0530
+Subject: [PATCH] cfg80211: Add nl80211 channel attribute
+
+iw currently derives the channel number from the frequency
+using ieee80211_frequency_to_channel(). For the 4.9 GHz band
+this calculation depends on ChannelMapping table.
+Currently, the channel mapping table only includes US channels.
+As a result, frequencies valid under JP but overlapping with
+US are incorrectly mapped to US channel numbers, leading
+to wrong channel number display in iw dev.
+
+Send the channel number directly via nl80211 so userspace
+does not depend on frequency. Extend nl80211_attrs with a
+new attribute "NL80211_ATTR_CHANNEL" and populate it for
+"NL80211_CMD_GET_INTERFACE".
+
+This allows iw to use the channel number provided by the
+kernel.
+
+Change-Id: Ia474821ff51066d15d1fb0d0def0c3a2f491b4f5
+Signed-off-by: Lokitha Thangavel <lthangav@qti.qualcomm.com>
+---
+ include/uapi/linux/nl80211.h | 3 +++
+ net/wireless/nl80211.c       | 3 +++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/include/uapi/linux/nl80211.h b/include/uapi/linux/nl80211.h
+index 69d03a9c3264..9bb4079ea4a4 100644
+--- a/include/uapi/linux/nl80211.h
++++ b/include/uapi/linux/nl80211.h
+@@ -2880,6 +2880,8 @@ enum nl80211_commands {
+  *
+  * @NL80211_ATTR_MLO_AP_RECONFIG: whether the operation is MLO reconfiguration or not
+  *
++ * @NL80211_ATTR_CHANNEL: (u8) Channel number of the given frequency.
++ *
+  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
+  * @NL80211_ATTR_MAX: highest attribute number currently defined
+  * @__NL80211_ATTR_AFTER_LAST: internal use
+@@ -3434,6 +3436,7 @@ enum nl80211_attrs {
+ 	NL80211_ATTR_RADIO_IFACE = 350,
+ 	NL80211_ATTR_MLO_AP_RECONFIG,
+ 	NL80211_ATTR_MLO_AP_AFC,
++	NL80211_ATTR_CHANNEL,
+ 
+ 	/* add attributes here, update the policy in nl80211.c */
+ 
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 34cd716f94a1..831e6c3cfbf8 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -827,6 +827,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
+ 	[NL80211_ATTR_TSF] = { .type = NLA_U64 },
+ 	[NL80211_ATTR_MLO_AP_RECONFIG] = { .type = NLA_FLAG },
+ 	[NL80211_ATTR_MLO_AP_AFC] = { .type = NLA_FLAG },
++	[NL80211_ATTR_CHANNEL] = { .type = NLA_U8 },
+ };
+ 
+ /* policy for the key attributes */
+@@ -3965,6 +3966,8 @@ int nl80211_send_chandef(struct sk_buff *msg, const struct cfg80211_chan_def *ch
+ 		return -ENOBUFS;
+ 	if (nla_put_u32(msg, NL80211_ATTR_PUNCT_BITMAP, chandef->puncture_bitmap))
+ 		return -ENOBUFS;
++	if (nla_put_u8(msg, NL80211_ATTR_CHANNEL, chandef->chan->hw_value))
++		return -ENOBUFS;
+ 	return 0;
+ }
+ EXPORT_SYMBOL(nl80211_send_chandef);
+-- 
+2.34.1
+

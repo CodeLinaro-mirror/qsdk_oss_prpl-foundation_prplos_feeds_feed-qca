@@ -1,0 +1,38 @@
+From 118acc6910781997178f26ed9c4688f302d22fc0 Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Thu, 11 Dec 2025 15:15:48 +0530
+Subject: [PATCH] mm: kfence: remove MEM_PROFILE specific condition
+
+Remove MEM_PROFILE specific condition and handle
+in openwrt.
+
+Change-Id: I77322a9f6a3525acc9f096d2f533d57516f806cb
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ mm/kfence/core.c | 9 ---------
+ 1 file changed, 9 deletions(-)
+
+diff --git a/mm/kfence/core.c b/mm/kfence/core.c
+index 4721a37e3d9c..f97a758c78bd 100644
+--- a/mm/kfence/core.c
++++ b/mm/kfence/core.c
+@@ -52,16 +52,7 @@
+ static bool kfence_enabled __read_mostly;
+ static bool disabled_by_warn __read_mostly;
+ 
+-/*
+- * For LM256, KFENCE is not supported due to memory constraints.
+- * For LM512, KFENCE can be enabled from bootargs.
+- * For other profiles, KFENCE enabled by default.
+- */
+-#if (CONFIG_IPQ_MEM_PROFILE == 0)
+ unsigned long kfence_sample_interval __read_mostly = CONFIG_KFENCE_SAMPLE_INTERVAL;
+-#else
+-unsigned long kfence_sample_interval __read_mostly;
+-#endif
+ EXPORT_SYMBOL_GPL(kfence_sample_interval); /* Export for test modules. */
+ 
+ #ifdef MODULE_PARAM_PREFIX
+-- 
+2.34.1
+

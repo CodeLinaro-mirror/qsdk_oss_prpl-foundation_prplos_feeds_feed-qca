@@ -1,0 +1,68 @@
+From 8901f4d78b6d6740cd29ea711e60f72f63eafe42 Mon Sep 17 00:00:00 2001
+From: Lei Wei <leiwei@qti.qualcomm.com>
+Date: Thu, 8 Jan 2026 15:03:40 +0800
+Subject: [PATCH] driver: net: dsa: Add QCE2204 MAC and PCS support
+
+Change-Id: I53854049937b30a3466a5c4594cffcae9b14220c
+Signed-off-by: Lei Wei <leiwei@qti.qualcomm.com>
+---
+ drivers/net/dsa/qca/Kconfig  | 1 +
+ drivers/net/dsa/qca/Makefile | 2 +-
+ drivers/net/pcs/Kconfig      | 8 ++++++++
+ drivers/net/pcs/Makefile     | 1 +
+ 4 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/qca/Kconfig b/drivers/net/dsa/qca/Kconfig
+index 281ecc998179..c3010f7ef312 100644
+--- a/drivers/net/dsa/qca/Kconfig
++++ b/drivers/net/dsa/qca/Kconfig
+@@ -29,6 +29,7 @@ config NET_DSA_QCE2204
+ 	tristate "Qualcomm QCE2204 Ethernet switch support"
+ 	depends on NET_DSA
+ 	select NET_DSA_TAG_QCA
++	select PCS_QCE2204
+ 	select REGMAP
+ 	help
+ 	  This enables support for the Qualcomm QCE2204 Ethernet switch chip.
+diff --git a/drivers/net/dsa/qca/Makefile b/drivers/net/dsa/qca/Makefile
+index 47445c36bd31..1a5dd89bd8ea 100644
+--- a/drivers/net/dsa/qca/Makefile
++++ b/drivers/net/dsa/qca/Makefile
+@@ -6,4 +6,4 @@ ifdef CONFIG_NET_DSA_QCA8K_LEDS_SUPPORT
+ qca8k-y				+= qca8k-leds.o
+ endif
+ obj-$(CONFIG_NET_DSA_QCE2204)	+= qce2204_dsa.o
+-qce2204_dsa-y			+= qce2204.o qce2204_ppe.o qce2204_clk.o
++qce2204_dsa-y			+= qce2204.o qce2204_ppe.o qce2204_clk.o qce2204_ppe_mac.o
+diff --git a/drivers/net/pcs/Kconfig b/drivers/net/pcs/Kconfig
+index 87cf308fc6d8..68f38cae0768 100644
+--- a/drivers/net/pcs/Kconfig
++++ b/drivers/net/pcs/Kconfig
+@@ -25,6 +25,14 @@ config PCS_MTK_LYNXI
+ 	  This module provides helpers to phylink for managing the LynxI PCS
+ 	  which is part of MediaTek's SoC and Ethernet switch ICs.
+ 
++config PCS_QCE2204
++	tristate "Qualcomm QCE2204 PCS"
++	help
++	  This module provides a driver for the Qualcomm QCE2204 PCS
++	  (Physical Coding Sublayer) which supports SGMII, 2500BASEX, 10GBASE-R
++	  and USXGMII modes for Ethernet switch ports. This PCS is used by the
++	  QCE2204 DSA switch driver.
++
+ config PCS_RZN1_MIIC
+ 	tristate "Renesas RZ/N1 MII converter"
+ 	depends on OF && (ARCH_RZN1 || COMPILE_TEST)
+diff --git a/drivers/net/pcs/Makefile b/drivers/net/pcs/Makefile
+index fb1694192ae6..b2a78a57f126 100644
+--- a/drivers/net/pcs/Makefile
++++ b/drivers/net/pcs/Makefile
+@@ -6,4 +6,5 @@ pcs_xpcs-$(CONFIG_PCS_XPCS)	:= pcs-xpcs.o pcs-xpcs-nxp.o pcs-xpcs-wx.o
+ obj-$(CONFIG_PCS_XPCS)		+= pcs_xpcs.o
+ obj-$(CONFIG_PCS_LYNX)		+= pcs-lynx.o
+ obj-$(CONFIG_PCS_MTK_LYNXI)	+= pcs-mtk-lynxi.o
++obj-$(CONFIG_PCS_QCE2204)	+= pcs-qce2204.o
+ obj-$(CONFIG_PCS_RZN1_MIIC)	+= pcs-rzn1-miic.o
+-- 
+2.34.1
+

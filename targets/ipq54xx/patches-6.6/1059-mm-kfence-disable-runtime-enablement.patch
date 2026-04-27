@@ -1,0 +1,80 @@
+From a2df422d653ea400d7e6d18b7774ba95492e33b3 Mon Sep 17 00:00:00 2001
+From: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+Date: Thu, 12 Feb 2026 19:46:09 +0530
+Subject: [PATCH] mm: kfence: disable runtime enablement
+
+Disable KFENCE runtime enablement when the KFENCE pool is not allocated
+during boot.
+
+When the KFENCE pool is allocated at boot time, only the pool address
+range is split into 4K pages to mark guard pages as invalid. All other
+regions remain mapped using block (flat) mappings.
+
+If the pool is allocated at runtime, it can reside anywhere in the
+linear map. This requires converting the entire linear map to
+NO_BLOCK mappings, which significantly degrades performance due to
+increased page table walks.
+
+As a workaround, disable runtime enablement when the KFENCE pool is not
+allocated during boot. This avoids the performance penalty while still
+allowing KFENCE to be enabled or disabled at runtime when boot-time
+allocation is used.
+
+Change-Id: Ic67416235cd8a92feaf4de7e4b6e0f2d27e69508
+Signed-off-by: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+---
+ arch/arm64/include/asm/kfence.h | 6 +++++-
+ mm/kfence/core.c                | 6 +++---
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/include/asm/kfence.h b/arch/arm64/include/asm/kfence.h
+index a81937fae9f6..70eb8fa448e8 100644
+--- a/arch/arm64/include/asm/kfence.h
++++ b/arch/arm64/include/asm/kfence.h
+@@ -23,7 +23,11 @@ static inline bool kfence_protect_page(unsigned long addr, bool protect)
+ extern bool kfence_early_init;
+ static inline bool arm64_kfence_can_set_direct_map(void)
+ {
+-	return !kfence_early_init;
++	/*
++	 * To avoid NO_{BLOCK|FLAT}_MAPPINGS when kfence is not enabled
++	 * during bootup time.
++	 */
++	return false;
+ }
+ #else /* CONFIG_KFENCE */
+ static inline bool arm64_kfence_can_set_direct_map(void) { return false; }
+diff --git a/mm/kfence/core.c b/mm/kfence/core.c
+index f97a758c78bd..d59a76559e14 100644
+--- a/mm/kfence/core.c
++++ b/mm/kfence/core.c
+@@ -78,7 +78,7 @@ static int param_set_sample_interval(const char *val, const struct kernel_param
+ 	*((unsigned long *)kp->arg) = num;
+ 
+ 	if (num && !READ_ONCE(kfence_enabled) && system_state != SYSTEM_BOOTING)
+-		return disabled_by_warn ? -EINVAL : kfence_enable_late();
++		return disabled_by_warn ? -EINVAL : -EOPNOTSUPP;
+ 	return 0;
+ }
+ 
+@@ -908,7 +908,7 @@ void __init kfence_init(void)
+ 	kfence_init_enable();
+ }
+ 
+-static int kfence_init_late(void)
++static int __maybe_unused kfence_init_late(void)
+ {
+ 	const unsigned long nr_pages_pool = KFENCE_POOL_SIZE / PAGE_SIZE;
+ 	const unsigned long nr_pages_meta = KFENCE_METADATA_SIZE / PAGE_SIZE;
+@@ -975,7 +975,7 @@ static int kfence_init_late(void)
+ 	return err;
+ }
+ 
+-static int kfence_enable_late(void)
++static int __maybe_unused kfence_enable_late(void)
+ {
+ 	if (!__kfence_pool)
+ 		return kfence_init_late();
+-- 
+2.34.1
+

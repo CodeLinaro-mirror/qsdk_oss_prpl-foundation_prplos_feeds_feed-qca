@@ -32,6 +32,24 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	regulator_fixed_3p3: s3300 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_3p3";
+	};
+
+	regulator_fixed_0p925: s0925 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <925000>;
+		regulator-max-microvolt = <925000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_0p925";
+	};
+
 	soc@0 {
 		nss-macsec0 {
 			compatible = "qcom,nss-macsec";
@@ -77,10 +95,7 @@
 			qcom,id = <1>;
 			reg = <0x3a500000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,phy-mdio-addr = <1>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "qusgmii";
 		};
 
 		dp2 {
@@ -89,10 +104,7 @@
 			qcom,id = <2>;
 			reg = <0x3a504000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,phy-mdio-addr = <2>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "qusgmii";
 		};
 
 		dp3 {
@@ -101,10 +113,7 @@
 			qcom,id = <3>;
 			reg = <0x3a508000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,phy-mdio-addr = <3>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "qusgmii";
 		};
 
 		dp4 {
@@ -113,10 +122,7 @@
 			qcom,id = <4>;
 			reg = <0x3a50c000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,phy-mdio-addr = <4>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "qusgmii";
 		};
 
 		dp5 {
@@ -125,10 +131,7 @@
 			qcom,id = <5>;
 			reg = <0x3a510000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <8>;
-			phy-mode = "usxgmii";
 		};
 
 		dp6 {
@@ -137,10 +140,7 @@
 			qcom,id = <6>;
 			reg = <0x3a514000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <0>;
-			phy-mode = "usxgmii";
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -269,6 +269,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x58800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x01>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <2>;
@@ -324,6 +330,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x8A800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x04>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <0>;
@@ -373,6 +385,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0xBC800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			 qcom,caldb_size = <0x800000>;
 			 qcom,board_id = <0x02>;
 			 qcom,wsi = <&wsi>;
 			 qcom,wsi_index = <1>;
@@ -417,6 +435,9 @@
 };
 
 &qusb_phy_0 {
+	vdd-supply = <&regulator_fixed_0p925>;
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-dpdm-supply = <&regulator_fixed_3p3>;
 	status = "okay";
 };
 
@@ -478,6 +499,8 @@
 };
 
 &ssphy_0 {
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-supply = <&regulator_fixed_0p925>;
 	status = "okay";
 };
 
@@ -507,6 +530,13 @@
 			regulator-max-microvolt = <9>;
 			regulator-always-on;
 		};
+
+		mp5496_l5: l5 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
 	};
 };
 
@@ -516,7 +546,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-down;
-		output-low;
 	};
 
 	pci2_pin: pci2-default-state {
@@ -524,7 +553,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-down;
-		output-low;
 	};
 
 	pci3_pin: pci3-default-state {
@@ -532,7 +560,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	i2c_3_pins: i2c-3-pins {
@@ -691,28 +718,40 @@
 		port@0 {
 			port_id = <1>;
 			phy_address = <1>;
+			phy-handle = <&phy0>;
+			phy-mode = "qusgmii";
 		};
 		port@1 {
 			port_id = <2>;
 			phy_address = <2>;
+			phy-handle = <&phy1>;
+			phy-mode = "qusgmii";
 		};
 		port@2 {
 			port_id = <3>;
 			phy_address = <3>;
+			phy-handle = <&phy2>;
+			phy-mode = "qusgmii";
 		};
 		port@3 {
 			port_id = <4>;
 			phy_address = <4>;
+			phy-handle = <&phy3>;
+			phy-mode = "qusgmii";
 		};
 		port@4 {
 			port_id = <5>;
 			phy_address = <8>;
 			ethernet-phy-ieee802.3-c45;
+			phy-handle = <&phy4>;
+			phy-mode = "usxgmii";
 		};
 		port@5 {
 			port_id = <6>;
 			phy_address = <0>;
 			ethernet-phy-ieee802.3-c45;
+			phy-handle = <&phy5>;
+			phy-mode = "usxgmii";
 		};
 	};
 

@@ -485,9 +485,15 @@
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 			memory-region = <&qcn9224_pcie2>, <&mhi_region2>, <&mlo_global_mem0>;
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
-			qcom,early_cal_enabled = "okay";
+			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x12000>;
-			qcom,board_id = <0x28>;
+			qcom,board_id = <0x29>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <1>;
 			ports {
@@ -532,9 +538,15 @@
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 			memory-region = <&qcn9224_pcie3>, <&mhi_region3>, <&mlo_global_mem0>;
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
-			qcom,early_cal_enabled = "okay";
+			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x2E800>;
-			qcom,board_id = <0x29>;
+			qcom,board_id = <0x28>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <2>;
 			ports {
@@ -590,12 +602,6 @@
 	status = "okay";
 };
 
-#if !defined(__RPROC_DISABLE_MPD_SUPPORT__)
-&userpd_1 {
-	status = "okay";
-};
-#endif
-
 &tlmm {
 	gpio_leds_default: gpio-leds-default-state {
 		pins = "gpio42";
@@ -610,7 +616,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -620,7 +625,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -630,7 +634,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -640,7 +643,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -786,10 +788,8 @@
 &wifi0 {
 	qcom,rproc = <&q6v5_wcss>;
 	qcom,tgt-mem-mode = <0>;
-	memory-region = <&q6_region>, <&q6_region>, <&q6_ipq5424_data>, <&m3_dump>,
-			<&mlo_global_mem0>, <&q6_etr_region>;
-	memory-region-names = "q6-region", "q6-region-1", "host-ddr-mem","m3-dump",
-			      "mlo-global-mem", "q6-etr-dump";
+	memory-region = <&q6_region>, <&q6_ipq5424_data>, <&mlo_global_mem0>;
+	memory-region-names = "q6-region", "host-ddr-mem", "mlo-global-mem";
 	qcom,wsi = <&wsi>;
 	qcom,wsi_index = <0>;
 	qcom,board_id = <0x13>;
@@ -820,14 +820,14 @@
 
 &wifi3 {
 	hremote_node = <&qcn9224_pcie2>;
-	board_id = <0x28>;
+	board_id = <0x29>;
 	hw_link_id = <1 0>;
 	status = "okay";
 };
 
 &wifi4 {
 	hremote_node = <&qcn9224_pcie3>;
-	board_id = <0x29>;
+	board_id = <0x28>;
 	hw_link_id = <2 0>;
 	status = "okay";
 };

@@ -1,0 +1,62 @@
+From da9c0cb7b2b2e9ce76c343dd994c86b6af711fdd Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Fri, 23 Jan 2026 11:10:37 +0530
+Subject: [PATCH] thermal: qcom: Introducing ops for hot trip type and
+ set_trip_hyst
+
+In order to support thermal-engine we are enabling the 'hot' trip
+type and introducing dummy ops for handling the hot trip and
+setting hysteresis from thermal-engine. The upper and lower
+threshold update requests from the thermal-engine will be
+updated into the kernel thermal trip list via the sysfs store
+methods - trip_point_temp_store and trip_point_hyst_store. Thermal
+framework will pick these values and update it in the registers.
+
+All the trips in the device tree with trip type as 'hot' will be
+handled by thermal-engine through the events posted by thermal
+netlink layer and hence the corresponding ops handler for hot trip
+type within the tsens driver will be left dummy.
+
+Change-Id: Iea7be56fc4fee56a472215433668dd5f588282c0
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/thermal/qcom/tsens.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/thermal/qcom/tsens.c b/drivers/thermal/qcom/tsens.c
+index 9eb028cb2696..903070193f17 100644
+--- a/drivers/thermal/qcom/tsens.c
++++ b/drivers/thermal/qcom/tsens.c
+@@ -921,6 +921,20 @@ static int __maybe_unused tsens_set_trips(struct thermal_zone_device *tz, int lo
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_CPU_THERMAL
++static void tsens_hot_trip(struct thermal_zone_device *tz)
++{
++	/* Do Nothing */
++}
++
++static int tsens_set_trip_hysteresis(struct thermal_zone_device *tz, int trip,
++				     int temperature)
++{
++	/* Do nothing */
++	return 0;
++}
++#endif
++
+ static int tsens_enable_irq(struct tsens_priv *priv)
+ {
+ 	int ret;
+@@ -1363,6 +1377,8 @@ static const struct thermal_zone_device_ops tsens_of_ops = {
+ 	.critical = tsens_critical,
+ #ifdef CONFIG_CPU_THERMAL
+ 	.set_trips = tsens_set_trips,
++	.set_trip_hyst = tsens_set_trip_hysteresis,
++	.hot = tsens_hot_trip,
+ #else
+ 	.set_trip_temp = tsens_set_trip_temp,
+ 	.set_trip_activate = tsens_set_trip_activate,
+-- 
+2.34.1
+

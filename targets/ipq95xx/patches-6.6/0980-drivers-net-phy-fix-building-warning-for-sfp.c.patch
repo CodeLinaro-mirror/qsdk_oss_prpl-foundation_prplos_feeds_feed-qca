@@ -1,0 +1,30 @@
+From 0f80bfa33a9f73716ea6fa845020c95218596fc6 Mon Sep 17 00:00:00 2001
+From: zhongjia <zhongjia@qti.qualcomm.com>
+Date: Wed, 5 Nov 2025 00:34:21 +0800
+Subject: [PATCH] drivers: net: phy: fix building warning for sfp.c
+
+Change-Id: I11fd3b8fb557f62ed4f552d2461ee816423bf437
+Signed-off-by: zhongjia <zhongjia@qti.qualcomm.com>
+---
+ drivers/net/phy/sfp.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
+index c02409b620e2..5988204c501d 100644
+--- a/drivers/net/phy/sfp.c
++++ b/drivers/net/phy/sfp.c
+@@ -1896,6 +1896,11 @@ static int sfp_sm_probe_for_phy(struct sfp *sfp)
+ 
+ 	switch (sfp->mdio_protocol) {
+ 	case MDIO_I2C_NONE:
++	/* MDIO_I2C_QCOM is specific for QCOM I2C PHY and does not require
++	* standard PHY probing as the PHY is handled through a different
++	* mechanism specific to the QCOM platform.
++	*/
++	case MDIO_I2C_QCOM:
+ 		break;
+ 
+ 	case MDIO_I2C_MARVELL_C22:
+-- 
+2.34.1
+

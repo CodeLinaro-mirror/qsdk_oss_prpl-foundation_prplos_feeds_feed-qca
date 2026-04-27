@@ -1,0 +1,93 @@
+From 9c567f03b942d8915e109edb283255896eee30e4 Mon Sep 17 00:00:00 2001
+From: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+Date: Wed, 31 Dec 2025 12:21:18 +0530
+Subject: [PATCH] drivers: bus: mhi: Add BHIE_DEBUG_n registers to
+ mhi_debug_reg_dump
+
+Add 11 BHIE_DEBUG_n to mhi_debug_reg_dump to be dumped along with
+other debug registers.
+
+Change-Id: If67b17f5ddbd3ef8c9e55a2229490ff84d39ce5d
+Signed-off-by: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+---
+ drivers/bus/mhi/common.h        |  1 +
+ drivers/bus/mhi/host/internal.h |  1 +
+ drivers/bus/mhi/host/main.c     | 31 +++++++++++++++++++++++++++++++
+ 3 files changed, 33 insertions(+)
+
+diff --git a/drivers/bus/mhi/common.h b/drivers/bus/mhi/common.h
+index f794b9c8049e..2aa99d2e6f9f 100644
+--- a/drivers/bus/mhi/common.h
++++ b/drivers/bus/mhi/common.h
+@@ -37,6 +37,7 @@
+ #define MHIDATABASE_HIGHER		0x9c
+ #define MHIDATALIMIT_LOWER		0xa0
+ #define MHIDATALIMIT_HIGHER		0xa4
++#define BHIE_DEBUG_OFFS(n)		(0xc0 + (0x4 * (n)))
+ 
+ /* MHI BHI registers */
+ #define BHI_BHIVERSION_MINOR		0x00
+diff --git a/drivers/bus/mhi/host/internal.h b/drivers/bus/mhi/host/internal.h
+index c5a28d4046c6..e239a6de957c 100644
+--- a/drivers/bus/mhi/host/internal.h
++++ b/drivers/bus/mhi/host/internal.h
+@@ -18,6 +18,7 @@ extern struct bus_type mhi_bus_type;
+ #define QCN9XXX_FAMILY_NUM				(0x4)
+ #define QCN9224_DEVICE_NUM				(0x1A)
+ #define QCN9625_DEVICE_NUM				(0x47)
++#define QCN9589_DEVICE_NUM				(0x49)
+ #define SOC_HW_VERSION_OFFS				0x224
+ #define SOC_HW_VERSION_FAM_NUM_BMSK			GENMASK(31, 28)
+ #define SOC_HW_VERSION_DEV_NUM_BMSK			GENMASK(27, 16)
+diff --git a/drivers/bus/mhi/host/main.c b/drivers/bus/mhi/host/main.c
+index 540701267306..d9ddba48987d 100644
+--- a/drivers/bus/mhi/host/main.c
++++ b/drivers/bus/mhi/host/main.c
+@@ -1768,6 +1768,24 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl)
+ 		{ "BHIE_IMGTXDB", BHI_IMGTXDB, bhie_base},
+ 		{ NULL },
+ 	};
++	struct {
++		const char *name;
++		int offset;
++		void *base;
++	} debug_reg_extended[] = {
++		{ "BHIE_DEBUG_0", BHIE_DEBUG_OFFS(0), mhi_base},
++		{ "BHIE_DEBUG_1", BHIE_DEBUG_OFFS(1), mhi_base},
++		{ "BHIE_DEBUG_2", BHIE_DEBUG_OFFS(2), mhi_base},
++		{ "BHIE_DEBUG_3", BHIE_DEBUG_OFFS(3), mhi_base},
++		{ "BHIE_DEBUG_4", BHIE_DEBUG_OFFS(4), mhi_base},
++		{ "BHIE_DEBUG_5", BHIE_DEBUG_OFFS(5), mhi_base},
++		{ "BHIE_DEBUG_6", BHIE_DEBUG_OFFS(6), mhi_base},
++		{ "BHIE_DEBUG_7", BHIE_DEBUG_OFFS(7), mhi_base},
++		{ "BHIE_DEBUG_8", BHIE_DEBUG_OFFS(8), mhi_base},
++		{ "BHIE_DEBUG_9", BHIE_DEBUG_OFFS(9), mhi_base},
++		{ "BHIE_DEBUG_10", BHIE_DEBUG_OFFS(10), mhi_base},
++		{ NULL },
++	};
+ 
+ 	dev_info(&mhi_cntrl->mhi_dev->dev,
+ 		 "host pm_state:%s dev_state:%s ee:%s\n",
+@@ -1799,6 +1817,19 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl)
+ 			 "reg:%s val:0x%x, ret:%d\n", debug_reg[i].name, val,
+ 			 ret);
+ 	}
++
++	if (mhi_cntrl->device_number == QCN9625_DEVICE_NUM ||
++	    mhi_cntrl->device_number == QCN9589_DEVICE_NUM) {
++		for (i = 0; debug_reg_extended[i].name; i++) {
++			if (!debug_reg_extended[i].base)
++				continue;
++
++			ret = mhi_read_reg(mhi_cntrl, debug_reg_extended[i].base,
++					   debug_reg_extended[i].offset, &val);
++			dev_info(&mhi_cntrl->mhi_dev->dev, "reg:%s val:0x%x, ret:%d\n",
++				 debug_reg_extended[i].name, val, ret);
++		}
++	}
+ }
+ EXPORT_SYMBOL_GPL(mhi_debug_reg_dump);
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,197 @@
+From fafc11573466f5b2550037c0e51cac43e6db9af8 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+Date: Thu, 17 Apr 2025 22:46:29 +0530
+Subject: [PATCH] PCI: host-common: Make the driver as a common library for
+ host controller drivers
+
+This common library will be used as a placeholder for helper functions
+shared by the host controller drivers. This avoids placing the host
+controller drivers specific helpers in drivers/pci/*.c, to avoid enlarging
+the kernel Image on platforms that do not use host controller drivers at
+all (like x86/ACPI platforms).
+
+Suggested-by: Lukas Wunner <lukas@wunner.de>
+Change-Id: Ie5ca5c4c84b9c25db6a3c96583fee94878febb14
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+---
+ drivers/pci/controller/Kconfig               |  8 ++++----
+ drivers/pci/controller/dwc/pcie-hisi.c       |  1 +
+ drivers/pci/controller/pci-host-common.c     |  5 ++++-
+ drivers/pci/controller/pci-host-common.h     | 16 ++++++++++++++++
+ drivers/pci/controller/pci-host-generic.c    |  2 ++
+ drivers/pci/controller/pci-thunder-ecam.c    |  2 ++
+ drivers/pci/controller/pci-thunder-pem.c     |  1 +
+ drivers/pci/controller/pcie-apple.c          |  2 ++
+ drivers/pci/controller/pcie-microchip-host.c |  1 +
+ include/linux/pci-ecam.h                     |  5 -----
+ 10 files changed, 33 insertions(+), 10 deletions(-)
+ create mode 100644 drivers/pci/controller/pci-host-common.h
+
+diff --git a/drivers/pci/controller/Kconfig b/drivers/pci/controller/Kconfig
+index c0c3f2824990..7a18fe6aad2d 100644
+--- a/drivers/pci/controller/Kconfig
++++ b/drivers/pci/controller/Kconfig
+@@ -3,6 +3,10 @@
+ menu "PCI controller drivers"
+ 	depends on PCI
+ 
++config PCI_HOST_COMMON
++	tristate
++	select PCI_ECAM
++
+ config PCI_AARDVARK
+ 	tristate "Aardvark PCIe controller"
+ 	depends on (ARCH_MVEBU && ARM64) || COMPILE_TEST
+@@ -119,10 +123,6 @@ config PCI_FTPCI100
+ 	depends on OF
+ 	default ARCH_GEMINI
+ 
+-config PCI_HOST_COMMON
+-	tristate
+-	select PCI_ECAM
+-
+ config PCI_HOST_GENERIC
+ 	tristate "Generic PCI host controller"
+ 	depends on OF
+diff --git a/drivers/pci/controller/dwc/pcie-hisi.c b/drivers/pci/controller/dwc/pcie-hisi.c
+index 8904b5b85ee5..3c17897e56fc 100644
+--- a/drivers/pci/controller/dwc/pcie-hisi.c
++++ b/drivers/pci/controller/dwc/pcie-hisi.c
+@@ -15,6 +15,7 @@
+ #include <linux/pci-acpi.h>
+ #include <linux/pci-ecam.h>
+ #include "../../pci.h"
++#include "../pci-host-common.h"
+ 
+ #if defined(CONFIG_PCI_HISI) || (defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS))
+ 
+diff --git a/drivers/pci/controller/pci-host-common.c b/drivers/pci/controller/pci-host-common.c
+index 6be3266cd7b5..d116906b00a2 100644
+--- a/drivers/pci/controller/pci-host-common.c
++++ b/drivers/pci/controller/pci-host-common.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /*
+- * Generic PCI host driver common code
++ * Common library for PCI host controller drivers
+  *
+  * Copyright (C) 2014 ARM Limited
+  *
+@@ -15,6 +15,8 @@
+ #include <linux/pci-ecam.h>
+ #include <linux/platform_device.h>
+ 
++#include "pci-host-common.h"
++
+ static void gen_pci_unmap_cfg(void *ptr)
+ {
+ 	pci_ecam_free((struct pci_config_window *)ptr);
+@@ -98,4 +100,5 @@ int pci_host_common_remove(struct platform_device *pdev)
+ }
+ EXPORT_SYMBOL_GPL(pci_host_common_remove);
+ 
++MODULE_DESCRIPTION("Common library for PCI host controller drivers");
+ MODULE_LICENSE("GPL v2");
+diff --git a/drivers/pci/controller/pci-host-common.h b/drivers/pci/controller/pci-host-common.h
+new file mode 100644
+index 000000000000..d8be024ca68d
+--- /dev/null
++++ b/drivers/pci/controller/pci-host-common.h
+@@ -0,0 +1,16 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Common library for PCI host controller drivers
++ *
++ * Copyright (C) 2014 ARM Limited
++ *
++ * Author: Will Deacon <will.deacon@arm.com>
++ */
++
++#ifndef _PCI_HOST_COMMON_H
++#define _PCI_HOST_COMMON_H
++
++int pci_host_common_probe(struct platform_device *pdev);
++void pci_host_common_remove(struct platform_device *pdev);
++
++#endif
+diff --git a/drivers/pci/controller/pci-host-generic.c b/drivers/pci/controller/pci-host-generic.c
+index 63865aeb636b..558fd99468b0 100644
+--- a/drivers/pci/controller/pci-host-generic.c
++++ b/drivers/pci/controller/pci-host-generic.c
+@@ -14,6 +14,8 @@
+ #include <linux/pci-ecam.h>
+ #include <linux/platform_device.h>
+ 
++#include "pci-host-common.h"
++
+ static const struct pci_ecam_ops gen_pci_cfg_cam_bus_ops = {
+ 	.bus_shift	= 16,
+ 	.pci_ops	= {
+diff --git a/drivers/pci/controller/pci-thunder-ecam.c b/drivers/pci/controller/pci-thunder-ecam.c
+index b5bd10a62adb..9428b44f29e9 100644
+--- a/drivers/pci/controller/pci-thunder-ecam.c
++++ b/drivers/pci/controller/pci-thunder-ecam.c
+@@ -11,6 +11,8 @@
+ #include <linux/pci-ecam.h>
+ #include <linux/platform_device.h>
+ 
++#include "pci-host-common.h"
++
+ #if defined(CONFIG_PCI_HOST_THUNDER_ECAM) || (defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS))
+ 
+ static void set_val(u32 v, int where, int size, u32 *val)
+diff --git a/drivers/pci/controller/pci-thunder-pem.c b/drivers/pci/controller/pci-thunder-pem.c
+index 06a9855cb431..6de523347c26 100644
+--- a/drivers/pci/controller/pci-thunder-pem.c
++++ b/drivers/pci/controller/pci-thunder-pem.c
+@@ -14,6 +14,7 @@
+ #include <linux/platform_device.h>
+ #include <linux/io-64-nonatomic-lo-hi.h>
+ #include "../pci.h"
++#include "pci-host-common.h"
+ 
+ #if defined(CONFIG_PCI_HOST_THUNDER_PEM) || (defined(CONFIG_ACPI) && defined(CONFIG_PCI_QUIRKS))
+ 
+diff --git a/drivers/pci/controller/pcie-apple.c b/drivers/pci/controller/pcie-apple.c
+index f7a248393a8f..e529e5d5b309 100644
+--- a/drivers/pci/controller/pcie-apple.c
++++ b/drivers/pci/controller/pcie-apple.c
+@@ -30,6 +30,8 @@
+ #include <linux/of_irq.h>
+ #include <linux/pci-ecam.h>
+ 
++#include "pci-host-common.h"
++
+ #define CORE_RC_PHYIF_CTL		0x00024
+ #define   CORE_RC_PHYIF_CTL_RUN		BIT(0)
+ #define CORE_RC_PHYIF_STAT		0x00028
+diff --git a/drivers/pci/controller/pcie-microchip-host.c b/drivers/pci/controller/pcie-microchip-host.c
+index 137fb8570ba2..1b926e06d235 100644
+--- a/drivers/pci/controller/pcie-microchip-host.c
++++ b/drivers/pci/controller/pcie-microchip-host.c
+@@ -19,6 +19,7 @@
+ #include <linux/platform_device.h>
+ 
+ #include "../pci.h"
++#include "../pci-host-common.h"
+ 
+ /* Number of MSI IRQs */
+ #define MC_MAX_NUM_MSI_IRQS			32
+diff --git a/include/linux/pci-ecam.h b/include/linux/pci-ecam.h
+index 6b1301e2498e..bf699b1337bf 100644
+--- a/include/linux/pci-ecam.h
++++ b/include/linux/pci-ecam.h
+@@ -90,9 +90,4 @@ extern const struct pci_ecam_ops tegra194_pcie_ops; /* Tegra194 PCIe */
+ extern const struct pci_ecam_ops loongson_pci_ecam_ops; /* Loongson PCIe */
+ #endif
+ 
+-#if IS_ENABLED(CONFIG_PCI_HOST_COMMON)
+-/* for DT-based PCI controllers that support ECAM */
+-int pci_host_common_probe(struct platform_device *pdev);
+-int pci_host_common_remove(struct platform_device *pdev);
+-#endif
+ #endif
+-- 
+2.34.1
+

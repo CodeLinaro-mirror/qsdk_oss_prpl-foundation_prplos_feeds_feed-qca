@@ -1,0 +1,215 @@
+From b07413a86d47025d51fff9a2d0da7b950d3852ab Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Mon, 29 Dec 2025 15:03:24 +0530
+Subject: [PATCH] drivers: ipq9650: Rename chipset reference in file
+
+Update the file to replace the chipset reference
+from ipq9679 to ipq9650 for consistency.
+
+Change-Id: I8193e686540d188812674034317d955b20aadab9
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ arch/arm/mach-qcom/Kconfig             |  4 ++--
+ drivers/clk/qcom/Kconfig               | 16 ++++++++--------
+ drivers/clk/qcom/Makefile              |  4 ++--
+ drivers/firmware/qcom_scm.c            |  4 ++--
+ drivers/mmc/core/core.c                |  6 +++---
+ drivers/mtd/nand/raw/qcom_nandc.c      |  6 +++---
+ drivers/pci/controller/dwc/pcie-qcom.c |  2 +-
+ drivers/pinctrl/qcom/Kconfig.msm       |  8 ++++----
+ drivers/pinctrl/qcom/Makefile          |  2 +-
+ 9 files changed, 26 insertions(+), 26 deletions(-)
+
+diff --git a/arch/arm/mach-qcom/Kconfig b/arch/arm/mach-qcom/Kconfig
+index 8a6773c1b0bd..2d3f7d3ca5c4 100644
+--- a/arch/arm/mach-qcom/Kconfig
++++ b/arch/arm/mach-qcom/Kconfig
+@@ -21,8 +21,8 @@ config ARCH_IPQ5424
+ 	bool "Enable support for IPQ5424"
+ 	select ARM_GIC_V3
+ 
+-config ARCH_IPQ9679
+-	bool "Enable support for IPQ9679"
++config ARCH_IPQ9650
++	bool "Enable support for IPQ9650"
+ 	select ARM_GIC_V3
+ 
+ config ARCH_MSM8X60
+diff --git a/drivers/clk/qcom/Kconfig b/drivers/clk/qcom/Kconfig
+index 2e8e17caa9ed..6ef89b365fe3 100644
+--- a/drivers/clk/qcom/Kconfig
++++ b/drivers/clk/qcom/Kconfig
+@@ -224,13 +224,13 @@ config IPQ_GCC_9574
+ 	  i2c, USB, SD/eMMC, etc. Select this for the root clock
+ 	  of ipq9574.
+ 
+-config IPQ_GCC_9679
+-	tristate "IPQ9574 Global Clock Controller"
++config IPQ_GCC_9650
++	tristate "IPQ9650 Global Clock Controller"
+ 	help
+-	  Support for global clock controller on ipq9679 devices.
++	  Support for global clock controller on ipq9650 devices.
+ 	  Say Y if you want to use peripheral devices such as UART, SPI,
+ 	  i2c, USB, SD/eMMC, etc. Select this for the root clock
+-	  of ipq9679.
++	  of ipq9650.
+ 
+ config IPQ_NSSCC_5210
+         tristate "IPQ5210 NSS Clock Controller"
+@@ -256,11 +256,11 @@ config IPQ_NSSCC_5424
+         help
+           Support for NSS clock controller on ipq5424 devices.
+ 
+-config IPQ_NSSCC_9679
+-	tristate "IPQ9679 NSS Clock Controller"
+-	depends on IPQ_GCC_9679
++config IPQ_NSSCC_9650
++	tristate "IPQ9650 NSS Clock Controller"
++	depends on IPQ_GCC_9650
+ 	help
+-	  Support for NSS clock controller on ipq9679 devices.
++	  Support for NSS clock controller on ipq9650 devices.
+ 	  Say Y or M if you want to enable the Network SubSystem
+ 	  for the Ethernet functions.
+ 
+diff --git a/drivers/clk/qcom/Makefile b/drivers/clk/qcom/Makefile
+index a1393a427b56..44e07ab65889 100644
+--- a/drivers/clk/qcom/Makefile
++++ b/drivers/clk/qcom/Makefile
+@@ -33,12 +33,12 @@ obj-$(CONFIG_IPQ_GCC_6018) += gcc-ipq6018.o
+ obj-$(CONFIG_IPQ_GCC_806X) += gcc-ipq806x.o
+ obj-$(CONFIG_IPQ_GCC_8074) += gcc-ipq8074.o
+ obj-$(CONFIG_IPQ_GCC_9574) += gcc-ipq9574.o
+-obj-$(CONFIG_IPQ_GCC_9679) += gcc-ipq9679.o
++obj-$(CONFIG_IPQ_GCC_9650) += gcc-ipq9650.o
+ obj-$(CONFIG_IPQ_NSSCC_5210) += nsscc-ipq5210.o
+ obj-$(CONFIG_IPQ_NSSCC_5332) += nsscc-ipq5332.o
+ obj-$(CONFIG_IPQ_NSSCC_5424) += nsscc-ipq5424.o
+ obj-$(CONFIG_IPQ_NSSCC_9574) += nsscc-ipq9574.o
+-obj-$(CONFIG_IPQ_NSSCC_9679) += nsscc-ipq9679.o
++obj-$(CONFIG_IPQ_NSSCC_9650) += nsscc-ipq9650.o
+ obj-$(CONFIG_IPQ_LCC_806X) += lcc-ipq806x.o
+ obj-$(CONFIG_IPQ_NSSCC_QCA8K) += nsscc-qca8k.o
+ obj-$(CONFIG_IPQ_NSSCC_QCE2204) += nsscc-qce2204.o
+diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
+index eef6f7c411a7..e6c912aa528e 100644
+--- a/drivers/firmware/qcom_scm.c
++++ b/drivers/firmware/qcom_scm.c
+@@ -3593,7 +3593,7 @@ struct scm_priv_data ipq5424_data = {
+ 	.milestone_mask = BIT(8)
+ };
+ 
+-struct scm_priv_data ipq9679_data = {
++struct scm_priv_data ipq9650_data = {
+ 	.milestone_mask = BIT(8)
+ };
+ 
+@@ -3611,7 +3611,7 @@ static const struct of_device_id qcom_scm_dt_match[] = {
+ 	{ .compatible = "qcom,scm-ipq5210", .data = &ipq5210_data },
+ 	{ .compatible = "qcom,scm-ipq5424", .data = &ipq5424_data},
+ 	{ .compatible = "qcom,scm-ipq9574", .data = &ipq9574_data},
+-	{ .compatible = "qcom,scm-ipq9679", .data = &ipq9679_data },
++	{ .compatible = "qcom,scm-ipq9650", .data = &ipq9650_data },
+ 	{ .compatible = "qcom,scm-msm8953" },
+ 	{ .compatible = "qcom,scm-msm8974" },
+ 	{ .compatible = "qcom,scm-msm8996" },
+diff --git a/drivers/mmc/core/core.c b/drivers/mmc/core/core.c
+index bbeec9a746a5..43e9593e129c 100644
+--- a/drivers/mmc/core/core.c
++++ b/drivers/mmc/core/core.c
+@@ -48,7 +48,7 @@
+ #include "sdio_ops.h"
+ 
+ #define EMU_CLK_ADJ_REG 	0x194C008
+-#define IPQ9679_EMU_CLK_ADJ_REG	0x1959008
++#define IPQ9650_EMU_CLK_ADJ_REG	0x1959008
+ 
+ /* The max erase timeout, used when host->max_busy_timeout isn't specified */
+ #define MMC_ERASE_TIMEOUT_MS	(60 * 1000) /* 60 s */
+@@ -2218,8 +2218,8 @@ void mmc_rescan(struct work_struct *work)
+ 		return;
+ 
+ 	if (of_property_read_bool(host->parent->of_node, "qcom,emulation")) {
+-		if (of_device_is_compatible(host->parent->of_node, "qcom,ipq9679-sdhci")) {
+-			emu_clk_adj_reg = ioremap(IPQ9679_EMU_CLK_ADJ_REG, 4);
++		if (of_device_is_compatible(host->parent->of_node, "qcom,ipq9650-sdhci")) {
++			emu_clk_adj_reg = ioremap(IPQ9650_EMU_CLK_ADJ_REG, 4);
+ 		} else {
+ 			emu_clk_adj_reg = ioremap(EMU_CLK_ADJ_REG, 4);
+ 		}
+diff --git a/drivers/mtd/nand/raw/qcom_nandc.c b/drivers/mtd/nand/raw/qcom_nandc.c
+index 0b176fd35d67..3b2c74a4e76a 100644
+--- a/drivers/mtd/nand/raw/qcom_nandc.c
++++ b/drivers/mtd/nand/raw/qcom_nandc.c
+@@ -4400,7 +4400,7 @@ static const struct qcom_nandc_props ipq9574_nandc_props = {
+ 	.dev_cmd_reg_start = 0x7000,
+ };
+ 
+-static const struct qcom_nandc_props ipq9679_nandc_props = {
++static const struct qcom_nandc_props ipq9650_nandc_props = {
+ 	.ecc_modes = (ECC_BCH_4BIT | ECC_BCH_8BIT),
+ 	.is_bam = true,
+ 	.is_serial_nand = true,
+@@ -4449,8 +4449,8 @@ static const struct of_device_id qcom_nandc_of_match[] = {
+ 		.data = &ipq9574_nandc_props,
+ 	},
+ 	{
+-		.compatible = "qcom,ipq9679-nand",
+-		.data = &ipq9679_nandc_props,
++		.compatible = "qcom,ipq9650-nand",
++		.data = &ipq9650_nandc_props,
+ 	},
+ 	{
+ 		.compatible = "qcom,sdx55-nand",
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index 9bb85a242e08..a1fabb505cd6 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -2370,7 +2370,7 @@ static const struct of_device_id qcom_pcie_match[] = {
+ 	{ .compatible = "qcom,pcie-ipq8074", .data = &cfg_2_3_3 },
+ 	{ .compatible = "qcom,pcie-ipq8074-gen3", .data = &cfg_2_9_0 },
+ 	{ .compatible = "qti,pcie-ipq9574", .data = &cfg_1_27_0 },
+-	{ .compatible = "qcom,pcie-ipq9679", .data = &cfg_1_27_0 },
++	{ .compatible = "qcom,pcie-ipq9650", .data = &cfg_1_27_0 },
+ 	{ .compatible = "qcom,pcie-msm8996", .data = &cfg_2_3_2 },
+ 	{ .compatible = "qcom,pcie-qcs404", .data = &cfg_2_4_0 },
+ 	{ .compatible = "qcom,pcie-sa8540p", .data = &cfg_1_9_0 },
+diff --git a/drivers/pinctrl/qcom/Kconfig.msm b/drivers/pinctrl/qcom/Kconfig.msm
+index fbfb46282f35..84ff325cfdab 100644
+--- a/drivers/pinctrl/qcom/Kconfig.msm
++++ b/drivers/pinctrl/qcom/Kconfig.msm
+@@ -87,13 +87,13 @@ config PINCTRL_IPQ9574
+           Qualcomm Technologies Inc. IPQ9574 platform. Select this for
+           IPQ9574.
+ 
+-config PINCTRL_IPQ9679
+-	tristate "Qualcomm Technologies, Inc. IPQ9679 pin controller driver"
++config PINCTRL_IPQ9650
++	tristate "Qualcomm Technologies, Inc. IPQ9650 pin controller driver"
+ 	help
+ 	  This is the pinctrl, pinmux, pinconf and gpiolib driver for
+ 	  the Qualcomm Technologies Inc. TLMM block found on the
+-	  Qualcomm Technologies Inc. IPQ9679 platform. Select this for
+-	  IPQ9679.
++	  Qualcomm Technologies Inc. IPQ9650 platform. Select this for
++	  IPQ9650.
+ 
+ config PINCTRL_MSM8226
+ 	tristate "Qualcomm 8226 pin controller driver"
+diff --git a/drivers/pinctrl/qcom/Makefile b/drivers/pinctrl/qcom/Makefile
+index 41df21eea89c..fa8291c1f786 100644
+--- a/drivers/pinctrl/qcom/Makefile
++++ b/drivers/pinctrl/qcom/Makefile
+@@ -12,7 +12,7 @@ obj-$(CONFIG_PINCTRL_IPQ5424)	+= pinctrl-ipq5424.o
+ obj-$(CONFIG_PINCTRL_IPQ8074)	+= pinctrl-ipq8074.o
+ obj-$(CONFIG_PINCTRL_IPQ6018)	+= pinctrl-ipq6018.o
+ obj-$(CONFIG_PINCTRL_IPQ9574)	+= pinctrl-ipq9574.o
+-obj-$(CONFIG_PINCTRL_IPQ9679)	+= pinctrl-ipq9679.o
++obj-$(CONFIG_PINCTRL_IPQ9650)	+= pinctrl-ipq9650.o
+ obj-$(CONFIG_PINCTRL_MSM8226)	+= pinctrl-msm8226.o
+ obj-$(CONFIG_PINCTRL_MSM8660)	+= pinctrl-msm8660.o
+ obj-$(CONFIG_PINCTRL_MSM8960)	+= pinctrl-msm8960.o
+-- 
+2.34.1
+

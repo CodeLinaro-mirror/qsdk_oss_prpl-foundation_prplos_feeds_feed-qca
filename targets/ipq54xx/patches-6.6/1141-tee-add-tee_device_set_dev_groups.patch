@@ -1,0 +1,99 @@
+From a3b5ee3352908c75053d7eeb0ec70798a1fe84d6 Mon Sep 17 00:00:00 2001
+From: Jens Wiklander <jens.wiklander@linaro.org>
+Date: Wed, 14 Aug 2024 17:35:57 +0200
+Subject: [PATCH] tee: add tee_device_set_dev_groups()
+
+Add tee_device_set_dev_groups() to TEE drivers to supply driver specific
+attribute groups. The class specific attributes are from now on added
+via the tee_class, which currently only consist of implementation_id.
+
+Signed-off-by: Jens Wiklander <jens.wiklander@linaro.org>
+Reviewed-by: Sumit Garg <sumit.garg@linaro.org>
+Link: https://lore.kernel.org/r/20240814153558.708365-4-jens.wiklander@linaro.org
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+(cherry picked from commit c30b855e814d9094e369a19fbd86c9bb5badc154)
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+
+Change-Id: I57d3722d05445f19f70fc9ef8f861c58e8a61aa4
+---
+ drivers/tee/tee_core.c   | 19 +++++++++++++------
+ include/linux/tee_core.h | 12 ++++++++++++
+ 2 files changed, 25 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/tee/tee_core.c b/drivers/tee/tee_core.c
+index 1cbc17c73df6..d3d195ecd93b 100644
+--- a/drivers/tee/tee_core.c
++++ b/drivers/tee/tee_core.c
+@@ -41,10 +41,7 @@ static const uuid_t tee_client_uuid_ns = UUID_INIT(0x58ac9ca0, 0x2086, 0x4683,
+ static DECLARE_BITMAP(dev_mask, TEE_NUM_DEVICES);
+ static DEFINE_SPINLOCK(driver_lock);
+ 
+-static const struct class tee_class = {
+-	.name = "tee",
+-};
+-
++static const struct class tee_class;
+ static dev_t tee_devt;
+ 
+ struct tee_context *teedev_open(struct tee_device *teedev)
+@@ -966,6 +963,13 @@ struct tee_device *tee_device_alloc(const struct tee_desc *teedesc,
+ }
+ EXPORT_SYMBOL_GPL(tee_device_alloc);
+ 
++void tee_device_set_dev_groups(struct tee_device *teedev,
++			       const struct attribute_group **dev_groups)
++{
++	teedev->dev.groups = dev_groups;
++}
++EXPORT_SYMBOL_GPL(tee_device_set_dev_groups);
++
+ static ssize_t implementation_id_show(struct device *dev,
+ 				      struct device_attribute *attr, char *buf)
+ {
+@@ -984,6 +988,11 @@ static struct attribute *tee_dev_attrs[] = {
+ 
+ ATTRIBUTE_GROUPS(tee_dev);
+ 
++static const struct class tee_class = {
++	.name = "tee",
++	.dev_groups = tee_dev_groups,
++};
++
+ /**
+  * tee_device_register() - Registers a TEE device
+  * @teedev:	Device to register
+@@ -1002,8 +1011,6 @@ int tee_device_register(struct tee_device *teedev)
+ 		return -EINVAL;
+ 	}
+ 
+-	teedev->dev.groups = tee_dev_groups;
+-
+ 	rc = cdev_device_add(&teedev->cdev, &teedev->dev);
+ 	if (rc) {
+ 		dev_err(&teedev->dev,
+diff --git a/include/linux/tee_core.h b/include/linux/tee_core.h
+index efd16ed52315..a38494d6b5f4 100644
+--- a/include/linux/tee_core.h
++++ b/include/linux/tee_core.h
+@@ -154,6 +154,18 @@ int tee_device_register(struct tee_device *teedev);
+  */
+ void tee_device_unregister(struct tee_device *teedev);
+ 
++/**
++ * tee_device_set_dev_groups() - Set device attribute groups
++ * @teedev:	Device to register
++ * @dev_groups: Attribute groups
++ *
++ * Assigns the provided @dev_groups to the @teedev to be registered later
++ * with tee_device_register(). Calling this function is optional, but if
++ * it's called it must be called before tee_device_register().
++ */
++void tee_device_set_dev_groups(struct tee_device *teedev,
++			       const struct attribute_group **dev_groups);
++
+ /**
+  * tee_session_calc_client_uuid() - Calculates client UUID for session
+  * @uuid:		Resulting UUID
+-- 
+2.34.1
+

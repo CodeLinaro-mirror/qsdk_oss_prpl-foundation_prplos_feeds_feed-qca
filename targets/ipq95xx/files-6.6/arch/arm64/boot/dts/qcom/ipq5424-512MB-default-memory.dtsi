@@ -81,7 +81,6 @@
 	 * |                                                  |
 	 * +==================================================+
 	 */
-
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -89,44 +88,29 @@
 
 		q6_region: wcnss@8a900000 {
 			no-map;
-			reg = <0x0 0x8a900000 0x0 0x2800000>;
+			reg = <0x0 0x8a900000 0x0 0xa00000>;
 		};
 
 		q6_ipq5424_data: q6_ipq5424_data@8b240000 {
 			no-map;
-			reg = <0x0 0x8b240000 0x0 0x1ec0000>;
+			reg = <0x0 0x8b300000 0x0 0x2800000>;
 		};
 
-		m3_dump: m3_dump@8d100000 {
+		qcn9224_pcie0: qcn9224_pcie0@8db00000 {
 			no-map;
-			reg = <0x0 0x8d100000 0x0 0x100000>;
-		};
-
-		q6_etr_region: q6_etr_dump@8d200000 {
-			no-map;
-			reg = <0x0 0x8d200000 0x0 0x100000>;
-		};
-
-		q6_ipq5424_caldb: q6_ipq5424_caldb@8d300000 {
-			no-map;
-			reg = <0x0 0x8d300000 0x0 0x600000>;
-		};
-
-		qcn9224_pcie0: qcn9224_pcie0@8d900000 {
-			no-map;
-			reg = <0x0 0x8d900000 0x0 0x02500000>;
+			reg = <0x0 0x8db00000 0x0 0x02500000>;
 			status = "disabled";
 		};
 
-		qcn9224_pcie1: qcn9224_pcie1@8fe00000 {
+		qcn9224_pcie1: qcn9224_pcie1@90000000 {
 			no-map;
-			reg = <0x0 0x8fe00000 0x0 0x02500000>;
+			reg = <0x0 0x90000000 0x0 0x02500000>;
 			status = "disabled";
 		};
 
-		qcn9224_pcie2: qcn9224_pcie2@92300000 {
+		qcn9224_pcie2: qcn9224_pcie2@92500000 {
 			no-map;
-			reg = <0x0 0x92300000 0x0 0x02500000>;
+			reg = <0x0 0x92500000 0x0 0x02500000>;
 			status = "disabled";
 		};
 
@@ -170,7 +154,7 @@
 
 		mlo_global_mem0: mlo_global_mem_0@0 {
 			no-map;
-			reg = <0x0 0x96d00000 0x0 0x1200000>;
+			reg = <0x0 0x96e00000 0x0 0x1200000>;
 			status = "disabled";
 		};
 	};

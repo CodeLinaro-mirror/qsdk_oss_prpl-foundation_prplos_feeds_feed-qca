@@ -22,15 +22,16 @@ diff --git a/drivers/net/phy/phy_device.c b/drivers/net/phy/phy_device.c
 index 2ce74593d6e4..c15d8e8c4cde 100644
 --- a/drivers/net/phy/phy_device.c
 +++ b/drivers/net/phy/phy_device.c
-@@ -1797,6 +1797,9 @@ void phy_detach(struct phy_device *phydev)
+@@ -1807,6 +1807,9 @@ void phy_detach(struct phy_device *phydev)
  	struct module *ndev_owner = NULL;
  	struct mii_bus *bus;
  
 +	if (phydev->drv && phydev->drv->detach)
 +		phydev->drv->detach(phydev);
 +
- 	if (phydev->devlink)
+ 	if (phydev->devlink) {
  		device_link_del(phydev->devlink);
+		phydev->devlink = NULL;
  
 diff --git a/include/linux/phy.h b/include/linux/phy.h
 index 1351b802ffcf..007fff29999c 100644

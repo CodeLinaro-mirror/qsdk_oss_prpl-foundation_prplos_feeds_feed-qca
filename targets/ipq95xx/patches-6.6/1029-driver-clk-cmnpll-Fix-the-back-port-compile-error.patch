@@ -1,0 +1,30 @@
+From 476cbe8c74e93d0237543871cdefde69e6ac982e Mon Sep 17 00:00:00 2001
+From: Luo Jie <luoj@qti.qualcomm.com>
+Date: Thu, 25 Dec 2025 15:28:13 +0800
+Subject: [PATCH] driver: clk: cmnpll: Fix the back port compile error
+
+The struct platform_driver is updated with the .remove function in
+the upstream kernel different from kernel6.6
+
+Change-Id: Iffa6ebe5811572c322e5cdb91db9c8e938057a6f
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ drivers/clk/qcom/ipq-cmn-pll.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/clk/qcom/ipq-cmn-pll.c b/drivers/clk/qcom/ipq-cmn-pll.c
+index dafbf5732048..39f956aa7ee4 100644
+--- a/drivers/clk/qcom/ipq-cmn-pll.c
++++ b/drivers/clk/qcom/ipq-cmn-pll.c
+@@ -455,7 +455,7 @@ MODULE_DEVICE_TABLE(of, ipq_cmn_pll_clk_ids);
+ 
+ static struct platform_driver ipq_cmn_pll_clk_driver = {
+ 	.probe = ipq_cmn_pll_clk_probe,
+-	.remove = ipq_cmn_pll_clk_remove,
++	.remove_new = ipq_cmn_pll_clk_remove,
+ 	.driver = {
+ 		.name = "ipq_cmn_pll",
+ 		.of_match_table = ipq_cmn_pll_clk_ids,
+-- 
+2.34.1
+

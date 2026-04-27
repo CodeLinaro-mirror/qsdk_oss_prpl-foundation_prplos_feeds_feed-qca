@@ -1,0 +1,46 @@
+From 04ad5cef94597a1be5124e96ba6bd31cc5365574 Mon Sep 17 00:00:00 2001
+From: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+Date: Fri, 21 Nov 2025 11:03:20 +0530
+Subject: [PATCH] soc: qcom: add build support for TFA_OPTEE_LOG driver
+
+Change-Id: I642b16796fa38df00f2d8c6a8f2e49d96916053a
+Signed-off-by: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+---
+ drivers/soc/qcom/Kconfig  | 8 ++++++++
+ drivers/soc/qcom/Makefile | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/soc/qcom/Kconfig b/drivers/soc/qcom/Kconfig
+index 3ebfc31414b6..9a20f387a232 100644
+--- a/drivers/soc/qcom/Kconfig
++++ b/drivers/soc/qcom/Kconfig
+@@ -375,6 +375,14 @@ config QCOM_SOC_NETSTANDBY
+ 	help
+ 	  SoC network standby driver for ErP support
+ 
++config QTI_TFA_OPTEE_LOG
++	tristate "TFA and OPTEE Log Driver"
++	depends on DEBUG_FS
++	help
++	  This option enables a driver with a debugfs interface for messages
++	  produced by the Secure code (TFA & OPTEE). These messages provide
++	  diagnostic information about secure world operation.
++
+ config QTI_TZ_LOG
+ 	tristate "Trust Zone (TZ) Log Driver"
+ 	depends on DEBUG_FS
+diff --git a/drivers/soc/qcom/Makefile b/drivers/soc/qcom/Makefile
+index 01bda214cdac..fa336697d135 100644
+--- a/drivers/soc/qcom/Makefile
++++ b/drivers/soc/qcom/Makefile
+@@ -39,6 +39,7 @@ obj-$(CONFIG_IPQ_DEBUG)	+= ipq-debug.o
+ obj-$(CONFIG_MSM_RPM_LOG)	+= rpm_log.o
+ obj-$(CONFIG_IPQ_REG_UPDATE) += ipq_reg_update.o
+ obj-$(CONFIG_QCOM_SOC_NETSTANDBY) += netstandby.o
++obj-$(CONFIG_QTI_TFA_OPTEE_LOG) += tfa_optee_log.o
+ obj-$(CONFIG_QTI_TZ_LOG) += tz_log.o
+ obj-$(CONFIG_QTI_HW_KEY) += hw_key.o
+ obj-$(CONFIG_QCOM_CTXT_SAVE) += ctx-save.o
+-- 
+2.34.1
+

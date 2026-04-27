@@ -1,0 +1,52 @@
+From 2ec21d2a6f17a99aea8740e906adf1375cb65b0f Mon Sep 17 00:00:00 2001
+From: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+Date: Fri, 20 Mar 2026 11:01:08 +0530
+Subject: [PATCH] drivers: bus: mhi: host: Skip License download flow for
+ QCN9625
+
+Skip License download flow for QCN9625 as it will go via the new QMI
+path and does not use the legacy register based path used in QCN9224.
+
+Change-Id: Ib1ee92f4e54176e73529c95e4433e03f9c07807c
+Signed-off-by: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+---
+ drivers/bus/mhi/host/boot.c     | 5 ++---
+ drivers/bus/mhi/host/internal.h | 5 -----
+ 2 files changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/bus/mhi/host/boot.c b/drivers/bus/mhi/host/boot.c
+index 4163b6f7a77f..3c451bd60bd0 100644
+--- a/drivers/bus/mhi/host/boot.c
++++ b/drivers/bus/mhi/host/boot.c
+@@ -669,10 +669,9 @@ int mhi_download_amss_image(struct mhi_controller *mhi_cntrl)
+ 		return ret;
+ 	}
+ 
+-	if (IS_LICENSE_DOWN_REQ(mhi_cntrl)) {
+-		/* Download the License */
++	/* Download the License */
++	if (mhi_cntrl->device_number == QCN9224_DEVICE_NUM)
+ 		mhi_download_fw_license(mhi_cntrl);
+-	}
+ 
+ 	ret = mhi_fw_load_bhie(mhi_cntrl,
+ 			       /* Vector table is the last entry */
+diff --git a/drivers/bus/mhi/host/internal.h b/drivers/bus/mhi/host/internal.h
+index 01e91dc1ece7..cd211c674f78 100644
+--- a/drivers/bus/mhi/host/internal.h
++++ b/drivers/bus/mhi/host/internal.h
+@@ -28,11 +28,6 @@ extern struct bus_type mhi_bus_type;
+ #define QCN9224_SOC_HW_VERSION_MAJOR_VER_BMSK		GENMASK(11, 8)
+ #define QCN9224_SOC_HW_VERSION_MINOR_VER_BMSK		GENMASK(7, 4)
+ 
+-#define IS_LICENSE_DOWN_REQ(mhi_cntrl) \
+-	((mhi_cntrl->family_number == QCN9XXX_FAMILY_NUM && \
+-	  ((mhi_cntrl->device_number == QCN9224_DEVICE_NUM) || \
+-	   (mhi_cntrl->device_number == QCN9625_DEVICE_NUM))) ? true : false)
+-
+ struct mhi_ctxt {
+ 	struct mhi_event_ctxt *er_ctxt;
+ 	struct mhi_chan_ctxt *chan_ctxt;
+-- 
+2.34.1
+

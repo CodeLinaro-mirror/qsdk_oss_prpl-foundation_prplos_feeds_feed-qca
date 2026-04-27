@@ -1,0 +1,65 @@
+From a87b27f044d7bb91caf5ae07f7a477862028e7a0 Mon Sep 17 00:00:00 2001
+From: Zhongjian Liu <zhongjia@qti.qualcomm.com>
+Date: Wed, 28 Feb 2024 18:24:10 +0100
+Subject: [PATCH] net: phy: qcom: qca808x: fill in possible_interfaces
+
+Currently QCA808x driver does not fill the possible_interfaces.
+2.5G QCA808x support SGMII and 2500Base-X while 1G model only supports
+SGMII, so fill the possible_interfaces accordingly.
+
+Signed-off-by: Robert Marko <robimarko@gmail.com>
+Reviewed-by: Russell King (Oracle) <rmk+kernel@armlinux.org.uk>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+(cherry picked from commit cb28f702960695e26597c332b0e46776e825cc34)
+Signed-off-by: zhongjia <zhongjia@qti.qualcomm.com>
+
+Change-Id: Id3d672ad3fefcfc1011b552918f1ecb0bc82a40e
+Signed-off-by: zhongjia <zhongjia@qti.qualcomm.com>
+---
+ drivers/net/phy/qcom/qca808x.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/drivers/net/phy/qcom/qca808x.c b/drivers/net/phy/qcom/qca808x.c
+index 330a89129422..5df64a0f639b 100644
+--- a/drivers/net/phy/qcom/qca808x.c
++++ b/drivers/net/phy/qcom/qca808x.c
+@@ -156,6 +156,27 @@ static bool qca808x_has_fast_retrain_or_slave_seed(struct phy_device *phydev)
+ 	return linkmode_test_bit(ETHTOOL_LINK_MODE_2500baseT_Full_BIT, phydev->supported);
+ }
+ 
++static bool qca808x_is_1g_only(struct phy_device *phydev)
++{
++	int ret;
++
++	ret = phy_read_mmd(phydev, MDIO_MMD_AN, QCA808X_PHY_MMD7_CHIP_TYPE);
++	if (ret < 0)
++		return true;
++
++	return !!(QCA808X_PHY_CHIP_TYPE_1G & ret);
++}
++
++static void qca808x_fill_possible_interfaces(struct phy_device *phydev)
++{
++	unsigned long *possible = phydev->possible_interfaces;
++
++	__set_bit(PHY_INTERFACE_MODE_SGMII, possible);
++
++	if (!qca808x_is_1g_only(phydev))
++		__set_bit(PHY_INTERFACE_MODE_2500BASEX, possible);
++}
++
+ static int qca808x_probe(struct phy_device *phydev)
+ {
+ 	struct device *dev = &phydev->mdio.dev;
+@@ -220,6 +241,8 @@ static int qca808x_config_init(struct phy_device *phydev)
+ 		}
+ 	}
+ 
++	qca808x_fill_possible_interfaces(phydev);
++
+ 	/* Configure adc threshold as 100mv for the link 10M */
+ 	return at803x_debug_reg_mask(phydev, QCA808X_PHY_DEBUG_ADC_THRESHOLD,
+ 				     QCA808X_ADC_THRESHOLD_MASK,
+-- 
+2.34.1
+

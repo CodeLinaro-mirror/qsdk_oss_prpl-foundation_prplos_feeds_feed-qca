@@ -1,0 +1,29 @@
+From 08ee1e6aa9935af881b20cbf350c0cf951551828 Mon Sep 17 00:00:00 2001
+From: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+Date: Mon, 8 Dec 2025 10:39:46 +0530
+Subject: [PATCH] net: Enable BRIDGE_MCAST_OFFLOAD config
+
+Change-Id: Ie96d16410761573f0387ec92af317f50b38773d8
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ net/bridge/Kconfig | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/net/bridge/Kconfig b/net/bridge/Kconfig
+index 3c8ded7d3e84..cea0bf9af8b9 100644
+--- a/net/bridge/Kconfig
++++ b/net/bridge/Kconfig
+@@ -84,3 +84,10 @@ config BRIDGE_CFM
+ 	  Say N to exclude this support and reduce the binary size.
+ 
+ 	  If unsure, say N.
++
++config BRIDGE_MCAST_OFFLOAD
++	bool "Bridge multicast offload"
++	depends on BRIDGE && BRIDGE_IGMP_SNOOPING
++	default y
++	help
++	  Enables multicast NSS/MCUC offload support.
+-- 
+2.34.1
+

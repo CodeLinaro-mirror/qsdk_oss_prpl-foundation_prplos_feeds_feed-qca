@@ -1,0 +1,61 @@
+From 3f03d659b9094c176f09735d72801fc2315936e3 Mon Sep 17 00:00:00 2001
+From: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+Date: Thu, 26 Feb 2026 13:23:24 +0530
+Subject: [PATCH] drivers: remoteproc: Add support for IPQ9650 CDSP
+
+Add compatible and driver data for IPQ9650 CDSP.
+
+Also, IPQ does not use xo clock for CDSP, so switch to
+devm_clock_get_optional for xo clock in adsp_init_clock.
+
+Change-Id: I7be5adad5ed8a40083d1405a3857f032417ca7d5
+Signed-off-by: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+---
+ drivers/remoteproc/qcom_q6v5_pas.c | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/remoteproc/qcom_q6v5_pas.c b/drivers/remoteproc/qcom_q6v5_pas.c
+index b58fb8f2c791..976d92996d48 100644
+--- a/drivers/remoteproc/qcom_q6v5_pas.c
++++ b/drivers/remoteproc/qcom_q6v5_pas.c
+@@ -436,7 +436,7 @@ static int adsp_init_clock(struct qcom_adsp *adsp)
+ {
+ 	int ret;
+ 
+-	adsp->xo = devm_clk_get(adsp->dev, "xo");
++	adsp->xo = devm_clk_get_optional(adsp->dev, "xo");
+ 	if (IS_ERR(adsp->xo)) {
+ 		ret = PTR_ERR(adsp->xo);
+ 		if (ret != -EPROBE_DEFER)
+@@ -1240,6 +1240,20 @@ static const struct adsp_data sm8550_mpss_resource = {
+ 	.region_assign_idx = 2,
+ };
+ 
++static const struct adsp_data ipq9650_cdsp_resource = {
++	.crash_reason_smem = 601,
++	.firmware_name = "cdsp.mbn",
++	.dtb_firmware_name = "cdsp_dtb.mbn",
++	.pas_id = 18,
++	.dtb_pas_id = 0x25,
++	.minidump_id = 7,
++	.auto_boot = false,
++	.load_state = "cdsp",
++	.ssr_name = "cdsp",
++	.sysmon_name = "cdsp",
++	.ssctl_id = 0x17,
++};
++
+ static const struct of_device_id adsp_of_match[] = {
+ 	{ .compatible = "qcom,msm8226-adsp-pil", .data = &msm8996_adsp_resource},
+ 	{ .compatible = "qcom,msm8953-adsp-pil", .data = &msm8996_adsp_resource},
+@@ -1295,6 +1309,7 @@ static const struct of_device_id adsp_of_match[] = {
+ 	{ .compatible = "qcom,sm8550-adsp-pas", .data = &sm8550_adsp_resource},
+ 	{ .compatible = "qcom,sm8550-cdsp-pas", .data = &sm8550_cdsp_resource},
+ 	{ .compatible = "qcom,sm8550-mpss-pas", .data = &sm8550_mpss_resource},
++	{ .compatible = "qcom,ipq9650-cdsp-pas", .data = &ipq9650_cdsp_resource},
+ 	{ },
+ };
+ MODULE_DEVICE_TABLE(of, adsp_of_match);
+-- 
+2.34.1
+

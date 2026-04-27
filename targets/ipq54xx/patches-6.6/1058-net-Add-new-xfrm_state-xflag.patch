@@ -1,0 +1,49 @@
+From 0605574b4e979f1894819ba3531e824197af65fd Mon Sep 17 00:00:00 2001
+From: Tushar Ganatra <tganatra@qti.qualcomm.com>
+Date: Wed, 14 Jan 2026 13:04:42 +0530
+Subject: [PATCH] net : Add new xfrm_state xflag
+
+New custom flag XFRM_STATE_OFFLOAD_HW_INNER to identify
+xfrm states offloaded to the NSS(for plaintext rule).
+
+renamed flag XFRM_STATE_OFFLOAD_NSS to XFRM_STATE_OFFLOAD_HW
+
+Change-Id: I9f4fa92cf277fff655bea171a061d39dfd79e1a8
+Signed-off-by: Tushar Ganatra <tganatra@qti.qualcomm.com>
+---
+ include/net/xfrm.h | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/include/net/xfrm.h b/include/net/xfrm.h
+index 6281785d3898..f11371d5c62f 100644
+--- a/include/net/xfrm.h
++++ b/include/net/xfrm.h
+@@ -315,9 +315,22 @@ static inline struct net *xs_net(struct xfrm_state *x)
+ }
+ 
+ /* xflags - make enum if more show up */
+-#define XFRM_TIME_DEFER	1
+-#define XFRM_SOFT_EXPIRE 2
+-#define XFRM_STATE_OFFLOAD_NSS 4
++#define XFRM_TIME_DEFER		0x1
++#define XFRM_SOFT_EXPIRE	0x2
++#define XFRM_STATE_OFFLOAD_HW	0x4 /* State offloaded */
++#define XFRM_STATE_OFFLOAD_HW_INNER	0x8 /* Inner flow offloaded to HW */
++
++/*
++ * TODO: After user switches to XFRM_STATE_OFFLOAD_HW, remove XFRM_STATE_OFFLOAD_NSS alias.
++ */
++#define XFRM_STATE_OFFLOAD_NSS XFRM_STATE_OFFLOAD_HW
++
++/*
++ * Inline hardware offload: supports accelerating both
++ * the outer IPsec and the inner plaintext flow.
++ */
++#define XFRM_STATE_OFFLOAD_HW_INLINE \
++(XFRM_STATE_OFFLOAD_HW | XFRM_STATE_OFFLOAD_HW_INNER)
+ 
+ enum {
+ 	XFRM_STATE_VOID,
+-- 
+2.34.1
+

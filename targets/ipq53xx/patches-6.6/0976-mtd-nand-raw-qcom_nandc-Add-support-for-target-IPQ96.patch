@@ -1,0 +1,47 @@
+From 43509883921615468066ef19294ef40d28104010 Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Fri, 14 Nov 2025 09:37:19 +0530
+Subject: [PATCH] mtd: nand: raw: qcom_nandc: Add support for target IPQ9679
+
+Change-Id: I838909dbb4ba879756e2b37cbac6df49b2d52aa1
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/mtd/nand/raw/qcom_nandc.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/mtd/nand/raw/qcom_nandc.c b/drivers/mtd/nand/raw/qcom_nandc.c
+index 5024c3d640bc..316f05741ba9 100644
+--- a/drivers/mtd/nand/raw/qcom_nandc.c
++++ b/drivers/mtd/nand/raw/qcom_nandc.c
+@@ -4397,6 +4397,17 @@ static const struct qcom_nandc_props ipq9574_nandc_props = {
+ 	.dev_cmd_reg_start = 0x7000,
+ };
+ 
++static const struct qcom_nandc_props ipq9679_nandc_props = {
++	.ecc_modes = (ECC_BCH_4BIT | ECC_BCH_8BIT),
++	.is_bam = true,
++	.is_serial_nand = true,
++	.qpic_v2 = true,
++	.is_serial_training = true,
++	.quad_mode = true,
++	.page_scope = true,
++	.dev_cmd_reg_start = 0x7000,
++};
++
+ /*
+  * data will hold a struct pointer containing more differences once we support
+  * more controller variants
+@@ -4434,6 +4445,10 @@ static const struct of_device_id qcom_nandc_of_match[] = {
+ 		.compatible = "qcom,ipq9574-nand",
+ 		.data = &ipq9574_nandc_props,
+ 	},
++	{
++		.compatible = "qcom,ipq9679-nand",
++		.data = &ipq9679_nandc_props,
++	},
+ 	{
+ 		.compatible = "qcom,sdx55-nand",
+ 		.data = &sdx55_nandc_props,
+-- 
+2.34.1
+

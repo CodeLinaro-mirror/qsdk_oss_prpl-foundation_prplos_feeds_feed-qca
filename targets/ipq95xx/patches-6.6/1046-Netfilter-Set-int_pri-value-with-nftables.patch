@@ -1,0 +1,84 @@
+From 0b870a3d126a92340a3f415adee349526bea62d0 Mon Sep 17 00:00:00 2001
+From: unnatid <unnatid@qti.qualcomm.com>
+Date: Tue, 9 Sep 2025 11:01:38 +0530
+Subject: [PATCH] Netfilter: Set int_pri value with nftables
+
+This Change adds support for a new nftable metadata field NFT_META_INT_PRI
+ that allows accessing and setting the int_pri field of the socket buffer
+(skb->int_pri). This enhancement extends the nftables functionality by
+providing access to the internal priority field of packets.
+
+Change-Id: I19c048e4cd8c61f7aa7caa2cb2423a4f7427815f
+Signed-off-by: Unnati Dixit <unnatid@qti.qualcomm.com>
+---
+ include/uapi/linux/netfilter/nf_tables.h |  2 ++
+ net/netfilter/nft_meta.c                 | 12 ++++++++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/include/uapi/linux/netfilter/nf_tables.h b/include/uapi/linux/netfilter/nf_tables.h
+index 9d35ae9989bc..cc779fdd8a82 100644
+--- a/include/uapi/linux/netfilter/nf_tables.h
++++ b/include/uapi/linux/netfilter/nf_tables.h
+@@ -939,6 +939,7 @@ enum nft_exthdr_attributes {
+  * @NFT_META_SDIF: slave device interface index
+  * @NFT_META_SDIFNAME: slave device interface name
+  * @NFT_META_BRI_BROUTE: packet br_netfilter_broute bit
++ * @NFT_META_INT_PRI: packet int_pri (skb->int_pri)
+  */
+ enum nft_meta_keys {
+ 	NFT_META_LEN,
+@@ -979,6 +980,7 @@ enum nft_meta_keys {
+ 	NFT_META_SDIFNAME,
+ 	NFT_META_BRI_BROUTE,
+ 	__NFT_META_IIFTYPE,
++	NFT_META_INT_PRI,
+ };
+ 
+ /**
+diff --git a/net/netfilter/nft_meta.c b/net/netfilter/nft_meta.c
+index 9139ce38ea7b..9ba5f86ad471 100644
+--- a/net/netfilter/nft_meta.c
++++ b/net/netfilter/nft_meta.c
+@@ -404,6 +404,9 @@ void nft_meta_get_eval(const struct nft_expr *expr,
+ 	case NFT_META_SDIFNAME:
+ 		nft_meta_get_eval_sdifname(dest, pkt);
+ 		break;
++	case NFT_META_INT_PRI:
++		*dest = skb->int_pri;
++		break;
+ 	default:
+ 		WARN_ON(1);
+ 		goto err;
+@@ -450,6 +453,9 @@ void nft_meta_set_eval(const struct nft_expr *expr,
+ 		skb->secmark = value;
+ 		break;
+ #endif
++	case NFT_META_INT_PRI:
++		skb->int_pri = value;
++		break;
+ 	default:
+ 		WARN_ON(1);
+ 	}
+@@ -526,6 +532,9 @@ int nft_meta_get_init(const struct nft_ctx *ctx,
+ 	case NFT_META_TIME_HOUR:
+ 		len = sizeof(u32);
+ 		break;
++	case NFT_META_INT_PRI:
++		len = sizeof(u8);
++		break;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -652,6 +661,9 @@ int nft_meta_set_init(const struct nft_ctx *ctx,
+ 	case NFT_META_PKTTYPE:
+ 		len = sizeof(u8);
+ 		break;
++	case NFT_META_INT_PRI:
++		len = sizeof(u8);
++		break;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+-- 
+2.34.1
+

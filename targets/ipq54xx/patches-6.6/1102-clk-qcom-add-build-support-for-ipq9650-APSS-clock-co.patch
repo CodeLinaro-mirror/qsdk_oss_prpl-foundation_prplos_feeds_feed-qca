@@ -1,0 +1,50 @@
+From 51ed0018e0c614b22161a28aef8536fd83d9d9bf Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Sun, 22 Feb 2026 22:06:02 +0530
+Subject: [PATCH] clk: qcom: add build support for ipq9650 APSS clock
+ controller
+
+Add Kconfig and Makefile entries for the IPQ9650 APSS clock controller
+to enable build-time support.
+
+Change-Id: I17da8ebf70991fbf9a9bf171730d7e44412b101f
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/clk/qcom/Kconfig  | 8 ++++++++
+ drivers/clk/qcom/Makefile | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/clk/qcom/Kconfig b/drivers/clk/qcom/Kconfig
+index 3665b1a48a92..44979462496f 100644
+--- a/drivers/clk/qcom/Kconfig
++++ b/drivers/clk/qcom/Kconfig
+@@ -146,6 +146,14 @@ config IPQ_APSS_6018
+ 	  Say Y if you want to support CPU frequency scaling on
+ 	  ipq based devices.
+ 
++config IPQ_APSS_9650
++	tristate "IPQ9650 APSS Clock Controller"
++	select INTERCONNECT_CLK
++	help
++	  Support for APSS Clock controller on Qualcom IPQ9650 platform.
++	  Say Y if you want to support CPU frequency scaling on ipq based
++	  devices.
++
+ config IPQ_CMN_PLL
+ 	tristate "IPQ CMN PLL Clock Controller"
+ 	help
+diff --git a/drivers/clk/qcom/Makefile b/drivers/clk/qcom/Makefile
+index 5101a01ada7a..3f7f00d68f7c 100644
+--- a/drivers/clk/qcom/Makefile
++++ b/drivers/clk/qcom/Makefile
+@@ -24,6 +24,7 @@ obj-$(CONFIG_CLK_GFM_LPASS_SM8250) += lpass-gfm-sm8250.o
+ obj-$(CONFIG_IPQ_APSS_PLL) += apss-ipq-pll.o
+ obj-$(CONFIG_IPQ_APSS_5424) += apss-ipq5424.o
+ obj-$(CONFIG_IPQ_APSS_6018) += apss-ipq6018.o
++obj-$(CONFIG_IPQ_APSS_9650) += apss-ipq9650.o
+ obj-$(CONFIG_IPQ_CMN_PLL) += ipq-cmn-pll.o
+ obj-$(CONFIG_IPQ_GCC_4019) += gcc-ipq4019.o
+ obj-$(CONFIG_IPQ_GCC_5018) += gcc-ipq5018.o
+-- 
+2.34.1
+

@@ -1,0 +1,30 @@
+From a8e905d0e579d60aedbc4953ff4f17648025ca42 Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Sun, 22 Feb 2026 22:09:42 +0530
+Subject: [PATCH] dt-bindings: clk: apss-ipq: add ipq9650 gold pll clock macros
+
+Add DT clock index macros for the IPQ9650 APSS gold cluster.
+
+Change-Id: I35f62dfa19ab36e1a5c19437ea6bc9a9c9ec0d30
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ include/dt-bindings/clock/qcom,apss-ipq.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/dt-bindings/clock/qcom,apss-ipq.h b/include/dt-bindings/clock/qcom,apss-ipq.h
+index 0bb41e5efdef..c9b04f2dbb6c 100644
+--- a/include/dt-bindings/clock/qcom,apss-ipq.h
++++ b/include/dt-bindings/clock/qcom,apss-ipq.h
+@@ -15,4 +15,9 @@
+ #define L3_CLK_SRC				6
+ #define L3_CORE_CLK				7
+ 
++/* IPQ9650 Gold cluster clock indices */
++#define APSS_GOLD_PLL				8
++#define APSS_GOLD_PLL_POSTDIV			9
++#define APSS_GOLD_CORE_CLK			10
++
+ #endif
+-- 
+2.34.1
+

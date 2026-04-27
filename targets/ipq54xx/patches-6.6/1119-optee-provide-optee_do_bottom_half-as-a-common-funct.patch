@@ -1,0 +1,164 @@
+From 4f16a04544a1ff503122ab0eae9ec0cc8a4b5b45 Mon Sep 17 00:00:00 2001
+From: Jens Wiklander <jens.wiklander@linaro.org>
+Date: Thu, 7 Sep 2023 12:55:58 +0200
+Subject: [PATCH] optee: provide optee_do_bottom_half() as a common function
+
+Provides optee_do_bottom_half() and optee_stop_async_notif() as common
+functions callable from the FF-A ABI part of the driver too.
+
+Signed-off-by: Jens Wiklander <jens.wiklander@linaro.org>
+Reviewed-by: Sumit Garg <sumit.garg@linaro.org>
+(cherry picked from commit 6dea6352bec3ab9f8f71d1694ca91002844a5067)
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+
+Change-Id: I70194fa65e8819477b316f6c19282bf76a40878e
+---
+ drivers/tee/optee/call.c          | 31 +++++++++++++++++++++++++-
+ drivers/tee/optee/optee_private.h |  5 ++++-
+ drivers/tee/optee/smc_abi.c       | 36 ++++---------------------------
+ 3 files changed, 38 insertions(+), 34 deletions(-)
+
+diff --git a/drivers/tee/optee/call.c b/drivers/tee/optee/call.c
+index b04c49c69619..a91e50be11be 100644
+--- a/drivers/tee/optee/call.c
++++ b/drivers/tee/optee/call.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0-only
+ /*
+- * Copyright (c) 2015-2021, Linaro Limited
++ * Copyright (c) 2015-2021, 2023 Linaro Limited
+  */
+ #include <linux/device.h>
+ #include <linux/err.h>
+@@ -640,3 +640,32 @@ int optee_check_mem_type(unsigned long start, size_t num_pages)
+ 
+ 	return rc;
+ }
++
++static int simple_call_with_arg(struct tee_context *ctx, u32 cmd)
++{
++	struct optee *optee = tee_get_drvdata(ctx->teedev);
++	struct optee_shm_arg_entry *entry;
++	struct optee_msg_arg *msg_arg;
++	struct tee_shm *shm;
++	u_int offs;
++
++	msg_arg = optee_get_msg_arg(ctx, 0, &entry, &shm, &offs);
++	if (IS_ERR(msg_arg))
++		return PTR_ERR(msg_arg);
++
++	msg_arg->cmd = cmd;
++	optee->ops->do_call_with_arg(ctx, shm, offs, false);
++
++	optee_free_msg_arg(ctx, entry, offs);
++	return 0;
++}
++
++int optee_do_bottom_half(struct tee_context *ctx)
++{
++	return simple_call_with_arg(ctx, OPTEE_MSG_CMD_DO_BOTTOM_HALF);
++}
++
++int optee_stop_async_notif(struct tee_context *ctx)
++{
++	return simple_call_with_arg(ctx, OPTEE_MSG_CMD_STOP_ASYNC_NOTIF);
++}
+diff --git a/drivers/tee/optee/optee_private.h b/drivers/tee/optee/optee_private.h
+index 05185e4e6a2f..85d963c9bd2f 100644
+--- a/drivers/tee/optee/optee_private.h
++++ b/drivers/tee/optee/optee_private.h
+@@ -1,6 +1,6 @@
+ /* SPDX-License-Identifier: GPL-2.0-only */
+ /*
+- * Copyright (c) 2015-2021, Linaro Limited
++ * Copyright (c) 2015-2021, 2023 Linaro Limited
+  */
+ 
+ #ifndef OPTEE_PRIVATE_H
+@@ -344,6 +344,9 @@ void optee_rpc_cmd_free_suppl(struct tee_context *ctx, struct tee_shm *shm);
+ void optee_rpc_cmd(struct tee_context *ctx, struct optee *optee,
+ 		   struct optee_msg_arg *arg);
+ 
++int optee_do_bottom_half(struct tee_context *ctx);
++int optee_stop_async_notif(struct tee_context *ctx);
++
+ /*
+  * Small helpers
+  */
+diff --git a/drivers/tee/optee/smc_abi.c b/drivers/tee/optee/smc_abi.c
+index 3b60acc15cf0..e158f3136c26 100644
+--- a/drivers/tee/optee/smc_abi.c
++++ b/drivers/tee/optee/smc_abi.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0-only
+ /*
+- * Copyright (c) 2015-2021, Linaro Limited
++ * Copyright (c) 2015-2021, 2023 Linaro Limited
+  * Copyright (c) 2016, EPAM Systems
+  */
+ 
+@@ -967,34 +967,6 @@ static int optee_smc_do_call_with_arg(struct tee_context *ctx,
+ 	return rc;
+ }
+ 
+-static int simple_call_with_arg(struct tee_context *ctx, u32 cmd)
+-{
+-	struct optee_shm_arg_entry *entry;
+-	struct optee_msg_arg *msg_arg;
+-	struct tee_shm *shm;
+-	u_int offs;
+-
+-	msg_arg = optee_get_msg_arg(ctx, 0, &entry, &shm, &offs);
+-	if (IS_ERR(msg_arg))
+-		return PTR_ERR(msg_arg);
+-
+-	msg_arg->cmd = cmd;
+-	optee_smc_do_call_with_arg(ctx, shm, offs, false);
+-
+-	optee_free_msg_arg(ctx, entry, offs);
+-	return 0;
+-}
+-
+-static int optee_smc_do_bottom_half(struct tee_context *ctx)
+-{
+-	return simple_call_with_arg(ctx, OPTEE_MSG_CMD_DO_BOTTOM_HALF);
+-}
+-
+-static int optee_smc_stop_async_notif(struct tee_context *ctx)
+-{
+-	return simple_call_with_arg(ctx, OPTEE_MSG_CMD_STOP_ASYNC_NOTIF);
+-}
+-
+ /*
+  * 5. Asynchronous notification
+  */
+@@ -1050,7 +1022,7 @@ static irqreturn_t notif_irq_thread_fn(int irq, void *dev_id)
+ {
+ 	struct optee *optee = dev_id;
+ 
+-	optee_smc_do_bottom_half(optee->ctx);
++	optee_do_bottom_half(optee->ctx);
+ 
+ 	return IRQ_HANDLED;
+ }
+@@ -1088,7 +1060,7 @@ static void notif_pcpu_irq_work_fn(struct work_struct *work)
+ 						   notif_pcpu_work);
+ 	struct optee *optee = container_of(optee_smc, struct optee, smc);
+ 
+-	optee_smc_do_bottom_half(optee->ctx);
++	optee_do_bottom_half(optee->ctx);
+ }
+ 
+ static int init_pcpu_irq(struct optee *optee, u_int irq)
+@@ -1160,7 +1132,7 @@ static void uninit_pcpu_irq(struct optee *optee)
+ static void optee_smc_notif_uninit_irq(struct optee *optee)
+ {
+ 	if (optee->smc.sec_caps & OPTEE_SMC_SEC_CAP_ASYNC_NOTIF) {
+-		optee_smc_stop_async_notif(optee->ctx);
++		optee_stop_async_notif(optee->ctx);
+ 		if (optee->smc.notif_irq) {
+ 			if (irq_is_percpu_devid(optee->smc.notif_irq))
+ 				uninit_pcpu_irq(optee);
+-- 
+2.34.1
+

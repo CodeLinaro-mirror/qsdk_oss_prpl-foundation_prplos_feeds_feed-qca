@@ -1,0 +1,30 @@
+From 0d8324f547f61a2f22513826dbb4a892075d7641 Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Sat, 7 Mar 2026 19:22:06 +0530
+Subject: [PATCH] clk: qcom: ipq5210: configure APSS PLL for 816MHz
+
+Adjust the PLL L value to program the APSS clock to 816 MHz.
+
+Change-Id: I8fc9e01c76d58d54547e0f1977d3e7fa0631a1af
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+(cherry picked from commit 1e933d7b3346d3cb89c568d97c802810e8ae889f)
+---
+ drivers/clk/qcom/apss-ipq-pll.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/clk/qcom/apss-ipq-pll.c b/drivers/clk/qcom/apss-ipq-pll.c
+index f90c879b44ba..58ffcedf8dd3 100644
+--- a/drivers/clk/qcom/apss-ipq-pll.c
++++ b/drivers/clk/qcom/apss-ipq-pll.c
+@@ -129,7 +129,7 @@ static const struct alpha_pll_config ipq9574_pll_config = {
+ };
+ 
+ static const struct alpha_pll_config ipq5210_pll_config = {
+-	.l = 0x32,
++	.l = 0x22,
+ 	.config_ctl_val = 0x4001075B,
+ 	.config_ctl_hi_val = 0x6,
+ 	.early_output_mask = BIT(3),
+-- 
+2.34.1
+

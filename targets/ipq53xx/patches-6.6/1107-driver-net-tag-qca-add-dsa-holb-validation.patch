@@ -1,0 +1,52 @@
+From 19c52b9342a717ef79bce67abde65c012a628ab1 Mon Sep 17 00:00:00 2001
+From: qiangqiang cheng <qiangqia@qti.qualcomm.com>
+Date: Fri, 6 Feb 2026 11:19:55 +0800
+Subject: [PATCH] driver: net: tag-qca: add dsa holb validation
+
+Need to check if valid vchannel id is assigned for HOLB case
+
+Change-Id: I99ae5cbfd2e7057a682bcbf4089e233ce743ff82
+Signed-off-by: qiangqiang cheng <qiangqia@qti.qualcomm.com>
+---
+ include/linux/dsa/tag_qca.h | 2 ++
+ net/dsa/tag_qca.c           | 4 ++--
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/dsa/tag_qca.h b/include/linux/dsa/tag_qca.h
+index 3639204e63eb..b00bf76e0db4 100644
+--- a/include/linux/dsa/tag_qca.h
++++ b/include/linux/dsa/tag_qca.h
+@@ -22,6 +22,8 @@ struct sk_buff;
+ #define HOLB_MHT_VALID_TAG		0xBB
+ #define HOLB_MHT_TAG_SHIFT		24
+ 
++#define QCE2204_FCGROUP_MAX		7
++
+ #define QCA_HDR_RECV_VERSION		GENMASK(15, 14)
+ #define QCA_HDR_RECV_PRIORITY		GENMASK(13, 11)
+ #define QCA_HDR_RECV_TYPE		GENMASK(10, 6)
+diff --git a/net/dsa/tag_qca.c b/net/dsa/tag_qca.c
+index 97ced8515789..2e74016b9ec1 100644
+--- a/net/dsa/tag_qca.c
++++ b/net/dsa/tag_qca.c
+@@ -55,7 +55,7 @@ static struct sk_buff *_qca_tag_xmit(struct sk_buff *skb, struct net_device *dev
+ 		/* Set the version field, and set destination port information */
+ 		*phdr = FIELD_PREP(QCA_HDR_XMIT_VERSION, QCA_HDR_VERSION3);
+ 
+-		if (unlikely(dp->ds->fc_group != NULL)) {
++		if (unlikely(dp->ds->fc_group != NULL && dp->ds->fc_group[dp->index - 1] < QCE2204_FCGROUP_MAX)) {
+ 			skb->mark = ((HOLB_MHT_VALID_TAG << HOLB_MHT_TAG_SHIFT) | (dp->index - 1));
+ 			*phdr |= FIELD_PREP(QCA_HDR_XMIT_VCHANNEL, dp->ds->fc_group[dp->index - 1]);
+ 		}
+@@ -177,7 +177,7 @@ static struct sk_buff *qca_8021q_tag_xmit(struct sk_buff *skb, struct net_device
+ 	if (unlikely(!nskb))
+ 		return NULL;
+ 
+-	if (unlikely(dp->ds->fc_group != NULL)) {
++	if (unlikely(dp->ds->fc_group != NULL && dp->ds->fc_group[dp->index - 1] < QCE2204_FCGROUP_MAX)) {
+ 		nskb = qca_4b_tag_xmit(nskb, dev);
+ 	}
+ 
+-- 
+2.34.1
+

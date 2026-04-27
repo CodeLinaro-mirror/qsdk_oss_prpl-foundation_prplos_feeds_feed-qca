@@ -1,0 +1,94 @@
+From e5033ccafba677e53b73dfc0b2940461b5193ba3 Mon Sep 17 00:00:00 2001
+From: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+Date: Mon, 2 Feb 2026 11:39:00 +0530
+Subject: [PATCH] soc: qcom: smem: add support to get the SoC major version
+
+Change-Id: I7ebebac0ba73949d2d7ae15b8cff1789a398d95c
+Signed-off-by: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+---
+ drivers/soc/qcom/smem.c       | 22 ++++++++++++++++++++++
+ drivers/soc/qcom/socinfo.c    |  7 -------
+ include/linux/soc/qcom/smem.h |  9 +++++++++
+ 3 files changed, 31 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/soc/qcom/smem.c b/drivers/soc/qcom/smem.c
+index 0394bcf4b028..f747ffd6a7c4 100644
+--- a/drivers/soc/qcom/smem.c
++++ b/drivers/soc/qcom/smem.c
+@@ -872,6 +872,28 @@ int qcom_smem_get_soc_id(u32 *id)
+ }
+ EXPORT_SYMBOL_GPL(qcom_smem_get_soc_id);
+ 
++/**
++ * qcom_smem_get_soc_major_version() - return the SoC major version
++ * @id:	On success, we return the SoC major version
++ *
++ * Look up SoC major version from HW/SW build ID and return it.
++ *
++ * Return: 0 on success, negative errno on failure.
++ */
++int qcom_smem_get_soc_major_version(u32 *version)
++{
++	struct socinfo *info;
++
++	info = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_HW_SW_BUILD_ID, NULL);
++	if (IS_ERR(info))
++		return PTR_ERR(info);
++
++	*version = SOCINFO_MAJOR(le32_to_cpu(info->ver));
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(qcom_smem_get_soc_major_version);
++
+ static int qcom_smem_get_sbl_version(struct qcom_smem *smem)
+ {
+ 	struct smem_header *header;
+diff --git a/drivers/soc/qcom/socinfo.c b/drivers/soc/qcom/socinfo.c
+index 8b2098357d41..d12d59142594 100644
+--- a/drivers/soc/qcom/socinfo.c
++++ b/drivers/soc/qcom/socinfo.c
+@@ -22,13 +22,6 @@
+ 
+ #include <dt-bindings/arm/qcom,ids.h>
+ 
+-/*
+- * SoC version type with major number in the upper 16 bits and minor
+- * number in the lower 16 bits.
+- */
+-#define SOCINFO_MAJOR(ver) (((ver) >> 16) & 0xffff)
+-#define SOCINFO_MINOR(ver) ((ver) & 0xffff)
+-#define SOCINFO_VERSION(maj, min)  ((((maj) & 0xffff) << 16)|((min) & 0xffff))
+ 
+ #define OEMID_REG 0xA6080
+ 
+diff --git a/include/linux/soc/qcom/smem.h b/include/linux/soc/qcom/smem.h
+index 03187bc95851..7b4a9d7cf94c 100644
+--- a/include/linux/soc/qcom/smem.h
++++ b/include/linux/soc/qcom/smem.h
+@@ -4,6 +4,14 @@
+ 
+ #define QCOM_SMEM_HOST_ANY -1
+ 
++/*
++ * SoC version type with major number in the upper 16 bits and minor
++ * number in the lower 16 bits.
++ */
++#define SOCINFO_MAJOR(ver) (((ver) >> 16) & 0xffff)
++#define SOCINFO_MINOR(ver) ((ver) & 0xffff)
++#define SOCINFO_VERSION(maj, min)  ((((maj) & 0xffff) << 16)|((min) & 0xffff))
++
+ bool qcom_smem_is_available(void);
+ int qcom_smem_alloc(unsigned host, unsigned item, size_t size);
+ void *qcom_smem_get(unsigned host, unsigned item, size_t *size);
+@@ -13,6 +21,7 @@ int qcom_smem_get_free_space(unsigned host);
+ phys_addr_t qcom_smem_virt_to_phys(void *p);
+ 
+ int qcom_smem_get_soc_id(u32 *id);
++int qcom_smem_get_soc_major_version(u32 *id);
+ 
+ int qcom_smem_bust_hwspin_lock_by_host(unsigned int host);
+ 
+-- 
+2.34.1
+

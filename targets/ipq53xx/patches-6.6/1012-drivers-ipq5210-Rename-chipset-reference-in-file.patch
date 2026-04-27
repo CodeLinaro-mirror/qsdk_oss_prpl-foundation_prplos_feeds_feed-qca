@@ -1,0 +1,236 @@
+From c6b65ce0934666f16fce18f823d615d7e763318e Mon Sep 17 00:00:00 2001
+From: Timple Raj M <timple@qti.qualcomm.com>
+Date: Tue, 23 Dec 2025 15:17:37 +0530
+Subject: [PATCH] drivers: ipq5210: Rename chipset reference in file
+
+Update the file to replace the chipset reference
+from ipq5200 to ipq5210 for consistency.
+
+Change-Id: I938201a37358a120376369efada704c04bd977ab
+Signed-off-by: Timple Raj M <timple@qti.qualcomm.com>
+---
+ .../devicetree/bindings/phy/qcom,qusb2-phy.yaml    |  2 +-
+ .../phy/qcom,sc8280xp-qmp-usb3-uni-phy.yaml        |  4 ++--
+ drivers/clk/qcom/Kconfig                           | 14 +++++++-------
+ drivers/clk/qcom/Makefile                          |  4 ++--
+ drivers/firmware/qcom_scm.c                        |  4 ++--
+ drivers/mtd/nand/raw/qcom_nandc.c                  |  6 +++---
+ drivers/pci/controller/dwc/pcie-qcom.c             |  2 +-
+ drivers/phy/qualcomm/phy-qcom-qmp-usb.c            |  2 +-
+ drivers/phy/qualcomm/phy-qcom-qusb2.c              |  2 +-
+ drivers/pinctrl/qcom/Kconfig.msm                   |  8 ++++----
+ drivers/pinctrl/qcom/Makefile                      |  2 +-
+ 11 files changed, 25 insertions(+), 25 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/phy/qcom,qusb2-phy.yaml b/Documentation/devicetree/bindings/phy/qcom,qusb2-phy.yaml
+index 30885c0ffc9c..142c923f724f 100644
+--- a/Documentation/devicetree/bindings/phy/qcom,qusb2-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/qcom,qusb2-phy.yaml
+@@ -22,7 +22,7 @@ properties:
+               - qcom,ipq8074-qusb2-phy
+               - qcom,ipq9574-qusb2-phy
+               - qcom,ipq5424-qusb2-phy
+-              - qcom,ipq5200-qusb2-phy
++              - qcom,ipq5210-qusb2-phy
+               - qcom,msm8953-qusb2-phy
+               - qcom,msm8996-qusb2-phy
+               - qcom,msm8998-qusb2-phy
+diff --git a/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb3-uni-phy.yaml b/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb3-uni-phy.yaml
+index 065af0356e2b..c88919e754d5 100644
+--- a/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb3-uni-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/qcom,sc8280xp-qmp-usb3-uni-phy.yaml
+@@ -18,7 +18,7 @@ properties:
+     enum:
+       - qcom,ipq9574-qmp-usb3-phy
+       - qcom,ipq5424-qmp-usb3-phy
+-      - qcom,ipq5200-qmp-usb3-phy
++      - qcom,ipq5210-qmp-usb3-phy
+       - qcom,qcm2290-qmp-usb3-phy
+       - qcom,sa8775p-qmp-usb3-uni-phy
+       - qcom,sc8280xp-qmp-usb3-uni-phy
+@@ -78,7 +78,7 @@ allOf:
+             enum:
+               - qcom,ipq9574-qmp-usb3-phy
+               - qcom,ipq5424-qmp-usb3-phy
+-              - qcom,ipq5200-qmp-usb3-phy
++              - qcom,ipq5210-qmp-usb3-phy
+     then:
+       properties:
+         clock-names:
+diff --git a/drivers/clk/qcom/Kconfig b/drivers/clk/qcom/Kconfig
+index 6115a1312338..2e8e17caa9ed 100644
+--- a/drivers/clk/qcom/Kconfig
++++ b/drivers/clk/qcom/Kconfig
+@@ -161,10 +161,10 @@ config IPQ_GCC_5018
+ 	  Say Y if you want to use peripheral devices such as UART, SPI,
+ 	  i2c, USB, SD/eMMC, etc.
+ 
+-config IPQ_GCC_5200
+-	tristate "IPQ5200 Global Clock Controller"
++config IPQ_GCC_5210
++	tristate "IPQ5210 Global Clock Controller"
+ 	help
+-	  Support for the global clock controller on ipq5200 devices.
++	  Support for the global clock controller on ipq5210 devices.
+ 	  Say Y if you want to use peripheral devices such as UART, SPI,
+ 	  i2c, USB, SD/eMMC, etc.
+ 
+@@ -232,11 +232,11 @@ config IPQ_GCC_9679
+ 	  i2c, USB, SD/eMMC, etc. Select this for the root clock
+ 	  of ipq9679.
+ 
+-config IPQ_NSSCC_5200
+-        tristate "IPQ5200 NSS Clock Controller"
+-        depends on IPQ_GCC_5200
++config IPQ_NSSCC_5210
++        tristate "IPQ5210 NSS Clock Controller"
++        depends on IPQ_GCC_5210
+         help
+-          Support for NSS clock controller on ipq5200 devices.
++          Support for NSS clock controller on ipq5210 devices.
+ 
+ config IPQ_NSSCC_5332
+         tristate "IPQ5332 NSS Clock Controller"
+diff --git a/drivers/clk/qcom/Makefile b/drivers/clk/qcom/Makefile
+index 9ad3ca2aa31d..a1393a427b56 100644
+--- a/drivers/clk/qcom/Makefile
++++ b/drivers/clk/qcom/Makefile
+@@ -28,13 +28,13 @@ obj-$(CONFIG_IPQ_GCC_4019) += gcc-ipq4019.o
+ obj-$(CONFIG_IPQ_GCC_5018) += gcc-ipq5018.o
+ obj-$(CONFIG_IPQ_GCC_5332) += gcc-ipq5332.o
+ obj-$(CONFIG_IPQ_GCC_5424) += gcc-ipq5424.o
+-obj-$(CONFIG_IPQ_GCC_5200) += gcc-ipq5200.o
++obj-$(CONFIG_IPQ_GCC_5210) += gcc-ipq5210.o
+ obj-$(CONFIG_IPQ_GCC_6018) += gcc-ipq6018.o
+ obj-$(CONFIG_IPQ_GCC_806X) += gcc-ipq806x.o
+ obj-$(CONFIG_IPQ_GCC_8074) += gcc-ipq8074.o
+ obj-$(CONFIG_IPQ_GCC_9574) += gcc-ipq9574.o
+ obj-$(CONFIG_IPQ_GCC_9679) += gcc-ipq9679.o
+-obj-$(CONFIG_IPQ_NSSCC_5200) += nsscc-ipq5200.o
++obj-$(CONFIG_IPQ_NSSCC_5210) += nsscc-ipq5210.o
+ obj-$(CONFIG_IPQ_NSSCC_5332) += nsscc-ipq5332.o
+ obj-$(CONFIG_IPQ_NSSCC_5424) += nsscc-ipq5424.o
+ obj-$(CONFIG_IPQ_NSSCC_9574) += nsscc-ipq9574.o
+diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
+index 16a492e6995c..eef6f7c411a7 100644
+--- a/drivers/firmware/qcom_scm.c
++++ b/drivers/firmware/qcom_scm.c
+@@ -3597,7 +3597,7 @@ struct scm_priv_data ipq9679_data = {
+ 	.milestone_mask = BIT(8)
+ };
+ 
+-struct scm_priv_data ipq5200_data = {
++struct scm_priv_data ipq5210_data = {
+ 	.milestone_mask = BIT(8)
+ };
+ 
+@@ -3608,7 +3608,7 @@ static const struct of_device_id qcom_scm_dt_match[] = {
+ 	{ .compatible = "qcom,scm-apq8064" },
+ 	{ .compatible = "qcom,scm-apq8084" },
+ 	{ .compatible = "qcom,scm-ipq4019" },
+-	{ .compatible = "qcom,scm-ipq5200", .data = &ipq5200_data },
++	{ .compatible = "qcom,scm-ipq5210", .data = &ipq5210_data },
+ 	{ .compatible = "qcom,scm-ipq5424", .data = &ipq5424_data},
+ 	{ .compatible = "qcom,scm-ipq9574", .data = &ipq9574_data},
+ 	{ .compatible = "qcom,scm-ipq9679", .data = &ipq9679_data },
+diff --git a/drivers/mtd/nand/raw/qcom_nandc.c b/drivers/mtd/nand/raw/qcom_nandc.c
+index ea55e91a9c7c..0b176fd35d67 100644
+--- a/drivers/mtd/nand/raw/qcom_nandc.c
++++ b/drivers/mtd/nand/raw/qcom_nandc.c
+@@ -4377,7 +4377,7 @@ static const struct qcom_nandc_props ipq5424_nandc_props = {
+ 	.dev_cmd_reg_start = 0x7000,
+ };
+ 
+-static const struct qcom_nandc_props ipq5200_nandc_props = {
++static const struct qcom_nandc_props ipq5210_nandc_props = {
+ 	.ecc_modes = (ECC_BCH_4BIT | ECC_BCH_8BIT),
+ 	.is_bam = true,
+ 	.is_serial_nand = true,
+@@ -4441,8 +4441,8 @@ static const struct of_device_id qcom_nandc_of_match[] = {
+ 		.data = &ipq5424_nandc_props,
+ 	},
+ 	{
+-		.compatible = "qcom,ipq5200-nand",
+-		.data = &ipq5200_nandc_props,
++		.compatible = "qcom,ipq5210-nand",
++		.data = &ipq5210_nandc_props,
+ 	},
+ 	{
+ 		.compatible = "qcom,ipq9574-nand",
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index edf488e4e9d0..9bb85a242e08 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -2363,7 +2363,7 @@ static const struct of_device_id qcom_pcie_match[] = {
+ 	{ .compatible = "qcom,pcie-ipq4019", .data = &cfg_2_4_0 },
+ 	{ .compatible = "qti,pcie-ipq5332", .data = &cfg_1_27_0 },
+ 	{ .compatible = "qcom,pcie-ipq5424", .data = &cfg_1_27_0 },
+-	{ .compatible = "qcom,pcie-ipq5200", .data = &cfg_1_27_0 },
++	{ .compatible = "qcom,pcie-ipq5210", .data = &cfg_1_27_0 },
+ 	{ .compatible = "qcom,pcie-ipq6018", .data = &cfg_2_9_0 },
+ 	{ .compatible = "qcom,pcie-ipq8064", .data = &cfg_2_1_0 },
+ 	{ .compatible = "qcom,pcie-ipq8064-v2", .data = &cfg_2_1_0 },
+diff --git a/drivers/phy/qualcomm/phy-qcom-qmp-usb.c b/drivers/phy/qualcomm/phy-qcom-qmp-usb.c
+index 69138d99a13f..2e499265d5b1 100644
+--- a/drivers/phy/qualcomm/phy-qcom-qmp-usb.c
++++ b/drivers/phy/qualcomm/phy-qcom-qmp-usb.c
+@@ -2250,7 +2250,7 @@ static const struct of_device_id qmp_usb_of_match_table[] = {
+ 		.compatible = "qcom,ipq5424-qmp-usb3-phy",
+ 		.data = &ipq9574_usb3phy_cfg,
+ 	}, {
+-		.compatible = "qcom,ipq5200-qmp-usb3-phy",
++		.compatible = "qcom,ipq5210-qmp-usb3-phy",
+ 		.data = &ipq9574_usb3phy_cfg,
+ 	}, {
+ 		.compatible = "qcom,msm8996-qmp-usb3-phy",
+diff --git a/drivers/phy/qualcomm/phy-qcom-qusb2.c b/drivers/phy/qualcomm/phy-qcom-qusb2.c
+index c533ef328bf4..e71c21014fc3 100644
+--- a/drivers/phy/qualcomm/phy-qcom-qusb2.c
++++ b/drivers/phy/qualcomm/phy-qcom-qusb2.c
+@@ -917,7 +917,7 @@ static const struct of_device_id qusb2_phy_of_match_table[] = {
+ 		.compatible	= "qcom,ipq5424-qusb2-phy",
+ 		.data		= &ipq6018_phy_cfg,
+ 	}, {
+-		.compatible	= "qcom,ipq5200-qusb2-phy",
++		.compatible	= "qcom,ipq5210-qusb2-phy",
+ 		.data		= &ipq6018_phy_cfg,
+ 	}, {
+ 		.compatible	= "qcom,msm8953-qusb2-phy",
+diff --git a/drivers/pinctrl/qcom/Kconfig.msm b/drivers/pinctrl/qcom/Kconfig.msm
+index 68b5b998ce2f..fbfb46282f35 100644
+--- a/drivers/pinctrl/qcom/Kconfig.msm
++++ b/drivers/pinctrl/qcom/Kconfig.msm
+@@ -53,13 +53,13 @@ config PINCTRL_IPQ5424
+ 	  Qualcomm Technologies Inc. IPQ5424 platform. Select this for
+ 	  IPQ5424.
+ 
+-config PINCTRL_IPQ5200
+-	tristate "Qualcomm Technologies, Inc. IPQ5200 pin controller driver"
++config PINCTRL_IPQ5210
++	tristate "Qualcomm Technologies, Inc. IPQ5210 pin controller driver"
+ 	help
+ 	  This is the pinctrl, pinmux, pinconf and gpiolib driver for
+ 	  the Qualcomm Technologies Inc. TLMM block found on the
+-	  Qualcomm Technologies Inc. IPQ5200 platform. Select this for
+-	  IPQ5200.
++	  Qualcomm Technologies Inc. IPQ5210 platform. Select this for
++	  IPQ5210.
+ 
+ config PINCTRL_IPQ8074
+ 	tristate "Qualcomm Technologies, Inc. IPQ8074 pin controller driver"
+diff --git a/drivers/pinctrl/qcom/Makefile b/drivers/pinctrl/qcom/Makefile
+index 989818a857da..41df21eea89c 100644
+--- a/drivers/pinctrl/qcom/Makefile
++++ b/drivers/pinctrl/qcom/Makefile
+@@ -6,7 +6,7 @@ obj-$(CONFIG_PINCTRL_APQ8084)	+= pinctrl-apq8084.o
+ obj-$(CONFIG_PINCTRL_IPQ4019)	+= pinctrl-ipq4019.o
+ obj-$(CONFIG_PINCTRL_IPQ5018)	+= pinctrl-ipq5018.o
+ obj-$(CONFIG_PINCTRL_IPQ8064)	+= pinctrl-ipq8064.o
+-obj-$(CONFIG_PINCTRL_IPQ5200)	+= pinctrl-ipq5200.o
++obj-$(CONFIG_PINCTRL_IPQ5210)	+= pinctrl-ipq5210.o
+ obj-$(CONFIG_PINCTRL_IPQ5332)	+= pinctrl-ipq5332.o
+ obj-$(CONFIG_PINCTRL_IPQ5424)	+= pinctrl-ipq5424.o
+ obj-$(CONFIG_PINCTRL_IPQ8074)	+= pinctrl-ipq8074.o
+-- 
+2.34.1
+

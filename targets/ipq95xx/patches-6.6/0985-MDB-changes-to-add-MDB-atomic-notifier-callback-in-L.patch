@@ -1,0 +1,96 @@
+From 1a4acab2a6f21fc255df3f6d76f36453ea56ba30 Mon Sep 17 00:00:00 2001
+From: Krithi D Shetty <kdshetty@qti.qualcomm.com>
+Date: Wed, 8 Oct 2025 11:31:41 +0530
+Subject: [PATCH] MDB: changes to add MDB atomic notifier callback in Linux
+
+This Patch invokes an atomic notifier callback in (br_mdb_notify) function when there is a meaningful change of state to a port-group (PG) for a Multicast listener port.
+
+ECM listens to this notification to update it's interface heirarchies on the fly to make sure it's rule is always up-to-date.
+
+Change-Id: Ib2905b0338750cd2c94899b6370247e97f4964dc
+Signed-off-by: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ include/linux/if_bridge.h | 25 +++++++++++++++++++++++++
+ net/bridge/br_mdb.c       | 15 +++++++++++++++
+ 2 files changed, 40 insertions(+)
+
+diff --git a/include/linux/if_bridge.h b/include/linux/if_bridge.h
+index 7c42ec2e08f2..f1fcb3bc6e16 100644
+--- a/include/linux/if_bridge.h
++++ b/include/linux/if_bridge.h
+@@ -89,6 +89,10 @@ extern struct net_bridge_fdb_entry *br_fdb_has_entry(struct net_device *dev,
+ 						     __u16 vid);
+ extern void br_fdb_update_register_notify(struct notifier_block *nb);
+ extern void br_fdb_update_unregister_notify(struct notifier_block *nb);
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++extern void br_mcast_offload_mdb_register_notify(struct notifier_block *nb);
++extern void br_mcast_offload_mdb_unregister_notify(struct notifier_block *nb);
++#endif
+ extern bool br_is_hairpin_enabled(struct net_device *dev);
+ 
+ #if IS_ENABLED(CONFIG_BRIDGE) && IS_ENABLED(CONFIG_BRIDGE_IGMP_SNOOPING)
+@@ -280,6 +284,27 @@ struct br_fdb_event {
+ 	struct net_device *orig_dev;
+ };
+ 
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++/*
++ * Bridge MDB event types.
++ */
++enum br_mdb_event_type {
++	BR_MDB_EVENT_NONE = 0,
++	BR_MDB_EVENT_ADD,
++	BR_MDB_EVENT_DEL,
++	BR_MDB_EVENT_MAX
++};
++
++/*
++ * Bridge MDB event data-structure.
++ */
++struct br_mdb_event {
++	struct net_device *dev;
++	union nf_inet_addr group;
++	__be16		proto;
++};
++#endif
++
+ extern void br_fdb_register_notify(struct notifier_block *nb);
+ extern void br_fdb_unregister_notify(struct notifier_block *nb);
+ extern struct net_device *br_fdb_bridge_dev_get_and_hold(struct net_bridge *br);
+diff --git a/net/bridge/br_mdb.c b/net/bridge/br_mdb.c
+index 01bd6549dc80..412a20aa82bf 100644
+--- a/net/bridge/br_mdb.c
++++ b/net/bridge/br_mdb.c
+@@ -589,6 +589,9 @@ void br_mdb_notify(struct net_device *dev,
+ 	struct net *net = dev_net(dev);
+ 	struct sk_buff *skb;
+ 	int err = -ENOBUFS;
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	int ret = 0;
++#endif
+ 
+ 	br_switchdev_mdb_notify(dev, mp, pg, type);
+ 
+@@ -602,6 +605,18 @@ void br_mdb_notify(struct net_device *dev,
+ 		goto errout;
+ 	}
+ 
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	/*
++	 * Notification should only be generated for a (*,G) MDB entry
++	 * having a valid Port-Group pointer.
++	 */
++	if (br_multicast_is_star_g(&mp->addr) && pg)
++		ret = br_mcast_offload_mdb_send_event_notify(dev, mp, type);
++
++	if (ret)
++		pr_debug("bridge: Failed to Send Bridge MDB notification(%d)\n", ret);
++#endif
++
+ 	rtnl_notify(skb, net, 0, RTNLGRP_MDB, NULL, GFP_ATOMIC);
+ 	return;
+ errout:
+-- 
+2.34.1
+

@@ -38,11 +38,11 @@ Signed-off-by: Pavithra R <quic_pavir@quicinc.com>
  include/net/bonding.h           |  21 +++
  4 files changed, 481 insertions(+), 13 deletions(-)
 
-diff --git a/drivers/net/bonding/bond_3ad.c b/drivers/net/bonding/bond_3ad.c
-index c99ffe6c683a..9bb75e31f75e 100644
---- a/drivers/net/bonding/bond_3ad.c
-+++ b/drivers/net/bonding/bond_3ad.c
-@@ -116,6 +116,38 @@ static void ad_marker_response_received(struct bond_marker *marker,
+Index: linux-6.6.116/drivers/net/bonding/bond_3ad.c
+===================================================================
+--- linux-6.6.116.orig/drivers/net/bonding/bond_3ad.c	2026-01-23 22:09:50.185901563 +0530
++++ linux-6.6.116/drivers/net/bonding/bond_3ad.c	2026-01-23 22:09:50.181901363 +0530
+@@ -119,6 +119,38 @@
  					struct port *port);
  static void ad_update_actor_keys(struct port *port, bool reset);
  
@@ -81,7 +81,7 @@ index c99ffe6c683a..9bb75e31f75e 100644
  
  /* ================= api to bonding and kernel code ================== */
  
-@@ -430,7 +462,6 @@ static u16 __ad_timer_to_ticks(u16 timer_type, u16 par)
+@@ -481,7 +513,6 @@
  	return retval;
  }
  
@@ -89,7 +89,7 @@ index c99ffe6c683a..9bb75e31f75e 100644
  /* ================= ad_rx_machine helper functions ================== */
  
  /**
-@@ -1073,6 +1104,28 @@ static void ad_mux_machine(struct port *port, bool *update_slave_arr)
+@@ -1163,6 +1194,28 @@
  			ad_disable_collecting_distributing(port,
  							   update_slave_arr);
  			port->ntt = true;
@@ -118,7 +118,7 @@ index c99ffe6c683a..9bb75e31f75e 100644
  			break;
  		case AD_MUX_COLLECTING_DISTRIBUTING:
  			port->actor_oper_port_state |= LACP_STATE_COLLECTING;
-@@ -1917,6 +1970,7 @@ static void ad_enable_collecting_distributing(struct port *port,
+@@ -2066,6 +2119,7 @@
  					      bool *update_slave_arr)
  {
  	if (port->aggregator->is_active) {
@@ -126,7 +126,7 @@ index c99ffe6c683a..9bb75e31f75e 100644
  		slave_dbg(port->slave->bond->dev, port->slave->dev,
  			  "Enabling port %d (LAG %d)\n",
  			  port->actor_port_number,
-@@ -1924,6 +1978,14 @@ static void ad_enable_collecting_distributing(struct port *port,
+@@ -2073,6 +2127,14 @@
  		__enable_port(port);
  		/* Slave array needs update */
  		*update_slave_arr = true;
@@ -141,7 +141,7 @@ index c99ffe6c683a..9bb75e31f75e 100644
  	}
  }
  
-@@ -2683,6 +2745,102 @@ int bond_3ad_get_active_agg_info(struct bonding *bond, struct ad_info *ad_info)
+@@ -2832,6 +2894,102 @@
  	return ret;
  }
  
@@ -244,11 +244,11 @@ index c99ffe6c683a..9bb75e31f75e 100644
  int bond_3ad_lacpdu_recv(const struct sk_buff *skb, struct bonding *bond,
  			 struct slave *slave)
  {
-diff --git a/drivers/net/bonding/bond_main.c b/drivers/net/bonding/bond_main.c
-index 8e6cc0e133b7..4aeae3330a36 100644
---- a/drivers/net/bonding/bond_main.c
-+++ b/drivers/net/bonding/bond_main.c
-@@ -210,6 +210,7 @@ atomic_t netpoll_block_tx = ATOMIC_INIT(0);
+Index: linux-6.6.116/drivers/net/bonding/bond_main.c
+===================================================================
+--- linux-6.6.116.orig/drivers/net/bonding/bond_main.c	2026-01-23 22:09:50.185901563 +0530
++++ linux-6.6.116/drivers/net/bonding/bond_main.c	2026-01-23 22:09:50.185901563 +0530
+@@ -210,6 +210,7 @@
  #endif
  
  unsigned int bond_net_id __read_mostly;
@@ -256,7 +256,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  
  static const struct flow_dissector_key flow_keys_bonding_keys[] = {
  	{
-@@ -287,6 +288,19 @@ const char *bond_mode_name(int mode)
+@@ -287,6 +288,19 @@
  	return names[mode];
  }
  
@@ -276,7 +276,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  /**
   * bond_dev_queue_xmit - Prepare skb for xmit.
   *
-@@ -1188,6 +1202,21 @@ void bond_change_active_slave(struct bonding *bond, struct slave *new_active)
+@@ -1231,6 +1245,21 @@
  			if (BOND_MODE(bond) == BOND_MODE_8023AD)
  				bond_3ad_handle_link_change(new_active, BOND_LINK_UP);
  
@@ -298,7 +298,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  			if (bond_is_lb(bond))
  				bond_alb_handle_link_change(bond, new_active, BOND_LINK_UP);
  		} else {
-@@ -1830,6 +1859,7 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+@@ -1876,6 +1905,7 @@
  	const struct net_device_ops *slave_ops = slave_dev->netdev_ops;
  	struct slave *new_slave = NULL, *prev_slave;
  	struct sockaddr_storage ss;
@@ -306,7 +306,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	int link_reporting;
  	int res = 0, i;
  
-@@ -2275,6 +2305,13 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+@@ -2337,6 +2367,13 @@
  		   bond_is_active_slave(new_slave) ? "an active" : "a backup",
  		   new_slave->link != BOND_LINK_DOWN ? "an up" : "a down");
  
@@ -320,7 +320,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	/* enslave is successful */
  	bond_queue_slave_event(new_slave);
  	return 0;
-@@ -2340,6 +2377,13 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev,
+@@ -2402,6 +2439,13 @@
  		}
  	}
  
@@ -334,7 +334,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	return res;
  }
  
-@@ -2361,6 +2405,7 @@ static int __bond_release_one(struct net_device *bond_dev,
+@@ -2423,6 +2467,7 @@
  	struct bonding *bond = netdev_priv(bond_dev);
  	struct slave *slave, *oldcurrent;
  	struct sockaddr_storage ss;
@@ -342,7 +342,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	int old_flags = bond_dev->flags;
  	netdev_features_t old_features = bond_dev->features;
  
-@@ -2383,6 +2428,13 @@ static int __bond_release_one(struct net_device *bond_dev,
+@@ -2445,6 +2490,13 @@
  
  	bond_set_slave_inactive_flags(slave, BOND_SLAVE_NOTIFY_NOW);
  
@@ -356,7 +356,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	bond_sysfs_slave_del(slave);
  
  	/* recompute stats just before removing the slave */
-@@ -2705,8 +2757,8 @@ static void bond_miimon_commit(struct bonding *bond)
+@@ -2773,8 +2825,8 @@
  	struct slave *slave, *primary, *active;
  	bool do_failover = false;
  	struct list_head *iter;
@@ -367,7 +367,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  
  	bond_for_each_slave(bond, slave, iter) {
  		switch (slave->link_new_state) {
-@@ -2744,6 +2796,10 @@ static void bond_miimon_commit(struct bonding *bond)
+@@ -2812,6 +2864,10 @@
  				bond_set_active_slave(slave);
  			}
  
@@ -378,7 +378,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  			slave_info(bond->dev, slave->dev, "link status definitely up, %u Mbps %s duplex\n",
  				   slave->speed == SPEED_UNKNOWN ? 0 : slave->speed,
  				   slave->duplex ? "full" : "half");
-@@ -2792,6 +2848,14 @@ static void bond_miimon_commit(struct bonding *bond)
+@@ -2860,6 +2916,14 @@
  		unblock_netpoll_tx();
  	}
  
@@ -393,7 +393,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	bond_set_carrier(bond);
  }
  
-@@ -4044,11 +4108,221 @@ static inline u32 bond_eth_hash(struct sk_buff *skb, const void *data, int mhoff
+@@ -4107,11 +4171,221 @@
  		return 0;
  
  	ep = (struct ethhdr *)(data + mhoff);
@@ -616,7 +616,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  {
  	const struct ipv6hdr *iph6;
  	const struct iphdr *iph;
-@@ -5174,15 +5448,16 @@ static netdev_tx_t bond_3ad_xor_xmit(struct sk_buff *skb,
+@@ -5237,15 +5511,16 @@
  				     struct net_device *dev)
  {
  	struct bonding *bond = netdev_priv(dev);
@@ -640,7 +640,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  }
  
  /* in broadcast mode, we send everything to all usable interfaces. */
-@@ -5432,8 +5707,9 @@ static netdev_tx_t __bond_start_xmit(struct sk_buff *skb, struct net_device *dev
+@@ -5495,8 +5770,9 @@
  		return bond_xmit_roundrobin(skb, dev);
  	case BOND_MODE_ACTIVEBACKUP:
  		return bond_xmit_activebackup(skb, dev);
@@ -651,7 +651,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  		return bond_3ad_xor_xmit(skb, dev);
  	case BOND_MODE_BROADCAST:
  		return bond_xmit_broadcast(skb, dev);
-@@ -5870,6 +6146,9 @@ static void bond_destructor(struct net_device *bond_dev)
+@@ -5933,6 +6209,9 @@
  	if (bond->wq)
  		destroy_workqueue(bond->wq);
  
@@ -661,7 +661,7 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  	free_percpu(bond->rr_tx_counter);
  }
  
-@@ -6422,6 +6701,11 @@ int bond_create(struct net *net, const char *name)
+@@ -6487,6 +6766,11 @@
  
  	bond_work_init_all(bond);
  
@@ -673,29 +673,26 @@ index 8e6cc0e133b7..4aeae3330a36 100644
  out:
  	rtnl_unlock();
  	return res;
-diff --git a/include/net/bond_3ad.h b/include/net/bond_3ad.h
-index c5e57c6bd873..28ebdcc569c3 100644
---- a/include/net/bond_3ad.h
-+++ b/include/net/bond_3ad.h
-@@ -302,8 +302,13 @@ int bond_3ad_lacpdu_recv(const struct sk_buff *skb, struct bonding *bond,
+Index: linux-6.6.116/include/net/bond_3ad.h
+===================================================================
+--- linux-6.6.116.orig/include/net/bond_3ad.h	2026-01-23 22:09:50.185901563 +0530
++++ linux-6.6.116/include/net/bond_3ad.h	2026-01-23 22:18:20.283485404 +0530
+@@ -304,6 +304,11 @@
  			 struct slave *slave);
  int bond_3ad_set_carrier(struct bonding *bond);
  void bond_3ad_update_lacp_rate(struct bonding *bond);
 +struct net_device *bond_3ad_get_tx_dev(struct sk_buff *skb, uint8_t *src_mac,
-+				       uint8_t *dst_mac, void *src,
-+				       void *dst, uint16_t protocol,
-+				       struct net_device *bond_dev,
-+				       __be16 *layer4hdr);
-+
++					uint8_t *dst_mac, void *src,
++					void *dst, uint16_t protocol,
++					struct net_device *bond_dev,
++					__be16 *layer4hdr);
+ void bond_3ad_update_lacp_active(struct bonding *bond);
  void bond_3ad_update_ad_actor_settings(struct bonding *bond);
  int bond_3ad_stats_fill(struct sk_buff *skb, struct bond_3ad_stats *stats);
- size_t bond_3ad_stats_size(void);
- #endif /* _NET_BOND_3AD_H */
--
-diff --git a/include/net/bonding.h b/include/net/bonding.h
-index 5b8b1b644a2d..7cbf28ca7f3f 100644
---- a/include/net/bonding.h
-+++ b/include/net/bonding.h
+Index: linux-6.6.116/include/net/bonding.h
+===================================================================
+--- linux-6.6.116.orig/include/net/bonding.h	2026-01-23 22:09:50.185901563 +0530
++++ linux-6.6.116/include/net/bonding.h	2026-01-23 22:09:50.185901563 +0530
 @@ -90,6 +90,8 @@
  #define BOND_XFRM_FEATURES (NETIF_F_HW_ESP | NETIF_F_HW_ESP_TX_CSUM | \
  			    NETIF_F_GSO_ESP)
@@ -705,15 +702,15 @@ index 5b8b1b644a2d..7cbf28ca7f3f 100644
  #ifdef CONFIG_NET_POLL_CONTROLLER
  extern atomic_t netpoll_block_tx;
  
-@@ -261,6 +263,7 @@ struct bonding {
- 	spinlock_t ipsec_lock;
+@@ -263,6 +265,7 @@
+ 	struct mutex ipsec_lock;
  #endif /* CONFIG_XFRM_OFFLOAD */
  	struct bpf_prog *xdp_prog;
 +	u32 id;
  };
  
  #define bond_slave_get_rcu(dev) \
-@@ -683,6 +686,11 @@ struct bond_vlan_tag *bond_verify_device_path(struct net_device *start_dev,
+@@ -706,6 +709,11 @@
  					      int level);
  int bond_update_slave_arr(struct bonding *bond, struct slave *skipslave);
  void bond_slave_arr_work_rearm(struct bonding *bond, unsigned long delay);
@@ -725,7 +722,7 @@ index 5b8b1b644a2d..7cbf28ca7f3f 100644
  void bond_work_init_all(struct bonding *bond);
  
  #ifdef CONFIG_PROC_FS
-@@ -787,4 +795,17 @@ static inline netdev_tx_t bond_tx_drop(struct net_device *dev, struct sk_buff *s
+@@ -810,4 +818,17 @@
  	return NET_XMIT_DROP;
  }
  
@@ -743,6 +740,3 @@ index 5b8b1b644a2d..7cbf28ca7f3f 100644
 +extern int bond_get_id(struct net_device *bond_dev);
 +
  #endif /* _NET_BONDING_H */
--- 
-2.34.1
-

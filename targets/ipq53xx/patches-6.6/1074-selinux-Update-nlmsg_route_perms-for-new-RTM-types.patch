@@ -1,0 +1,41 @@
+From 958aca54c54939cf1706db0c925c039178508a72 Mon Sep 17 00:00:00 2001
+From: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+Date: Wed, 25 Feb 2026 08:04:53 +0530
+Subject: [PATCH] selinux: Update nlmsg_route_perms for new RTM types
+
+This patch updates the nlmsg_route_perms array to include permissions for
+the new RTM message types and adjusts the BUILD_BUG_ON check to account
+for the new RTM_MAX value.
+
+Change-Id: I78b48ac8b05775fb2d49cb5fbead54a5b7d2f58a
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ security/selinux/nlmsgtab.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/security/selinux/nlmsgtab.c b/security/selinux/nlmsgtab.c
+index 8ff670cf1ee5..c81812f54eba 100644
+--- a/security/selinux/nlmsgtab.c
++++ b/security/selinux/nlmsgtab.c
+@@ -94,6 +94,9 @@ static const struct nlmsg_perm nlmsg_route_perms[] = {
+ 	{ RTM_NEWTUNNEL,	NETLINK_ROUTE_SOCKET__NLMSG_WRITE },
+ 	{ RTM_DELTUNNEL,	NETLINK_ROUTE_SOCKET__NLMSG_WRITE },
+ 	{ RTM_GETTUNNEL,	NETLINK_ROUTE_SOCKET__NLMSG_READ  },
++	{ RTM_NEWMCASTRULE,	NETLINK_ROUTE_SOCKET__NLMSG_WRITE },
++	{ RTM_DELMCASTRULE,	NETLINK_ROUTE_SOCKET__NLMSG_WRITE },
++	{ RTM_GETMCASTRULE,	NETLINK_ROUTE_SOCKET__NLMSG_READ  },
+ };
+ 
+ static const struct nlmsg_perm nlmsg_tcpdiag_perms[] = {
+@@ -177,7 +180,7 @@ int selinux_nlmsg_lookup(u16 sclass, u16 nlmsg_type, u32 *perm)
+ 		 * structures at the top of this file with the new mappings
+ 		 * before updating the BUILD_BUG_ON() macro!
+ 		 */
+-		BUILD_BUG_ON(RTM_MAX != (RTM_NEWTUNNEL + 3));
++		BUILD_BUG_ON(RTM_MAX != (RTM_NEWMCASTRULE + 3));
+ 		err = nlmsg_perm(nlmsg_type, perm, nlmsg_route_perms,
+ 				 sizeof(nlmsg_route_perms));
+ 		break;
+-- 
+2.34.1
+

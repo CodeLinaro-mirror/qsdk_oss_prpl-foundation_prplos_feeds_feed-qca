@@ -1,0 +1,151 @@
+From fb70d22dbab623888f9617315eebde01f4cd1e9b Mon Sep 17 00:00:00 2001
+From: Wolfram Sang <wsa+renesas@sang-engineering.com>
+Date: Wed, 13 Aug 2025 18:14:48 +0200
+Subject: [PATCH] clk: remove unneeded 'fast_io' parameter in regmap_config
+
+When using MMIO with regmap, fast_io is implied. No need to set it
+again.
+
+Signed-off-by: Wolfram Sang <wsa+renesas@sang-engineering.com>
+Link: https://lore.kernel.org/r/20250813161517.4746-3-wsa+renesas@sang-engineering.com
+Signed-off-by: Stephen Boyd <sboyd@kernel.org>
+(cherry picked from commit 4239b174c2fc8307a1939ebaf51118109935a8fc)
+
+Change-Id: I6fd4bfdbadadd59d0b5b3e3fa482911262b968d8
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ drivers/clk/actions/owl-common.c | 1 -
+ drivers/clk/clk-axm5516.c        | 1 -
+ drivers/clk/nxp/clk-lpc32xx.c    | 1 -
+ drivers/clk/qcom/a53-pll.c       | 1 -
+ drivers/clk/qcom/a7-pll.c        | 1 -
+ drivers/clk/qcom/apss-ipq-pll.c  | 1 -
+ drivers/clk/qcom/clk-cbf-8996.c  | 1 -
+ drivers/clk/qcom/clk-cpu-8996.c  | 1 -
+ drivers/clk/qcom/hfpll.c         | 1 -
+ drivers/clk/qcom/ipq-cmn-pll.c   | 1 -
+ 10 files changed, 10 deletions(-)
+
+diff --git a/drivers/clk/actions/owl-common.c b/drivers/clk/actions/owl-common.c
+index c62024b7c737..b3dded204dc5 100644
+--- a/drivers/clk/actions/owl-common.c
++++ b/drivers/clk/actions/owl-common.c
+@@ -18,7 +18,6 @@ static const struct regmap_config owl_regmap_config = {
+ 	.reg_stride	= 4,
+ 	.val_bits	= 32,
+ 	.max_register	= 0x00cc,
+-	.fast_io	= true,
+ };
+ 
+ static void owl_clk_set_regmap(const struct owl_clk_desc *desc,
+diff --git a/drivers/clk/clk-axm5516.c b/drivers/clk/clk-axm5516.c
+index 4a3462ee8f3e..3823383f3fa6 100644
+--- a/drivers/clk/clk-axm5516.c
++++ b/drivers/clk/clk-axm5516.c
+@@ -529,7 +529,6 @@ static const struct regmap_config axmclk_regmap_config = {
+ 	.reg_stride	= 4,
+ 	.val_bits	= 32,
+ 	.max_register	= 0x1fffc,
+-	.fast_io	= true,
+ };
+ 
+ static const struct of_device_id axmclk_match_table[] = {
+diff --git a/drivers/clk/nxp/clk-lpc32xx.c b/drivers/clk/nxp/clk-lpc32xx.c
+index d0f870eff0d6..bfb9a06c4b4f 100644
+--- a/drivers/clk/nxp/clk-lpc32xx.c
++++ b/drivers/clk/nxp/clk-lpc32xx.c
+@@ -68,7 +68,6 @@ static struct regmap_config lpc32xx_scb_regmap_config = {
+ 	.reg_stride = 4,
+ 	.val_format_endian = REGMAP_ENDIAN_LITTLE,
+ 	.max_register = 0x114,
+-	.fast_io = true,
+ };
+ 
+ static struct regmap *clk_regmap;
+diff --git a/drivers/clk/qcom/a53-pll.c b/drivers/clk/qcom/a53-pll.c
+index f9c5e296dba2..57713ae1cd7c 100644
+--- a/drivers/clk/qcom/a53-pll.c
++++ b/drivers/clk/qcom/a53-pll.c
+@@ -33,7 +33,6 @@ static const struct regmap_config a53pll_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.val_bits		= 32,
+ 	.max_register		= 0x40,
+-	.fast_io		= true,
+ };
+ 
+ static struct pll_freq_tbl *qcom_a53pll_get_freq_tbl(struct device *dev)
+diff --git a/drivers/clk/qcom/a7-pll.c b/drivers/clk/qcom/a7-pll.c
+index c4a53e5db229..f95aefc43119 100644
+--- a/drivers/clk/qcom/a7-pll.c
++++ b/drivers/clk/qcom/a7-pll.c
+@@ -50,7 +50,6 @@ static const struct regmap_config a7pll_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.val_bits		= 32,
+ 	.max_register		= 0x1000,
+-	.fast_io		= true,
+ };
+ 
+ static int qcom_a7pll_probe(struct platform_device *pdev)
+diff --git a/drivers/clk/qcom/apss-ipq-pll.c b/drivers/clk/qcom/apss-ipq-pll.c
+index 9eb189f75f1d..ccf5275bf46e 100644
+--- a/drivers/clk/qcom/apss-ipq-pll.c
++++ b/drivers/clk/qcom/apss-ipq-pll.c
+@@ -163,7 +163,6 @@ static const struct regmap_config ipq_pll_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.val_bits		= 32,
+ 	.max_register		= 0x40,
+-	.fast_io		= true,
+ };
+ 
+ static int apss_ipq_pll_probe(struct platform_device *pdev)
+diff --git a/drivers/clk/qcom/clk-cbf-8996.c b/drivers/clk/qcom/clk-cbf-8996.c
+index 53f205a3f183..dc7002eb1584 100644
+--- a/drivers/clk/qcom/clk-cbf-8996.c
++++ b/drivers/clk/qcom/clk-cbf-8996.c
+@@ -223,7 +223,6 @@ static const struct regmap_config cbf_msm8996_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.val_bits		= 32,
+ 	.max_register		= 0x10000,
+-	.fast_io		= true,
+ 	.val_format_endian	= REGMAP_ENDIAN_LITTLE,
+ };
+ 
+diff --git a/drivers/clk/qcom/clk-cpu-8996.c b/drivers/clk/qcom/clk-cpu-8996.c
+index 72689448a653..21d13c0841ed 100644
+--- a/drivers/clk/qcom/clk-cpu-8996.c
++++ b/drivers/clk/qcom/clk-cpu-8996.c
+@@ -411,7 +411,6 @@ static const struct regmap_config cpu_msm8996_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.val_bits		= 32,
+ 	.max_register		= 0x80210,
+-	.fast_io		= true,
+ 	.val_format_endian	= REGMAP_ENDIAN_LITTLE,
+ };
+ 
+diff --git a/drivers/clk/qcom/hfpll.c b/drivers/clk/qcom/hfpll.c
+index f4d78003d189..1987f24ae94a 100644
+--- a/drivers/clk/qcom/hfpll.c
++++ b/drivers/clk/qcom/hfpll.c
+@@ -42,7 +42,6 @@ static const struct regmap_config hfpll_regmap_config = {
+ 	.reg_stride	= 4,
+ 	.val_bits	= 32,
+ 	.max_register	= 0x30,
+-	.fast_io	= true,
+ };
+ 
+ static int qcom_hfpll_probe(struct platform_device *pdev)
+diff --git a/drivers/clk/qcom/ipq-cmn-pll.c b/drivers/clk/qcom/ipq-cmn-pll.c
+index b3d7169c63e5..dafbf5732048 100644
+--- a/drivers/clk/qcom/ipq-cmn-pll.c
++++ b/drivers/clk/qcom/ipq-cmn-pll.c
+@@ -108,7 +108,6 @@ static const struct regmap_config ipq_cmn_pll_regmap_config = {
+ 	.reg_stride = 4,
+ 	.val_bits = 32,
+ 	.max_register = 0x7fc,
+-	.fast_io = true,
+ };
+ 
+ static const struct cmn_pll_fixed_output_clk ipq5018_output_clks[] = {
+-- 
+2.34.1
+

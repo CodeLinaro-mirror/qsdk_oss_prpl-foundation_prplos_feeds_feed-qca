@@ -1,0 +1,230 @@
+From 13c6547e63aa6bebd5617bef5ce7f2487f47b1a7 Mon Sep 17 00:00:00 2001
+From: Krithi D Shetty <kdshetty@qti.qualcomm.com>
+Date: Sun, 21 Sep 2025 13:18:34 +0530
+Subject: [PATCH] net: Support for MCUC HW offload
+
+Change-Id: Ib0ea96c9d5f9271efdd21a38a59bf522f33c5e9c
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ include/linux/if_bridge.h     |  1 +
+ include/uapi/linux/if_link.h  |  1 +
+ net/bridge/Makefile           |  1 +
+ net/bridge/br_multicast.c     | 45 +++++++++++++++++++++++++++++++++++
+ net/bridge/br_multicast_eht.c |  2 +-
+ net/bridge/br_netlink.c       |  8 ++++++-
+ net/bridge/br_private.h       |  7 ++++++
+ net/core/rtnetlink.c          |  2 +-
+ 8 files changed, 64 insertions(+), 3 deletions(-)
+
+diff --git a/include/linux/if_bridge.h b/include/linux/if_bridge.h
+index 80d567a425f6..7c42ec2e08f2 100644
+--- a/include/linux/if_bridge.h
++++ b/include/linux/if_bridge.h
+@@ -64,6 +64,7 @@ struct br_ip_list {
+ #define BR_BPDU_FILTER		BIT(24)
+ #define BR_UPSTREAM_PORT	BIT(25)
+ #define BR_NO_HAIRPIN_FLOOD	BIT(26)
++#define BR_MCAST_MCUC_HW_OFFLOAD	BIT(27)
+ 
+ #define BR_DEFAULT_AGEING_TIME	(300 * HZ)
+ 
+diff --git a/include/uapi/linux/if_link.h b/include/uapi/linux/if_link.h
+index b29417908271..1e9aee5cdc54 100644
+--- a/include/uapi/linux/if_link.h
++++ b/include/uapi/linux/if_link.h
+@@ -572,6 +572,7 @@ enum {
+ 	IFLA_BRPORT_NEIGH_VLAN_SUPPRESS,
+ 	IFLA_BRPORT_BACKUP_NHID,
+ 	IFLA_BRPORT_BPDU_FILTER,
++	IFLA_BRPORT_MCAST_MCUC_HW_OFFLOAD,
+ 	__IFLA_BRPORT_MAX
+ };
+ #define IFLA_BRPORT_MAX (__IFLA_BRPORT_MAX - 1)
+diff --git a/net/bridge/Makefile b/net/bridge/Makefile
+index 24bd1c0a9a5a..fd25dd09bb4b 100644
+--- a/net/bridge/Makefile
++++ b/net/bridge/Makefile
+@@ -19,6 +19,7 @@ br_netfilter-$(subst m,y,$(CONFIG_IPV6)) += br_netfilter_ipv6.o
+ obj-$(CONFIG_BRIDGE_NETFILTER) += br_netfilter.o
+ 
+ bridge-$(CONFIG_BRIDGE_IGMP_SNOOPING) += br_multicast.o br_mdb.o br_multicast_eht.o
++bridge-$(CONFIG_BRIDGE_MCAST_OFFLOAD) += br_mcast_offload.o
+ 
+ bridge-$(CONFIG_BRIDGE_VLAN_FILTERING) += br_vlan.o br_vlan_tunnel.o br_vlan_options.o br_mst.o
+ 
+diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
+index 7d608dc484e0..29d0a61fd34d 100644
+--- a/net/bridge/br_multicast.c
++++ b/net/bridge/br_multicast.c
+@@ -35,6 +35,9 @@
+ 
+ #include "br_private.h"
+ #include "br_private_mcast_eht.h"
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++#include "br_mcast_offload.h"
++#endif
+ 
+ static const struct rhashtable_params br_mdb_rht_params = {
+ 	.head_offset = offsetof(struct net_bridge_mdb_entry, rhnode),
+@@ -3837,6 +3840,23 @@ static int br_multicast_ipv4_rcv(struct net_bridge_mcast *brmctx,
+ 	src = eth_hdr(skb)->h_source;
+ 	BR_INPUT_SKB_CB(skb)->igmp = ih->type;
+ 
++	/*
++	 * Add IP-MAC mapping for hardware offload
++	 */
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	if (pmctx && (pmctx->port->flags & BR_MCAST_MCUC_HW_OFFLOAD)) {
++		int ifindex = pmctx->port->dev->ifindex;
++		struct net_bridge *br = brmctx->br;
++		struct br_ip host;
++
++		br_mcast_offload_get_br_ip(skb, &host);
++		err = br_mcast_offload_map_add(&br->multicast_ctx, &host, src, ifindex, vid);
++		if (err) {
++			pr_debug("br_multicast: Failed to add IP-MAC mapping: %d\n", err);
++		}
++	}
++
++#endif
+ 	switch (ih->type) {
+ 	case IGMP_HOST_MEMBERSHIP_REPORT:
+ 	case IGMPV2_HOST_MEMBERSHIP_REPORT:
+@@ -3902,6 +3922,25 @@ static int br_multicast_ipv6_rcv(struct net_bridge_mcast *brmctx,
+ 	mld = (struct mld_msg *)skb_transport_header(skb);
+ 	BR_INPUT_SKB_CB(skb)->igmp = mld->mld_type;
+ 
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++
++	/*
++	 * Add IP-MAC mapping for hardware offload
++	 */
++	if (pmctx && (pmctx->port->flags & BR_MCAST_MCUC_HW_OFFLOAD)) {
++		int ifindex = pmctx->port->dev->ifindex;
++		struct net_bridge *br = brmctx->br;
++		struct br_ip host;
++
++		src = eth_hdr(skb)->h_source;
++		br_mcast_offload_get_br_ip(skb, &host);
++		err = br_mcast_offload_map_add(&br->multicast_ctx, &host, src, ifindex, vid);
++		if (err) {
++			pr_debug("br_multicast: Failed to add IP-MAC mapping: %d\n", err);
++		}
++	}
++
++#endif
+ 	switch (mld->mld_type) {
+ 	case ICMPV6_MGM_REPORT:
+ 		src = eth_hdr(skb)->h_source;
+@@ -4069,11 +4108,17 @@ void br_multicast_ctx_init(struct net_bridge *br,
+ 	timer_setup(&brmctx->ip6_own_query.timer,
+ 		    br_ip6_multicast_query_expired, 0);
+ #endif
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	br_mcast_offload_init_map(brmctx);
++#endif
+ }
+ 
+ void br_multicast_ctx_deinit(struct net_bridge_mcast *brmctx)
+ {
+ 	__br_multicast_stop(brmctx);
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	br_mcast_offload_cleanup_map(brmctx);
++#endif
+ }
+ 
+ void br_multicast_init(struct net_bridge *br)
+diff --git a/net/bridge/br_multicast_eht.c b/net/bridge/br_multicast_eht.c
+index c126aa4e7551..bbc20f922475 100644
+--- a/net/bridge/br_multicast_eht.c
++++ b/net/bridge/br_multicast_eht.c
+@@ -781,7 +781,7 @@ bool br_multicast_eht_handle(const struct net_bridge_mcast *brmctx,
+ 			     size_t addr_size,
+ 			     int grec_type)
+ {
+-	bool eht_enabled = !!(pg->key.port->flags & BR_MULTICAST_FAST_LEAVE);
++	bool eht_enabled = !!(pg->key.port->flags & (BR_MULTICAST_FAST_LEAVE | BR_MCAST_MCUC_HW_OFFLOAD));
+ 	union net_bridge_eht_addr eht_host_addr;
+ 	bool changed = false;
+ 
+diff --git a/net/bridge/br_netlink.c b/net/bridge/br_netlink.c
+index a28e2be894a6..29837a188ef9 100644
+--- a/net/bridge/br_netlink.c
++++ b/net/bridge/br_netlink.c
+@@ -213,6 +213,7 @@ static inline size_t br_port_info_size(void)
+ 		+ nla_total_size(sizeof(u32))	/* IFLA_BRPORT_MCAST_EHT_HOSTS_LIMIT */
+ 		+ nla_total_size(sizeof(u32))	/* IFLA_BRPORT_MCAST_EHT_HOSTS_CNT */
+ 		+ nla_total_size(sizeof(u32))	/* IFLA_BRPORT_BACKUP_NHID */
++		+ nla_total_size(1)		/* IFLA_BRPORT_MCAST_MCUC_HW_OFFLOAD */
+ 		+ 0;
+ }
+ 
+@@ -284,7 +285,9 @@ static int br_port_fill_attrs(struct sk_buff *skb,
+ 	    nla_put_u8(skb, IFLA_BRPORT_MAB, !!(p->flags & BR_PORT_MAB)) ||
+ 	    nla_put_u8(skb, IFLA_BRPORT_NEIGH_VLAN_SUPPRESS,
+ 		       !!(p->flags & BR_NEIGH_VLAN_SUPPRESS)) ||
+-	    nla_put_u8(skb, IFLA_BRPORT_BPDU_FILTER, !!(p->flags & BR_BPDU_FILTER)))
++	    nla_put_u8(skb, IFLA_BRPORT_BPDU_FILTER, !!(p->flags & BR_BPDU_FILTER)) ||
++	    nla_put_u8(skb, IFLA_BRPORT_MCAST_MCUC_HW_OFFLOAD,
++			    !!(p->flags & BR_MCAST_MCUC_HW_OFFLOAD)))
+ 		return -EMSGSIZE;
+ 
+ 	timerval = br_timer_value(&p->message_age_timer);
+@@ -907,6 +910,7 @@ static const struct nla_policy br_port_policy[IFLA_BRPORT_MAX + 1] = {
+ 	[IFLA_BRPORT_MCAST_MAX_GROUPS] = { .type = NLA_U32 },
+ 	[IFLA_BRPORT_NEIGH_VLAN_SUPPRESS] = NLA_POLICY_MAX(NLA_U8, 1),
+ 	[IFLA_BRPORT_BACKUP_NHID] = { .type = NLA_U32 },
++	[IFLA_BRPORT_MCAST_MCUC_HW_OFFLOAD] = { .type = NLA_U8 },
+ };
+ 
+ /* Change the state of the port and notify spanning tree */
+@@ -1084,6 +1088,8 @@ static int br_setport(struct net_bridge_port *p, struct nlattr *tb[],
+ 		WRITE_ONCE(p->backup_nhid, backup_nhid);
+ 	}
+ 
++	br_set_port_flag(p, tb, IFLA_BRPORT_MCAST_MCUC_HW_OFFLOAD, BR_MCAST_MCUC_HW_OFFLOAD);
++
+ 	return 0;
+ }
+ 
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index c00a64e92bc5..9b3c0279b156 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -57,6 +57,10 @@ enum {
+ 
+ #define BR_FDB_NOTIFY_SETTABLE_BITS (FDB_NOTIFY_BIT | FDB_NOTIFY_INACTIVE_BIT)
+ 
++#ifndef BR_IP_MAC_HASH_SIZE
++#define BR_IP_MAC_HASH_SIZE 256
++#endif
++
+ typedef struct bridge_id bridge_id;
+ typedef struct mac_addr mac_addr;
+ typedef __u16 port_id;
+@@ -167,6 +171,9 @@ struct net_bridge_mcast {
+ 	struct bridge_mcast_own_query	ip6_own_query;
+ 	struct bridge_mcast_querier	ip6_querier;
+ #endif /* IS_ENABLED(CONFIG_IPV6) */
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	struct hlist_head		ip_mac_map[BR_IP_MAC_HASH_SIZE];
++#endif
+ #endif /* CONFIG_BRIDGE_IGMP_SNOOPING */
+ };
+ 
+diff --git a/net/core/rtnetlink.c b/net/core/rtnetlink.c
+index fff5f4bda7fd..f7e8f5738aaf 100644
+--- a/net/core/rtnetlink.c
++++ b/net/core/rtnetlink.c
+@@ -61,7 +61,7 @@
+ #include "dev.h"
+ 
+ #define RTNL_MAX_TYPE		50
+-#define RTNL_SLAVE_MAX_TYPE	45
++#define RTNL_SLAVE_MAX_TYPE	46
+ 
+ struct rtnl_link {
+ 	rtnl_doit_func		doit;
+-- 
+2.34.1
+

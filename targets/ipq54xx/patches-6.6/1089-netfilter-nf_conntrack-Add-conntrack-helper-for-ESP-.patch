@@ -1,0 +1,558 @@
+From 14283a9a9fe26b8c7063f362e2cbfda5803aa4b2 Mon Sep 17 00:00:00 2001
+From: Parikshit Gune <pgune@qti.qualcomm.com>
+Date: Fri, 6 Mar 2026 15:12:12 +0530
+Subject: [PATCH] netfilter: nf_conntrack: Add conntrack helper for ESP/IPsec
+
+Introduce changes to add ESP connection tracking helper to netfilter
+conntrack. The connection tracking of ESP is based on IPsec SPIs. The
+underlying motivation for this patch was to allow multiple VPN ESP
+clients to be distinguished when using NAT.
+
+Added config flag CONFIG_NF_CT_PROTO_ESP to enable the ESP/IPsec
+conntrack helper.
+https://patchwork.kernel.org/project/linux-kselftest/patch/20210503010646.11111-1-Cole.Dishington@alliedtelesis.co.nz/#24157299
+
+Change-Id: Ib623e026f266927e796c19c030b6ccfc91ea4983
+Signed-off-by: Cole Dishington <Cole.Dishington@alliedtelesis.co.nz>
+Signed-off-by: Parikshit Gune <pgune@qti.qualcomm.com>
+---
+ .../net/netfilter/ipv4/nf_conntrack_ipv4.h    |  3 ++
+ include/net/netfilter/nf_conntrack.h          |  5 ++
+ include/net/netfilter/nf_conntrack_l4proto.h  | 16 ++++++
+ include/net/netfilter/nf_conntrack_tuple.h    |  3 ++
+ include/net/netns/conntrack.h                 | 17 ++++++
+ .../netfilter/nf_conntrack_tuple_common.h     |  3 ++
+ .../linux/netfilter/nfnetlink_conntrack.h     |  2 +
+ net/netfilter/Kconfig                         | 11 ++++
+ net/netfilter/Makefile                        |  1 +
+ net/netfilter/nf_conntrack_core.c             | 30 ++++++++++-
+ net/netfilter/nf_conntrack_netlink.c          |  4 +-
+ net/netfilter/nf_conntrack_proto.c            | 26 ++++++++++
+ net/netfilter/nf_conntrack_standalone.c       | 52 +++++++++++++++++++
+ net/netfilter/nf_internals.h                  | 10 +++-
+ net/netfilter/nf_nat_proto.c                  | 16 ++++++
+ 15 files changed, 196 insertions(+), 3 deletions(-)
+
+diff --git a/include/net/netfilter/ipv4/nf_conntrack_ipv4.h b/include/net/netfilter/ipv4/nf_conntrack_ipv4.h
+index 2c8c2b023848..1aee91592639 100644
+--- a/include/net/netfilter/ipv4/nf_conntrack_ipv4.h
++++ b/include/net/netfilter/ipv4/nf_conntrack_ipv4.h
+@@ -25,5 +25,8 @@ extern const struct nf_conntrack_l4proto nf_conntrack_l4proto_udplite;
+ #ifdef CONFIG_NF_CT_PROTO_GRE
+ extern const struct nf_conntrack_l4proto nf_conntrack_l4proto_gre;
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++extern const struct nf_conntrack_l4proto nf_conntrack_l4proto_esp;
++#endif
+ 
+ #endif /*_NF_CONNTRACK_IPV4_H*/
+diff --git a/include/net/netfilter/nf_conntrack.h b/include/net/netfilter/nf_conntrack.h
+index a2c987289401..15cace43212a 100644
+--- a/include/net/netfilter/nf_conntrack.h
++++ b/include/net/netfilter/nf_conntrack.h
+@@ -21,6 +21,7 @@
+ #include <linux/netfilter/nf_conntrack_dccp.h>
+ #include <linux/netfilter/nf_conntrack_sctp.h>
+ #include <linux/netfilter/nf_conntrack_proto_gre.h>
++#include <net/netfilter/nf_conntrack_proto_esp.h>
+ 
+ #include <net/netfilter/nf_conntrack_tuple.h>
+ 
+@@ -36,6 +37,7 @@ union nf_conntrack_proto {
+ 	struct ip_ct_tcp tcp;
+ 	struct nf_ct_udp udp;
+ 	struct nf_ct_gre gre;
++	struct nf_ct_esp esp;
+ 	unsigned int tmpl_padto;
+ };
+ 
+@@ -64,6 +66,9 @@ struct nf_conntrack_net {
+ #ifdef CONFIG_NF_CONNTRACK_EVENTS
+ 	struct nf_conntrack_net_ecache ecache;
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	DECLARE_BITMAP(esp_id_map, 1024);
++#endif
+ };
+ 
+ #include <linux/types.h>
+diff --git a/include/net/netfilter/nf_conntrack_l4proto.h b/include/net/netfilter/nf_conntrack_l4proto.h
+index 1f47bef51722..ca2310708b81 100644
+--- a/include/net/netfilter/nf_conntrack_l4proto.h
++++ b/include/net/netfilter/nf_conntrack_l4proto.h
+@@ -75,6 +75,8 @@ bool nf_conntrack_invert_icmp_tuple(struct nf_conntrack_tuple *tuple,
+ 				    const struct nf_conntrack_tuple *orig);
+ bool nf_conntrack_invert_icmpv6_tuple(struct nf_conntrack_tuple *tuple,
+ 				      const struct nf_conntrack_tuple *orig);
++bool nf_conntrack_invert_esp_tuple(struct nf_conntrack_tuple *tuple,
++				   const struct nf_conntrack_tuple *orig);
+ 
+ int nf_conntrack_inet_error(struct nf_conn *tmpl, struct sk_buff *skb,
+ 			    unsigned int dataoff,
+@@ -132,6 +134,11 @@ int nf_conntrack_gre_packet(struct nf_conn *ct,
+ 			    unsigned int dataoff,
+ 			    enum ip_conntrack_info ctinfo,
+ 			    const struct nf_hook_state *state);
++int nf_conntrack_esp_packet(struct nf_conn *ct,
++			    struct sk_buff *skb,
++			    unsigned int dataoff,
++			    enum ip_conntrack_info ctinfo,
++			    const struct nf_hook_state *state);
+ 
+ void nf_conntrack_generic_init_net(struct net *net);
+ void nf_conntrack_tcp_init_net(struct net *net);
+@@ -141,6 +148,8 @@ void nf_conntrack_dccp_init_net(struct net *net);
+ void nf_conntrack_sctp_init_net(struct net *net);
+ void nf_conntrack_icmp_init_net(struct net *net);
+ void nf_conntrack_icmpv6_init_net(struct net *net);
++int nf_conntrack_esp_init(void);
++void nf_conntrack_esp_init_net(struct net *net);
+ 
+ /* Existing built-in generic protocol */
+ extern const struct nf_conntrack_l4proto nf_conntrack_l4proto_generic;
+@@ -244,4 +253,11 @@ static inline struct nf_gre_net *nf_gre_pernet(struct net *net)
+ }
+ #endif
+ 
++#ifdef CONFIG_NF_CT_PROTO_ESP
++static inline struct nf_esp_net *nf_esp_pernet(struct net *net)
++{
++	return &net->ct.nf_ct_proto.esp;
++}
++#endif
++
+ #endif /*_NF_CONNTRACK_PROTOCOL_H*/
+diff --git a/include/net/netfilter/nf_conntrack_tuple.h b/include/net/netfilter/nf_conntrack_tuple.h
+index f7dd950ff250..8bd6fdebcc40 100644
+--- a/include/net/netfilter/nf_conntrack_tuple.h
++++ b/include/net/netfilter/nf_conntrack_tuple.h
+@@ -62,6 +62,9 @@ struct nf_conntrack_tuple {
+ 			struct {
+ 				__be16 key;
+ 			} gre;
++			struct {
++				__be16 id;
++			} esp;
+ 		} u;
+ 
+ 		/* The protocol. */
+diff --git a/include/net/netns/conntrack.h b/include/net/netns/conntrack.h
+index 028ef0262581..b90a4f4287d5 100644
+--- a/include/net/netns/conntrack.h
++++ b/include/net/netns/conntrack.h
+@@ -77,6 +77,20 @@ struct nf_gre_net {
+ };
+ #endif
+ 
++#ifdef CONFIG_NF_CT_PROTO_ESP
++enum esp_conntrack {
++	ESP_CT_UNREPLIED,
++	ESP_CT_REPLIED,
++	ESP_CT_MAX
++};
++
++struct nf_esp_net {
++	spinlock_t id_list_lock;
++	struct list_head id_list;
++	unsigned int esp_timeouts[ESP_CT_MAX];
++};
++#endif
++
+ struct nf_ip_net {
+ 	struct nf_generic_net   generic;
+ 	struct nf_tcp_net	tcp;
+@@ -92,6 +106,9 @@ struct nf_ip_net {
+ #ifdef CONFIG_NF_CT_PROTO_GRE
+ 	struct nf_gre_net	gre;
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	struct nf_esp_net	esp;
++#endif
+ };
+ 
+ struct netns_ct {
+diff --git a/include/uapi/linux/netfilter/nf_conntrack_tuple_common.h b/include/uapi/linux/netfilter/nf_conntrack_tuple_common.h
+index 64390fac6f7e..78600cb4bfff 100644
+--- a/include/uapi/linux/netfilter/nf_conntrack_tuple_common.h
++++ b/include/uapi/linux/netfilter/nf_conntrack_tuple_common.h
+@@ -39,6 +39,9 @@ union nf_conntrack_man_proto {
+ 	struct {
+ 		__be16 key;	/* GRE key is 32bit, PPtP only uses 16bit */
+ 	} gre;
++	struct {
++		__be16 id;
++	} esp;
+ };
+ 
+ #define CTINFO2DIR(ctinfo) ((ctinfo) >= IP_CT_IS_REPLY ? IP_CT_DIR_REPLY : IP_CT_DIR_ORIGINAL)
+diff --git a/include/uapi/linux/netfilter/nfnetlink_conntrack.h b/include/uapi/linux/netfilter/nfnetlink_conntrack.h
+index c2ac7269acf7..4c08693c4762 100644
+--- a/include/uapi/linux/netfilter/nfnetlink_conntrack.h
++++ b/include/uapi/linux/netfilter/nfnetlink_conntrack.h
+@@ -91,6 +91,8 @@ enum ctattr_l4proto {
+ 	CTA_PROTO_ICMPV6_ID,
+ 	CTA_PROTO_ICMPV6_TYPE,
+ 	CTA_PROTO_ICMPV6_CODE,
++	CTA_PROTO_SRC_ESP_ID,
++	CTA_PROTO_DST_ESP_ID,
+ 	__CTA_PROTO_MAX
+ };
+ #define CTA_PROTO_MAX (__CTA_PROTO_MAX - 1)
+diff --git a/net/netfilter/Kconfig b/net/netfilter/Kconfig
+index b513842fc831..ca03b0c4e58e 100644
+--- a/net/netfilter/Kconfig
++++ b/net/netfilter/Kconfig
+@@ -252,6 +252,17 @@ config NF_CT_PROTO_UDPLITE
+ 
+ 	  If unsure, say Y.
+ 
++config NF_CT_PROTO_ESP
++	bool "ESP protocol support"
++	depends on NETFILTER_ADVANCED
++	default y
++	help
++	  ESP connection tracking helper. Provides connection tracking for IPsec
++	  clients behind this device based on SPI, especially useful for
++	  distinguishing multiple clients when using NAT.
++
++	  If unsure, say N.
++
+ config NF_CONNTRACK_AMANDA
+ 	tristate "Amanda backup protocol support"
+ 	depends on NETFILTER_ADVANCED
+diff --git a/net/netfilter/Makefile b/net/netfilter/Makefile
+index 4219064244cc..0435ed3a7bb0 100644
+--- a/net/netfilter/Makefile
++++ b/net/netfilter/Makefile
+@@ -15,6 +15,7 @@ nf_conntrack-$(CONFIG_NF_CONNTRACK_OVS) += nf_conntrack_ovs.o
+ nf_conntrack-$(CONFIG_NF_CT_PROTO_DCCP) += nf_conntrack_proto_dccp.o
+ nf_conntrack-$(CONFIG_NF_CT_PROTO_SCTP) += nf_conntrack_proto_sctp.o
+ nf_conntrack-$(CONFIG_NF_CT_PROTO_GRE) += nf_conntrack_proto_gre.o
++nf_conntrack-$(CONFIG_NF_CT_PROTO_ESP) += nf_conntrack_proto_esp.o
+ ifeq ($(CONFIG_NF_CONNTRACK),m)
+ nf_conntrack-$(CONFIG_DEBUG_INFO_BTF_MODULES) += nf_conntrack_bpf.o
+ else ifeq ($(CONFIG_NF_CONNTRACK),y)
+diff --git a/net/netfilter/nf_conntrack_core.c b/net/netfilter/nf_conntrack_core.c
+index 152a995eb6c9..2b79b126be48 100644
+--- a/net/netfilter/nf_conntrack_core.c
++++ b/net/netfilter/nf_conntrack_core.c
+@@ -32,7 +32,7 @@
+ #include <linux/mm.h>
+ #include <linux/nsproxy.h>
+ #include <linux/rculist_nulls.h>
+-
++#include <net/xfrm.h>
+ #include <net/netfilter/nf_conntrack.h>
+ #include <net/netfilter/nf_conntrack_bpf.h>
+ #include <net/netfilter/nf_conntrack_l4proto.h>
+@@ -326,6 +326,13 @@ nf_ct_get_tuple(const struct sk_buff *skb,
+ #ifdef CONFIG_NF_CT_PROTO_GRE
+ 	case IPPROTO_GRE:
+ 		return gre_pkt_to_tuple(skb, dataoff, net, tuple);
++#endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	case IPPROTO_ESP:
++		if (nf_ct_esp_enabled)
++			return esp_pkt_to_tuple(skb, dataoff, net, tuple);
++		else
++			break;
+ #endif
+ 	case IPPROTO_TCP:
+ 	case IPPROTO_UDP:
+@@ -468,6 +475,10 @@ nf_ct_invert_tuple(struct nf_conntrack_tuple *inverse,
+ #if IS_ENABLED(CONFIG_IPV6)
+ 	case IPPROTO_ICMPV6:
+ 		return nf_conntrack_invert_icmpv6_tuple(inverse, orig);
++#endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	case IPPROTO_ESP:
++		return nf_conntrack_invert_esp_tuple(inverse, orig);
+ #endif
+ 	}
+ 
+@@ -577,6 +588,13 @@ static void destroy_gre_conntrack(struct nf_conn *ct)
+ #endif
+ }
+ 
++static void destroy_esp_conntrack(struct nf_conn *ct)
++{
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	destroy_esp_conntrack_entry(ct);
++#endif
++}
++
+ void nf_ct_destroy(struct nf_conntrack *nfct)
+ {
+ 	struct nf_conn *ct = (struct nf_conn *)nfct;
+@@ -591,6 +609,9 @@ void nf_ct_destroy(struct nf_conntrack *nfct)
+ 	if (unlikely(nf_ct_protonum(ct) == IPPROTO_GRE))
+ 		destroy_gre_conntrack(ct);
+ 
++	if (unlikely(nf_ct_protonum(ct) == IPPROTO_ESP))
++		destroy_esp_conntrack(ct);
++
+ 	/* Expectations will have been removed in clean_from_lists,
+ 	 * except TFTP can create an expectation on the first packet,
+ 	 * before connection is in the list, so we need to clean here,
+@@ -1976,6 +1997,13 @@ static int nf_conntrack_handle_packet(struct nf_conn *ct,
+ 	case IPPROTO_GRE:
+ 		return nf_conntrack_gre_packet(ct, skb, dataoff,
+ 					       ctinfo, state);
++#endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	case IPPROTO_ESP:
++		if (nf_ct_esp_enabled)
++			return nf_conntrack_esp_packet(ct, skb, dataoff,
++						       ctinfo, state);
++		break;
+ #endif
+ 	}
+ 
+diff --git a/net/netfilter/nf_conntrack_netlink.c b/net/netfilter/nf_conntrack_netlink.c
+index 09810b2811e4..b78566de629c 100644
+--- a/net/netfilter/nf_conntrack_netlink.c
++++ b/net/netfilter/nf_conntrack_netlink.c
+@@ -1440,7 +1440,9 @@ static const struct nla_policy tuple_nla_policy[CTA_TUPLE_MAX+1] = {
+    CTA_FILTER_F_CTA_PROTO_ICMP_ID | \
+    CTA_FILTER_F_CTA_PROTO_ICMPV6_TYPE | \
+    CTA_FILTER_F_CTA_PROTO_ICMPV6_CODE | \
+-   CTA_FILTER_F_CTA_PROTO_ICMPV6_ID)
++   CTA_FILTER_F_CTA_PROTO_ICMPV6_ID | \
++   CTA_FILTER_F_CTA_PROTO_SRC_ESP_ID | \
++   CTA_FILTER_F_CTA_PROTO_DST_ESP_ID)
+ 
+ static int
+ ctnetlink_parse_tuple_filter(const struct nlattr * const cda[],
+diff --git a/net/netfilter/nf_conntrack_proto.c b/net/netfilter/nf_conntrack_proto.c
+index c928ff63b10e..a2877d4e1124 100644
+--- a/net/netfilter/nf_conntrack_proto.c
++++ b/net/netfilter/nf_conntrack_proto.c
+@@ -42,6 +42,11 @@
+ #include <net/ipv6.h>
+ #include <net/inet_frag.h>
+ 
++#ifdef CONFIG_NF_CT_PROTO_ESP
++/* External sysctl to enable/disable ESP conntrack */
++extern int nf_ct_esp_enabled;
++#endif
++
+ static DEFINE_MUTEX(nf_ct_proto_mutex);
+ 
+ #ifdef CONFIG_SYSCTL
+@@ -112,6 +117,15 @@ const struct nf_conntrack_l4proto *nf_ct_l4proto_find(u8 l4proto)
+ #ifdef CONFIG_NF_CT_PROTO_GRE
+ 	case IPPROTO_GRE: return &nf_conntrack_l4proto_gre;
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	case IPPROTO_ESP: {
++		/* Return generic handler if ESP conntrack is disabled */
++		if (!nf_ct_esp_enabled) {
++			return &nf_conntrack_l4proto_generic;
++		}
++		return &nf_conntrack_l4proto_esp;
++	}
++#endif
+ #if IS_ENABLED(CONFIG_IPV6)
+ 	case IPPROTO_ICMPV6: return &nf_conntrack_l4proto_icmpv6;
+ #endif /* CONFIG_IPV6 */
+@@ -608,6 +622,9 @@ EXPORT_SYMBOL_GPL(nf_ct_netns_get);
+ 
+ void nf_ct_netns_put(struct net *net, uint8_t nfproto)
+ {
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	nf_ct_esp_pernet_flush(net);
++#endif
+ 	switch (nfproto) {
+ 	case NFPROTO_BRIDGE:
+ 		nf_ct_netns_do_put(net, NFPROTO_BRIDGE);
+@@ -655,6 +672,12 @@ int nf_conntrack_proto_init(void)
+ 		goto cleanup_sockopt;
+ #endif
+ 
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	ret = nf_conntrack_esp_init();
++	if (ret < 0)
++		goto cleanup_sockopt;
++#endif
++
+ 	return ret;
+ 
+ #if IS_ENABLED(CONFIG_IPV6)
+@@ -690,6 +713,9 @@ void nf_conntrack_proto_pernet_init(struct net *net)
+ #ifdef CONFIG_NF_CT_PROTO_GRE
+ 	nf_conntrack_gre_init_net(net);
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	nf_conntrack_esp_init_net(net);
++#endif
+ }
+ 
+ module_param_call(hashsize, nf_conntrack_set_hashsize, param_get_uint,
+diff --git a/net/netfilter/nf_conntrack_standalone.c b/net/netfilter/nf_conntrack_standalone.c
+index 7fe08c92de28..2e2038c68ef9 100644
+--- a/net/netfilter/nf_conntrack_standalone.c
++++ b/net/netfilter/nf_conntrack_standalone.c
+@@ -31,6 +31,12 @@ module_param(enable_hooks, bool, 0000);
+ 
+ unsigned int nf_conntrack_net_id __read_mostly;
+ 
++#ifdef CONFIG_NF_CT_PROTO_ESP
++/* Sysctl to enable/disable ESP conntrack functionality */
++int nf_ct_esp_enabled __read_mostly;
++EXPORT_SYMBOL_GPL(nf_ct_esp_enabled);
++#endif
++
+ #ifdef CONFIG_NF_CONNTRACK_PROCFS
+ void
+ print_tuple(struct seq_file *s, const struct nf_conntrack_tuple *tuple,
+@@ -89,6 +95,14 @@ print_tuple(struct seq_file *s, const struct nf_conntrack_tuple *tuple,
+ 			   ntohs(tuple->src.u.gre.key),
+ 			   ntohs(tuple->dst.u.gre.key));
+ 		break;
++	case IPPROTO_ESP:
++		/* Both src and dest esp.id should be equal but showing both
++		 * will help find errors.
++		 */
++		seq_printf(s, "srcid=0x%x dstid=0x%x ",
++			   ntohs(tuple->src.u.esp.id),
++			   ntohs(tuple->dst.u.esp.id));
++		break;
+ 	default:
+ 		break;
+ 	}
+@@ -664,6 +678,11 @@ enum nf_ct_sysctl_index {
+ 	NF_SYSCTL_CT_PROTO_TIMEOUT_GRE,
+ 	NF_SYSCTL_CT_PROTO_TIMEOUT_GRE_STREAM,
+ #endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	NF_SYSCTL_CT_PROTO_ESP_ENABLED,
++	NF_SYSCTL_CT_PROTO_TIMEOUT_ESP_UNREPLIED,
++	NF_SYSCTL_CT_PROTO_TIMEOUT_ESP_REPLIED,
++#endif
+ 
+ 	__NF_SYSCTL_CT_LAST_SYSCTL,
+ };
+@@ -1008,6 +1027,27 @@ static struct ctl_table nf_ct_sysctl_table[] = {
+ 		.mode           = 0644,
+ 		.proc_handler   = proc_dointvec_jiffies,
+ 	},
++#endif
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	[NF_SYSCTL_CT_PROTO_ESP_ENABLED] = {
++		.procname	= "nf_conntrack_esp_enabled",
++		.data		= &nf_ct_esp_enabled,
++		.maxlen		= sizeof(int),
++		.mode		= 0644,
++		.proc_handler	= proc_dointvec,
++	},
++	[NF_SYSCTL_CT_PROTO_TIMEOUT_ESP_UNREPLIED] = {
++		.procname	= "nf_conntrack_esp_timeout_unreplied",
++		.maxlen		= sizeof(unsigned int),
++		.mode		= 0644,
++		.proc_handler	= proc_dointvec_jiffies,
++	},
++	[NF_SYSCTL_CT_PROTO_TIMEOUT_ESP_REPLIED] = {
++		.procname	= "nf_conntrack_esp_timeout_replied",
++		.maxlen		= sizeof(unsigned int),
++		.mode		= 0644,
++		.proc_handler	= proc_dointvec_jiffies,
++	},
+ #endif
+ 	{}
+ };
+@@ -1117,6 +1157,17 @@ static void nf_conntrack_standalone_init_gre_sysctl(struct net *net,
+ #endif
+ }
+ 
++static void nf_conntrack_standalone_init_esp_sysctl(struct net *net,
++						    struct ctl_table *table)
++{
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	struct nf_esp_net *en = nf_esp_pernet(net);
++
++	table[NF_SYSCTL_CT_PROTO_TIMEOUT_ESP_UNREPLIED].data = &en->esp_timeouts[ESP_CT_UNREPLIED];
++	table[NF_SYSCTL_CT_PROTO_TIMEOUT_ESP_REPLIED].data = &en->esp_timeouts[ESP_CT_REPLIED];
++#endif
++}
++
+ static int nf_conntrack_standalone_init_sysctl(struct net *net)
+ {
+ 	struct nf_conntrack_net *cnet = nf_ct_pernet(net);
+@@ -1153,6 +1204,7 @@ static int nf_conntrack_standalone_init_sysctl(struct net *net)
+ 	nf_conntrack_standalone_init_sctp_sysctl(net, table);
+ 	nf_conntrack_standalone_init_dccp_sysctl(net, table);
+ 	nf_conntrack_standalone_init_gre_sysctl(net, table);
++	nf_conntrack_standalone_init_esp_sysctl(net, table);
+ 
+ 	/* Don't allow non-init_net ns to alter global sysctls */
+ 	if (!net_eq(&init_net, net)) {
+diff --git a/net/netfilter/nf_internals.h b/net/netfilter/nf_internals.h
+index 25403023060b..b4112f4bf31f 100644
+--- a/net/netfilter/nf_internals.h
++++ b/net/netfilter/nf_internals.h
+@@ -19,7 +19,9 @@
+ #define CTA_FILTER_F_CTA_PROTO_ICMPV6_TYPE	(1 << 9)
+ #define CTA_FILTER_F_CTA_PROTO_ICMPV6_CODE	(1 << 10)
+ #define CTA_FILTER_F_CTA_PROTO_ICMPV6_ID	(1 << 11)
+-#define CTA_FILTER_F_MAX			(1 << 12)
++#define CTA_FILTER_F_CTA_PROTO_SRC_ESP_ID	(1 << 12)
++#define CTA_FILTER_F_CTA_PROTO_DST_ESP_ID	(1 << 13)
++#define CTA_FILTER_F_MAX			(1 << 14)
+ #define CTA_FILTER_F_ALL			(CTA_FILTER_F_MAX-1)
+ #define CTA_FILTER_FLAG(ctattr) CTA_FILTER_F_ ## ctattr
+ 
+@@ -40,4 +42,10 @@ void nf_hook_entries_delete_raw(struct nf_hook_entries __rcu **pp,
+ 				const struct nf_hook_ops *reg);
+ int nf_hook_entries_insert_raw(struct nf_hook_entries __rcu **pp,
+ 				const struct nf_hook_ops *reg);
++
++/* nf_conntrack_standalone.c */
++#ifdef CONFIG_NF_CT_PROTO_ESP
++extern int nf_ct_esp_enabled;
++#endif
++
+ #endif
+diff --git a/net/netfilter/nf_nat_proto.c b/net/netfilter/nf_nat_proto.c
+index 48cc60084d28..0da24a8efca5 100644
+--- a/net/netfilter/nf_nat_proto.c
++++ b/net/netfilter/nf_nat_proto.c
+@@ -62,6 +62,14 @@ __udp_manip_pkt(struct sk_buff *skb,
+ 	*portptr = newport;
+ }
+ 
++static bool esp_manip_pkt(struct sk_buff *skb,
++			  unsigned int iphdroff, unsigned int hdroff,
++			  const struct nf_conntrack_tuple *tuple,
++			  enum nf_nat_manip_type maniptype)
++{
++	return true;
++}
++
+ static bool udp_manip_pkt(struct sk_buff *skb,
+ 			  unsigned int iphdroff, unsigned int hdroff,
+ 			  const struct nf_conntrack_tuple *tuple,
+@@ -344,6 +352,9 @@ static bool l4proto_manip_pkt(struct sk_buff *skb,
+ 	case IPPROTO_GRE:
+ 		return gre_manip_pkt(skb, iphdroff, hdroff,
+ 				     tuple, maniptype);
++	case IPPROTO_ESP:
++		return esp_manip_pkt(skb, iphdroff, hdroff,
++				     tuple, maniptype);
+ 	}
+ 
+ 	/* If we don't know protocol -- no error, pass it unmodified. */
+@@ -375,6 +386,11 @@ static bool nf_nat_ipv4_manip_pkt(struct sk_buff *skb,
+ 		csum_replace4(&iph->check, iph->daddr, target->dst.u3.ip);
+ 		iph->daddr = target->dst.u3.ip;
+ 	}
++
++#ifdef CONFIG_NF_CT_PROTO_ESP
++	nf_ct_esp_manip_packet(skb, target, maniptype);
++#endif
++
+ 	return true;
+ }
+ 
+-- 
+2.34.1
+

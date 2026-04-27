@@ -1,0 +1,51 @@
+From b251f1f13fcd6e50e9e094fd4f60e9e744f9afcf Mon Sep 17 00:00:00 2001
+From: Luo Jie <luoj@qti.qualcomm.com>
+Date: Thu, 13 Nov 2025 17:25:14 +0800
+Subject: [PATCH] clk: qcom: Add QCE2204 NSSCC driver support
+
+The Kconfig and Makefile are updated to support QCE2204 NSSCC.
+
+Change-Id: I04f42b4fe3bcd168723dc5817782d50e209498fb
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ drivers/clk/qcom/Kconfig  | 11 +++++++++++
+ drivers/clk/qcom/Makefile |  1 +
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/clk/qcom/Kconfig b/drivers/clk/qcom/Kconfig
+index a7a1c3206cc5..6115a1312338 100644
+--- a/drivers/clk/qcom/Kconfig
++++ b/drivers/clk/qcom/Kconfig
+@@ -273,6 +273,17 @@ config IPQ_NSSCC_QCA8K
+ 	  Say Y or M if you want to use network features of switch or
+ 	  PHY device. Select this for the root clock of qca8k.
+ 
++config IPQ_NSSCC_QCE2204
++	tristate "QCE2204 Network SubSystem Clock Controller"
++	depends on MDIO_BUS || COMPILE_TEST
++	select QCOM_GDSC
++	help
++	  Support for the network subsystem clock controller on QCE2204 Ethernet switch.
++	  The clock controller is accessed via MDIO bus and provides clocks
++	  and resets for the QCE2204 switch hardware.
++	  Say Y or M if you want to use QCE2204 switch devices and functionality
++	  such as MAC ports, SerDes, and system clocks.
++
+ config MSM_GCC_8660
+ 	tristate "MSM8660 Global Clock Controller"
+ 	depends on ARM || COMPILE_TEST
+diff --git a/drivers/clk/qcom/Makefile b/drivers/clk/qcom/Makefile
+index 5731fbcf375c..9ad3ca2aa31d 100644
+--- a/drivers/clk/qcom/Makefile
++++ b/drivers/clk/qcom/Makefile
+@@ -41,6 +41,7 @@ obj-$(CONFIG_IPQ_NSSCC_9574) += nsscc-ipq9574.o
+ obj-$(CONFIG_IPQ_NSSCC_9679) += nsscc-ipq9679.o
+ obj-$(CONFIG_IPQ_LCC_806X) += lcc-ipq806x.o
+ obj-$(CONFIG_IPQ_NSSCC_QCA8K) += nsscc-qca8k.o
++obj-$(CONFIG_IPQ_NSSCC_QCE2204) += nsscc-qce2204.o
+ obj-$(CONFIG_MDM_GCC_9607) += gcc-mdm9607.o
+ obj-$(CONFIG_MDM_GCC_9615) += gcc-mdm9615.o
+ obj-$(CONFIG_MSM_GCC_8660) += gcc-msm8660.o
+-- 
+2.34.1
+

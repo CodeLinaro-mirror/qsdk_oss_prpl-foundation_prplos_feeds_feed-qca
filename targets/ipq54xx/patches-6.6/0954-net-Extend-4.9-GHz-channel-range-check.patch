@@ -1,0 +1,53 @@
+From 6b201be76cc52f09c7b664038c75a45958646f60 Mon Sep 17 00:00:00 2001
+From: Lokitha Thangavel <lthangav@qti.qualcomm.com>
+Date: Thu, 18 Sep 2025 15:12:32 +0530
+Subject: [PATCH] net:Extend 4.9 GHz channel range check
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+In the phy_info_freq API, the channel number is typically
+derived using ieee80211_freq_to_chan(freq). However,
+for certain JP-specific frequencies, this function
+fails to compute a valid channel number. In such cases,
+the channel is overridden using the driver's regulatory
+data via nla_get_u16(tb_freq[NL80211_FREQUENCY_ATTR_CHANNEL]).
+
+The current frequency validation logic in
+nl80211_msg_put_channel() excludes frequencies below
+4940 MHz.
+
+For frequencies outside the 4940–5090 MHz range,
+the channel value in the hostapd allowed channel list
+is assigned as 0.
+
+As a result, attempts to bring up APs on the frequencies
+below 4940 fail due to the incorrect lower bound check
+in nl80211_msg_put_channel().
+
+To resolve this, the lower bound of the frequency check is
+extended from 4940 MHz to 4909 MHz, ensuring full support
+for all valid 4.9 GHz channels in the JP domain.
+
+Change-Id: Idb370c0d3e70ca01dc2f40d91966feff4c8a382b
+Signed-off-by: Lokitha Thangavel <lthangav@qti.qualcomm.com>
+---
+ net/wireless/nl80211.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 34cd716f94a1..3046ce4550cc 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -1219,7 +1219,7 @@ static int nl80211_msg_put_channel(struct sk_buff *msg, struct wiphy *wiphy,
+ 		}
+ 	}
+ 
+-	if (chan->center_freq >= 4940 && chan->center_freq <= 5090) {
++	if (chan->center_freq >= 4909 && chan->center_freq <= 5090) {
+ 		if (nla_put_u16(msg, NL80211_FREQUENCY_ATTR_CHANNEL,
+ 				chan->hw_value))
+ 			goto nla_put_failure;
+-- 
+2.34.1
+

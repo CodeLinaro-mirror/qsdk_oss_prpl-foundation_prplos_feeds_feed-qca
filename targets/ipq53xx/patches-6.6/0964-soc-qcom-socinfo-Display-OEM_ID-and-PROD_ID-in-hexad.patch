@@ -1,0 +1,47 @@
+From b9aac74b3f1aa4c7afaa9e05ef3e27130f4308f4 Mon Sep 17 00:00:00 2001
+From: Poovendhan Selvaraj <poovendh@qti.qualcomm.com>
+Date: Tue, 7 Oct 2025 13:24:25 +0530
+Subject: [PATCH] soc: qcom: socinfo: Display OEM_ID and PROD_ID in hexadecimal
+ format
+
+The OEM_ID and PROD_ID values are hardware identifiers that are
+conventionally represented in hexadecimal format in hardware
+specifications and documentation. Currently, these values are
+displayed in decimal format, which makes it difficult to correlate
+with hardware documentation.
+
+Change the format specifiers from %u to 0x%x to display these
+identifiers in hexadecimal format with the 0x prefix for better
+readability and consistency with hardware specifications.
+
+Example output change:
+Before: OEM_ID: 12345, PROD_ID: 67890
+After:  OEM_ID: 0x3039, PROD_ID: 0x10932
+
+Change-Id: Ic6c7de679751dbcd6af9a52a35e159af43edcbca
+Signed-off-by: Poovendhan Selvaraj <poovendh@qti.qualcomm.com>
+---
+ drivers/soc/qcom/socinfo.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/soc/qcom/socinfo.c b/drivers/soc/qcom/socinfo.c
+index fc3519865a98..0c9ed785e76e 100644
+--- a/drivers/soc/qcom/socinfo.c
++++ b/drivers/soc/qcom/socinfo.c
+@@ -797,11 +797,11 @@ static int qcom_socinfo_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	qs->attr.oem_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
+-						 "%u",
++						 "0x%x",
+ 						 le32_to_cpu(oem_id));
+ 
+ 	qs->attr.prod_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
+-						 "%u",
++						 "0x%x",
+ 						 le32_to_cpu(prod_id));
+ 
+ 	qs->soc_dev = soc_device_register(&qs->attr);
+-- 
+2.34.1
+

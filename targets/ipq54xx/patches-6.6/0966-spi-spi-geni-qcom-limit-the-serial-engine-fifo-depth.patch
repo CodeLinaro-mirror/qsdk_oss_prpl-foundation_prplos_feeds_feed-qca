@@ -1,0 +1,53 @@
+From cad25258108a3834f69593ebac4f9a825e58f0ae Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Wed, 22 Oct 2025 14:34:15 +0530
+Subject: [PATCH] spi: spi-geni-qcom: limit the serial engine fifo depth
+
+In QUPVv3 SEs, SE0 have a 128 FIFO depth whereas all
+other SEs have 32 as FIFO depth. spi-geni driver
+dynamically switches between FIFO and DMA depending on the
+fifo size by reading the fifo parameters from regsitser
+SE0_SE_HW_PARAM_0.
+
+From MTD layer, maximum write length is based on SPI Flash
+chip page size (256Bytes). So, In SE0 always the
+fifo size will be greater than flash page size (512 > 256).
+So SPI write won't switches to DMA mode at all.
+Hence limit the SE0 fifo depth with optional parameter
+qup-tx-fifo-depth as other SEs.
+
+Change-Id: I516bc81b8056e4ffe543aff928026fab21da62d7
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/spi/spi-geni-qcom.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/spi/spi-geni-qcom.c b/drivers/spi/spi-geni-qcom.c
+index b15711a0ae22..82fcc53e2961 100644
+--- a/drivers/spi/spi-geni-qcom.c
++++ b/drivers/spi/spi-geni-qcom.c
+@@ -9,6 +9,7 @@
+ #include <linux/io.h>
+ #include <linux/log2.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/pm_opp.h>
+ #include <linux/pm_runtime.h>
+@@ -669,6 +670,13 @@ static int spi_geni_init(struct spi_geni_master *mas)
+ 	}
+ 	mas->tx_fifo_depth = geni_se_get_tx_fifo_depth(se);
+ 
++	/*
++	 * Override SE fifo depth to allow switching between
++	 * FIFO and DMA mode.
++	 */
++	of_property_read_u32(mas->dev->of_node, "qup-tx-fifo-depth",
++			     &mas->tx_fifo_depth);
++
+ 	/* Width of Tx and Rx FIFO is same */
+ 	mas->fifo_width_bits = geni_se_get_tx_fifo_width(se);
+ 
+-- 
+2.34.1
+

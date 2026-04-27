@@ -1,0 +1,30 @@
+From 499729cfba7faa03850def1e5a4bac02aa5e3fd2 Mon Sep 17 00:00:00 2001
+From: Poovendhan Selvaraj <poovendh@qti.qualcomm.com>
+Date: Mon, 20 Oct 2025 20:41:05 +0530
+Subject: [PATCH] fix: pass correct virtual address to ctx_save driver
+
+- Updated code to pass virtual address directly
+- Address translation is now handled by ctx_save driver
+
+Change-Id: Ie7ffb166083bd917b9aaf689fff8ecb6975e3131
+Signed-off-by: Poovendhan Selvaraj <poovendh@qti.qualcomm.com>
+---
+ kernel/printk/printk.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index a278b79b95c6..b899d97c03e5 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -2378,7 +2378,7 @@ static bool __pr_flush(struct console *con, int timeout_ms, bool reset_on_progre
+ void minidump_get_log_buf_info(u64 *plog_buf, u64 *plog_buf_len)
+ {
+ 	*plog_buf = (u64)(uintptr_t)log_buf;
+-	*plog_buf_len = (u64)__pa(&log_buf_len);
++	*plog_buf_len = (uint64_t)(uintptr_t)&log_buf_len;
+ }
+ EXPORT_SYMBOL(minidump_get_log_buf_info);
+ void minidump_get_dmesg_read_info(u64 *dmesg_tail_lpos, u64 *dmesg_tail_len)
+-- 
+2.34.1
+

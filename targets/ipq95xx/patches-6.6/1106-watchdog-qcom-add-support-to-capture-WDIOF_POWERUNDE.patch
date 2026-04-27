@@ -1,0 +1,36 @@
+From 38571926ae288786605945354fd85b8d320dab3e Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Mon, 23 Mar 2026 18:30:23 +0530
+Subject: [PATCH] watchdog: qcom: add support to capture WDIOF_POWERUNDER
+
+Change-Id: I0b76ddd2ccbc473fbd43483b8422949cbdecb9a8
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/watchdog/qcom-wdt.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/watchdog/qcom-wdt.c b/drivers/watchdog/qcom-wdt.c
+index 0b97ec527d31..02ab7333e148 100644
+--- a/drivers/watchdog/qcom-wdt.c
++++ b/drivers/watchdog/qcom-wdt.c
+@@ -223,7 +223,7 @@ static int qcom_wdt_panic_handler(struct notifier_block *nb,
+ 
+ static int qcom_wdt_get_restart_reason(struct device *dev, struct qcom_wdt *wdt)
+ {
+-	unsigned int args[2];
++	unsigned int args[3];
+ 	struct regmap *imem;
+ 	unsigned int val;
+ 	int ret;
+@@ -253,6 +253,8 @@ static int qcom_wdt_get_restart_reason(struct device *dev, struct qcom_wdt *wdt)
+ 
+ 	if (val == args[1])
+ 		wdt->wdd.bootstatus = WDIOF_CARDRESET;
++	else if (val == args[2])
++		wdt->wdd.bootstatus = WDIOF_POWERUNDER;
+ 
+ 	return 0;
+ }
+-- 
+2.34.1
+

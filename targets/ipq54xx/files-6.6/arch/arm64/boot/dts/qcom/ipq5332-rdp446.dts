@@ -75,88 +75,36 @@
 	 * |                                                  |
 	 * +==================================================+
 	 */
-
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
 
 		q6_mem_regions: q6_mem_regions@4A900000  {
-			reg = <0x0 0x4a900000 0x0 0x5D00000>;
+			reg = <0x0 0x4a900000 0x0 0x1a00000>;
 			no-map;
 		};
 
-		q6_code_data: q6_code_data@4A900000 {
-			reg = <0x0 0x4a900000 0x0 0x1900000>;
+		q6_ipq5332_data: q6_ipq5332_data@4C300000 {
+			reg = <0x0 0x4C300000 0x0 0x1600000>;
 			no-map;
 		};
 
-		q6_ipq5332_data: q6_ipq5332_data@4C200000 {
-			reg = <0x0 0x4C200000 0x0 0x1100000>;
+		q6_qcn6432_data_1: q6_qcn6432_data_1@4D900000 {
+			reg = <0x0 0x4D900000 0x0 0x1700000>;
 			no-map;
 		};
 
-		m3_dump: m3_dump@4D300000 {
-			reg = <0x0 0x4D300000 0x0 0x100000>;
+		q6_qcn6432_data_2: q6_qcn6432_data_2@4f000000 {
+			reg = <0x0 0x4f000000 0x0 0x1700000>;
 			no-map;
 		};
 
-		q6_etr_region: q6_etr_dump@4D400000 {
-			reg = <0x0 0x4D400000 0x0 0x100000>;
-			no-map;
-		};
-
-		q6_ipq5332_caldb: q6_ipq5332_caldb@4D500000 {
-			reg = <0x0 0x4D500000 0x0 0x300000>;
-			no-map;
-		};
-
-		q6_qcn6432_data_1: q6_qcn6432_data_1@4D800000 {
-			reg = <0x0 0x4D800000 0x0 0x1000000>;
-			no-map;
-		};
-
-		m3_dump_qcn6432_1: m3_dump_qcn6432_1@4E800000 {
-			reg = <0x0 0x4E800000 0x0 0x100000>;
-			no-map;
-                };
-
-		q6_qcn6432_etr_1: q6_qcn6432_etr_1@4E900000 {
-			reg = <0x0 0x4E900000 0x0 0x100000>;
-			no-map;
-		};
-
-		q6_qcn6432_caldb_1: q6_qcn6432_caldb_1@4EA00000 {
-			reg = <0x0 0x4EA00000 0x0 0x500000>;
-			no-map;
-		};
-
-		q6_qcn6432_data_2: q6_qcn6432_data_2@4EF00000 {
-			reg = <0x0 0x4EF00000 0x0 0x1000000>;
-			no-map;
-		};
-
-		m3_dump_qcn6432_2: m3_dump_qcn6432_2@4FF00000 {
-			reg = <0x0 0x4FF00000 0x0 0x100000>;
-			no-map;
-                };
-
-		q6_qcn6432_etr_2: q6_qcn6432_etr_2@50000000 {
-			reg = <0x0 0x50000000 0x0 0x100000>;
-			no-map;
-		};
-
-		q6_qcn6432_caldb_2: q6_qcn6432_caldb_2@50100000 {
-			reg = <0x0 0x50100000 0x0 0x500000>;
-			no-map;
-		};
-
-		mlo_global_mem0: mlo_global_mem_0@50600000 {
-			reg = <0x0 0x50600000 0x0 0xC00000>;
+		mlo_global_mem0: mlo_global_mem_0@50700000 {
+			reg = <0x0 0x50700000 0x0 0xC00000>;
 			no-map;
 		};
 	};
-
 	aliases {
 		serial0 = &blsp1_uart0;
 		serial1 = &blsp1_uart1;
@@ -297,10 +245,17 @@
 							switch_handle = <&switch1>;
 							switch_cpu_port = <0>;
 						};
+						fixed-link {
+							speed = <2500>;
+							full-duplex;
+							pause;
+						};
 					};
 					port@1 {
 						port_id = <2>;
 						phy_address = <12>;
+						phy-handle = <&phy4>;
+						phy-mode = "sgmii";
 					};
 				};
 			};
@@ -387,10 +342,6 @@
 			reg = <0x3a504000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			mdio-bus = <&mdio>;
-			qcom,phy-mdio-addr = <12>;
-			qcom,link-poll = <1>;
-			phy-mode = "sgmii";
 		};
 
 		gmac2:dp2 {
@@ -400,7 +351,6 @@
 			reg = <0x3a500000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "sgmii";
 			qcom,mht-dev = <1>;
 			qcom,is_switch_connected = <1>;
 			qcom,ppe-offload-disabled = <1>;
@@ -499,6 +449,9 @@
 			boot-args = <0x1 0x5 0x3 0x1 0x2f 0x2 0x0>,
 					<0x1 0x5 0x4 0x2 0x2c 0x2 0x0>;
 			memory-region = <&q6_mem_regions>,
+					<&q6_ipq5332_data>,
+					<&q6_qcn6432_data_1>,
+					<&q6_qcn6432_data_2>,
 					<&mlo_global_mem0>;
 			textpd_fw = "IPQ5332/q6_fw4.mdt";
 			textpd_pasid = <0x412>;
@@ -534,16 +487,7 @@
 					qcom,smem-state-names = "shutdown",
 								"stop",
 								"spawn";
-					memory-region = <&q6_ipq5332_data>,
-							<&m3_dump>,
-							<&q6_etr_region>,
-							<&q6_ipq5332_caldb>,
-							<&mlo_global_mem0>;
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 					status = "disabled";
-#else
-					status = "ok";
-#endif
 				};
 
 				q6_wcss_pd2: remoteproc_pd2 {
@@ -565,16 +509,7 @@
 					qcom,smem-state-names = "shutdown",
 								"stop",
 								"spawn";
-					memory-region = <&q6_qcn6432_data_1>,
-							<&m3_dump_qcn6432_1>,
-							<&q6_qcn6432_etr_1>,
-							<&q6_qcn6432_caldb_1>,
-							<&mlo_global_mem0>;
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 					status = "disabled";
-#else
-					status = "ok";
-#endif
 				};
 
 				q6_wcss_pd3: remoteproc_pd3 {
@@ -595,16 +530,7 @@
 					qcom,smem-state-names = "shutdown",
 								"stop",
 								"spawn";
-					memory-region = <&q6_qcn6432_data_2>,
-							<&m3_dump_qcn6432_2>,
-							<&q6_qcn6432_etr_2>,
-							<&q6_qcn6432_caldb_2>,
-							<&mlo_global_mem0>;
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 					status = "disabled";
-#else
-					status = "ok";
-#endif
 				};
 			};
 		};
@@ -754,34 +680,30 @@
 	};
 };
 
+&qcom_test_userpd2 {
+	status = "okay";
+};
+
+&qcom_test_userpd3 {
+	status = "okay";
+};
+
 &hs_m31phy_0 {
 	status = "okay";
 };
 
 &wifi0 {
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 	qcom,rproc = <&q6v5_wcss>;
 	dump-region = <&q6_ipq5332_data>,
-		<&m3_dump>,
-		<&q6_etr_region>,
-		<&q6_ipq5332_caldb>,
-		<&mlo_global_mem0>;
-#else
-	qcom,multipd_arch;
-	qcom,rproc = <&q6_wcss_pd1>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
-#endif
+		      <&mlo_global_mem0>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	qcom,tgt-mem-mode = <1>;
 	qcom,bdf-addr = <0x4C200000 0x4C200000 0x4C200000 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x4D500000 0x4D500000 0x4D500000 0x0 0x0 0x0>;
 	qcom,caldb-size = <0x300000>;
 	qcom,board_id = <0x41>;
-	mem-region = <&q6_ipq5332_data>;
-	memory-region = <&q6_ipq5332_data>, <&q6_mem_regions>, <&m3_dump>,
-			<&mlo_global_mem0>, <&q6_etr_region>;
-	memory-region-names = "host-ddr-mem", "q6-region", "m3-dump",
-			      "mlo-global-mem", "q6-etr-dump";
+	memory-region = <&q6_ipq5332_data>, <&q6_mem_regions>,<&mlo_global_mem0>;
+	memory-region-names = "host-ddr-mem", "q6-region", "mlo-global-mem";
 	qcom,wsi = <&wsi>;
 	qcom,wsi_index = <0>;
 	qcom,wsi-controller;
@@ -809,18 +731,9 @@
 };
 
 &wifi1 {
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 	qcom,rproc = <&q6v5_wcss>;
 	dump-region = <&q6_qcn6432_data_1>,
-		<&m3_dump_qcn6432_1>,
-		<&q6_qcn6432_etr_1>,
-		<&q6_qcn6432_caldb_1>,
-		<&mlo_global_mem0>;
-#else
-	qcom,multipd_arch;
-	qcom,rproc = <&q6_wcss_pd2>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
-#endif
+		      <&mlo_global_mem0>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,tgt-mem-mode = <1>;
 	qcom,bdf-addr = <0x4D800000 0x4D800000 0x4D800000 0x0 0x0 0x0>;
@@ -828,11 +741,8 @@
 	qcom,umac-irq-reset-addr = <0x18000884>;
 	qcom,caldb-size = <0x500000>;
 	qcom,board_id = <0x052>;
-	mem-region = <&q6_qcn6432_data_1>;
-	memory-region = <&q6_qcn6432_data_1>, <&q6_mem_regions>, <&m3_dump_qcn6432_1>,
-			<&mlo_global_mem0>, <&q6_qcn6432_etr_1>;
-	memory-region-names = "host-ddr-mem", "q6-region", "m3-dump",
-			      "mlo-global-mem", "q6-etr-dump";
+	memory-region = <&q6_qcn6432_data_1>, <&q6_mem_regions>, <&mlo_global_mem0>;
+	memory-region-names = "host-ddr-mem", "q6-region", "mlo-global-mem";
 	qcom,wsi = <&wsi>;
 	qcom,wsi_index = <1>;
 	qcom,pci_slot_id = <1>;
@@ -865,18 +775,9 @@
 };
 
 &wifi2 {
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 	qcom,rproc = <&q6v5_wcss>;
 	dump-region = <&q6_qcn6432_data_2>,
-		<&m3_dump_qcn6432_2>,
-		<&q6_qcn6432_etr_2>,
-		<&q6_qcn6432_caldb_2>,
-		<&mlo_global_mem0>;
-#else
-	qcom,multipd_arch;
-	qcom,rproc = <&q6_wcss_pd3>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
-#endif
+		      <&mlo_global_mem0>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd3";
 	qcom,tgt-mem-mode = <1>;
 	qcom,bdf-addr = <0x4EF00000 0x4EF00000 0x4EF00000 0x0 0x0 0x0>;
@@ -884,11 +785,8 @@
 	qcom,umac-irq-reset-addr = <0x10000884>;
 	qcom,caldb-size = <0x500000>;
 	qcom,board_id = <0x091>;
-	mem-region = <&q6_qcn6432_data_2>;
-	memory-region = <&q6_qcn6432_data_2>, <&q6_mem_regions>, <&m3_dump_qcn6432_2>,
-			<&mlo_global_mem0>, <&q6_qcn6432_etr_2>;
-	memory-region-names = "host-ddr-mem", "q6-region", "m3-dump",
-			      "mlo-global-mem", "q6-etr-dump";
+	memory-region = <&q6_qcn6432_data_2>, <&q6_mem_regions>, <&mlo_global_mem0>;
+	memory-region-names = "host-ddr-mem", "q6-region", "mlo-global-mem";
 	qcom,wsi = <&wsi>;
 	qcom,wsi_index = <2>;
 	qcom,pci_slot_id = <2>;

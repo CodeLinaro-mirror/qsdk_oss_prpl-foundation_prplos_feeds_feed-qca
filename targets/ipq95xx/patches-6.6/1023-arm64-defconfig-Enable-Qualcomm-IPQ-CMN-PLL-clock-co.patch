@@ -1,0 +1,43 @@
+From b87e1063c416b914638dbd845e31ac36cd9f7b21 Mon Sep 17 00:00:00 2001
+From: Luo Jie <quic_luoj@quicinc.com>
+Date: Fri, 3 Jan 2025 15:31:36 +0800
+Subject: [PATCH] arm64: defconfig: Enable Qualcomm IPQ CMN PLL clock
+ controller
+
+The CMN PLL hardware block is available in the Qualcomm IPQ SoC such
+as IPQ9574 and IPQ5332. It provides fixed rate output clocks to Ethernet
+related hardware blocks such as external Ethernet PHY or switch. This
+driver is initially being enabled for IPQ9574. All boards based on
+IPQ9574 SoC will require to include this driver in the build.
+
+This CMN PLL hardware block does not provide any other specific function
+on the IPQ SoC other than enabling output clocks to Ethernet related
+devices.
+
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Luo Jie <quic_luoj@quicinc.com>
+Link: https://lore.kernel.org/r/20250103-qcom_ipq_cmnpll-v8-3-c89fb4d4849d@quicinc.com
+Signed-off-by: Bjorn Andersson <andersson@kernel.org>
+(cherry picked from commit 1fe6c70fec8fd8c823afee66467f85f028b0d22c)
+
+Change-Id: I848843f0e37bce36613a2ef09b4713ad4cfa6258
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 60af93c04b45..0390e6e0c9dc 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1208,6 +1208,7 @@ CONFIG_QCOM_CLK_RPMH=y
+ CONFIG_IPQ_APSS_6018=y
+ CONFIG_IPQ_GCC_5332=y
+ CONFIG_IPQ_APSS_5018=y
++CONFIG_IPQ_CMN_PLL=m
+ CONFIG_IPQ_GCC_5018=y
+ CONFIG_IPQ_GCC_6018=y
+ CONFIG_IPQ_GCC_8074=y
+-- 
+2.34.1
+

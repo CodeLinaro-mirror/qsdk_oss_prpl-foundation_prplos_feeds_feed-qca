@@ -1,0 +1,64 @@
+From b49c221d39b421d5ca304cf061fe432b186e433d Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Thu, 16 Oct 2025 10:23:58 +0530
+Subject: [PATCH] pci: controller: dwc: pcie-qcom: Add emulation specific flag
+
+Add a flag to indicate emulation platform, which increases the
+delay during PCIe reset assert and de-assert sequences in
+qcom_pcie_init_2_9_0
+
+Change-Id: Ideef2f001ee50b4ed8a7648e23be10a5792ee0b3
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/pci/controller/dwc/pcie-qcom.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index 206b86e329da..68ca41f1440d 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -347,6 +347,7 @@ struct qcom_pcie {
+ 	u32 iatu_ib0_target_addr[3];	/* Low , High, Limit */
+ 	bool enumerated;
+ 	u32 rc_idx;
++	bool is_emulation;
+ };
+ 
+ struct qcom_pcie_info{
+@@ -1234,7 +1235,10 @@ static int qcom_pcie_init_2_9_0(struct qcom_pcie *pcie)
+ 	 * Delay periods before and after reset deassert are working values
+ 	 * from downstream Codeaurora kernel
+ 	 */
+-	usleep_range(2000, 2500);
++	if (pcie->is_emulation)
++		usleep_range(10000, 12000);
++	else
++		usleep_range(2000, 2500);
+ 
+ 	ret = reset_control_deassert(res->rst);
+ 	if (ret) {
+@@ -1242,7 +1246,10 @@ static int qcom_pcie_init_2_9_0(struct qcom_pcie *pcie)
+ 		return ret;
+ 	}
+ 
+-	usleep_range(2000, 2500);
++	if (pcie->is_emulation)
++		usleep_range(10000, 12000);
++	else
++		usleep_range(2000, 2500);
+ 
+ 	return clk_bulk_prepare_enable(res->num_clks, res->clks);
+ }
+@@ -2006,6 +2013,9 @@ static int __qcom_pcie_probe(struct platform_device *pdev,
+ 	pcie->enable_iatu = of_property_read_bool(pdev->dev.of_node,
+ 						  "enable-iatu");
+ 
++	pcie->is_emulation = of_property_read_bool(pdev->dev.of_node,
++						   "qcom,emulation");
++
+ 	of_property_read_u32(pdev->dev.of_node, "num-lanes",
+ 				&num_lanes);
+ 	pcie->num_lanes = num_lanes;
+-- 
+2.34.1
+

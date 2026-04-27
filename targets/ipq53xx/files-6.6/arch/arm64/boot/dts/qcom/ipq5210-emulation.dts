@@ -1,0 +1,358 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * IPQ5210 Emulation board device tree source
+ *
+ * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "ipq5210.dtsi"
+#include "ipq5210-default-memory.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. IPQ5210-EMULATION";
+	compatible = "qcom,ipq5210-emulation", "qcom,ipq5210";
+
+	/delete-node/ firmware;
+	/delete-node/ ctx-save;
+
+	/* Timer freq for rumi = timer freq / 150 */
+	clocks {
+		sleep_clk: sleep-clk {
+			clock-frequency = <213>;
+		};
+
+		xo: xo {
+			clock-frequency = <160000>;
+		};
+	};
+
+	aliases {
+		serial0 = &uart1;
+		ethernet0 = "/soc/dp1";
+		ethernet1 = "/soc/dp2";
+		ethernet2 = "/soc/dp3";
+		ethernet3 = "/soc/dp4";
+		ethernet4 = "/soc/dp5";
+		ethernet5 = "/soc/dp6";
+	};
+
+	chosen {
+		linux,initrd-end = <0x98000000>;
+		linux,initrd-start = <0x95000000>;
+		bootargs = "root=/dev/ram0 rw init=/init clk_ignore_unused earlycon";
+		stdout-path = "serial0";
+	};
+
+	cpus: cpus {
+		CPU0: cpu@0 {
+			enable-method = "qcom,a53-cortex-acc";
+			qcom,acc = <&acc0>;
+			/delete-property/ clocks;
+			/delete-property/ clock-names;
+			/delete-property/ operating-points-v2;
+		};
+
+		CPU1: cpu@1 {
+			enable-method = "qcom,a53-cortex-acc";
+			qcom,acc = <&acc1>;
+			/delete-property/ clocks;
+			/delete-property/ clock-names;
+			/delete-property/ operating-points-v2;
+		};
+
+		CPU2: cpu@2 {
+			enable-method = "qcom,a53-cortex-acc";
+			qcom,acc = <&acc2>;
+			/delete-property/ clocks;
+			/delete-property/ clock-names;
+			/delete-property/ operating-points-v2;
+		};
+
+		CPU3: cpu@3 {
+			enable-method = "qcom,a53-cortex-acc";
+			qcom,acc = <&acc3>;
+			/delete-property/ clocks;
+			/delete-property/ clock-names;
+			/delete-property/ operating-points-v2;
+		};
+	};
+
+	memory@80000000 {
+		reg = <0x0 0x80000000 0x0 0x40000000>;
+	};
+
+	soc@0 {
+		acc0: clock-controller@b188000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0xb188000 0x1000>;
+		};
+
+		acc1: clock-controller@b198000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0xb198000 0x1000>;
+		};
+
+		acc2:clock-controller@b1a8000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0xb1a8000 0x1000>;
+		};
+
+		acc3:clock-controller@b1b8000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0xb1b8000 0x1000>;
+		};
+
+		/* Timer freq for rumi = timer freq / 150 */
+		timer {
+			clock-frequency = <160000>;
+		};
+
+		timer@b120000 {
+			clock-frequency = <160000>;
+		};
+
+		qupv3: geniqup@1ac0000 {
+			status = "okay";
+
+			uart1: serial@1a84000 {
+				status = "okay";
+			};
+
+			spi0: spi@1a80000 {
+				status = "disabled";
+
+				flash@0 {
+					compatible = "spansion,s25fs128s1", "jedec,spi-nor";
+					#address-cells = <1>;
+					#size-cells = <1>;
+					reg = <0>;
+					spi-max-frequency = <50000000>;
+				};
+			};
+
+			i2c0: i2c@1a88000 {
+				status = "disabled";
+			};
+
+			i2c1: i2c@1a8c000 {
+				status = "disabled";
+			};
+		};
+
+		sdhc: mmc@7804000 {
+			qcom,emulation;
+			/* over-ride the frequency to 48Mhz for emulation platform */
+			max-frequency = <48000000>;
+			bus-width = <4>;
+			/* Force 3.3V, because only that will support on emulation platform */
+			mmc-ddr-3_3v;
+			/* quirk to disable SDR104, SDR50 modes */
+			no-1-8-v;
+			non-removable;
+			status = "okay";
+		};
+
+		usb3: usb3@8a00000 {
+			qcom,select-utmi-as-pipe-clk;
+			status = "disabled";
+
+			dwc3@8a00000 {
+				usb-phy = <>;
+				phys = <>;
+				phy-names = "";
+				snps,quirk-fladj = <0x8c09fca0>;
+				snps,quirk-guctl = <0xc804010>;
+				maximum-speed = "high-speed";
+			};
+		};
+
+		qpic_bam: dma-controller@7984000 {
+			status="disabled";
+		};
+
+		qpic_nand: nand@79b0000 {
+			status="disabled";
+		};
+
+		pcie0: pcie@70000000 {
+			max-link-speed = <1>;
+			phys = <>;
+			phy-names = "";
+			perst-gpio = <&tlmm 34 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+
+			pcie0_rp {
+				reg = <0 0 0 0 0>;
+				qcom,mhi@0 {
+					reg = <0 0 0 0 0>;
+					boot-args = <0x2 0x4 0xFF 0x3 0x0 0x0  /* MX Rail, Invalid GPIO, Drive strength 0x3 */
+							0x5 0x4 0x34 0x3 0x0 0x16 /* CX Rail, GPIO52, Drive strength 0x3, CPR1_fuse 0x0, CPR0_fuse 0x16 */
+							0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
+					memory-region = <&qcn9224_pcie0>, <&mlo_global_mem0>;
+					memory-region-names = "host-ddr-mem", "mlo-global-mem";
+					qcom,board_id = <0x2002>;
+				};
+			};
+		};
+
+		pcie1: pcie@50000000 {
+			max-link-speed = <1>;
+			phys = <>;
+			phy-names = "";
+			perst-gpio = <&tlmm 35 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+
+			pcie1_rp {
+				reg = <0 0 0 0 0>;
+				qcom,mhi@0 {
+					reg = <0 0 0 0 0>;
+				};
+			};
+		};
+
+		dp1 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <1>;
+			reg = <0x3a001000 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <16>;
+			phy-mode = "psgmii";
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp2 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <2>;
+			reg = <0x3a001200 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <17>;
+			phy-mode = "psgmii";
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+
+		dp3 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <3>;
+			reg = <0x3a001400 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <18>;
+			phy-mode = "psgmii";
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp4 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <4>;
+			reg = <0x3a001600 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <19>;
+			phy-mode = "psgmii";
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp5 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <5>;
+			reg = <0x3a001800 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <8>;
+			phy-mode = "psgmii";
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp6 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <6>;
+			reg = <0x3A001A00 0x200>;
+			qcom,mactype = <1>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <8>;
+			phy-mode = "psgmii";
+			qcom,ppe-offload-disabled = <0>;
+			qcom,gem_port = <1>;
+		};
+
+
+	};
+
+	psci {
+		status = "disabled";
+	};
+};
+
+&apcs_glb {
+	status = "disabled";
+};
+
+&ess_uniphy {
+	status = "disabled";
+};
+
+&ess_switch {
+	switch_lan_bmp = <0x3e>; /* lan port bitmap */
+	switch_wan_bmp = <0x40>; /* wan port bitmap */
+	switch_mac_mode = <0xd>; /* mac mode for uniphy instance0*/
+	switch_mac_mode1 = <0xd>; /* mac mode for uniphy instance1*/
+	switch_mac_mode2 = <0xd>; /* mac mode for uniphy instance2*/
+
+	qcom,port_phyinfo {
+		port@1 {
+			port_id = <1>;
+			forced-speed = <10000>;
+			forced-duplex = <1>;
+		};
+		port@2 {
+			port_id = <2>;
+			forced-speed = <1000>;
+			forced-duplex = <1>;
+		};
+		port@3 {
+			port_id = <3>;
+			forced-speed = <1000>;
+			forced-duplex = <1>;
+		};
+		port@4 {
+			port_id = <4>;
+			forced-speed = <1000>;
+			forced-duplex = <1>;
+		};
+		port@5 {
+			port_id = <5>;
+			forced-speed = <10000>;
+			forced-duplex = <1>;
+		};
+		port@6 {
+			port_id = <6>;
+			forced-speed = <10000>;
+			forced-duplex = <1>;
+		};
+	};
+};
+
+&ref_48mhz_clk {
+	clock-div = <1>;
+	clock-mult = <1>;
+};
+
+&xo_clk {
+	clock-frequency = <48000000>;
+};
+
+&cmn_pll {
+	status = "disabled";
+};

@@ -1,0 +1,55 @@
+From 7b18848fcea86b0e72d5ef7982939af102880c0f Mon Sep 17 00:00:00 2001
+From: Ananya Ghosh <ananghos@qti.qualcomm.com>
+Date: Thu, 26 Mar 2026 20:03:15 +0530
+Subject: [PATCH] drivers: soc: qcom: llcc-qcom: Added support for LLCC in
+ ipq9650
+
+Change-Id: I7b67dba708e72b76b445a0d298645272558cf96f
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+---
+ drivers/soc/qcom/llcc-qcom.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/soc/qcom/llcc-qcom.c b/drivers/soc/qcom/llcc-qcom.c
+index 923225b5605f..2e7f8cb41047 100644
+--- a/drivers/soc/qcom/llcc-qcom.c
++++ b/drivers/soc/qcom/llcc-qcom.c
+@@ -410,6 +410,12 @@ static const struct llcc_slice_config ipq5424_data[] =  {
+ 	{LLCC_PCIE6G,     7,   128, 3, 0,  0x3000, 0x0,  0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, },
+ };
+ 
++static const struct llcc_slice_config ipq9650_data[] =  {
++	/* SCID 2 - SKB, SKB data (APSS Core 0,1,2) */
++	{LLCC_APSS,       2,   768, 1, 1,  0x0FFF, 0x0,  0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, },
++	{LLCC_AI,         3,   128, 3, 1,  0x0FFF, 0x0,  0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, },
++};
++
+ static const struct llcc_edac_reg_offset llcc_v1_edac_reg_offset = {
+ 	.trp_ecc_error_status0 = 0x20344,
+ 	.trp_ecc_error_status1 = 0x20348,
+@@ -629,6 +635,14 @@ static const struct qcom_llcc_config ipq5424_cfg = {
+ 	.edac_reg_offset = &llcc_v2_1_edac_reg_offset,
+ };
+ 
++static const struct qcom_llcc_config ipq9650_cfg = {
++	.sct_data	= ipq9650_data,
++	.size		= ARRAY_SIZE(ipq9650_data),
++	.need_llcc_cfg	= true,
++	.reg_offset	= llcc_v6_reg_offset,
++	.edac_reg_offset = &llcc_v6_edac_reg_offset,
++};
++
+ static struct llcc_drv_data *drv_data = (void *) -EPROBE_DEFER;
+ /* AI_LLC_SLICE */
+ static struct llcc_slice_desc *ai_llc_slice_desc;
+@@ -1364,6 +1378,7 @@ static int qcom_llcc_probe(struct platform_device *pdev)
+ 
+ static const struct of_device_id qcom_llcc_of_match[] = {
+ 	{ .compatible = "qcom,ipq5424-llcc", .data = &ipq5424_cfg },
++	{ .compatible = "qcom,ipq9650-llcc", .data = &ipq9650_cfg },
+ 	{ .compatible = "qcom,sc7180-llcc", .data = &sc7180_cfg },
+ 	{ .compatible = "qcom,sc7280-llcc", .data = &sc7280_cfg },
+ 	{ .compatible = "qcom,sc8180x-llcc", .data = &sc8180x_cfg },
+-- 
+2.34.1
+

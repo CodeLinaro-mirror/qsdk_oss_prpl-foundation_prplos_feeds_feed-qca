@@ -32,7 +32,9 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/of_address.h>
 
-#define MINIDUMP_WAIT_MSECS	300000
+/* Separate timeouts for different phases of minidump collection */
+#define MINIDUMP_OPEN_TIMEOUT_MSECS	20000  /* 20s for userspace to open device */
+#define MINIDUMP_COMPLETE_TIMEOUT_MSECS	60000  /* 60s total for complete operation */
 #define CRASHDUMP_PAGE_SIZE	(512 * SZ_1K)
 typedef struct ctx_save_tlv_msg {
 	unsigned char *msg_buffer;
@@ -74,6 +76,23 @@ struct minidump_metadata_list {
 #endif /* CONFIG_QCA_MINIDUMP */
 
 ctx_save_tlv_msg_t tlv_msg;
+u32 minidump_version_lvl;
+
+/**
+ * struct ctx_save_platform_data - Platform-specific configuration data
+ * @tmel_buffer_size: Size of TMEL buffer
+ * @tmel_log_buffer_reg_addr: Register address for TMEL buffer
+ * @tlv_buffer_size: Size of TLV buffer
+ * @tlv_buffer_addr: IMEM address for TLV buffer
+ * @regsave_size: Size of register save buffer
+ */
+struct ctx_save_platform_data {
+	u32 tmel_buffer_size;
+	u32 tmel_log_buffer_reg_addr;
+	u32 tlv_buffer_size;
+	u32 tlv_buffer_addr;
+	u32 regsave_size;
+};
 
 #ifdef CONFIG_QCA_MINIDUMP
 struct minidump_metadata {
@@ -110,6 +129,7 @@ static void __iomem *smem_base_addr;
 static u64 smem_size;
 static u64 imem_size;
 enum minidump_crash_type minidump_type = MINIDUMP_CRASH_TYPE_LIVEDUMP;
+DECLARE_COMPLETION(minidump_open_complete);
 DECLARE_COMPLETION(minidump_complete);
 DEFINE_MUTEX(g_minidump_lock);
 
@@ -321,6 +341,9 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 	struct dump_segment *segment = NULL;
 	int index = 0;
 
+	/* Signal that device has been opened */
+	complete(&minidump_open_complete);
+
 	if (!tlv_msg.msg_buffer)
 		return -ENOMEM;
 
@@ -444,9 +467,11 @@ static ssize_t mini_dump_read(struct file *file, char __user *buf,
 		seg_num ++;
 		pending = segment->size;
 
+		pr_debug("Minidump: Segment name : %s and addr %lx\n",
+				segment->name, segment->addr);
 		ret = copy_to_user(buf, (const void *)(uintptr_t)segment->addr, pending);
 		if (ret) {
-			pr_info("\n Minidump: copy_to_user error");
+			pr_err("\n Minidump: copy_to_user error");
 			return 0;
 		}
 
@@ -572,6 +597,7 @@ int do_dump_minidump(enum minidump_crash_type crashtype)
 	pr_debug("\n Minidump: Size of node in Metadata list = %ld\n",
 		 (unsigned long)sizeof(struct minidump_metadata_list));
 
+	init_completion(&minidump_open_complete);
 	init_completion(&minidump_complete);
 	if (dump_class || dump_major) {
 		pr_err("Already minidump virtual class or device exists\n");
@@ -601,14 +627,41 @@ int do_dump_minidump(enum minidump_crash_type crashtype)
 		goto device_failed;
 	}
 
-	/* Wait (with a timeout) to let the ramdump complete */
-	ret = wait_for_completion_timeout(&minidump_complete,
-					  msecs_to_jiffies(MINIDUMP_WAIT_MSECS));
-	ret = ret ? 0 : -ETIMEDOUT;
+	/* Two-phase timeout approach:
+	 * Phase 1: Wait for userspace to open the device (20 seconds)
+	 * Phase 2: Wait for userspace to close the device (60 seconds)
+	 */
 
+	/* Phase 1: Wait for device open */
+	ret = wait_for_completion_timeout(&minidump_open_complete,
+					  msecs_to_jiffies(MINIDUMP_OPEN_TIMEOUT_MSECS));
+	if (ret == 0) {
+		/* Timeout occurred - userspace didn't open the device */
+		pr_err("Minidump: Timeout waiting for userspace to open device\n");
+		ret = -ETIMEDOUT;
+		goto device_failed;
+	}
+
+	/* Phase 2: Wait for device close/release */
+	ret = wait_for_completion_timeout(&minidump_complete,
+					  msecs_to_jiffies(MINIDUMP_COMPLETE_TIMEOUT_MSECS));
+	if (ret == 0) {
+		/* Timeout occurred - userspace didn't close the device */
+		pr_err("Minidump: Timeout waiting for userspace to close device\n");
+		ret = -ETIMEDOUT;
+	} else {
+		/* Completion signaled successfully */
+		ret = 0;
+	}
+
+	/* Cleanup allocated resources */
 	kfree(minidump.hdr.seg_size);
 	kfree(minidump.hdr.phy_addr);
 	kfree(minidump.hdr.type);
+	minidump.hdr.seg_size = NULL;
+	minidump.hdr.phy_addr = NULL;
+	minidump.hdr.type = NULL;
+
 	device_destroy(dump_class, MKDEV(dump_major, 0));
 
 device_failed:
@@ -1113,6 +1166,33 @@ int minidump_fill_tlv_crashdump_buffer(const uint64_t start_addr, uint64_t size,
 }
 
 /*
+* Function: minidump_virt_to_phys
+*
+* Description: Convert virtual address to physical address, handling both
+* linear mapping addresses and vmalloc/module addresses correctly.
+*
+* @param: [in] virt_addr - Virtual address to convert
+*
+* Return: Physical address on success, 0 on failure
+*/
+static uint64_t minidump_virt_to_phys(uint64_t virt_addr)
+{
+	struct page *page;
+
+	if (is_vmalloc_or_module_addr((const void *)(uintptr_t)(virt_addr & (~(PAGE_SIZE - 1))))) {
+		page = vmalloc_to_page((const void *)(uintptr_t)(virt_addr & (~(PAGE_SIZE - 1))));
+		if (!page) {
+			pr_warn("Minidump: Cannot get page for address 0x%llx\n", virt_addr);
+			return 0;
+		}
+		return page_to_phys(page) + offset_in_page(virt_addr);
+	} else {
+		/* Handle linear mapping addresses */
+		return (uint64_t)__pa(virt_addr);
+	}
+}
+
+/*
 * Function: minidump_fill_segments_internal
 *
 * Description: Add a dump segment as a TLV entry in the Metadata list
@@ -1128,14 +1208,12 @@ int minidump_fill_tlv_crashdump_buffer(const uint64_t start_addr, uint64_t size,
 * Return: 0 on success, -ENOMEM on failure
 */
 int minidump_fill_segments_internal(const u64 start_addr, u64 size,
-				    enum minidump_tlv_type type, const char *name, int islowmem,
+				    enum minidump_tlv_type type, const char *name,
 				    enum minidump_crash_type crashtype)
 {
 
 	int ret = 0;
 	unsigned int replace = 0;
-	int highmem = 0;
-	struct page *minidump_tlv_page;
 	uint64_t phys_addr;
 	unsigned char *tlv_offset = NULL;
 
@@ -1143,29 +1221,19 @@ int minidump_fill_segments_internal(const u64 start_addr, u64 size,
 	if (crashtype >= MINIDUMP_CRASH_TYPE_MAX)
 		return -EINVAL;
 
-	/*
-	* Calculate PA of Dump segment using relevant APIs for lowmem and highmem
-	* virtual address.
-	*/
-	if (islowmem) {
-		phys_addr = (uint64_t)__pa(start_addr);
-	} else {
-		if (!is_vmalloc_or_module_addr((const void *)(uintptr_t)(start_addr & (~(PAGE_SIZE - 1))))) {
-			phys_addr = (uint64_t)__pa(start_addr);
-		} else {
-			minidump_tlv_page = vmalloc_to_page((const void *)(uintptr_t)
-					(start_addr & (~(PAGE_SIZE - 1))));
-			phys_addr = page_to_phys(minidump_tlv_page) + offset_in_page(start_addr);
-			highmem = 1;
-		}
+	phys_addr = minidump_virt_to_phys(start_addr);
+	if (!phys_addr) {
+		pr_warn("Minidump: Failed to convert virtual address 0x%llx to physical for %s, skipping\n",
+			start_addr, name ? name : "unknown");
+		return -EINVAL;
 	}
 	replace = minidump_traverse_metadata_list(name, start_addr, (const unsigned long)phys_addr,
 						  &tlv_offset, size, (unsigned char)type,
 						  crashtype);
 	/* return value of -ENOMEM indicates  new list node was not created
-    * due to an alloc failure. return value of -EINVAL indicates an attempt to
-    * add a duplicate entry
-    */
+	 * due to an alloc failure. return value of -EINVAL indicates an attempt to
+	 * add a duplicate entry
+	 */
 	if (replace == -EINVAL)
 		return 0;
 
@@ -1209,7 +1277,7 @@ int minidump_add_segments(const u64 start_addr, u64 size, enum minidump_tlv_type
 {
 	int ret = 0;
 
-	ret = minidump_fill_segments_internal(start_addr, size, type, name, 0, crashtype);
+	ret = minidump_fill_segments_internal(start_addr, size, type, name, crashtype);
 	if (!ret) {
 		if (module_name) {
 			/* traverse through the metadata module list and add entry if new module */
@@ -1227,7 +1295,7 @@ EXPORT_SYMBOL(minidump_add_segments);
 int minidump_fill_segments(const u64 start_addr, u64 size, enum minidump_tlv_type type,
 			   const char *name)
 {
-	return minidump_fill_segments_internal(start_addr, size, type, name, 0,
+	return minidump_fill_segments_internal(start_addr, size, type, name,
 					       MINIDUMP_CRASH_TYPE_HOST |
 					       MINIDUMP_CRASH_TYPE_FW);
 }
@@ -1420,15 +1488,22 @@ static int ctx_save_fill_log_dump_tlv(void)
 #endif /* CONFIG_QCA_MINIDUMP */
 	uname = utsname();
 
-	struct minidump_tlv_info uname_tlv;
+	if (minidump_version_lvl != 2) {
+		ret_val = ctx_save_add_tlv(QCA_WDT_LOG_DUMP_TYPE_UNAME,
+					   sizeof(*uname),
+					   (unsigned char *)uname);
+	} else {
 
-	uname_tlv.start = (uint64_t)(uintptr_t)__pa(uname);
-	uname_tlv.size = sizeof(*uname);
-	uname_tlv.crashtype = MINIDUMP_CRASH_TYPE_DEFAULT;
+		struct minidump_tlv_info uname_tlv;
 
-	ret_val = ctx_save_add_tlv(QCA_WDT_LOG_DUMP_TYPE_UNAME,
-			    sizeof(uname_tlv),
-			    (unsigned char *)&uname_tlv);
+		uname_tlv.start = (uint64_t)(uintptr_t)__pa(uname);
+		uname_tlv.size = sizeof(*uname);
+		uname_tlv.crashtype = MINIDUMP_CRASH_TYPE_DEFAULT;
+
+		ret_val = ctx_save_add_tlv(QCA_WDT_LOG_DUMP_TYPE_UNAME,
+					   sizeof(uname_tlv),
+					   (unsigned char *)&uname_tlv);
+	}
 	if (ret_val)
 		return ret_val;
 
@@ -1437,13 +1512,18 @@ static int ctx_save_fill_log_dump_tlv(void)
 	ret_val = minidump_fill_segments_internal(dmesg_tail_lpos.start,
 						  dmesg_tail_lpos.size,
 						  QCA_WDT_LOG_DUMP_TYPE_TEXT_DATA_TAIL,
-						  "DMESG_READ", 1, MINIDUMP_CRASH_TYPE_DEFAULT);
+						  "DMESG_READ", MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val)
 		return ret_val;
 
 	minidump_get_log_buf_info(&log_buf_info.start, &log_buf_info.size);
-	ret_val = minidump_fill_segments_internal(log_buf_info.start, log_buf_info.size,
-						  QCA_WDT_LOG_DUMP_TYPE_DMESG, "DMESG", 1,
+	uint64_t log_buf_size_phys = minidump_virt_to_phys(log_buf_info.size);
+	if (!log_buf_size_phys) {
+		pr_err("Minidump: Failed to convert log_buf_info.size virtual address to physical\n");
+		return -EINVAL;
+	}
+	ret_val = minidump_fill_segments_internal(log_buf_info.start, log_buf_size_phys,
+						  QCA_WDT_LOG_DUMP_TYPE_DMESG, "DMESG",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d \n", ret_val);
@@ -1452,7 +1532,7 @@ static int ctx_save_fill_log_dump_tlv(void)
 
 	minidump_get_pgd_info(&pagetable_tlv_info.start, &pagetable_tlv_info.size);
 	ret_val = minidump_fill_segments_internal(pagetable_tlv_info.start, pagetable_tlv_info.size,
-						  QCA_WDT_LOG_DUMP_TYPE_LEVEL1_PT, "PGD", 1,
+						  QCA_WDT_LOG_DUMP_TYPE_LEVEL1_PT, "PGD",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
@@ -1461,32 +1541,42 @@ static int ctx_save_fill_log_dump_tlv(void)
 
 	minidump_get_linux_buf_info(&linux_banner_info.start, &linux_banner_info.size);
 	ret_val = minidump_fill_segments_internal(linux_banner_info.start, linux_banner_info.size,
-						  QCA_WDT_LOG_DUMP_TYPE_MOD, "linux_banner", 1,
+						  QCA_WDT_LOG_DUMP_TYPE_MOD, "linux_banner",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 		return ret_val;
 	}
 
+	uint64_t mod_log_len_phys = minidump_virt_to_phys((uint64_t)(uintptr_t)&minidump_meta_info.mod_log_len);
+	if (!mod_log_len_phys) {
+		pr_err("Minidump: Failed to convert mod_log_len virtual address to physical\n");
+		return -EINVAL;
+	}
 	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)minidump_meta_info.mod_log,
-						  (uint64_t)__pa(&minidump_meta_info.mod_log_len),
-						  QCA_WDT_LOG_DUMP_TYPE_MOD_INFO, "mod_info", 1,
+						  mod_log_len_phys,
+						  QCA_WDT_LOG_DUMP_TYPE_MOD_INFO, "mod_info",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 		return ret_val;
 	}
 
+	uint64_t mmu_log_len_phys = minidump_virt_to_phys((uint64_t)(uintptr_t)&minidump_meta_info.mmu_log_len);
+	if (!mmu_log_len_phys) {
+		pr_err("Minidump: Failed to convert mmu_log_len virtual address to physical\n");
+		return -EINVAL;
+	}
 	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)minidump_meta_info.mmu_log,
-						  (uint64_t)__pa(&minidump_meta_info.mmu_log_len),
-						  QCA_WDT_LOG_DUMP_TYPE_MMU_INFO, "mmu_info", 1,
+						  mmu_log_len_phys,
+						  QCA_WDT_LOG_DUMP_TYPE_MMU_INFO, "mmu_info",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 		return ret_val;
 	}
 	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)tz_diag_addr_va, 3 * SZ_4K,
-						  QCA_WDT_LOG_DUMP_TYPE_MOD, "TZ_DIAG", 0,
+						  QCA_WDT_LOG_DUMP_TYPE_MOD, "TZ_DIAG",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
@@ -1494,14 +1584,14 @@ static int ctx_save_fill_log_dump_tlv(void)
 	}
 
 	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)imem_base_add, imem_size,
-						  QCA_WDT_LOG_DUMP_TYPE_MOD, "IMEM", 0,
+						  QCA_WDT_LOG_DUMP_TYPE_MOD, "IMEM",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 		return ret_val;
 	}
 	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)smem_base_addr, smem_size,
-						  QCA_WDT_LOG_DUMP_TYPE_MOD, "SMEM", 0,
+						  QCA_WDT_LOG_DUMP_TYPE_MOD, "SMEM",
 						  MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
@@ -1555,7 +1645,7 @@ int minidump_dump_modules(void)
 	module_tlv_info.start = (uintptr_t)minidump_modules;
 	module_tlv_info.size = sizeof(struct list_head);
 	ret_val = minidump_fill_segments_internal(module_tlv_info.start,
-			module_tlv_info.size, QCA_WDT_LOG_DUMP_TYPE_MOD, "mod_list_head", 0,
+			module_tlv_info.size, QCA_WDT_LOG_DUMP_TYPE_MOD, "mod_list_head",
 			MINIDUMP_CRASH_TYPE_DEFAULT);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
@@ -1579,7 +1669,7 @@ int minidump_dump_modules(void)
 		module_tlv_info.size = sizeof(struct module);
 		ret_val = minidump_fill_segments_internal(module_tlv_info.start,
 							  module_tlv_info.size,
-							  QCA_WDT_LOG_DUMP_TYPE_MOD, mod->name, 0,
+							  QCA_WDT_LOG_DUMP_TYPE_MOD, mod->name,
 							  MINIDUMP_CRASH_TYPE_DEFAULT);
 		if (ret_val) {
 			pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
@@ -1690,11 +1780,188 @@ static struct notifier_block panic_nb = {
 	.notifier_call = ctx_save_panic_handler,
 };
 
+/*
+ * ctx_save_setup_tmel_log_buf - Allocate and setup TMEL buffer
+ * @pdev: Platform device pointer
+ * @pdata: Platform-specific configuration data
+ * @tmel_buffer: Pointer to store allocated TMEL buffer
+ *
+ * This function allocates TMEL buffer for platforms that have platform data
+ * configured and writes its physical address to the appropriate register.
+ * Returns success if platform data is not available (not an error condition).
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+static int ctx_save_setup_tmel_log_buf(struct platform_device *pdev,
+				       const struct ctx_save_platform_data *pdata,
+				       void **tmel_buffer)
+{
+	void __iomem *reg_addr = NULL;
+	phys_addr_t tmel_phy_addr;
+	int ret;
+
+	/* Return success if platform data is not available */
+	if (!pdata || !pdata->tmel_buffer_size || !pdata->tmel_log_buffer_reg_addr)
+		return 0;
+
+	*tmel_buffer = (void *)__get_dma_pages(GFP_KERNEL,
+					       get_order(pdata->tmel_buffer_size));
+	if (!*tmel_buffer) {
+		dev_err(&pdev->dev, "Failed to allocate TMEL buffer\n");
+		return -ENOMEM;
+	}
+
+	tmel_phy_addr = virt_to_phys(*tmel_buffer);
+
+	/* Validate physical address */
+	if (!tmel_phy_addr || !virt_addr_valid(*tmel_buffer)) {
+		dev_err(&pdev->dev,
+			"Invalid physical address for TMEL buffer: phys=0x%llx\n",
+			(u64)tmel_phy_addr);
+		ret = -EINVAL;
+		goto err_free_tmel;
+	}
+
+	/* Ensure address fits in 32-bit register */
+	if (tmel_phy_addr > 0xFFFFFFFF) {
+		dev_err(&pdev->dev,
+			"TMEL physical address 0x%llx exceeds 32-bit range\n",
+			(u64)tmel_phy_addr);
+		ret = -EINVAL;
+		goto err_free_tmel;
+	}
+
+	dev_dbg(&pdev->dev,
+		"TMEL buffer allocated: virt=0x%lx phys=0x%llx size=%u\n",
+		(unsigned long)*tmel_buffer, (u64)tmel_phy_addr,
+		pdata->tmel_buffer_size);
+
+	/* Map and write TMEL buffer address to register */
+	reg_addr = ioremap(pdata->tmel_log_buffer_reg_addr, 4);
+	if (!reg_addr) {
+		dev_err(&pdev->dev, "Failed to map register at 0x%x\n",
+			pdata->tmel_log_buffer_reg_addr);
+		ret = -ENOMEM;
+		goto err_free_tmel;
+	}
+
+	writel(tmel_phy_addr, reg_addr);
+
+	/* Validate write operation */
+	if (readl(reg_addr) != tmel_phy_addr) {
+		dev_warn(&pdev->dev,
+			 "TMEL register write verification failed at 0x%x: expected 0x%llx, read 0x%x\n",
+			 pdata->tmel_log_buffer_reg_addr, (u64)tmel_phy_addr, readl(reg_addr));
+	}
+
+	dev_dbg(&pdev->dev,
+		"TMEL buffer address written to register at 0x%x\n",
+		pdata->tmel_log_buffer_reg_addr);
+	iounmap(reg_addr);
+
+	return 0;
+
+err_free_tmel:
+	free_pages((unsigned long)*tmel_buffer, get_order(pdata->tmel_buffer_size));
+	*tmel_buffer = NULL;
+	return ret;
+}
+
+/*
+ * ctx_save_setup_tlv_buf - Allocate and setup TLV buffer
+ * @pdev: Platform device pointer
+ * @pdata: Platform-specific configuration data
+ *
+ * This function allocates TLV buffer for platforms that have platform data
+ * configured and writes its physical address to IMEM location.
+ * Returns success if platform data is not available (not an error condition).
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+static int ctx_save_setup_tlv_buf(struct platform_device *pdev,
+				  const struct ctx_save_platform_data *pdata)
+{
+	void *tlv_buffer = NULL;
+	void __iomem *tlv_imem_addr = NULL;
+	phys_addr_t tlv_phy_addr;
+	int ret;
+
+	/* Return success if platform data is not available */
+	if (!pdata || !pdata->tlv_buffer_size || !pdata->tlv_buffer_addr)
+		return 0;
+
+	tlv_buffer = (void *)__get_dma_pages(GFP_KERNEL,
+					     get_order(pdata->tlv_buffer_size));
+	if (!tlv_buffer) {
+		dev_err(&pdev->dev, "Failed to allocate TLV buffer\n");
+		return -ENOMEM;
+	}
+
+	tlv_phy_addr = virt_to_phys(tlv_buffer);
+
+	/* Validate physical address */
+	if (!tlv_phy_addr || !virt_addr_valid(tlv_buffer)) {
+		dev_err(&pdev->dev,
+			"Invalid physical address for TLV buffer: phys=0x%llx\n",
+			(u64)tlv_phy_addr);
+		ret = -EINVAL;
+		goto err_free_tlv;
+	}
+
+	/* Ensure address fits in 32-bit register */
+	if (tlv_phy_addr > 0xFFFFFFFF) {
+		dev_err(&pdev->dev,
+			"TLV physical address 0x%llx exceeds 32-bit range\n",
+			(u64)tlv_phy_addr);
+		ret = -EINVAL;
+		goto err_free_tlv;
+	}
+
+	dev_dbg(&pdev->dev,
+		"TLV buffer allocated: virt=0x%lx phys=0x%llx size=%u\n",
+		(unsigned long)tlv_buffer, (u64)tlv_phy_addr,
+		pdata->tlv_buffer_size);
+
+	/* Store TLV buffer physical address in IMEM */
+	tlv_imem_addr = ioremap(pdata->tlv_buffer_addr, 4);
+	if (!tlv_imem_addr) {
+		dev_err(&pdev->dev,
+			"Failed to map TLV IMEM location at 0x%x\n",
+			pdata->tlv_buffer_addr);
+		ret = -ENOMEM;
+		goto err_free_tlv;
+	}
+
+	writel(tlv_phy_addr, tlv_imem_addr);
+
+	/* Validate write operation */
+	if (readl(tlv_imem_addr) != tlv_phy_addr) {
+		dev_warn(&pdev->dev,
+			 "TLV IMEM write verification failed at 0x%x: expected 0x%llx, read 0x%x\n",
+			 pdata->tlv_buffer_addr, (u64)tlv_phy_addr, readl(tlv_imem_addr));
+	}
+
+	dev_dbg(&pdev->dev, "TLV buffer address written to IMEM at 0x%x\n",
+		pdata->tlv_buffer_addr);
+	iounmap(tlv_imem_addr);
+
+	/* Update tlv_msg to use the new TLV buffer */
+	tlv_msg.msg_buffer = tlv_buffer;
+	tlv_msg.cur_msg_buffer_pos = tlv_msg.msg_buffer;
+	tlv_msg.len = pdata->tlv_buffer_size;
+
+	return 0;
+
+err_free_tlv:
+	free_pages((unsigned long)tlv_buffer, get_order(pdata->tlv_buffer_size));
+	return ret;
+}
+
 static int ctx_save_probe(struct platform_device *pdev)
 {
 	void *scm_regsave;
 	struct device_node *of_node = pdev->dev.of_node;
-	u32 minidump_offset = 0;
+	const struct ctx_save_platform_data *pdata;
 	size_t tlv_msg_offset = 0;
 #ifdef CONFIG_QCA_MINIDUMP
 	struct device_node *node;
@@ -1705,19 +1972,33 @@ static int ctx_save_probe(struct platform_device *pdev)
 	struct resource imem;
 #endif /* CONFIG_QCA_MINIDUMP */
 	int ret;
+	void *tmel_buffer = NULL;
+	u32 regsave_size;
 
-	scm_regsave = (void *) __get_dma_pages(GFP_KERNEL,
-				get_order(CRASHDUMP_PAGE_SIZE));
+	/* Get platform-specific data from of_device_id table */
+	pdata = of_device_get_match_data(&pdev->dev);
+	if (pdata)
+		regsave_size = pdata->regsave_size;
+	else
+		regsave_size = CRASHDUMP_PAGE_SIZE;
 
-	if (!scm_regsave)
+	scm_regsave = (void *)__get_dma_pages(GFP_KERNEL,
+					      get_order(regsave_size));
+
+	if (!scm_regsave) {
+		dev_err(&pdev->dev, "Failed to allocate regsave buffer\n");
 		return -ENOMEM;
+	}
 
-	ret = qcom_scm_regsave(scm_regsave, CRASHDUMP_PAGE_SIZE);
+	dev_dbg(&pdev->dev, "Regsave buffer allocated: size=%u\n",
+		regsave_size);
+
+	ret = qcom_scm_regsave(scm_regsave, regsave_size);
 
 	if (ret) {
 		pr_err("Setting register save address failed.\n"
-			"Registers won't be dumped on a dog bite\n");
-		return ret;
+		       "Registers won't be dumped on a dog bite\n");
+		goto err_free_regsave;
 	}
 
 #ifdef CONFIG_QCA_MINIDUMP
@@ -1780,38 +2061,51 @@ static int ctx_save_probe(struct platform_device *pdev)
 #endif /* CONFIG_QCA_MINIDUMP */
 
 	spin_lock_init(&tlv_msg.spinlock);
-	of_property_read_u32(of_node, "minidump-level", &minidump_offset);
+	of_property_read_u32(of_node, "minidump-level", &minidump_version_lvl);
 
-	if (minidump_offset != 2)
-		tlv_msg_offset = 500 * SZ_1K;
-	else
-		tlv_msg_offset = 489 * SZ_1K;
+	/* Call setup functions unconditionally - they return success if pdata is not available */
+	ret = ctx_save_setup_tmel_log_buf(pdev, pdata, &tmel_buffer);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "TMEL buffer setup failed, continuing without it\n");
+		tmel_buffer = NULL;
+	}
 
-	tlv_msg.msg_buffer = scm_regsave + tlv_msg_offset;
-	tlv_msg.cur_msg_buffer_pos = tlv_msg.msg_buffer;
-	tlv_msg.len = CRASHDUMP_PAGE_SIZE - tlv_msg_offset;
+	ret = ctx_save_setup_tlv_buf(pdev, pdata);
+	if (ret < 0)
+		dev_err(&pdev->dev, "TLV buffer setup failed, continuing without it\n");
+
+	/* If buffers were not allocated (not IPQ5210/IPQ9650), use existing flow */
+	if (!tlv_msg.msg_buffer) {
+		/* For other platforms, use existing flow */
+		if (minidump_version_lvl != 2)
+			tlv_msg_offset = 500 * SZ_1K;
+		else
+			tlv_msg_offset = 489 * SZ_1K;
+
+		tlv_msg.msg_buffer = scm_regsave + tlv_msg_offset;
+		tlv_msg.cur_msg_buffer_pos = tlv_msg.msg_buffer;
+		tlv_msg.len = CRASHDUMP_PAGE_SIZE - tlv_msg_offset;
+	}
+
 	ret = ctx_save_fill_log_dump_tlv();
-
 	/* if failed, we still return 0 because it should not
 	 * affect the boot flow. The return value 0 does not
 	 * necessarily indicate success in this function.
 	 */
 	if (ret) {
 		pr_err("log dump initialization failed\n");
-		return 0;
+		goto err_cleanup_dma;
 	}
 
 	ret = atomic_notifier_chain_register(&panic_notifier_list, &panic_nb);
-
 	if (ret)
 		dev_err(&pdev->dev,
 			"Failed to register panic notifier\n");
 
 #ifdef CONFIG_QCA_MINIDUMP
 	ret = register_module_notifier(&wlan_module_exit_nb);
-	if (ret) {
+	if (ret)
 		dev_err(&pdev->dev, "Failed to register WLAN  module exit notifier\n");
-	}
 
 	ret = atomic_notifier_chain_register(&panic_notifier_list,
 				&wlan_panic_nb);
@@ -1820,6 +2114,25 @@ static int ctx_save_probe(struct platform_device *pdev)
 			"Failed to register panic notifier for WLAN module info\n");
 	register_sysrq_key('y', &sysrq_minidump_op);
 #endif /* CONFIG_QCA_MINIDUMP */
+	return 0;
+
+err_cleanup_dma:
+	if (pdata && pdata->tlv_buffer_size && tlv_msg.msg_buffer) {
+		free_pages((unsigned long)tlv_msg.msg_buffer,
+			   get_order(pdata->tlv_buffer_size));
+		tlv_msg.msg_buffer = NULL;
+	}
+
+	/*
+	 * Don't free TMEL buffer here - it's independent and was successfully set up.
+	 * TMEL buffer will remain allocated for crash dump functionality.
+	 * scm_regsave is already registered with firmware, don't free it either.
+	 */
+	return 0;
+
+err_free_regsave:
+	/* Free scm_regsave only if qcom_scm_regsave failed */
+	free_pages((unsigned long)scm_regsave, get_order(regsave_size));
 	return ret;
 }
 
@@ -1892,7 +2205,29 @@ static int ctx_save_probe(struct platform_device *pdev)
  *		-----------------
  */
 
+/* Platform-specific configuration data for IPQ5210 */
+static const struct ctx_save_platform_data ipq5210_data = {
+	.tmel_buffer_size = 0x20000,        /* 128KB */
+	.tmel_log_buffer_reg_addr = 0x8600BE4,
+	.tlv_buffer_size = 0x5C00,          /* 23KB */
+	.tlv_buffer_addr = 0x8600758,
+	.regsave_size = 0x10000,            /* 64KB */
+};
+
+/* Platform-specific configuration data for IPQ9650 */
+static const struct ctx_save_platform_data ipq9650_data = {
+	.tmel_buffer_size = 0x20000,        /* 128KB */
+	.tmel_log_buffer_reg_addr = 0x1967004,
+	.tlv_buffer_size = 0x5C00,          /* 23KB */
+	.tlv_buffer_addr = 0x8600758,
+	.regsave_size = 0x40000,            /* 256KB */
+};
+
 static const struct of_device_id ctx_save_of_table[] = {
+	{
+		.compatible = "qti,ctxt-save-ipq5210",
+		.data = &ipq5210_data,
+	},
 	{
 		.compatible = "qti,ctxt-save-ipq5332",
 	},
@@ -1901,6 +2236,10 @@ static const struct of_device_id ctx_save_of_table[] = {
 	},
 	{
 		.compatible = "qti,ctxt-save-ipq9574",
+	},
+	{
+		.compatible = "qti,ctxt-save-ipq9650",
+		.data = &ipq9650_data,
 	},
 	{}
 };

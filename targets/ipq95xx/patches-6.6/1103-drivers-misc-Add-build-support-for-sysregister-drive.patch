@@ -1,0 +1,48 @@
+From 06c1c063363b2c0fd44b8722c55713e44878bd50 Mon Sep 17 00:00:00 2001
+From: Devi Priya <devipriy@qti.qualcomm.com>
+Date: Tue, 24 Feb 2026 01:07:31 +0530
+Subject: [PATCH] drivers: misc: Add build support for sysregister driver
+
+Change-Id: I0f20f95dc80d60ecbfedee286a264b86393dd463
+Signed-off-by: Devi Priya <devipriy@qti.qualcomm.com>
+---
+ drivers/misc/Kconfig  | 10 ++++++++++
+ drivers/misc/Makefile |  1 +
+ 2 files changed, 11 insertions(+)
+
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 6923f1676624..00f0f0a59865 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -163,6 +163,16 @@ config ENCLOSURE_SERVICES
+ 	  driver (SCSI/ATA) which supports enclosures
+ 	  or a SCSI enclosure device (SES) to use these services.
+ 
++config SYSREGISTER
++        tristate "System Register Driver"
++        depends on OF && HAS_IOMEM
++        depends on QCOM_SCM
++        help
++          This driver provides sysfs access to memory-mapped system registers.
++          It supports both secure and non-secure registers with optional
++          bit-level access. It creates sysfs entries for each configured
++          register allowing userspace to read and write register values.
++
+ config SGI_XP
+ 	tristate "Support communication between SGI SSIs"
+ 	depends on NET
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 35f9f79bed1a..f5ae3328ff7d 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -47,6 +47,7 @@ obj-$(CONFIG_VMWARE_VMCI)	+= vmw_vmci/
+ obj-$(CONFIG_LATTICE_ECP3_CONFIG)	+= lattice-ecp3-config.o
+ obj-$(CONFIG_SRAM)		+= sram.o
+ obj-$(CONFIG_SRAM_EXEC)		+= sram-exec.o
++obj-$(CONFIG_SYSREGISTER)	+= sysregister.o
+ obj-$(CONFIG_GENWQE)		+= genwqe/
+ obj-$(CONFIG_ECHO)		+= echo/
+ obj-$(CONFIG_CXL_BASE)		+= cxl/
+-- 
+2.34.1
+

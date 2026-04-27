@@ -1,0 +1,32 @@
+From 14102f69242c6af96b38f3cb9c0baba8ae1d608d Mon Sep 17 00:00:00 2001
+From: Luo Jie <luoj@qti.qualcomm.com>
+Date: Mon, 2 Feb 2026 17:32:08 +0800
+Subject: [PATCH] driver: clk: qcom: Avoid the warning report
+
+Change-Id: Id6aa839c471d8af74eb95e9fae0d9f96d12f24d2
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ drivers/clk/qcom/clk-rcg2.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/clk/qcom/clk-rcg2.c b/drivers/clk/qcom/clk-rcg2.c
+index 7788759de8ef..1b9ce626274c 100644
+--- a/drivers/clk/qcom/clk-rcg2.c
++++ b/drivers/clk/qcom/clk-rcg2.c
+@@ -365,8 +365,11 @@ __clk_rcg2_select_conf(struct clk_hw *hw, const struct freq_multi_tbl *f,
+ 	 * due to parent not found in every config.
+ 	 */
+ 	if (unlikely(!best_conf)) {
+-		WARN(1, "%s: can't find a configuration for rate %lu\n",
+-		     name, req_rate);
++		/* Only warn on the valid parent clock. */
++		if (parent_rate != 0) {
++			WARN(1, "%s: can't find a configuration for rate %lu\n",
++			     name, req_rate);
++		}
+ 		return ERR_PTR(-EINVAL);
+ 	}
+ 
+-- 
+2.34.1
+

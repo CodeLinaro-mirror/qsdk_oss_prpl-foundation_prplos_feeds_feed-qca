@@ -1,0 +1,34 @@
+From e3063d19e58bd86c78af25dd5c5c7c03332fec25 Mon Sep 17 00:00:00 2001
+From: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+Date: Mon, 23 Feb 2026 15:03:17 +0530
+Subject: [PATCH] drivers: bus: mhi: Fix Device ID for QCN9625 and QCN9589
+
+QCN9625 and QCN9589 device IDs are expected to be in hex, but
+incorrectly decimal values were defined as hex.
+
+Fix this with the correct hex values for QCN9625 and QCN9589.
+
+Change-Id: I19ddf54536883602d2592aff5afb8f3f6e8ab347
+Signed-off-by: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+---
+ drivers/bus/mhi/host/internal.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/bus/mhi/host/internal.h b/drivers/bus/mhi/host/internal.h
+index f8187fec6d01..0fff89db2db1 100644
+--- a/drivers/bus/mhi/host/internal.h
++++ b/drivers/bus/mhi/host/internal.h
+@@ -17,8 +17,8 @@ extern struct bus_type mhi_bus_type;
+ 
+ #define QCN9XXX_FAMILY_NUM				(0x4)
+ #define QCN9224_DEVICE_NUM				(0x1A)
+-#define QCN9625_DEVICE_NUM				(0x47)
+-#define QCN9589_DEVICE_NUM				(0x49)
++#define QCN9625_DEVICE_NUM				(0x2F)
++#define QCN9589_DEVICE_NUM				(0x31)
+ #define SOC_HW_VERSION_OFFS				0x224
+ #define SOC_HW_VERSION_FAM_NUM_BMSK			GENMASK(31, 28)
+ #define SOC_HW_VERSION_DEV_NUM_BMSK			GENMASK(27, 16)
+-- 
+2.34.1
+

@@ -1,0 +1,66 @@
+From 4a77afd2a4c479565451b8567dba6e37c41ecf89 Mon Sep 17 00:00:00 2001
+From: Satya Priya Kakitapalli <quic_skakitap@quicinc.com>
+Date: Wed, 31 Jul 2024 11:59:12 +0530
+Subject: [PATCH] clk: qcom: clk-alpha-pll: Update set_rate for Zonda PLL
+
+The Zonda PLL has a 16 bit signed alpha and in the cases where the alpha
+value is greater than 0.5, the L value needs to be adjusted accordingly.
+Thus update the logic to handle the signed alpha val.
+
+Fixes: f21b6bfecc27 ("clk: qcom: clk-alpha-pll: add support for zonda pll")
+Cc: stable@vger.kernel.org
+Change-Id: I7bc69ed69543878781fa1db9c28852edb0bc3440
+Signed-off-by: Satya Priya Kakitapalli <quic_skakitap@quicinc.com>
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@linaro.org>
+Link: https://lore.kernel.org/r/20240731062916.2680823-5-quic_skakitap@quicinc.com
+Signed-off-by: Bjorn Andersson <andersson@kernel.org>
+(cherry picked from commit f4973130d255dd4811006f5822d4fa4d0de9d712)
+(cherry picked from commit 128cbc4d16c01b090a88f2f2a0fffe6509310b94)
+---
+ drivers/clk/qcom/clk-alpha-pll.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/clk/qcom/clk-alpha-pll.c b/drivers/clk/qcom/clk-alpha-pll.c
+index ad6229196a88..f3812cd00665 100644
+--- a/drivers/clk/qcom/clk-alpha-pll.c
++++ b/drivers/clk/qcom/clk-alpha-pll.c
+@@ -41,6 +41,7 @@
+ #define PLL_USER_CTL(p)		((p)->offset + (p)->regs[PLL_OFF_USER_CTL])
+ # define PLL_POST_DIV_SHIFT	8
+ # define PLL_POST_DIV_MASK(p)	GENMASK((p)->width - 1, 0)
++# define PLL_ALPHA_MSB		BIT(15)
+ # define PLL_ALPHA_EN		BIT(24)
+ # define PLL_ALPHA_MODE		BIT(25)
+ # define PLL_VCO_SHIFT		20
+@@ -2160,6 +2161,18 @@ static void clk_zonda_pll_disable(struct clk_hw *hw)
+ 	regmap_write(regmap, PLL_OPMODE(pll), 0x0);
+ }
+ 
++static void zonda_pll_adjust_l_val(unsigned long rate, unsigned long prate, u32 *l)
++{
++	u64 remainder, quotient;
++
++	quotient = rate;
++	remainder = do_div(quotient, prate);
++	*l = quotient;
++
++	if ((remainder * 2) / prate)
++		*l = *l + 1;
++}
++
+ static int clk_zonda_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+ 				  unsigned long prate)
+ {
+@@ -2176,6 +2189,9 @@ static int clk_zonda_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+ 	if (ret < 0)
+ 		return ret;
+ 
++	if (a & PLL_ALPHA_MSB)
++		zonda_pll_adjust_l_val(rate, prate, &l);
++
+ 	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL(pll), a);
+ 	regmap_write(pll->clkr.regmap, PLL_L_VAL(pll), l);
+ 
+-- 
+2.34.1
+

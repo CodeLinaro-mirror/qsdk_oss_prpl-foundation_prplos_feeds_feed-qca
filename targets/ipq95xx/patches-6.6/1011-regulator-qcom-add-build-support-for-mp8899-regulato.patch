@@ -1,0 +1,56 @@
+From a912cea320b6930f663986108f511ff6afaffadd Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Thu, 4 Sep 2025 12:21:21 +0530
+Subject: [PATCH] regulator: qcom: add build support for mp8899 regulator
+
+Add Makefile and Kconfig changes to build the MP8899 regulator.
+
+Change-Id: I06166d3bbf05f93724751c1403ede0a5e786d363
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/regulator/Kconfig  | 16 ++++++++++++++++
+ drivers/regulator/Makefile |  1 +
+ 2 files changed, 17 insertions(+)
+
+diff --git a/drivers/regulator/Kconfig b/drivers/regulator/Kconfig
+index f84f2131ea55..d35ce57d2f6f 100644
+--- a/drivers/regulator/Kconfig
++++ b/drivers/regulator/Kconfig
+@@ -778,6 +778,22 @@ config REGULATOR_MP8859
+ 	  Say M here if you want to include support for the regulator as a
+ 	  module. The module will be named "mp8859".
+ 
++config REGULATOR_MP8899
++	tristate "MPS MP8899 PMIC regulator driver"
++	depends on I2C && OF
++	select REGMAP_I2C
++	help
++	  Say y here to support the MP8899 PMIC voltage regulators. This driver
++	  supports the MP8899 quad buck converters with I2C interface. The MP8899
++	  provides configurable voltage output from 0.4V to 3.6V or 0.4V to 2.0475V.
++
++	  This driver supports basic regulator operations (enable/disable,
++	  get/set voltage, current limiting) and integrates with the Linux
++	  regulator framework.
++
++	  Say M here if you want to include support for the regulator as a
++	  module. The module will be named "mp8899".
++
+ config REGULATOR_MP886X
+ 	tristate "MPS MP8869 regulator driver"
+ 	depends on I2C && OF
+diff --git a/drivers/regulator/Makefile b/drivers/regulator/Makefile
+index 531ae202e55d..5b8267c80108 100644
+--- a/drivers/regulator/Makefile
++++ b/drivers/regulator/Makefile
+@@ -94,6 +94,7 @@ obj-$(CONFIG_REGULATOR_MC13XXX_CORE) +=  mc13xxx-regulator-core.o
+ obj-$(CONFIG_REGULATOR_MCP16502) += mcp16502.o
+ obj-$(CONFIG_REGULATOR_MP5416) += mp5416.o
+ obj-$(CONFIG_REGULATOR_MP8859) += mp8859.o
++obj-$(CONFIG_REGULATOR_MP8899) += mp8899.o
+ obj-$(CONFIG_REGULATOR_MP886X) += mp886x.o
+ obj-$(CONFIG_REGULATOR_MPQ7920) += mpq7920.o
+ obj-$(CONFIG_REGULATOR_MT6311) += mt6311-regulator.o
+-- 
+2.34.1
+

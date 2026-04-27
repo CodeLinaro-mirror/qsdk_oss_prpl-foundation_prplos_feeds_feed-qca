@@ -23,10 +23,10 @@ Signed-off-by: Saahil Tomar <quic_saahtoma@quicinc.com>
  drivers/soc/qcom/qmi_interface.c | 15 +++++--
  2 files changed, 73 insertions(+), 10 deletions(-)
 
-diff --git a/drivers/soc/qcom/qmi_encdec.c b/drivers/soc/qcom/qmi_encdec.c
-index 5c7161b18b72..bddda6415bc4 100644
---- a/drivers/soc/qcom/qmi_encdec.c
-+++ b/drivers/soc/qcom/qmi_encdec.c
+Index: linux-6.6.116/drivers/soc/qcom/qmi_encdec.c
+===================================================================
+--- linux-6.6.116.orig/drivers/soc/qcom/qmi_encdec.c	2026-01-26 23:59:02.772986734 +0530
++++ linux-6.6.116/drivers/soc/qcom/qmi_encdec.c	2026-01-27 00:29:11.517120130 +0530
 @@ -25,14 +25,38 @@
  
  #define QMI_ENCDEC_ENCODE_N_BYTES(p_dst, p_src, size) \
@@ -66,20 +66,19 @@ index 5c7161b18b72..bddda6415bc4 100644
  	p_dst = (u8 *)p_dst + size; \
  	p_src = (u8 *)p_src + size; \
  } while (0)
-@@ -304,6 +328,7 @@ static int qmi_encode(const struct qmi_elem_info *ei_array, void *out_buf,
+@@ -304,6 +328,7 @@
  	const void *buf_src;
  	int encode_tlv = 0;
  	int rc;
 +	char *d;
+ 	u8 val8;
+ 	u16 val16;
  
- 	if (!ei_array)
- 		return 0;
-@@ -338,7 +363,19 @@ static int qmi_encode(const struct qmi_elem_info *ei_array, void *out_buf,
- 			break;
- 
- 		case QMI_DATA_LEN:
--			memcpy(&data_len_value, buf_src, temp_ei->elem_size);
-+			memcpy(&data_len_value, buf_src, sizeof(u32));
+@@ -367,6 +392,19 @@
+ 				temp_ei = skip_to_next_elem(temp_ei, enc_level);
+ 			else
+ 				encode_tlv = 0;
++
 +			if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) {
 +				d = (char *)&data_len_value;
 +				if (temp_ei->elem_size == 1) {
@@ -92,21 +91,10 @@ index 5c7161b18b72..bddda6415bc4 100644
 +					d[2] = d[3] = 0;
 +				}
 +			}
- 			data_len_sz = temp_ei->elem_size == sizeof(u8) ?
- 					sizeof(u8) : sizeof(u16);
- 			/* Check to avoid out of range buffer access */
-@@ -357,6 +394,10 @@ static int qmi_encode(const struct qmi_elem_info *ei_array, void *out_buf,
- 				temp_ei = skip_to_next_elem(temp_ei, enc_level);
- 			else
- 				encode_tlv = 0;
-+
-+			if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
-+				data_len_value = (u32)*(u32 *)(buf_src);
-+
  			break;
  
  		case QMI_UNSIGNED_1_BYTE:
-@@ -520,8 +561,8 @@ static int qmi_decode_string_elem(const struct qmi_elem_info *ei_array,
+@@ -530,8 +568,8 @@
  {
  	int rc;
  	int decoded_bytes = 0;
@@ -115,33 +103,36 @@ index 5c7161b18b72..bddda6415bc4 100644
 +	u16 string_len = 0;
 +	u16 string_len_sz = 0;
  	const struct qmi_elem_info *temp_ei = ei_array;
- 
- 	if (dec_level == 1) {
-@@ -531,6 +572,7 @@ static int qmi_decode_string_elem(const struct qmi_elem_info *ei_array,
- 				sizeof(u8) : sizeof(u16);
- 		rc = qmi_decode_basic_elem(&string_len, buf_src,
- 					   1, string_len_sz);
-+		string_len = le16_to_cpu(string_len);
+ 	u8 val8;
+ 	u16 val16;
+@@ -549,6 +587,7 @@
+ 			rc = qmi_decode_basic_elem(&val16, buf_src,
+ 						   1, string_len_sz);
+ 			string_len = (u32)val16;
++			string_len = le16_to_cpu(string_len);
+ 		}
  		decoded_bytes += rc;
  	}
- 
-@@ -604,6 +646,7 @@ static int qmi_decode(const struct qmi_elem_info *ei_array, void *out_c_struct,
+@@ -623,6 +662,7 @@
  	u32 decoded_bytes = 0;
  	const void *buf_src = in_buf;
  	int rc;
 +	char *d;
- 
- 	while (decoded_bytes < in_buf_len) {
- 		if (dec_level >= 2 && temp_ei->data_type == QMI_EOTI)
-@@ -640,10 +683,23 @@ static int qmi_decode(const struct qmi_elem_info *ei_array, void *out_c_struct,
+ 	u8 val8;
+ 	u16 val16;
+ 	u32 val32;
+@@ -662,6 +702,7 @@
  		}
  
  		if (temp_ei->data_type == QMI_DATA_LEN) {
 +			data_len_value = 0;
  			data_len_sz = temp_ei->elem_size == sizeof(u8) ?
  					sizeof(u8) : sizeof(u16);
- 			rc = qmi_decode_basic_elem(&data_len_value, buf_src,
- 						   1, data_len_sz);
+ 			if (data_len_sz == sizeof(u8)) {
+@@ -673,6 +714,18 @@
+ 							   1, data_len_sz);
+ 				data_len_value = (u32)val16;
+ 			}
 +			if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) {
 +				d = (char *)&data_len_value;
 +				if (temp_ei->elem_size == 1) {
@@ -154,10 +145,10 @@ index 5c7161b18b72..bddda6415bc4 100644
 +					d[0] = d[1] = 0;
 +				}
 +			}
- 			memcpy(buf_dst, &data_len_value, sizeof(u32));
+ 			val32 = cpu_to_le32(data_len_value);
+ 			memcpy(buf_dst, &val32, sizeof(u32));
  			temp_ei = temp_ei + 1;
- 			buf_dst = out_c_struct + temp_ei->offset;
-@@ -746,9 +802,9 @@ void *qmi_encode_message(int type, unsigned int msg_id, size_t *len,
+@@ -776,9 +829,9 @@
  
  	hdr = msg;
  	hdr->type = type;
@@ -170,11 +161,11 @@ index 5c7161b18b72..bddda6415bc4 100644
  
  	*len = sizeof(*hdr) + msglen;
  
-diff --git a/drivers/soc/qcom/qmi_interface.c b/drivers/soc/qcom/qmi_interface.c
-index 78d7361fdcf2..e08a3f07d3ef 100644
---- a/drivers/soc/qcom/qmi_interface.c
-+++ b/drivers/soc/qcom/qmi_interface.c
-@@ -473,17 +473,21 @@ static void qmi_handle_message(struct qmi_handle *qmi,
+Index: linux-6.6.116/drivers/soc/qcom/qmi_interface.c
+===================================================================
+--- linux-6.6.116.orig/drivers/soc/qcom/qmi_interface.c	2026-01-26 23:59:02.772986734 +0530
++++ linux-6.6.116/drivers/soc/qcom/qmi_interface.c	2026-01-26 23:59:02.768986528 +0530
+@@ -473,17 +473,21 @@
  			       struct sockaddr_qrtr *sq,
  			       const void *buf, size_t len)
  {
@@ -198,7 +189,7 @@ index 78d7361fdcf2..e08a3f07d3ef 100644
  
  	/* If this is a response, find the matching transaction handle */
  	if (hdr->type == QMI_RESPONSE) {
-@@ -499,18 +503,21 @@ static void qmi_handle_message(struct qmi_handle *qmi,
+@@ -499,18 +503,21 @@
  		mutex_lock(&txn->lock);
  		mutex_unlock(&qmi->txn_lock);
  
@@ -222,6 +213,3 @@ index 78d7361fdcf2..e08a3f07d3ef 100644
  	} else {
  		/* Create a txn based on the txn_id of the incoming message */
  		memset(&tmp_txn, 0, sizeof(tmp_txn));
--- 
-2.34.1
-

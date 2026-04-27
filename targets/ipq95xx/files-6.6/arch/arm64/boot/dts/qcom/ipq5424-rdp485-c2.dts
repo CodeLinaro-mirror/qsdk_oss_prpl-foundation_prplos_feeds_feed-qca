@@ -58,7 +58,7 @@
 		};
 
 		mdio@90000 {
-			ethernet-phy@4 {
+			phy4: ethernet-phy@4 {
 				reg = <0>;
 				 compatible ="ethernet-phy-ieee802.3-c45";
 			};
@@ -99,6 +99,8 @@
 						port_id = <2>;
 						phy_address = <0>;
 						ethernet-phy-ieee802.3-c45;
+						phy-handle = <&phy4>;
+						phy-mode = "usxgmii";
 					};
 				};
 			};
@@ -136,9 +138,6 @@
 			reg = <0x3A504000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <0>;
-			qcom,link-poll = <1>;
-			phy-mode = "usxgmii";
 		};
 
 		gmac2:dp3 {
@@ -153,7 +152,6 @@
 			local-mac-address = [000000000000];
 			qcom,mht-dev = <1>;
 			qcom,is_switch_connected = <1>;
-			phy-mode = "sgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -315,6 +313,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x12000>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x29>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <1>;
@@ -362,6 +366,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x2E800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x28>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <2>;
@@ -395,6 +405,10 @@
 };
 
 &qusb_phy_1 {
+	vdd-supply = <&vreg_misc_0p925>;
+	vdda-pll-supply = <&vreg_misc_1p8>;
+	vdda-phy-dpdm-supply = <&vreg_misc_3p3>;
+
 	status = "okay";
 };
 
@@ -403,10 +417,17 @@
 };
 
 &qusb_phy_0 {
+	vdd-supply = <&vreg_misc_0p925>;
+	vdda-pll-supply = <&vreg_misc_1p8>;
+	vdda-phy-dpdm-supply = <&vreg_misc_3p3>;
+
 	status = "okay";
 };
 
 &ssphy_0 {
+	vdda-pll-supply = <&vreg_misc_1p8>;
+	vdda-phy-supply = <&vreg_misc_0p925>;
+
 	status = "okay";
 };
 
@@ -417,12 +438,6 @@
 &q6v5_wcss {
 	status = "okay";
 };
-
-#if !defined(__RPROC_DISABLE_MPD_SUPPORT__)
-&userpd_1 {
-	status = "okay";
-};
-#endif
 
 &spi1 {
 	pinctrl-0 = <&qup_spi1_default>;
@@ -457,7 +472,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -467,7 +481,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -477,7 +490,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -487,7 +499,6 @@
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
-			output-low;
 		};
 	};
 
@@ -690,10 +701,8 @@
 &wifi0 {
 	qcom,rproc = <&q6v5_wcss>;
 	qcom,tgt-mem-mode = <0>;
-	memory-region = <&q6_region>, <&q6_region>, <&q6_ipq5424_data>, <&m3_dump>,
-			<&mlo_global_mem0>, <&q6_etr_region>;
-	memory-region-names = "q6-region", "q6-region-1", "host-ddr-mem","m3-dump",
-			      "mlo-global-mem", "q6-etr-dump";
+	memory-region = <&q6_region>, <&q6_ipq5424_data>, <&mlo_global_mem0>;
+	memory-region-names = "q6-region", "host-ddr-mem", "mlo-global-mem";
 	qcom,wsi = <&wsi>;
 	qcom,wsi_index = <0>;
 	qcom,board_id = <0x11>;

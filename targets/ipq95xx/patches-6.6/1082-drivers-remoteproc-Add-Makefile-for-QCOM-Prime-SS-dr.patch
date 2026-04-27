@@ -1,0 +1,56 @@
+From f78c877359cb0cf428f2158ade4bfa185f974b90 Mon Sep 17 00:00:00 2001
+From: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+Date: Mon, 9 Mar 2026 23:03:21 +0530
+Subject: [PATCH] drivers: remoteproc: Add Makefile for QCOM Prime SS driver
+
+Add Kconfig and Makefile changes for PrimeSS remoteproc driver.
+
+Change-Id: Ie235101f7f24eb8bcf4bde229e5d154818e7e1b7
+Signed-off-by: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+---
+ drivers/remoteproc/Kconfig  | 16 ++++++++++++++++
+ drivers/remoteproc/Makefile |  1 +
+ 2 files changed, 17 insertions(+)
+
+diff --git a/drivers/remoteproc/Kconfig b/drivers/remoteproc/Kconfig
+index 8f33506046cd..9a2a79db5108 100644
+--- a/drivers/remoteproc/Kconfig
++++ b/drivers/remoteproc/Kconfig
+@@ -352,6 +352,22 @@ config QCOM_WCNSS_PIL
+ 	  verified and booted with the help of the Peripheral Authentication
+ 	  System (PAS) in TrustZone.
+ 
++config QCOM_PRIMESS
++	tristate "Qualcomm PRIME Subsystem Driver"
++	depends on OF && ARCH_QCOM
++	select DMA_SHARED_BUFFER
++	select QCOM_MDT_LOADER
++	select QCOM_SCM
++	select QCOM_TMELCOM
++	select TMEL_QMP
++	help
++	  Say y here to enable Prime Subsystem driver for loading firmware
++	  and boot the Prime Subsystem core. The firmware is verified and booted
++	  with the help of Peripheral Authentication System (PAS) in TrustZone/
++	  TME-L depending on the root of trust. The driver also enables the
++	  IOCTL interface for the userspace Prime Subsystem framework to
++	  allocate DMA memory and interact with Prime FW.
++
+ config RCAR_REMOTEPROC
+ 	tristate "Renesas R-Car Gen3 remoteproc support"
+ 	depends on ARCH_RENESAS || COMPILE_TEST
+diff --git a/drivers/remoteproc/Makefile b/drivers/remoteproc/Makefile
+index fd78a34e8c33..5e893dc03440 100644
+--- a/drivers/remoteproc/Makefile
++++ b/drivers/remoteproc/Makefile
+@@ -22,6 +22,7 @@ obj-$(CONFIG_KEYSTONE_REMOTEPROC)	+= keystone_remoteproc.o
+ obj-$(CONFIG_MESON_MX_AO_ARC_REMOTEPROC)+= meson_mx_ao_arc.o
+ obj-$(CONFIG_PRU_REMOTEPROC)		+= pru_rproc.o
+ obj-$(CONFIG_QCOM_PIL_INFO)		+= qcom_pil_info.o
++obj-$(CONFIG_QCOM_PRIMESS)              += qcom_primess.o
+ obj-$(CONFIG_QCOM_RPROC_COMMON)		+= qcom_common.o
+ obj-$(CONFIG_QCOM_Q6V5_COMMON)		+= qcom_q6v5.o
+ obj-$(CONFIG_QCOM_Q6V5_ADSP)		+= qcom_q6v5_adsp.o
+-- 
+2.34.1
+

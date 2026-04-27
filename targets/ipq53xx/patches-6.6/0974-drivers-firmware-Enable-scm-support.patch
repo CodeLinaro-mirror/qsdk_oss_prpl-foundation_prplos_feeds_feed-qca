@@ -1,0 +1,40 @@
+From a5da1ebbd96cbe0dc02e6b8cdcb216899600175f Mon Sep 17 00:00:00 2001
+From: Timple Raj M <timple@qti.qualcomm.com>
+Date: Thu, 13 Nov 2025 15:32:02 +0530
+Subject: [PATCH] drivers: firmware: Enable scm support
+
+This patch enables scm support for the
+IPQ52xx chipset
+
+Change-Id: I5357c3e79bcfad62515d1a753595ab0669c8acb7
+Signed-off-by: Timple Raj M <timple@qti.qualcomm.com>
+---
+ drivers/firmware/qcom_scm.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
+index 536cf3507310..16a492e6995c 100644
+--- a/drivers/firmware/qcom_scm.c
++++ b/drivers/firmware/qcom_scm.c
+@@ -3597,6 +3597,10 @@ struct scm_priv_data ipq9679_data = {
+ 	.milestone_mask = BIT(8)
+ };
+ 
++struct scm_priv_data ipq5200_data = {
++	.milestone_mask = BIT(8)
++};
++
+ static const struct of_device_id qcom_scm_dt_match[] = {
+ 	{ .compatible = "qcom,scm" },
+ 
+@@ -3604,6 +3608,7 @@ static const struct of_device_id qcom_scm_dt_match[] = {
+ 	{ .compatible = "qcom,scm-apq8064" },
+ 	{ .compatible = "qcom,scm-apq8084" },
+ 	{ .compatible = "qcom,scm-ipq4019" },
++	{ .compatible = "qcom,scm-ipq5200", .data = &ipq5200_data },
+ 	{ .compatible = "qcom,scm-ipq5424", .data = &ipq5424_data},
+ 	{ .compatible = "qcom,scm-ipq9574", .data = &ipq9574_data},
+ 	{ .compatible = "qcom,scm-ipq9679", .data = &ipq9679_data },
+-- 
+2.34.1
+

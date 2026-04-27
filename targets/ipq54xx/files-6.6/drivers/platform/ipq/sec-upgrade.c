@@ -46,6 +46,10 @@
 #define QFPROM_MAX_VERSION_EXCEEDED             0x10
 #define QFPROM_IS_AUTHENTICATE_CMD_RSP_SIZE	0x2
 
+#define SECURE_BOOT_FUSE_ADDR_IPQ5424	0xA40E0
+#define SECURE_BOOT_FUSE_ADDR_IPQ9650	0xA40E8
+#define OEM_SEC_BOOT_ENABLE		BIT(7)
+
 #define SW_TYPE_SEC_DATA			0x2B
 
 #ifdef CONFIG_QCOM_TMELCOM
@@ -101,7 +105,43 @@ enum qti_sec_img_auth_args {
 
 struct qfprom_node_cfg {
 	bool is_rlbk_support;
+	u32 secure_boot_fuse_addr;
 };
+
+static const struct qfprom_node_cfg *global_qfprom_cfg;
+
+static int qcom_qfprom_show_authenticate_tmel(const struct qfprom_node_cfg *cfg)
+{
+	int ret;
+	struct tmel_fuse_payload *fuse = NULL;
+
+	if (!cfg) {
+		pr_err("Invalid configuration\n");
+		return -EINVAL;
+	}
+
+	if (!cfg->secure_boot_fuse_addr) {
+		pr_err("secure_boot_fuse_addr not set for this platform\n");
+		return -ENODEV;
+	}
+
+	fuse = kzalloc(sizeof(*fuse), GFP_KERNEL);
+	if (!fuse)
+		return -ENOMEM;
+	fuse[0].fuse_addr = cfg->secure_boot_fuse_addr;
+	ret = tmelcom_fuse_list_read(fuse, sizeof(struct tmel_fuse_payload));
+	if (ret) {
+		pr_err("TME-L IPC fuse read failed with error: %d\n", ret);
+		goto fuse_alloc_err;
+	}
+	if (fuse[0].lsb_val & OEM_SEC_BOOT_ENABLE)
+		ret = 1;
+	else
+		ret = 0;
+fuse_alloc_err:
+	kfree(fuse);
+	return ret;
+}
 
 static ssize_t
 qfprom_show_authenticate(struct device *dev,
@@ -113,7 +153,7 @@ qfprom_show_authenticate(struct device *dev,
 	if (qcom_qfprom_show_auth_available())
 		ret = qcom_qfprom_show_authenticate();
 	else
-		ret = ipq54xx_qcom_qfprom_show_authenticate();
+		ret = qcom_qfprom_show_authenticate_tmel(global_qfprom_cfg);
 
 	if (ret < 0)
 		return ret;
@@ -971,9 +1011,10 @@ store_sec_auth(struct device *dev,
 			remove_nand_preamble_n_magic_bytes(&data, &size);
 		}
 		if(is_compressed(data, &info)) {
-			out_data = kzalloc(info.memsize, GFP_KERNEL);
+			out_data = vzalloc(info.memsize);
 			if(!out_data) {
-				pr_err("%s: Memory allocation failed for out_data buffer\n", __func__);
+				pr_err("%s: Memory allocation failed for %#x bytes\n",
+				       __func__, info.memsize);
 				goto free_data;
 			}
 			if(!img_decompress(data + info.offset, info.filesz, out_data, &info)) {
@@ -1177,7 +1218,7 @@ hash_buf_alloc_err:
 	kfree(hash_file_buf);
 free_out_data:
 	if(out_data)
-		kfree(out_data);
+		vfree(out_data);
 free_data:
 	if (xbl_nand)
 		data -= NAND_PREAMBLE_SIZE;
@@ -1346,14 +1387,22 @@ static struct device_attribute sec_dat_attr =
 
 static const struct qfprom_node_cfg ipq9574_qfprom_node_cfg = {
 	.is_rlbk_support	=	true,
+	.secure_boot_fuse_addr	=	0,
 };
 
 static const struct qfprom_node_cfg ipq5332_qfprom_node_cfg = {
 	.is_rlbk_support	=	true,
+	.secure_boot_fuse_addr	=	0,
 };
 
 static const struct qfprom_node_cfg ipq5424_qfprom_node_cfg = {
 	.is_rlbk_support	=	false,
+	.secure_boot_fuse_addr	=	SECURE_BOOT_FUSE_ADDR_IPQ5424,
+};
+
+static const struct qfprom_node_cfg ipq9650_qfprom_node_cfg = {
+	.is_rlbk_support	=	false,
+	.secure_boot_fuse_addr	=	SECURE_BOOT_FUSE_ADDR_IPQ9650,
 };
 
 /*
@@ -1527,6 +1576,8 @@ static int qfprom_probe(struct platform_device *pdev)
 		return err;
 	}
 
+	global_qfprom_cfg = cfg;
+
 	err = device_register(&device_qfprom);
 	if (err) {
 		pr_err("Could not register device %s, err=%d\n",
@@ -1542,7 +1593,7 @@ static int qfprom_probe(struct platform_device *pdev)
 	if (qcom_qfprom_show_auth_available())
 		ret = qcom_qfprom_show_authenticate();
 	else
-		ret = ipq54xx_qcom_qfprom_show_authenticate();
+		ret = qcom_qfprom_show_authenticate_tmel(global_qfprom_cfg);
 
 	if (ret < 0)
 		return ret;
@@ -1636,6 +1687,9 @@ static const struct of_device_id qcom_qfprom_dt_match[] = {
 	}, {
 		.compatible = "qcom,qfprom-ipq5424-sec",
 		.data = (void *)&ipq5424_qfprom_node_cfg,
+	}, {
+		.compatible = "qcom,qfprom-ipq9650-sec",
+		.data = (void *)&ipq9650_qfprom_node_cfg,
 	},
 	{}
 };

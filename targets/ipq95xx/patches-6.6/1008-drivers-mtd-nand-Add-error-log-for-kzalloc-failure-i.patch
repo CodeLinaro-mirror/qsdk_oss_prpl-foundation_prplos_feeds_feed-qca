@@ -1,0 +1,36 @@
+From 7ccdb54479d3401dec9b3ac14801a482715149b4 Mon Sep 17 00:00:00 2001
+From: Devi Priya <devipriy@qti.qualcomm.com>
+Date: Wed, 17 Dec 2025 14:19:21 +0530
+Subject: [PATCH] drivers: mtd: nand: Add error log for kzalloc failure in
+ prepare_bam_async_desc()
+
+Add a dev_err() message to report kzalloc() failure along with the
+requested allocation size. This helps diagnose allocation failures
+during BAM descriptor preparation in low memory scenarios.
+
+Change-Id: Ie008f209f92456034009566929209e3c3158d64d
+Signed-off-by: Devi Priya <devipriy@qti.qualcomm.com>
+---
+ drivers/mtd/nand/raw/qcom_nandc.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/nand/raw/qcom_nandc.c b/drivers/mtd/nand/raw/qcom_nandc.c
+index 316f05741ba9..ea55e91a9c7c 100644
+--- a/drivers/mtd/nand/raw/qcom_nandc.c
++++ b/drivers/mtd/nand/raw/qcom_nandc.c
+@@ -1003,8 +1003,11 @@ static int prepare_bam_async_desc(struct qcom_nand_controller *nandc,
+ 	struct dma_async_tx_descriptor *dma_desc;
+ 
+ 	desc = kzalloc(sizeof(*desc), GFP_KERNEL);
+-	if (!desc)
++	if (!desc) {
++		dev_err(nandc->dev, "%s: kzalloc failed for %zu bytes\n",
++			__func__, sizeof(*desc));
+ 		return -ENOMEM;
++	}
+ 
+ 	if (chan == nandc->cmd_chan) {
+ 		sgl = &bam_txn->cmd_sgl[bam_txn->cmd_sgl_start];
+-- 
+2.34.1
+

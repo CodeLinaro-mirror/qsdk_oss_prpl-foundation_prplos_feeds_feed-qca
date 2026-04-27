@@ -1,0 +1,75 @@
+From 10ea623e88462b5bd01a6b27a56c50e50606c111 Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Wed, 1 Apr 2026 22:17:58 +0530
+Subject: [PATCH] clk: qcom: alpha-pll: Add passthrough ops for Lucid PLL
+ postdiv output
+
+Modeling gpll0 as a plain clk_alpha_pll caused APSS clock driver to
+incorrectly select it as the parent during frequency scaling, since an
+unconstrained VCO determine_rate would claim any requested rate over
+the APSS PLL.
+
+Splitting gpll0 into gpll0_main (VCO) and gpll0 (postdiv output) fixes
+this by bounding the output rate to the hardware-configured VCO rate.
+The existing clk_alpha_pll_postdiv_ro_ops is unsuitable here because
+the Lucid PLL main output has no software-visible post-divider.
+
+Add clk_lucid_pll_passthrough_ops which returns the paret rate
+unchanged in recalc_rate and satisfies rate requests with
+the parent rate in determine_rate.
+
+Change-Id: Ie67cce2edd0395380823239f189389e2981513a8
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+(cherry picked from commit 2fed3f44bd15dd1e516fe888307e12a68b2b1ef9)
+---
+ drivers/clk/qcom/clk-alpha-pll.c | 21 +++++++++++++++++++++
+ drivers/clk/qcom/clk-alpha-pll.h |  1 +
+ 2 files changed, 22 insertions(+)
+
+diff --git a/drivers/clk/qcom/clk-alpha-pll.c b/drivers/clk/qcom/clk-alpha-pll.c
+index e3c7ce83ba4d..73a243db741c 100644
+--- a/drivers/clk/qcom/clk-alpha-pll.c
++++ b/drivers/clk/qcom/clk-alpha-pll.c
+@@ -1771,6 +1771,27 @@ const struct clk_ops clk_alpha_pll_postdiv_lucid_ops = {
+ };
+ EXPORT_SYMBOL_GPL(clk_alpha_pll_postdiv_lucid_ops);
+ 
++static unsigned long
++clk_lucid_pll_passthrough_recalc_rate(struct clk_hw *hw,
++				      unsigned long parent_rate)
++{
++	return parent_rate;
++}
++
++static int
++clk_lucid_pll_passthrough_determine_rate(struct clk_hw *hw,
++					 struct clk_rate_request *req)
++{
++	req->rate = req->best_parent_rate;
++	return 0;
++}
++
++const struct clk_ops clk_lucid_pll_passthrough_ops = {
++	.recalc_rate    = clk_lucid_pll_passthrough_recalc_rate,
++	.determine_rate = clk_lucid_pll_passthrough_determine_rate,
++};
++EXPORT_SYMBOL_GPL(clk_lucid_pll_passthrough_ops);
++
+ void clk_agera_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
+ 			const struct alpha_pll_config *config)
+ {
+diff --git a/drivers/clk/qcom/clk-alpha-pll.h b/drivers/clk/qcom/clk-alpha-pll.h
+index 52dc5b9b546a..81bd084d2c6e 100644
+--- a/drivers/clk/qcom/clk-alpha-pll.h
++++ b/drivers/clk/qcom/clk-alpha-pll.h
+@@ -169,6 +169,7 @@ extern const struct clk_ops clk_alpha_pll_postdiv_trion_ops;
+ extern const struct clk_ops clk_alpha_pll_lucid_ops;
+ #define clk_alpha_pll_fixed_lucid_ops clk_alpha_pll_fixed_trion_ops
+ extern const struct clk_ops clk_alpha_pll_postdiv_lucid_ops;
++extern const struct clk_ops clk_lucid_pll_passthrough_ops;
+ extern const struct clk_ops clk_alpha_pll_agera_ops;
+ 
+ extern const struct clk_ops clk_alpha_pll_lucid_5lpe_ops;
+-- 
+2.34.1
+

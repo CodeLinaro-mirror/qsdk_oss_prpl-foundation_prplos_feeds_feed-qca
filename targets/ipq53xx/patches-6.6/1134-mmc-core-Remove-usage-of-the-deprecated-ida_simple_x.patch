@@ -1,0 +1,105 @@
+From 52d6cbcda431b4c280d51b6c0ebeabd9428c068a Mon Sep 17 00:00:00 2001
+From: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Date: Sun, 14 Jan 2024 16:01:57 +0100
+Subject: [PATCH] mmc: core: Remove usage of the deprecated ida_simple_xx() API
+
+ida_alloc() and ida_free() should be preferred to the deprecated
+ida_simple_get() and ida_simple_remove().
+
+Note that the upper limit of ida_simple_get() is exclusive, but the one of
+ida_alloc_range()/ida_alloc_max() is inclusive. So a -1 has been added when
+needed.
+
+Change-Id: Ice3ef92553d3d480ededf083a97f34781fea2cb1
+Signed-off-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Link: https://lore.kernel.org/r/583c57d0ae09f9d3a1e1a7b80c1e39ada17954b7.1705244502.git.christophe.jaillet@wanadoo.fr
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+(cherry picked from commit 18cbe81639f2c8999f9ad0505a08ddfc01cd05f7)
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+---
+ drivers/mmc/core/block.c | 12 ++++++------
+ drivers/mmc/core/host.c  |  5 +++--
+ 2 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/mmc/core/block.c b/drivers/mmc/core/block.c
+index ddb5c08ea888..a9a734e78c1a 100644
+--- a/drivers/mmc/core/block.c
++++ b/drivers/mmc/core/block.c
+@@ -206,7 +206,7 @@ static void mmc_blk_kref_release(struct kref *ref)
+ 	int devidx;
+ 
+ 	devidx = mmc_get_devidx(md->disk);
+-	ida_simple_remove(&mmc_blk_ida, devidx);
++	ida_free(&mmc_blk_ida, devidx);
+ 
+ 	mutex_lock(&open_lock);
+ 	md->disk->private_data = NULL;
+@@ -2469,7 +2469,7 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
+ 	bool cache_enabled = false;
+ 	bool fua_enabled = false;
+ 
+-	devidx = ida_simple_get(&mmc_blk_ida, 0, max_devices, GFP_KERNEL);
++	devidx = ida_alloc_max(&mmc_blk_ida, max_devices - 1, GFP_KERNEL);
+ 	if (devidx < 0) {
+ 		/*
+ 		 * We get -ENOSPC because there are no more any available
+@@ -2579,7 +2579,7 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
+  err_kfree:
+ 	kfree(md);
+  out:
+-	ida_simple_remove(&mmc_blk_ida, devidx);
++	ida_free(&mmc_blk_ida, devidx);
+ 	return ERR_PTR(ret);
+ }
+ 
+@@ -2705,7 +2705,7 @@ static void mmc_blk_rpmb_device_release(struct device *dev)
+ {
+ 	struct mmc_rpmb_data *rpmb = dev_get_drvdata(dev);
+ 
+-	ida_simple_remove(&mmc_rpmb_ida, rpmb->id);
++	ida_free(&mmc_rpmb_ida, rpmb->id);
+ 	kfree(rpmb);
+ }
+ 
+@@ -2721,13 +2721,13 @@ static int mmc_blk_alloc_rpmb_part(struct mmc_card *card,
+ 	struct mmc_rpmb_data *rpmb;
+ 
+ 	/* This creates the minor number for the RPMB char device */
+-	devidx = ida_simple_get(&mmc_rpmb_ida, 0, max_devices, GFP_KERNEL);
++	devidx = ida_alloc_max(&mmc_rpmb_ida, max_devices - 1, GFP_KERNEL);
+ 	if (devidx < 0)
+ 		return devidx;
+ 
+ 	rpmb = kzalloc(sizeof(*rpmb), GFP_KERNEL);
+ 	if (!rpmb) {
+-		ida_simple_remove(&mmc_rpmb_ida, devidx);
++		ida_free(&mmc_rpmb_ida, devidx);
+ 		return -ENOMEM;
+ 	}
+ 
+diff --git a/drivers/mmc/core/host.c b/drivers/mmc/core/host.c
+index cf396e8f34e9..7cc9a33d28ca 100644
+--- a/drivers/mmc/core/host.c
++++ b/drivers/mmc/core/host.c
+@@ -76,7 +76,7 @@ static void mmc_host_classdev_release(struct device *dev)
+ 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
+ 	wakeup_source_unregister(host->ws);
+ 	if (of_alias_get_id(host->parent->of_node, "mmc") < 0)
+-		ida_simple_remove(&mmc_host_ida, host->index);
++		ida_free(&mmc_host_ida, host->index);
+ 	kfree(host);
+ }
+ 
+@@ -538,7 +538,8 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
+ 		min_idx = mmc_first_nonreserved_index();
+ 		max_idx = 0;
+ 
+-		index = ida_simple_get(&mmc_host_ida, min_idx, max_idx, GFP_KERNEL);
++		index = ida_alloc_range(&mmc_host_ida, min_idx, max_idx - 1,
++					GFP_KERNEL);
+ 		if (index < 0) {
+ 			kfree(host);
+ 			return NULL;
+-- 
+2.34.1
+

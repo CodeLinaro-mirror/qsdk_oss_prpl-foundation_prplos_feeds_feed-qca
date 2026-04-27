@@ -1,0 +1,67 @@
+From 482f693a596aaa238c2a98b5d6254ca4add52118 Mon Sep 17 00:00:00 2001
+From: zhongjia <zhongjia@qti.qualcomm.com>
+Date: Thu, 4 Dec 2025 22:40:38 +0800
+Subject: [PATCH] drivers: phylink: correct qusgmii speed
+
+The change is specific for mht PHY in kernel 6.6.
+And it will be removed once the kernel is updated.
+
+Change-Id: Ibf42a988c41bb4432d2987760867045b9eefd7cd
+Signed-off-by: zhongjia <zhongjia@qti.qualcomm.com>
+---
+ drivers/net/phy/phylink.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index b5f012619e42..68d507a12490 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -212,11 +212,11 @@ static int phylink_interface_max_speed(phy_interface_t interface)
+ 	case PHY_INTERFACE_MODE_RGMII:
+ 	case PHY_INTERFACE_MODE_PSGMII:
+ 	case PHY_INTERFACE_MODE_QSGMII:
+-	case PHY_INTERFACE_MODE_QUSGMII:
+ 	case PHY_INTERFACE_MODE_SGMII:
+ 	case PHY_INTERFACE_MODE_GMII:
+ 		return SPEED_1000;
+ 
++	case PHY_INTERFACE_MODE_QUSGMII:
+ 	case PHY_INTERFACE_MODE_2500BASEX:
+ 		return SPEED_2500;
+ 
+@@ -496,7 +496,6 @@ unsigned long phylink_get_capabilities(phy_interface_t interface,
+ 	case PHY_INTERFACE_MODE_RGMII:
+ 	case PHY_INTERFACE_MODE_PSGMII:
+ 	case PHY_INTERFACE_MODE_QSGMII:
+-	case PHY_INTERFACE_MODE_QUSGMII:
+ 	case PHY_INTERFACE_MODE_SGMII:
+ 	case PHY_INTERFACE_MODE_GMII:
+ 		caps |= MAC_1000HD | MAC_1000FD;
+@@ -525,8 +524,14 @@ unsigned long phylink_get_capabilities(phy_interface_t interface,
+ 		caps |= MAC_1000FD;
+ 		break;
+ 
++	case PHY_INTERFACE_MODE_QUSGMII:
+ 	case PHY_INTERFACE_MODE_2500BASEX:
+ 		caps |= MAC_2500FD;
++		if (interface == PHY_INTERFACE_MODE_QUSGMII) {
++			caps |= MAC_1000HD | MAC_1000FD;
++			caps |= MAC_100HD | MAC_100FD;
++			caps |= MAC_10HD | MAC_10FD;
++		}
+ 		break;
+ 
+ 	case PHY_INTERFACE_MODE_5GBASER:
+@@ -3503,6 +3508,9 @@ static void phylink_decode_usgmii_word(struct phylink_link_state *state,
+ 	case MDIO_USXGMII_1000:
+ 		state->speed = SPEED_1000;
+ 		break;
++	case MDIO_USXGMII_2500:
++		state->speed = SPEED_2500;
++		break;
+ 	default:
+ 		state->link = false;
+ 		return;
+-- 
+2.34.1
+

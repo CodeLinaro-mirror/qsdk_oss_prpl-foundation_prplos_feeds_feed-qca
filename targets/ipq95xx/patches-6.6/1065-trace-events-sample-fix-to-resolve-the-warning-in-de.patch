@@ -1,0 +1,27 @@
+From 1f77939cabf28bd80c0b2178076f82be86671ad3 Mon Sep 17 00:00:00 2001
+From: Saahil Tomar <saahtoma@qti.qualcomm.com>
+Date: Thu, 19 Feb 2026 15:38:22 +0530
+Subject: [PATCH] trace-events-sample: fix to resolve the warning in debug
+ build
+
+Change-Id: I0b3880011a70c3383897fdbc62b68281dc7eaf3e
+Signed-off-by: Saahil Tomar <saahtoma@qti.qualcomm.com>
+---
+ samples/trace_events/trace-events-sample.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/samples/trace_events/trace-events-sample.h b/samples/trace_events/trace-events-sample.h
+index 0cbe801ed50a..40daedcdf639 100644
+--- a/samples/trace_events/trace-events-sample.h
++++ b/samples/trace_events/trace-events-sample.h
+@@ -302,7 +302,6 @@ TRACE_EVENT(foo_bar,
+ 		__bitmask(	cpus,	num_possible_cpus()	)
+ 		__cpumask(	cpum				)
+ 		__dynamic_array(char,   vstr,	512		)
+-		__vstring(	vstr,	fmt,	va		)
+ 		__string_len(	lstr,	foo,	bar / 2 < strlen(foo) ? bar / 2 : strlen(foo) )
+ 	),
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,78 @@
+From 67ed6e69fb5fff813a85a7f1ed979a57a3792e18 Mon Sep 17 00:00:00 2001
+From: Devi Priya <devipriy@qti.qualcomm.com>
+Date: Tue, 13 Jan 2026 16:53:07 +0530
+Subject: [PATCH] Revert "nvmem: qfprom: switch to 4-byte aligned reads"
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This reverts the upstream commit 3566a737db87a9bf360c2fd36433c5149f805f2e
+This upstream commit introduces an issue during the CPU frequency driver
+initialization on the IPQ5312 SKU, where it attempts to bump the frequency to
+1.5 GHz, a value not supported by this SKU.
+
+Change-Id: I41d5f3894e35bc86821822e5646323e263113124
+Signed-off-by: Devi Priya <devipriy@qti.qualcomm.com>
+---
+ drivers/nvmem/qfprom.c | 27 +++++++--------------------
+ 1 file changed, 7 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/nvmem/qfprom.c b/drivers/nvmem/qfprom.c
+index a872c640b8c5..8220cf41e7f0 100644
+--- a/drivers/nvmem/qfprom.c
++++ b/drivers/nvmem/qfprom.c
+@@ -321,32 +321,20 @@ static int qfprom_reg_read(void *context,
+ 			unsigned int reg, void *_val, size_t bytes)
+ {
+ 	struct qfprom_priv *priv = context;
+-	u32 *val = _val;
++	u8 *val = _val;
++	int i = 0, words = bytes;
++
+ 	void __iomem *base = priv->qfpcorrected;
+-	int words = DIV_ROUND_UP(bytes, sizeof(u32));
+-	int i;
+ 
+ 	if (read_raw_data && priv->qfpraw)
+ 		base = priv->qfpraw;
+ 
+-	for (i = 0; i < words; i++)
+-		*val++ = readl(base + reg + i * sizeof(u32));
++	while(words--)
++		*val++ = readb(base + reg + i++);
+ 
+ 	return 0;
+ }
+ 
+-/* Align reads to word boundary */
+-static void qfprom_fixup_dt_cell_info(struct nvmem_device *nvmem,
+-				      struct nvmem_cell_info *cell)
+-{
+-	unsigned int byte_offset = cell->offset % sizeof(u32);
+-
+-	cell->bit_offset += byte_offset * BITS_PER_BYTE;
+-	cell->offset -= byte_offset;
+-	if (byte_offset && !cell->nbits)
+-		cell->nbits = cell->bytes * BITS_PER_BYTE;
+-}
+-
+ static void qfprom_runtime_disable(void *data)
+ {
+ 	pm_runtime_disable(data);
+@@ -371,11 +359,10 @@ static int qfprom_probe(struct platform_device *pdev)
+ 	struct nvmem_config econfig = {
+ 		.name = "qfprom",
+ 		.add_legacy_fixed_of_cells = true,
+-		.stride = 4,
+-		.word_size = 4,
++		.stride = 1,
++		.word_size = 1,
+ 		.id = NVMEM_DEVID_AUTO,
+ 		.reg_read = qfprom_reg_read,
+-		.fixup_dt_cell_info = qfprom_fixup_dt_cell_info,
+ 	};
+ 	struct device *dev = &pdev->dev;
+ 	struct resource *res;
+-- 
+2.34.1
+

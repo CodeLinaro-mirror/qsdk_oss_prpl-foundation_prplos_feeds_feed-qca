@@ -1,0 +1,66 @@
+From 2d533129b810850a641da4603327a722bc141a31 Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Mon, 23 Feb 2026 11:19:05 +0530
+Subject: [PATCH] phy: qualcomm: phy-qcom-qmp-pcie: Update IPQ5210 PHY settings
+
+Reuse Gen3x2 settings from target IPQ9574, Hence remove the
+separate cfg for IPQ5210.
+
+Change-Id: I3db3f7a79f346ac23a60d5222eb69353452f3cb1
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/phy/qualcomm/phy-qcom-qmp-pcie.c | 31 ------------------------
+ 1 file changed, 31 deletions(-)
+
+diff --git a/drivers/phy/qualcomm/phy-qcom-qmp-pcie.c b/drivers/phy/qualcomm/phy-qcom-qmp-pcie.c
+index 78fd9c7e13ef..7b1b0b136a93 100644
+--- a/drivers/phy/qualcomm/phy-qcom-qmp-pcie.c
++++ b/drivers/phy/qualcomm/phy-qcom-qmp-pcie.c
+@@ -3016,34 +3016,6 @@ static const struct qmp_phy_cfg ipq5210_gen3x1_pciephy_cfg = {
+ 	.pipe_clock_rate	= 250000000,
+ };
+ 
+-static const struct qmp_phy_cfg ipq5210_gen3x2_pciephy_cfg = {
+-	.lanes			= 2,
+-
+-	.offsets		= &qmp_pcie_offsets_9574_v4x2,
+-
+-	.tbls = {
+-		.serdes		= ipq9574_gen3x1_pcie_serdes_tbl,
+-		.serdes_num	= ARRAY_SIZE(ipq9574_gen3x1_pcie_serdes_tbl),
+-		.tx		= ipq9574_pcie_tx_tbl,
+-		.tx_num		= ARRAY_SIZE(ipq9574_pcie_tx_tbl),
+-		.rx		= ipq9574_pcie_rx_tbl,
+-		.rx_num		= ARRAY_SIZE(ipq9574_pcie_rx_tbl),
+-		.pcs		= ipq9574_gen3x1_pcie_pcs_tbl,
+-		.pcs_num	= ARRAY_SIZE(ipq9574_gen3x1_pcie_pcs_tbl),
+-		.pcs_misc	= ipq9574_gen3x1_pcie_pcs_misc_tbl,
+-		.pcs_misc_num	= ARRAY_SIZE(ipq9574_gen3x1_pcie_pcs_misc_tbl),
+-	},
+-	.reset_list		= ipq8074_pciephy_reset_l,
+-	.num_resets		= ARRAY_SIZE(ipq8074_pciephy_reset_l),
+-	.vreg_list		= NULL,
+-	.num_vregs		= 0,
+-	.regs			= pciephy_v4_regs_layout,
+-
+-	.pwrdn_ctrl		= SW_PWRDN | REFCLK_DRV_DSBL,
+-	.phy_status		= PHYSTATUS,
+-	.pipe_clock_rate	= 250000000,
+-};
+-
+ static const struct qmp_phy_cfg ipq9574_gen3x1_pciephy_cfg = {
+ 	.lanes			= 1,
+ 
+@@ -4468,9 +4440,6 @@ static const struct of_device_id qmp_pcie_of_match_table[] = {
+ 	{
+ 		.compatible = "qcom,ipq5210-qmp-gen3x1-pcie-phy",
+ 		.data = &ipq5210_gen3x1_pciephy_cfg,
+-	}, {
+-		.compatible = "qcom,ipq5210-qmp-gen3x2-pcie-phy",
+-		.data = &ipq5210_gen3x2_pciephy_cfg,
+ 	}, {
+ 		.compatible = "qcom,ipq6018-qmp-pcie-phy",
+ 		.data = &ipq6018_pciephy_cfg,
+-- 
+2.34.1
+

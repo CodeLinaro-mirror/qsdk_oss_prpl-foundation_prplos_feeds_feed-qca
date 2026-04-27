@@ -1,0 +1,202 @@
+--- a/drivers/soc/qcom/qmi_encdec.c
++++ b/drivers/soc/qcom/qmi_encdec.c
+@@ -25,38 +25,14 @@
+ 
+ #define QMI_ENCDEC_ENCODE_N_BYTES(p_dst, p_src, size) \
+ do { \
+-	u16 *var16; \
+-	u32 *var32; \
+-	u64 *var64; \
+-	var16 = (u16 *) p_dst; \
+-	var32 = (u32 *) p_dst; \
+-	var64 = (u64 *) p_dst; \
+ 	memcpy(p_dst, p_src, size); \
+-	if (size == 2)	\
+-		*var16 = cpu_to_le16(*var16); \
+-	if (size == 4)	\
+-		*var32 = cpu_to_le32(*var32); \
+-	if (size == 8)	 \
+-		*var64 = cpu_to_le64(*var64); \
+ 	p_dst = (u8 *)p_dst + size; \
+ 	p_src = (u8 *)p_src + size; \
+ } while (0)
+ 
+ #define QMI_ENCDEC_DECODE_N_BYTES(p_dst, p_src, size) \
+ do { \
+-	u16 *var16; \
+-	u32 *var32; \
+-	u64 *var64; \
+-	var16 = (u16 *) p_dst; \
+-	var32 = (u32 *) p_dst; \
+-	var64 = (u64 *) p_dst; \
+ 	memcpy(p_dst, p_src, size); \
+-	if (size == 2)	\
+-		*var16 = le16_to_cpu(*var16); \
+-	if (size == 4)	\
+-		*var32 = le32_to_cpu(*var32); \
+-	if (size == 8)	 \
+-		*var64 = le64_to_cpu(*var64); \
+ 	p_dst = (u8 *)p_dst + size; \
+ 	p_src = (u8 *)p_src + size; \
+ } while (0)
+@@ -328,7 +304,6 @@ static int qmi_encode(const struct qmi_elem_info *ei_array, void *out_buf,
+ 	const void *buf_src;
+ 	int encode_tlv = 0;
+ 	int rc;
+-	char *d;
+ 	u8 val8;
+ 	u16 val16;
+ 
+@@ -393,18 +368,6 @@ static int qmi_encode(const struct qmi_elem_info *ei_array, void *out_buf,
+ 			else
+ 				encode_tlv = 0;
+ 
+-			if (IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) {
+-				d = (char *)&data_len_value;
+-				if (temp_ei->elem_size == 1) {
+-					d[0] = d[3];
+-					d[1] = d[2] = d[3] = 0;
+-				}
+-				if (temp_ei->elem_size == 2) {
+-					d[0] = d[2];
+-					d[1] = d[3];
+-					d[2] = d[3] = 0;
+-				}
+-			}
+ 			break;
+ 
+ 		case QMI_UNSIGNED_1_BYTE:
+--- a/drivers/net/bonding/bond_main.c
++++ b/drivers/net/bonding/bond_main.c
+@@ -2102,15 +2102,15 @@
+ 	 */
+ 	if (BOND_MODE(bond) != BOND_MODE_MLO) {
+ 		if (!bond->params.fail_over_mac ||
+-	    	BOND_MODE(bond) != BOND_MODE_ACTIVEBACKUP) {
++		    BOND_MODE(bond) != BOND_MODE_ACTIVEBACKUP) {
+ 			memcpy(ss.__data, bond_dev->dev_addr, bond_dev->addr_len);
+ 		} else if (bond->params.fail_over_mac == BOND_FOM_FOLLOW &&
+-		   	BOND_MODE(bond) == BOND_MODE_ACTIVEBACKUP &&
+-		   	bond_has_slaves(bond) &&
+-		   	memcmp(slave_dev->dev_addr, bond_dev->dev_addr, bond_dev->addr_len) == 0) {
++			BOND_MODE(bond) == BOND_MODE_ACTIVEBACKUP &&
++			bond_has_slaves(bond) &&
++			memcmp(slave_dev->dev_addr, bond_dev->dev_addr, bond_dev->addr_len) == 0) {
+ 			/* Set slave to random address to avoid duplicate mac
+-		 	 * address in later fail over.
+-		 	 */
++			 * address in later fail over.
++			 */
+ 			eth_random_addr(ss.__data);
+ 		} else {
+ 			goto skip_mac_set;
+--- a/drivers/net/ppp/pptp.c
++++ b/drivers/net/ppp/pptp.c
+@@ -234,7 +234,6 @@
+ 	int len;
+ 	unsigned char *data;
+ 	__u32 seq_recv;
+-
+ 	struct rtable *rt;
+ 	struct net_device *tdev;
+ 	struct net_device *pptp_dev;
+--- a/drivers/phy/qualcomm/phy-qcom-m31.c
++++ b/drivers/phy/qualcomm/phy-qcom-m31.c
+@@ -62,12 +62,12 @@
+  #define PLL_CHARGING_PUMP_CURRENT_35UA	GENMASK(4, 3)
+  #define ODT_VALUE_38_02_OHM		GENMASK(7, 6)
+ 
++#define USB2PHY_USB_PHY_M31_XCFGI_9	0xDC
++#define HSTX_CURRENT_17_1MA_385MV	BIT(1)
++
+ #define USB2PHY_USB_PHY_M31_XCFGI_5	0xcc
+  #define HSTX_PRE_EMPHASIS_LEVEL_0_55MA	BIT(0)
+ 
+-#define USB2PHY_USB_PHY_M31_XCFGI_9	0xdc
+- #define HSTX_CURRENT_17_1MA_385MV	BIT(1)
+-
+ #define USB2PHY_USB_PHY_M31_XCFGI_11	0xe4
+  #define XCFG_COARSE_TUNE_NUM		BIT(1)
+  #define XCFG_FINE_TUNE_NUM		BIT(3)
+@@ -138,7 +138,6 @@ static struct m31_phy_regs m31_ipq5332_regs[] = {
+	{
+		USB2PHY_USB_PHY_M31_XCFGI_9,
+		HSTX_CURRENT_17_1MA_385MV,
+-		0
+	},
+	{
+		USB_PHY_UTMI_CTRL5,
+--- a/drivers/remoteproc/qcom_q6v5.c
++++ b/drivers/remoteproc/qcom_q6v5.c
+@@ -172,6 +172,7 @@
+ 	int ret;
+ 
+ 	ret = wait_for_completion_timeout(&q6v5->start_done, timeout);
++
+ 	if (!ret) {
+ 		disable_irq(q6v5->handover_irq);
+ 		return -ETIMEDOUT;
+--- a/drivers/usb/dwc3/dwc3-qcom.c
++++ b/drivers/usb/dwc3/dwc3-qcom.c
+@@ -2035,14 +2035,15 @@
+ 		dwc3_qcom_destroy_urs_usb_platdev(qcom->urs_usb);
+ 
+ 	dwc3_qcom_interconnect_exit(qcom);
++	reset_control_assert(qcom->resets);
+ 
+ 	if (qcom->phy_mux) {
+ 		/*usb phy mux deselection*/
+ 		ret = regmap_write(qcom->phy_mux_map, qcom->phy_mux_reg,
+-											0x0);
++					0x0);
+ 		if (ret)
+ 			dev_err(qcom->dev,
+-				"Not able to configure phy mux selection:%d\n", ret);
++			  "Not able to configure phy mux selection:%d\n", ret);
+ 	}
+ 
+ 	for (i = qcom->num_clocks - 1; i >= 0; i--) {
+--- a/samples/trace_events/trace-events-sample.h
++++ b/samples/trace_events/trace-events-sample.h
+@@ -301,7 +301,7 @@
+ 		__string(	str,	string			)
+ 		__bitmask(	cpus,	num_possible_cpus()	)
+ 		__cpumask(	cpum				)
+-		__dynamic_array(char,   vstr,   512     )
++		__dynamic_array(char,   vstr,	512		)
+ 		__vstring(	vstr,	fmt,	va		)
+ 		__string_len(	lstr,	foo,	bar / 2 < strlen(foo) ? bar / 2 : strlen(foo) )
+ 	),
+--- a/include/net/bond_3ad.h
++++ b/include/net/bond_3ad.h
+@@ -305,10 +305,10 @@
+ int bond_3ad_set_carrier(struct bonding *bond);
+ void bond_3ad_update_lacp_rate(struct bonding *bond);
+ struct net_device *bond_3ad_get_tx_dev(struct sk_buff *skb, uint8_t *src_mac,
+-					uint8_t *dst_mac, void *src,
+-					void *dst, uint16_t protocol,
+-					struct net_device *bond_dev,
+-					__be16 *layer4hdr);
++				       uint8_t *dst_mac, void *src,
++				       void *dst, uint16_t protocol,
++				       struct net_device *bond_dev,
++				       __be16 *layer4hdr);
+ void bond_3ad_update_lacp_active(struct bonding *bond);
+ void bond_3ad_update_ad_actor_settings(struct bonding *bond);
+ int bond_3ad_stats_fill(struct sk_buff *skb, struct bond_3ad_stats *stats);
+@@ -314,4 +314,3 @@ void bond_3ad_update_ad_actor_settings(struct bonding *bond);
+ int bond_3ad_stats_fill(struct sk_buff *skb, struct bond_3ad_stats *stats);
+ size_t bond_3ad_stats_size(void);
+ #endif /* _NET_BOND_3AD_H */
+-
+--- a/include/linux/if_vlan.h
++++ b/include/linux/if_vlan.h
+@@ -241,7 +241,7 @@
+ 
+ #else
+ static inline void __vlan_dev_update_accel_stats(struct net_device *dev,
+-						struct rtnl_link_stats64 *stats)
++					   struct rtnl_link_stats64 *stats)
+ {
+ 
+ }

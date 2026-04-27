@@ -1,0 +1,29 @@
+From 9b8f74720ffc1783facdf7c06346f0815a738306 Mon Sep 17 00:00:00 2001
+From: Gokul Sriram Palanisamy <gokulsri@qti.qualcomm.com>
+Date: Mon, 2 Mar 2026 20:45:18 +0530
+Subject: [PATCH] mtd: rawnand: add winbond nand part W25N01KWZEI
+
+Change-Id: I69864ed92a3fe8966a40985d0d673156de0324af
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+Signed-off-by: Gokul Sriram Palanisamy <gokulsri@qti.qualcomm.com>
+---
+ drivers/mtd/nand/raw/nand_ids.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mtd/nand/raw/nand_ids.c b/drivers/mtd/nand/raw/nand_ids.c
+index 66ef24b3b003..ebd1b0ec642d 100644
+--- a/drivers/mtd/nand/raw/nand_ids.c
++++ b/drivers/mtd/nand/raw/nand_ids.c
+@@ -116,6 +116,9 @@ struct nand_flash_dev nand_flash_ids[] = {
+ 	{"W25N02JWZEIF SPI NAND 2G 1.8V",
+ 		{ .id = {0xef, 0xbf, 0x22} },
+ 		SZ_2K, SZ_256, SZ_128K, 0, 3, 64, NAND_ECC_INFO(4, SZ_512)},
++	{"W25N01KWZEIG SPI NAND 2G 1.8V",
++		{ .id = {0xef, 0xbe, 0x21} },
++		SZ_2K, SZ_128, SZ_128K, 0, 3, 64, NAND_ECC_INFO(4, SZ_512)},
+ 	{"MX35UF1GE4AC SPI NAND 1G 1.8V",
+ 		{ .id = {0xc2, 0x92} },
+ 		SZ_2K, SZ_128, SZ_128K, 0, 2, 64, NAND_ECC_INFO(4, SZ_512)},
+-- 
+2.34.1
+

@@ -9,10 +9,10 @@ Signed-off-by: Timple Raj M <quic_timple@quicinc.com>
  drivers/usb/dwc3/dwc3-qcom.c | 54 +++++++++++++++++++++++++++++++++++-
  1 file changed, 53 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/usb/dwc3/dwc3-qcom.c b/drivers/usb/dwc3/dwc3-qcom.c
-index 3de43df6bbe8..4830e36a4f51 100644
---- a/drivers/usb/dwc3/dwc3-qcom.c
-+++ b/drivers/usb/dwc3/dwc3-qcom.c
+Index: linux-6.6.116/drivers/usb/dwc3/dwc3-qcom.c
+===================================================================
+--- linux-6.6.116.orig/drivers/usb/dwc3/dwc3-qcom.c	2026-01-23 21:52:05.040738752 +0530
++++ linux-6.6.116/drivers/usb/dwc3/dwc3-qcom.c	2026-01-23 22:04:19.933416028 +0530
 @@ -22,6 +22,8 @@
  #include <linux/iopoll.h>
  #include <linux/usb/hcd.h>
@@ -22,7 +22,7 @@ index 3de43df6bbe8..4830e36a4f51 100644
  #include "core.h"
  
  /* USB QSCRATCH Hardware registers */
-@@ -89,6 +91,9 @@ struct dwc3_qcom {
+@@ -89,6 +91,9 @@
  	enum usb_dr_mode	mode;
  	bool			is_suspended;
  	bool			pm_suspended;
@@ -32,8 +32,8 @@ index 3de43df6bbe8..4830e36a4f51 100644
  	struct icc_path		*icc_path_ddr;
  	struct icc_path		*icc_path_apps;
  };
-@@ -793,6 +798,39 @@ dwc3_qcom_create_urs_usb_platdev(struct device *dev)
- 	return acpi_create_platform_device(adev, NULL);
+@@ -811,6 +816,39 @@
+ 	fwnode_handle_put(fwh);
  }
  
 +static int dwc3_qcom_phy_sel(struct dwc3_qcom *qcom)
@@ -72,7 +72,7 @@ index 3de43df6bbe8..4830e36a4f51 100644
  static int dwc3_qcom_probe(struct platform_device *pdev)
  {
  	struct device_node	*np = pdev->dev.of_node;
-@@ -819,6 +857,11 @@ static int dwc3_qcom_probe(struct platform_device *pdev)
+@@ -837,6 +875,11 @@
  		}
  	}
  
@@ -84,31 +84,29 @@ index 3de43df6bbe8..4830e36a4f51 100644
  	qcom->resets = devm_reset_control_array_get_optional_exclusive(dev);
  	if (IS_ERR(qcom->resets)) {
  		return dev_err_probe(&pdev->dev, PTR_ERR(qcom->resets),
-@@ -951,7 +994,7 @@ static void dwc3_qcom_remove(struct platform_device *pdev)
+@@ -973,7 +1016,7 @@
  	struct dwc3_qcom *qcom = platform_get_drvdata(pdev);
  	struct device_node *np = pdev->dev.of_node;
  	struct device *dev = &pdev->dev;
 -	int i;
 +	int i, ret;
  
- 	device_remove_software_node(&qcom->dwc3->dev);
- 	if (np)
-@@ -968,6 +1011,15 @@ static void dwc3_qcom_remove(struct platform_device *pdev)
- 	dwc3_qcom_interconnect_exit(qcom);
- 	reset_control_assert(qcom->resets);
+ 	if (np) {
+ 		of_platform_depopulate(&pdev->dev);
+@@ -993,6 +1036,16 @@
+ 	qcom->num_clocks = 0;
  
+ 	dwc3_qcom_interconnect_exit(qcom);
++
 +	if (qcom->phy_mux) {
 +		/*usb phy mux deselection*/
 +		ret = regmap_write(qcom->phy_mux_map, qcom->phy_mux_reg,
-+					0x0);
++											0x0);
 +		if (ret)
 +			dev_err(qcom->dev,
-+			  "Not able to configure phy mux selection:%d\n", ret);
++				"Not able to configure phy mux selection:%d\n", ret);
 +	}
 +
  	pm_runtime_allow(dev);
  	pm_runtime_disable(dev);
  }
--- 
-2.34.1
-

@@ -1,0 +1,86 @@
+From f9c6bd0e18534144ce4f046374c89fd192f49adf Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Sun, 22 Mar 2026 20:00:49 +0530
+Subject: [PATCH] remoteproc: qcom: q6v5: pas: add optional MX supply handling
+
+IPQ9650 PAS instance require an additional MX rail alongside the
+existing CX/PX supplies. Add support for an optional "mx" regulator,
+enable it during rproc start, and ensure it is disabled on failures
+and during the PAS handover cleanup path.
+
+The MX regulator is obtained via devm_regulator_get_optional() so
+platforms without an MX supply continue to work unchanged.
+
+Change-Id: I8c888abe41da52e67398d96b33a057582bcd2961
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/remoteproc/qcom_q6v5_pas.c | 22 +++++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/remoteproc/qcom_q6v5_pas.c b/drivers/remoteproc/qcom_q6v5_pas.c
+index fb8c8062d913..a9ea0c2348fa 100644
+--- a/drivers/remoteproc/qcom_q6v5_pas.c
++++ b/drivers/remoteproc/qcom_q6v5_pas.c
+@@ -64,6 +64,7 @@ struct qcom_adsp {
+ 	struct clk *aggre2_clk;
+ 
+ 	struct regulator *cx_supply;
++	struct regulator *mx_supply;
+ 	struct regulator *px_supply;
+ 
+ 	struct device *proxy_pds[3];
+@@ -271,10 +272,16 @@ static int adsp_start(struct rproc *rproc)
+ 			goto disable_aggre2_clk;
+ 	}
+ 
++	if (adsp->mx_supply) {
++		ret = regulator_enable(adsp->mx_supply);
++		if (ret)
++			goto disable_cx_supply;
++	}
++
+ 	if (adsp->px_supply) {
+ 		ret = regulator_enable(adsp->px_supply);
+ 		if (ret)
+-			goto disable_cx_supply;
++			goto disable_mx_supply;
+ 	}
+ 
+ 	if (adsp->dtb_pas_id) {
+@@ -329,6 +336,9 @@ static int adsp_start(struct rproc *rproc)
+ disable_px_supply:
+ 	if (adsp->px_supply)
+ 		regulator_disable(adsp->px_supply);
++disable_mx_supply:
++	if (adsp->mx_supply)
++		regulator_disable(adsp->mx_supply);
+ disable_cx_supply:
+ 	if (adsp->cx_supply)
+ 		regulator_disable(adsp->cx_supply);
+@@ -353,6 +363,8 @@ static void qcom_pas_handover(struct qcom_q6v5 *q6v5)
+ 
+ 	if (adsp->px_supply)
+ 		regulator_disable(adsp->px_supply);
++	if (adsp->mx_supply)
++		regulator_disable(adsp->mx_supply);
+ 	if (adsp->cx_supply)
+ 		regulator_disable(adsp->cx_supply);
+ 	clk_disable_unprepare(adsp->aggre2_clk);
+@@ -470,6 +482,14 @@ static int adsp_init_regulator(struct qcom_adsp *adsp)
+ 	if (adsp->cx_supply)
+ 		regulator_set_load(adsp->cx_supply, 100000);
+ 
++	adsp->mx_supply = devm_regulator_get_optional(adsp->dev, "mx");
++	if (IS_ERR(adsp->mx_supply)) {
++		if (PTR_ERR(adsp->mx_supply) == -ENODEV)
++			adsp->mx_supply = NULL;
++		else
++			return PTR_ERR(adsp->mx_supply);
++	}
++
+ 	adsp->px_supply = devm_regulator_get_optional(adsp->dev, "px");
+ 	if (IS_ERR(adsp->px_supply)) {
+ 		if (PTR_ERR(adsp->px_supply) == -ENODEV)
+-- 
+2.34.1
+

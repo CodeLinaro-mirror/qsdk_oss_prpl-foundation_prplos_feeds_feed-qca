@@ -1,0 +1,119 @@
+From d33e1357a0c91aed483a8540c40bed8508971ac8 Mon Sep 17 00:00:00 2001
+From: Md Sadre Alam <quic_mdalam@quicinc.com>
+Date: Fri, 19 Dec 2025 12:00:38 +0530
+Subject: [PATCH] Revert "mmc: sdhci-msm: Add host_disable_cqe quirk to
+ selectively disable CQE"
+
+Reverting this change since its failing on platform which will not
+support ICE.
+
+This reverts commit e3a419e16e6d755c289517fff38cba3a53297913.
+
+Change-Id: Ib86db9a183fefddab139b5517e57b8e4aca7c9ff
+Signed-off-by: Md Sadre Alam <quic_mdalam@quicinc.com>
+---
+ drivers/mmc/host/cqhci-core.c | 28 ++--------------------------
+ drivers/mmc/host/sdhci-msm.c  | 14 +++++---------
+ include/linux/mmc/host.h      |  1 -
+ 3 files changed, 7 insertions(+), 36 deletions(-)
+
+diff --git a/drivers/mmc/host/cqhci-core.c b/drivers/mmc/host/cqhci-core.c
+index 2ca1f6dec9bb..81bd5b0137c1 100644
+--- a/drivers/mmc/host/cqhci-core.c
++++ b/drivers/mmc/host/cqhci-core.c
+@@ -329,12 +329,6 @@ int cqhci_resume(struct mmc_host *mmc)
+ }
+ EXPORT_SYMBOL(cqhci_resume);
+ 
+-static int cqhci_host_disable(struct mmc_host *mmc, struct mmc_card *card)
+-{
+-	pr_info("%s: Host does not want to use CMDQ\n", mmc_hostname(mmc));
+-	return -EINVAL;
+-}
+-
+ static int cqhci_enable(struct mmc_host *mmc, struct mmc_card *card)
+ {
+ 	struct cqhci_host *cq_host = mmc->cqe_private;
+@@ -1141,18 +1135,6 @@ static const struct mmc_cqe_ops cqhci_cqe_ops = {
+ 	.cqe_recovery_finish = cqhci_recovery_finish,
+ };
+ 
+-static const struct mmc_cqe_ops cqhci_disable_ops = {
+-	.cqe_enable = cqhci_host_disable,
+-	.cqe_disable = NULL,
+-	.cqe_request = NULL,
+-	.cqe_post_req = NULL,
+-	.cqe_off = NULL,
+-	.cqe_wait_for_idle = NULL,
+-	.cqe_timeout = NULL,
+-	.cqe_recovery_start = NULL,
+-	.cqe_recovery_finish = NULL,
+-};
+-
+ struct cqhci_host *cqhci_pltfm_init(struct platform_device *pdev)
+ {
+ 	struct cqhci_host *cq_host;
+@@ -1205,14 +1187,8 @@ int cqhci_init(struct cqhci_host *cq_host, struct mmc_host *mmc,
+ 
+ 	cq_host->num_slots = NUM_SLOTS;
+ 	cq_host->dcmd_slot = DCMD_SLOT;
+-	/*
+-	 * Some platforms may not support CQE reliably.
+-	 * Use host_disable_cqe to force fallback to legacy request path.
+-	 */
+-	if (mmc->host_disable_cqe)
+-		mmc->cqe_ops = &cqhci_disable_ops;
+-	else
+-		mmc->cqe_ops = &cqhci_cqe_ops;
++
++	mmc->cqe_ops = &cqhci_cqe_ops;
+ 
+ 	mmc->cqe_qdepth = NUM_SLOTS;
+ 	if (mmc->caps2 & MMC_CAP2_CQE_DCMD)
+diff --git a/drivers/mmc/host/sdhci-msm.c b/drivers/mmc/host/sdhci-msm.c
+index 16f658bfec1b..74ec1e36b2ec 100644
+--- a/drivers/mmc/host/sdhci-msm.c
++++ b/drivers/mmc/host/sdhci-msm.c
+@@ -2137,8 +2137,7 @@ static int sdhci_msm_cqe_add_host(struct sdhci_host *host,
+ 		goto cleanup;
+ 	}
+ 
+-	if (!msm_host->mmc->host_disable_cqe)
+-		msm_host->mmc->caps2 |= MMC_CAP2_CQE | MMC_CAP2_CQE_DCMD;
++	msm_host->mmc->caps2 |= MMC_CAP2_CQE | MMC_CAP2_CQE_DCMD;
+ 	cq_host->ops = &sdhci_msm_cqhci_ops;
+ 
+ 	dma64 = host->flags & SDHCI_USE_64_BIT_DMA;
+@@ -2775,13 +2774,10 @@ static int sdhci_msm_probe(struct platform_device *pdev)
+ 	host->mmc_host_ops.start_signal_voltage_switch =
+ 		sdhci_msm_start_signal_voltage_switch;
+ 	host->mmc_host_ops.execute_tuning = sdhci_msm_execute_tuning;
+-	/*
+-	 * If "supports-cqe" is not set in DT, disable CQE at host level.
+-	 * This allows ICE to operate in legacy mode.
+-	 */
+-	msm_host->mmc->host_disable_cqe = !of_property_read_bool(node,
+-								 "supports-cqe");
+-	ret = sdhci_msm_cqe_add_host(host, pdev);
++	if (of_property_read_bool(node, "supports-cqe"))
++		ret = sdhci_msm_cqe_add_host(host, pdev);
++	else
++		ret = sdhci_add_host(host);
+ 	if (ret)
+ 		goto pm_runtime_disable;
+ 
+diff --git a/include/linux/mmc/host.h b/include/linux/mmc/host.h
+index e9ebe00e244e..62a6847a3b6f 100644
+--- a/include/linux/mmc/host.h
++++ b/include/linux/mmc/host.h
+@@ -518,7 +518,6 @@ struct mmc_host {
+ 	int			cqe_qdepth;
+ 	bool			cqe_enabled;
+ 	bool			cqe_on;
+-	bool			host_disable_cqe;
+ 
+ 	/* Inline encryption support */
+ #ifdef CONFIG_MMC_CRYPTO
+-- 
+2.34.1
+

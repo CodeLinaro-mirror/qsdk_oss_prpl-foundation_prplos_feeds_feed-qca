@@ -1,0 +1,49 @@
+From cc80f0648e77418e96f39e937cb33243873ecd46 Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Thu, 5 Mar 2026 11:21:14 +0530
+Subject: [PATCH] phy: qualcomm: Add build support for phy-qcom-usb-femto-hs
+
+Change-Id: I279e399ca8077d626fab1592735b10fe023aac13
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/phy/qualcomm/Kconfig  | 11 +++++++++++
+ drivers/phy/qualcomm/Makefile |  1 +
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/phy/qualcomm/Kconfig b/drivers/phy/qualcomm/Kconfig
+index 35fc032bb9d6..9a42694f9dc3 100644
+--- a/drivers/phy/qualcomm/Kconfig
++++ b/drivers/phy/qualcomm/Kconfig
+@@ -163,6 +163,17 @@ config PHY_QCOM_USB_HS
+ 	  Support for the USB high-speed ULPI compliant phy on Qualcomm
+ 	  chipsets.
+ 
++config PHY_QCOM_USB_FEMTO_HS
++	tristate "Qualcomm USB Femto HS PHY driver"
++	depends on OF && (ARCH_QCOM || COMPILE_TEST)
++	select GENERIC_PHY
++	help
++	  Enable support for the USB High-Speed Femto PHY on Qualcomm SoCs.
++	  This driver implements the femto PHY initialization sequence with
++	  table-based configuration for easy support of multiple SoCs with
++	  the same register space. Currently supports IPQ9650. The PHY is
++	  paired with a Synopsys DWC3 USB controller.
++
+ config PHY_QCOM_USB_SNPS_FEMTO_V2
+ 	tristate "Qualcomm SNPS FEMTO USB HS PHY V2 module"
+ 	depends on OF && (ARCH_QCOM || COMPILE_TEST)
+diff --git a/drivers/phy/qualcomm/Makefile b/drivers/phy/qualcomm/Makefile
+index 2f58f080d94f..6912f5710305 100644
+--- a/drivers/phy/qualcomm/Makefile
++++ b/drivers/phy/qualcomm/Makefile
+@@ -22,6 +22,7 @@ obj-$(CONFIG_PHY_QCOM_USB_HSIC) 	+= phy-qcom-usb-hsic.o
+ obj-$(CONFIG_PHY_QCOM_USB_HS_28NM)	+= phy-qcom-usb-hs-28nm.o
+ obj-$(CONFIG_PHY_QCOM_USB_SS)		+= phy-qcom-usb-ss.o
+ obj-$(CONFIG_PHY_QCOM_USB_SNPS_FEMTO_V2)+= phy-qcom-snps-femto-v2.o
++obj-$(CONFIG_PHY_QCOM_USB_FEMTO_HS)	+= phy-qcom-usb-femto-hs.o
+ obj-$(CONFIG_PHY_QCOM_IPQ806X_USB)	+= phy-qcom-ipq806x-usb.o
+ obj-$(CONFIG_PHY_QCOM_SGMII_ETH)	+= phy-qcom-sgmii-eth.o
+ obj-$(CONFIG_PHY_IPQ_UNIPHY_PCIE)       += phy-qca-pcie-uniphy.o
+-- 
+2.34.1
+

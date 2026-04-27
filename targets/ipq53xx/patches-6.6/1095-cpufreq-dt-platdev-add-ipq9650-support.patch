@@ -1,0 +1,26 @@
+From 25b300e44bdaba88b8433d4248d9c853aca79bc4 Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Wed, 11 Mar 2026 12:35:17 +0530
+Subject: [PATCH] cpufreq: dt-platdev: add ipq9650 support
+
+Change-Id: I1fc3bc65adb349a378d3123a0d6823c7821c122d
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/cpufreq/cpufreq-dt-platdev.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/cpufreq/cpufreq-dt-platdev.c b/drivers/cpufreq/cpufreq-dt-platdev.c
+index 12ac98a6f202..d4f25e053925 100644
+--- a/drivers/cpufreq/cpufreq-dt-platdev.c
++++ b/drivers/cpufreq/cpufreq-dt-platdev.c
+@@ -183,6 +183,7 @@ static const struct of_device_id blocklist[] __initconst = {
+ 	{ .compatible = "qcom,ipq5424", },
+ 	{ .compatible = "qcom,ipq8064", },
+ 	{ .compatible = "qcom,ipq9574", },
++	{ .compatible = "qcom,ipq9650", },
+ 	{ .compatible = "qcom,apq8064", },
+ 	{ .compatible = "qcom,msm8974", },
+ 	{ .compatible = "qcom,msm8960", },
+-- 
+2.34.1
+

@@ -19,114 +19,29 @@
 	model = "Qualcomm Technologies, Inc. IPQ5332/RDP486/AP-MI01.3-C3";
 	compatible = "qcom,ipq5332-ap-mi01.3-c3", "qcom,ipq5332-rdp486", "qcom,ipq5332";
 
-	/*  1G  Layout for IPQ5332 + QCN6432
-	* +==========+==============+========================+
-	* |         |              |                         |
-	* |  Region | Start Offset |          Size           |
-	* |         |              |                         |
-	* +---------+--------------+-------------------------+
-	* |   Q6    |              |                         |
-	* |  code/  |  0x4A900000  |          20MB           |
-	* |  data   |              |                         |
-	* +---------+--------------+-------------------------+
-	* | IPQ5332 |              |                         |
-	* |  data   |  0x4BD00000  |          21MB           |
-	* +---------+--------------+-------------------------+
-	* | IPQ5332 |              |                         |
-	* | M3 Dump |  0x4D200000  |           1MB           |
-	* +---------+--------------+-------------------------+
-	* | IPQ5332 |              |                         |
-	* |  QDSS   |  0x4D300000  |           1MB           |
-	* +---------+--------------+-------------------------+
-	* | IPQ5332 |              |                         |
-	* |  CALDB  |  0x4D400000  |           5MB           |
-	* +---------+--------------+-------------------------+
-	* |QCN6432_1|              |                         |
-	* |  data   |  0x4D900000  |          21MB           |
-	* +---------+--------------+-------------------------+
-	* |QCN6432_1|              |                         |
-	* | M3 Dump |  0x4EE00000  |           1MB           |
-	* +---------+--------------+-------------------------+
-	* |QCN6432_1|              |                         |
-	* |  QDSS   |  0x4EF00000  |           1MB           |
-	* +---------+--------------+-------------------------+
-	* |QCN6432_1|              |                         |
-	* |  CALDB  |  0x4F000000  |           5MB           |
-	* +---------+--------------+-------------------------+
-	* |         |              |                         |
-	* |   MLO   |  0x4FA00000  |          18MB           |
-	* +==================================================+
-	* |                                                  |
-	* |                                                  |
-	* |                                                  |
-	* |             Rest of memory for Linux             |
-	* |                                                  |
-	* |                                                  |
-	* |                                                  |
-	* +==================================================+
-	*/
 	reserved-memory {
-
-		/delete-node/ q6_ipq5332_data@4b500000;
-		/delete-node/ m3_dump@4cc00000;
-		/delete-node/ q6_etr_dump@1;
-		/delete-node/ mlo_global_mem_0@0x4db00000;
 		/delete-node/ wcnss@4a900000;
-		/delete-node/ q6_caldb_region@4ce00000;
+		/delete-node/ q6_ipq5332_data@4b300000;
+		/delete-node/ mlo_global_mem_0@54900000;
 
 		q6_mem_regions: q6_mem_regions@4A900000  {
 			no-map;
-			reg = <0x0 0x4a900000 0x0 0x4C00000>;
+			reg = <0x0 0x4a900000 0x0 0x1500000>;
 		};
 
-		q6_code_data: q6_code_data@4A900000 {
+		q6_ipq5332_data: q6_ipq5332_data@4be00000 {
 			no-map;
-			reg = <0x0 0x4a900000 0x0 0x1400000>;
+			reg = <0x0 0x4be00000 0x0 0x1C00000>;
 		};
 
-		q6_ipq5332_data: q6_ipq5332_data@4BD00000 {
+		q6_qcn6432_data_1: q6_qcn6432_data_1@4da00000 {
 			no-map;
-			reg = <0x0 0x4BD00000 0x0 0x1500000>;
+			reg = <0x0 0x4da00000 0x0 0x1C00000>;
 		};
 
-		m3_dump: m3_dump@4D200000 {
+		mlo_global_mem0: mlo_global_mem_0@4f600000 {
 			no-map;
-			reg = <0x0 0x4D200000 0x0 0x100000>;
-		};
-
-		q6_etr_region: q6_etr_dump@4D300000 {
-			no-map;
-			reg = <0x0 0x4D300000 0x0 0x100000>;
-		};
-
-		q6_ipq5332_caldb: q6_ipq5332_caldb@4D400000 {
-			no-map;
-			reg = <0x0 0x4D400000 0x0 0x500000>;
-		};
-
-		q6_qcn6432_data_1: q6_qcn6432_data_1@4D900000 {
-			no-map;
-			reg = <0x0 0x4D900000 0x0 0x1500000>;
-		};
-
-		m3_dump_qcn6432_1: m3_dump_qcn6432_1@4EE00000 {
-			no-map;
-			reg = <0x0 0x4EE00000 0x0 0x100000>;
-        };
-
-		q6_qcn6432_etr_1: q6_qcn6432_etr_1@4EF00000 {
-			no-map;
-			reg = <0x0 0x4EF00000 0x0 0x100000>;
-		};
-
-		q6_qcn6432_caldb_1: q6_qcn6432_caldb_1@4F000000 {
-			no-map;
-			reg = <0x0 0x4F000000 0x0 0x500000>;
-		};
-
-		mlo_global_mem0: mlo_global_mem_0@4FA00000 {
-			no-map;
-			reg = <0x0 0x4FA00000 0x0 0x1200000>;
+			reg = <0x0 0x4f600000 0x0 0x1200000>;
 		};
 	};
 	aliases {
@@ -267,6 +182,11 @@
 							switch_handle = <&switch1>;
 							switch_cpu_port = <0>;
 						};
+						fixed-link {
+							speed = <2500>;
+							full-duplex;
+							pause;
+						};
 					};
 					port@1 {
 						port_id = <2>;
@@ -365,7 +285,6 @@
 			reg = <0x3a500000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "sgmii";
 			qcom,mht-dev = <1>;
 			qcom,is_switch_connected = <1>;
 			qcom,ppe-offload-disabled = <1>;
@@ -461,20 +380,15 @@
 
 		q6v5_wcss: remoteproc@d100000 {
 			boot-args = <0x1 0x5 0x3 0x1 0x2f 0x2 0x0>;
-			memory-region = <&q6_mem_regions>;
+			memory-region = <&q6_mem_regions>,
+					<&q6_ipq5332_data>,
+					<&q6_qcn6432_data_1>,
+					<&mlo_global_mem0>;
 			upd-firmware-names = "IPQ5332/q6_fw1.mdt",
 					     "IPQ5332/q6_fw2.mdt";
 
 			q6_wcss_pd1: remoteproc_pd1 {
-				memory-region = <&q6_ipq5332_data>,
-						<&m3_dump>,
-						<&q6_etr_region>,
-						<&q6_ipq5332_caldb>;
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 				status = "disabled";
-#else
-				status = "ok";
-#endif
 			};
 
 			q6_wcss_pd2: remoteproc_pd2 {
@@ -496,15 +410,7 @@
 				qcom,smem-state-names = "shutdown",
 							"stop",
 							"spawn";
-				memory-region = <&q6_qcn6432_data_1>,
-						<&m3_dump_qcn6432_1>,
-						<&q6_qcn6432_etr_1>,
-						<&q6_qcn6432_caldb_1>;
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 				status = "disabled";
-#else
-				status = "ok";
-#endif
 			};
 		};
 	};
@@ -709,6 +615,10 @@
 	};
 };
 
+&qcom_test_userpd2 {
+	status = "okay";
+};
+
 &pwm {
 	pinctrl-0 = <&pwm_pins>;
 	pinctrl-names = "default";
@@ -720,28 +630,17 @@
 };
 
 &wifi0 {
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
     qcom,rproc = <&q6v5_wcss>;
     dump-region = <&q6_ipq5332_data>,
-                  <&m3_dump>,
-                  <&q6_etr_region>,
-                  <&q6_ipq5332_caldb>,
                   <&mlo_global_mem0>;
-#else
-    qcom,multipd_arch;
-    qcom,rproc = <&q6_wcss_pd1>;
-    qcom,rproc_rpd = <&q6v5_wcss>;
-#endif
     qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
     qcom,bdf-addr = <0x4BD00000 0x4BD00000 0x4BD00000 0x0 0x0 0x0>;
     qcom,caldb-addr = <0x4D400000 0x4D400000 0x4D400000 0x0 0x0 0x0>;
     qcom,tgt-mem-mode = <0>;
     qcom,caldb-size = <0x500000>;
     qcom,board_id = <0x13>;
-    memory-region = <&q6_ipq5332_data>, <&q6_mem_regions>, <&m3_dump>,
-		    <&mlo_global_mem0>, <&q6_etr_region>;
-    memory-region-names = "host-ddr-mem", "q6-region", "m3-dump",
-			  "mlo-global-mem", "q6-etr-dump";
+    memory-region = <&q6_ipq5332_data>, <&q6_mem_regions>, <&mlo_global_mem0>;
+    memory-region-names = "host-ddr-mem", "q6-region", "mlo-global-mem";
     qcom,wsi = <&wsi>;
     qcom,wsi_index = <0>;
     status = "ok";
@@ -769,18 +668,9 @@
 };
 
 &wifi1 {
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
     qcom,rproc = <&q6v5_wcss>;
     dump-region = <&q6_qcn6432_data_1>,
-                  <&m3_dump_qcn6432_1>,
-                  <&q6_qcn6432_etr_1>,
-                  <&q6_qcn6432_caldb_1>,
                   <&mlo_global_mem0>;
-#else
-    qcom,multipd_arch;
-    qcom,rproc = <&q6_wcss_pd2>;
-    qcom,rproc_rpd = <&q6v5_wcss>;
-#endif
     qcom,wide_band = <2>;
     qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
     qcom,bdf-addr = <0x4D900000 0x4D900000 0x4D900000 0x0 0x0 0x0>;
@@ -788,10 +678,8 @@
     qcom,caldb-size = <0x500000>;
     qcom,tgt-mem-mode = <0>;
     qcom,board_id = <0x070>;
-    memory-region = <&q6_qcn6432_data_1>, <&q6_mem_regions>, <&m3_dump_qcn6432_1>,
-		    <&mlo_global_mem0>, <&q6_qcn6432_etr_1>;
-    memory-region-names = "host-ddr-mem", "q6-region", "m3-dump",
-			  "mlo-global-mem", "q6-etr-dump";
+    memory-region = <&q6_qcn6432_data_1>, <&q6_mem_regions>, <&mlo_global_mem0>;
+    memory-region-names = "host-ddr-mem", "q6-region", "mlo-global-mem";
     qcom,wsi = <&wsi>;
     qcom,wsi_index = <1>;
     interrupts = <0 0 0>,

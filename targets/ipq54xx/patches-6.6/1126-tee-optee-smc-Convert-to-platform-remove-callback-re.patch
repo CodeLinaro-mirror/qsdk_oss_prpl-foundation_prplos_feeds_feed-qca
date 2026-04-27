@@ -1,0 +1,67 @@
+From c643f654d27815ba60cf3e69127b66cb2fd5afd9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Uwe=20Kleine-K=C3=B6nig?= <u.kleine-koenig@pengutronix.de>
+Date: Fri, 8 Mar 2024 09:51:17 +0100
+Subject: [PATCH] tee: optee: smc: Convert to platform remove callback
+ returning void
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The .remove() callback for a platform driver returns an int which makes
+many driver authors wrongly assume it's possible to do error handling by
+returning an error code. However the value returned is ignored (apart
+from emitting a warning) and this typically results in resource leaks.
+
+To improve here there is a quest to make the remove callback return
+void. In the first step of this quest all drivers are converted to
+.remove_new(), which already returns void. Eventually after all drivers
+are converted, .remove_new() will be renamed to .remove().
+
+Trivially convert this driver from always returning zero in the remove
+callback to the void returning variant.
+
+Signed-off-by: Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+Reviewed-by: Sumit Garg <sumit.garg@linaro.org>
+Signed-off-by: Jens Wiklander <jens.wiklander@linaro.org>
+(cherry picked from commit 5c794301eb4e5373822e8898661bacdc7f46ba14)
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+
+Change-Id: I42a4bd95d0a64597390dc5527a0bea619d02fc5d
+---
+ drivers/tee/optee/smc_abi.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/tee/optee/smc_abi.c b/drivers/tee/optee/smc_abi.c
+index a37f87087e5c..c82b7b88991d 100644
+--- a/drivers/tee/optee/smc_abi.c
++++ b/drivers/tee/optee/smc_abi.c
+@@ -1433,7 +1433,7 @@ static optee_invoke_fn *get_invoke_func(struct device *dev)
+  * optee_remove is called by platform subsystem to alert the driver
+  * that it should release the device
+  */
+-static int optee_smc_remove(struct platform_device *pdev)
++static void optee_smc_remove(struct platform_device *pdev)
+ {
+ 	struct optee *optee = platform_get_drvdata(pdev);
+ 
+@@ -1453,8 +1453,6 @@ static int optee_smc_remove(struct platform_device *pdev)
+ 		memunmap(optee->smc.memremaped_shm);
+ 
+ 	kfree(optee);
+-
+-	return 0;
+ }
+ 
+ /* optee_shutdown - Device Removal Routine
+@@ -1806,7 +1804,7 @@ MODULE_DEVICE_TABLE(of, optee_dt_match);
+ 
+ static struct platform_driver optee_driver = {
+ 	.probe  = optee_probe,
+-	.remove = optee_smc_remove,
++	.remove_new = optee_smc_remove,
+ 	.shutdown = optee_shutdown,
+ 	.driver = {
+ 		.name = "optee",
+-- 
+2.34.1
+

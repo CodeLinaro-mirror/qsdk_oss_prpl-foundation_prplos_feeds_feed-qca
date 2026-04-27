@@ -1,0 +1,253 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * IPQ5210 RDP498 board device tree source
+ *
+ * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+
+#include "ipq5210-rdp-common.dtsi"
+#include "ipq5210-default-memory.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. IPQ5210 RDP498";
+	compatible = "qcom,ipq5210-rdp498", "qcom,ipq5210";
+
+	aliases {
+		serial0 = &uart1;
+		ethernet0 = "/soc/dp1";
+		ethernet1 = "/soc/dp2";
+		ethernet2 = "/soc/dp3";
+		ethernet3 = "/soc/dp4";
+		ethernet4 = "/soc/dp5";
+	};
+
+	soc@0 {
+		mdio@90000 {
+			status = "okay";
+			/* gpio reset for Malibu PHY */
+			phy-reset-gpio = <&tlmm 24 GPIO_ACTIVE_LOW>;
+
+			ethernet-phy-package@0 {
+				compatible = "qcom,qca8075-package";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x0>;
+				qcom,package-mode = "qsgmii";
+				phy0: ethernet-phy@0 {
+					reg = <0>;
+				};
+				phy1: ethernet-phy@1 {
+					reg = <1>;
+				};
+				phy2: ethernet-phy@2 {
+					reg = <2>;
+				};
+			};
+		};
+
+		mdio_ahb: mdio-ahb@1400000 {
+			status = "okay";
+			compatible = "qcom,mdio-ahb-ipq52xx";
+			reg = <0x1400000 0x200000>;  /* Base address: 0x1400000, Size: 2MB */
+			clocks = <&gcc GCC_MDIO_GEPHY_AHB_CLK>,
+				<&gcc GCC_GEPHY_SYS_CLK>,
+				<&nsscc NSS_CC_EPHY_RX_CLK>,
+				<&nsscc NSS_CC_EPHY_TX_CLK>,
+				<&cmn_pll IPQ5210_EPHY_RAW_CLK>;
+			clock-names = "mdio_gephy_ahb_clk",
+				"gephy_sys_clk",
+				"gephy_rx_clk",
+				"gephy_tx_clk",
+				"gephy_raw_clk";
+
+			resets = <&gcc GCC_GEPHY_SYS_ARES>,
+				 <&nsscc NSS_CC_EPHY_RX_CLK_ARES>,
+				 <&nsscc NSS_CC_EPHY_TX_CLK_ARES>;
+			reset-names = "gephy_sys_reset",
+				 "gephy_rx_reset",
+				 "gephy_tx_reset";
+
+			pinctrl-0 = <&phy_led0>;
+			pinctrl-names = "default";
+		};
+
+		ess-instance {
+			num_devices = <0x1>;
+
+			ess_switch: ess-switch@3a000000 {
+				switch_lan_bmp = <0x1e>; /* lan port bitmap */
+				switch_wan_bmp = <0x40>; /* wan port bitmap */
+				switch_mac_mode = <0xb>; /* QSGMII for malibu PHY */
+				switch_mac_mode1 = <0xff>; /* unused */
+				switch_mac_mode2 = <0xff>;
+
+				qcom,port_phyinfo {
+					port@0 {
+						port_id = <1>;
+						phy_address = <0>;
+						phy-handle = <&phy0>;
+						phy-mode = "qsgmii";
+					};
+					port@1 {
+						port_id = <2>;
+						phy_address = <1>;
+						phy-handle = <&phy1>;
+						phy-mode = "qsgmii";
+					};
+					port@2 {
+						port_id = <3>;
+						phy_address = <2>;
+						phy-handle = <&phy2>;
+						phy-mode = "qsgmii";
+					};
+					port@3 {
+						port_id = <4>;
+						phy-mode = "internal";
+					};
+					port@5 {
+						port_id = <6>;
+						forced-speed = <10000>;
+						forced-duplex = <1>;
+						fixed-link {
+							speed = <10000>;
+							full-duplex;
+							pause;
+						};
+					};
+				};
+			};
+		};
+
+		dp1 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <1>;
+			reg = <0x3a001000 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp2 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <2>;
+			reg = <0x3a001200 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+
+		dp3 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <3>;
+			reg = <0x3a001400 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp4 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <4>;
+			reg = <0x3a001600 0x200>;
+			qcom,mactype = <0>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+		};
+
+		dp5 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <6>;
+			reg = <0x3A508000 0x4000>;
+			qcom,mactype = <1>;
+			local-mac-address = [000000000000];
+			qcom,ppe-offload-disabled = <0>;
+			qcom,gem_port = <1>;
+			pinctrl-0 = <&pps_state>;
+			pinctrl-names = "default";
+			interrupts = <GIC_SPI 359 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "pps_in";
+			clocks = <&nsscc NSS_CC_XGMAC2_PTP_REF_CLK>;
+			clock-names = "ptp";
+		};
+	};
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+
+	status = "okay";
+};
+
+&nsscc {
+	assigned-clocks = <&nsscc NSS_CC_EPHY_RX_CLK_SRC>,
+			  <&nsscc NSS_CC_EPHY_TX_CLK_SRC>;
+	assigned-clock-parents = <&nsscc NSS_CC_PORT4_RX_DIV_CLK_SRC>,
+				 <&nsscc NSS_CC_PORT4_TX_DIV_CLK_SRC>;
+};
+
+&tlmm {
+	pcie0_default_state: pcie0-default-state {
+		pins = "gpio32";
+		function = "gpio";
+		drive-strength = <6>;
+		bias-pull-down;
+		output-low;
+	};
+
+	phy_led0: phy-led0-state {
+		pins = "gpio23";
+		function = "Led00";
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+};
+
+&pcie0_phy {
+	status = "okay";
+};
+
+&pcie0 {
+	pinctrl-0 = <&pcie0_default_state>;
+	perst-gpio = <&tlmm 32 GPIO_ACTIVE_LOW>;
+	status = "okay";
+
+	pcie0_rp {
+		reg = <0 0 0 0 0>;
+		qcom,mhi@0 {
+			reg = <0 0 0 0 0>;
+			memory-region = <&qcn9224_pcie0>, <&mlo_global_mem0>;
+			memory-region-names = "host-ddr-mem", "mlo-global-mem";
+			qcom,board_id = <0x1041>;
+			status = "okay";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+				};
+
+				port@1 {
+					reg = <1>;
+				};
+			};
+		};
+	};
+};
+
+&qcn9224_pcie0 {
+	status = "okay";
+};
+
+&mlo_global_mem0 {
+	status = "okay";
+};

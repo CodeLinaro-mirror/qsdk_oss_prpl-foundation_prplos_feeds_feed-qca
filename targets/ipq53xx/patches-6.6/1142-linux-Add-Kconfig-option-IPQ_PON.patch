@@ -1,0 +1,53 @@
+From 41383f11b4b0e4b7a43c30674a8dfd4d13330339 Mon Sep 17 00:00:00 2001
+From: Akansha Verma <akanverm@qti.qualcomm.com>
+Date: Mon, 2 Mar 2026 11:56:23 +0530
+Subject: [PATCH] [linux]: Add Kconfig option IPQ_PON
+
+Introduce a new Kconfig symbol IPQ_PON under
+arch/arm/mach-qcom. This serves as a hint to
+the NSS-DP and PON driver stack so they canenable
+relevant features when PON is configured in the build.
+
+Change-Id: I00c12f3532b3fd56fa184b2976fa46c9feb1f8af
+Signed-off-by: Akansha Verma <akanverm@qti.qualcomm.com>
+---
+ arch/arm/mach-qcom/Kconfig | 6 ++++++
+ arch/arm64/Kconfig         | 7 +++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/arch/arm/mach-qcom/Kconfig b/arch/arm/mach-qcom/Kconfig
+index 2d3f7d3ca5c4..12dd82f922df 100644
+--- a/arch/arm/mach-qcom/Kconfig
++++ b/arch/arm/mach-qcom/Kconfig
+@@ -85,4 +85,10 @@ config IPQ_PROFILE_MINENT
+ 	  Enable/Disable MINENT profile. Based on this UBI is enabled
+ 	  or disabled in device tree.
+ 
++config IPQ_PON
++	bool "Enable PON config"
++	default n
++	help
++	 This is a hint to the NSS-DP and PON driver that the PON
++	 is enabled in the build.
+ endif
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 1fe85ac1fc1f..5e12efc1a006 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -2300,6 +2300,13 @@ config SCID_LLCC
+ 	  code to program SYS_CLUSTERTHREADSID_EL1 with the mapped SID value. Per-CPU
+ 	  default SID values are captured at boot.
+ 
++config IPQ_PON
++	bool "Enable PON config"
++	default n
++	help
++	 This is a hint to the NSS-DP and PON driver that the PON
++	 is enabled in the build.
++
+ endmenu # "Kernel Features"
+ 
+ menu "Boot options"
+-- 
+2.34.1
+

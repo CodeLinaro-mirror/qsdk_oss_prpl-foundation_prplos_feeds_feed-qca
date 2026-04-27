@@ -1,0 +1,76 @@
+From 595d8262386f1186eb78c9c9e9c357be78f97724 Mon Sep 17 00:00:00 2001
+From: Saahil Tomar <quic_saahtoma@quicinc.com>
+Date: Thu, 23 Oct 2025 15:40:06 +0530
+Subject: [PATCH] drivers: pci: qcom: Add support for L0s,L1 power management
+ features.
+
+Add support for enabling PCIe ASPM L0s and L1 power management features.
+When "qcom,aspm-supported" is specified in the device tree:
+
+1. L0s and L1 are supported by setting the appropriate bits in the Link
+   Control register
+2. L1 is enabled by default by clearing the REQ_NOT_ENTR_L1 bit in PARF_PM_CTRL
+
+The implementation is controlled through device tree, making it easy to
+enable or disable ASPM features for specific platforms.
+L1 substates are not supported.
+
+Change-Id: Ie405f53a5de6c87a06f0b6a14a3b550d84d86517
+Signed-off-by: Saahil Tomar <saahtoma@qti.qualcomm.com>
+---
+ drivers/pci/controller/dwc/pcie-qcom.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/drivers/pci/controller/dwc/pcie-qcom.c b/drivers/pci/controller/dwc/pcie-qcom.c
+index 68ca41f1440d..70b386f8af2b 100644
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -348,6 +348,7 @@ struct qcom_pcie {
+ 	bool enumerated;
+ 	u32 rc_idx;
+ 	bool is_emulation;
++	bool aspm_supported;
+ };
+ 
+ struct qcom_pcie_info{
+@@ -1286,6 +1287,27 @@ static int qcom_pcie_post_init(struct qcom_pcie *pcie)
+ 
+ 	writel(0, pcie->parf + PARF_Q2A_FLUSH);
+ 
++	if (pcie->aspm_supported) {
++		/* Enable L0s & L1 in link control register. L1ss is not enabled. */
++		if (offset) {
++			dw_pcie_dbi_ro_wr_en(pci);
++
++			/* Enable L0s & L1 */
++			val = readl_relaxed(pci->dbi_base + offset + PCI_EXP_LNKCTL);
++			val |= PCI_EXP_LNKCTL_ASPM_L0S | PCI_EXP_LNKCTL_ASPM_L1;
++			writel_relaxed(val, pci->dbi_base + offset + PCI_EXP_LNKCTL);
++
++			dev_dbg(pci->dev, "PCIe: RC%d: L0s and L1 enabled via device tree property\n", pcie->rc_idx);
++
++			dw_pcie_dbi_ro_wr_dis(pci);
++
++			/* Remove L1 entry restriction */
++			val = readl(pcie->parf + PARF_PM_CTRL);
++			val &= ~REQ_NOT_ENTR_L1;
++			writel(val, pcie->parf + PARF_PM_CTRL);
++		}
++	}
++
+ 	if (pcie->axi_wr_addr_halt) {
+ 		val = readl(pcie->parf + PARF_AXI_MSTR_WR_ADDR_HALT_V2);
+ 		val &= ~PARF_AXI_MSTR_WR_ADDR_HALT_V2_MASK;
+@@ -2007,6 +2029,9 @@ static int __qcom_pcie_probe(struct platform_device *pdev,
+ 
+ 	of_property_read_u32(pdev->dev.of_node, "linux,pci-domain",&pcie->domain);
+ 
++	pcie->aspm_supported = of_property_read_bool(pdev->dev.of_node,
++									"qcom,aspm-supported");
++
+ 	pcie->enable_vc = of_property_read_bool(pdev->dev.of_node,
+ 					"enable-virtual-channel");
+ 
+-- 
+2.34.1
+

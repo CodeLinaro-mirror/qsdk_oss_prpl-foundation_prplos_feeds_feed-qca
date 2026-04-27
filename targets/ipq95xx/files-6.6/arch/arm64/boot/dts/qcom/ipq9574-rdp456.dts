@@ -33,6 +33,24 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	regulator_fixed_3p3: s3300 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_3p3";
+	};
+
+	regulator_fixed_0p925: s0925 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <925000>;
+		regulator-max-microvolt = <925000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_0p925";
+	};
+
 	soc@0 {
 		mdio@90000 {
 			pinctrl-0 = <&mdio_pins>;
@@ -87,27 +105,39 @@
 					port@0 {
 						port_id = <1>;
 						phy_address = <16>;
+						phy-handle = <&phy0>;
+						phy-mode = "psgmii";
 					};
 					port@1 {
 						port_id = <2>;
 						phy_address = <17>;
+						phy-handle = <&phy1>;
+						phy-mode = "psgmii";
 					};
 					port@2 {
 						port_id = <3>;
 						phy_address = <18>;
+						phy-handle = <&phy2>;
+						phy-mode = "psgmii";
 					};
 					port@3 {
 						port_id = <4>;
 						phy_address = <19>;
+						phy-handle = <&phy3>;
+						phy-mode = "psgmii";
 					};
 					port@4 {
 						port_id = <5>;
 						phy_address = <8>;
+						phy-handle = <&phy4>;
+						phy-mode = "usxgmii";
 						ethernet-phy-ieee802.3-c45;
 					};
 					port@5 {
 						port_id = <6>;
 						phy_address = <0>;
+						phy-handle = <&phy5>;
+						phy-mode = "usxgmii";
 						ethernet-phy-ieee802.3-c45;
 					};
 				};
@@ -134,10 +164,7 @@
 			qcom,id = <1>;
 			reg = <0x3a001000 0x200>;
 			qcom,mactype = <0>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <16>;
-			phy-mode = "psgmii";
 		};
 
 		dp2 {
@@ -146,10 +173,7 @@
 			qcom,id = <2>;
 			reg = <0x3a001200 0x200>;
 			qcom,mactype = <0>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <17>;
-			phy-mode = "psgmii";
 		};
 
 		dp3 {
@@ -158,10 +182,7 @@
 			qcom,id = <3>;
 			reg = <0x3a001400 0x200>;
 			qcom,mactype = <0>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <18>;
-			phy-mode = "psgmii";
 		};
 
 		dp4 {
@@ -170,10 +191,7 @@
 			qcom,id = <4>;
 			reg = <0x3a001600 0x200>;
 			qcom,mactype = <0>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <19>;
-			phy-mode = "psgmii";
 		};
 
 		dp5 {
@@ -182,10 +200,7 @@
 			qcom,id = <5>;
 			reg = <0x3a510000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <8>;
-			phy-mode = "usxgmii";
 		};
 
 		dp6 {
@@ -194,10 +209,7 @@
 			qcom,id = <6>;
 			reg = <0x3a514000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <0>;
-			phy-mode = "usxgmii";
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -311,11 +323,41 @@
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
-			memory-region = <&qcn9224_pcie0>, <&mhi_region0>;
+			memory-region = <&qcn9224_pcie0>, <&mhi_region0>, <&mlo_global_mem0>;
+			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x26800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x11>;
+			qcom,msi = <0x10>;
 			qcom,wsi = <&wsi>;
+			qcom,wsi-controller;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					wifi0_wsi_tx: endpoint {
+						remote-endpoint = <&wifi1_wsi_rx>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					wifi0_wsi_rx: endpoint {
+						remote-endpoint = <&wifi3_wsi_tx>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -338,11 +380,40 @@
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
-			memory-region = <&qcn9224_pcie1>, <&mhi_region1>;
+			memory-region = <&qcn9224_pcie1>, <&mhi_region1>, <&mlo_global_mem0>;
+			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x58800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x12>;
+			qcom,msi = <0x10>;
 			qcom,wsi = <&wsi>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					wifi1_wsi_tx: endpoint {
+						remote-endpoint = <&wifi2_wsi_rx>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					wifi1_wsi_rx: endpoint {
+						remote-endpoint = <&wifi0_wsi_tx>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -365,11 +436,39 @@
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
-			memory-region = <&qcn9224_pcie2>, <&mhi_region2>;
+			memory-region = <&qcn9224_pcie2>, <&mhi_region2>, <&mlo_global_mem0>;
+			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x8A800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x14>;
 			qcom,wsi = <&wsi>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					wifi2_wsi_tx: endpoint {
+						remote-endpoint = <&wifi3_wsi_rx>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					wifi2_wsi_rx: endpoint {
+						remote-endpoint = <&wifi1_wsi_tx>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -392,11 +491,39 @@
 			boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 					0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 					0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
-			memory-region = <&qcn9224_pcie3>, <&mhi_region3>;
+			memory-region = <&qcn9224_pcie3>, <&mhi_region3>, <&mlo_global_mem0>;
+			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0xBC800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x13>;
 			qcom,wsi = <&wsi>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					wifi3_wsi_tx: endpoint {
+						remote-endpoint = <&wifi0_wsi_rx>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					wifi3_wsi_rx: endpoint {
+						remote-endpoint = <&wifi2_wsi_tx>;
+					};
+				};
+			};
 		};
 	};
 };
@@ -406,6 +533,9 @@
 };
 
 &qusb_phy_0 {
+	vdd-supply = <&regulator_fixed_0p925>;
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-dpdm-supply = <&regulator_fixed_3p3>;
 	status = "okay";
 };
 
@@ -481,6 +611,8 @@
 };
 
 &ssphy_0 {
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-supply = <&regulator_fixed_0p925>;
 	status = "okay";
 };
 
@@ -510,6 +642,13 @@
 			regulator-max-microvolt = <9>;
 			regulator-always-on;
 		};
+
+		mp5496_l5: l5 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
 	};
 };
 
@@ -519,7 +658,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	pci1_pin: pci1-default-state {
@@ -527,7 +665,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-down;
-		output-low;
 	};
 
 	pci2_pin: pci2-default-state {
@@ -535,7 +672,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-down;
-		output-low;
 	};
 
 	pci3_pin: pci3-default-state {
@@ -543,7 +679,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	i2c_3_pins: i2c-3-pins {

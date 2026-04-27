@@ -1,0 +1,35 @@
+From 065e59b24dc40a13a8950b6b85e837dcf16abe54 Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Mon, 2 Feb 2026 18:29:39 +0530
+Subject: [PATCH] bus: mhi: host: export mhi_ee_str for other drivers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Export mhi_ee_str so that other MHI drivers can access the common
+execution‑environment string table for consistent state reporting,
+tracing, and diagnostics. This allows dependent drivers to avoid
+duplicating the EE string mappings and ensures uniform logging
+across the MHI stack.
+
+Change-Id: I229351ace76bfdbddc3600d73bc9289471d575df
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/bus/mhi/host/init.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/bus/mhi/host/init.c b/drivers/bus/mhi/host/init.c
+index 520186aa2ecd..e0841c20f1a4 100644
+--- a/drivers/bus/mhi/host/init.c
++++ b/drivers/bus/mhi/host/init.c
+@@ -37,6 +37,7 @@ const char * const mhi_ee_str[MHI_EE_MAX] = {
+ 	[MHI_EE_DISABLE_TRANSITION] = "DISABLE",
+ 	[MHI_EE_NOT_SUPPORTED] = "NOT SUPPORTED",
+ };
++EXPORT_SYMBOL(mhi_ee_str);
+ 
+ const char * const dev_state_tran_str[DEV_ST_TRANSITION_MAX] = {
+ 	[DEV_ST_TRANSITION_PBL] = "PBL",
+-- 
+2.34.1
+

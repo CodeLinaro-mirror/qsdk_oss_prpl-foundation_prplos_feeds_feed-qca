@@ -1,0 +1,27 @@
+From af19a609fc80fbccdc52b9753766c8019cc62bc2 Mon Sep 17 00:00:00 2001
+From: Ananya Ghosh <ananghos@qti.qualcomm.com>
+Date: Wed, 18 Feb 2026 11:22:59 +0530
+Subject: [PATCH] drivers: mailbox: qcom-apcs-ipc-mailbox: Added support for
+ ipq9650
+
+Change-Id: Iddfeca647e6636b39191360732a1fbdf2f91dea8
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+---
+ drivers/mailbox/qcom-apcs-ipc-mailbox.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/mailbox/qcom-apcs-ipc-mailbox.c b/drivers/mailbox/qcom-apcs-ipc-mailbox.c
+index 62419bff44c5..8eb3e0f1de48 100644
+--- a/drivers/mailbox/qcom-apcs-ipc-mailbox.c
++++ b/drivers/mailbox/qcom-apcs-ipc-mailbox.c
+@@ -164,6 +164,7 @@ static const struct of_device_id qcom_apcs_ipc_of_match[] = {
+ 	{ .compatible = "qcom,sc7180-apss-shared", .data = &apps_shared_apcs_data },
+ 	{ .compatible = "qcom,sc8180x-apss-shared", .data = &apps_shared_apcs_data },
+ 	{ .compatible = "qcom,sm8150-apss-shared", .data = &apps_shared_apcs_data },
++	{ .compatible = "qcom,ipq9650-apcs-global", .data = &msm8994_apcs_data },
+ 	{}
+ };
+ MODULE_DEVICE_TABLE(of, qcom_apcs_ipc_of_match);
+-- 
+2.34.1
+

@@ -1,0 +1,116 @@
+From 29aec169b23be75884a26879f74dd2f35774474e Mon Sep 17 00:00:00 2001
+From: Tos Xu <quic_txu@quicinc.com>
+Date: Tue, 18 Jun 2024 22:03:22 -0700
+Subject: [PATCH] netfilter: avoid readding the ct to nat_bysource
+
+In some cases of broadcast destination mac address, nfnetlink applications
+running in multiple cores could trigger nf_nat_setup_info call to add the
+same ct at the same time. This will mess up the ct list of nat_bysource
+and cause the crash if the ct is already in nat_bysource table.
+
+This fix will check IPS_SRC_NAT_DONE flag to avoid adding ct again and also set this flag under spin_lock protection in the above race conditions.
+
+A typical crash is like the below:
+
+<1>[31272.063783] Unable to handle kernel paging request at virtual address 004271ce65995e84
+<1>[31272.063810] Mem abort info:
+<1>[31272.070648]   ESR = 0x96000004
+<1>[31272.073272]   EC = 0x25: DABT (current EL), IL = 32 bits
+<1>[31272.076407]   SET = 0, FnV = 0
+<1>[31272.081897]   EA = 0, S1PTW = 0
+<1>[31272.084727] Data abort info:
+<1>[31272.087762]   ISV = 0, ISS = 0x00000004
+<1>[31272.090913]   CM = 0, WnR = 0
+<1>[31272.094450] [004271ce65995e84] address between user and kernel address ranges
+<0>[31272.097579] Internal error: Oops: 96000004 [#1] PREEMPT SMP
+<4>[31272.104693] Modules linked in: nf_nat_pptp nf_nat_rtsp nf_nat_sip nf_nat_h323 nf_nat_tftp nf_nat_ftp ecm_wifi_plugin ecm_ovs ecm smart_antenna(P) ath_pktlog(P) monitor wifi_3_0 qca_ol qca_spectral umac qdf mem_manager nf_flow_table_ipv6 nf_flow_table_ipv4 nf_flow_table_inet ipt_REJECT ebtable_nat ebtable_filter ebtable_broute xt_time xt_tcpudp xt_tcpmss xt_string xt_statistic xt_state xt_recent xt_quota xt_policy xt_pkttype xt_physdev xt_owner xt_nat xt_multiport xt_mark xt_mac xt_limit xt_length xt_iprange xt_hl xt_helper xt_hashlimit xt_esp xt_ecn xt_dscp xt_conntrack xt_connmark xt_connlimit xt_connbytes xt_comment xt_bpf xt_addrtype xt_TCPMSS xt_REDIRECT xt_NFQUEUE xt_NFLOG xt_MASQUERADE xt_LOG xt_IPMARK xt_HL xt_FLOWOFFLOAD xt_DSCP xt_CT xt_CLASSIFY wireguard ts_fsm ts_bm pppoe ppp_mppe ppp_async nft_reject_ipv6 nft_reject_ipv4 nft_reject_inet nft_reject nft_redir nft_quota nft_numgen nft_nat nft_masq nft_log nft_limit nft_fwd_netdev nft_flow_offload nft_dup_netdev nft_ct nft_counter
+<4>[31272.104813]  nfnetlink_queue nfnetlink_log nf_tables nf_reject_ipv4 nf_nat_snmp_basic nf_nat_irc nf_nat_amanda nf_log_ipv4 nf_flow_table_hw nf_flow_table nf_dup_netdev nf_conntrack_tftp nf_conntrack_snmp nf_conntrack_sip nf_conntrack_rtsp nf_conntrack_rtcache nf_conntrack_pptp nf_conntrack_netlink nf_conntrack_irc nf_conntrack_h323 nf_conntrack_ftp nf_conntrack_broadcast ts_kmp nf_conntrack_amanda l2tp_ppp iptable_raw iptable_nat iptable_mangle iptable_filter ipt_ah ipt_TRIGGER ipt_ECN ip6table_raw ip_tables ebtables ebt_vlan ebt_stp ebt_snat ebt_redirect ebt_pkttype ebt_mark_m ebt_mark ebt_limit ebt_ip6 ebt_ip ebt_dnat ebt_arpreply ebt_arp ebt_among ebt_802_3 compat_xtables arptable_filter arpt_mangle arp_tables sch_teql sch_sfq sch_red sch_prio sch_pie sch_multiq sch_gred sch_fq sch_dsmark sch_codel sch_cake em_text em_nbyte em_meta em_cmp act_simple act_police act_pedit act_ipt act_gact act_csum act_connmark sch_tbf sch_ingress sch_htb sch_hfsc em_u32 cls_u32 cls_tcindex cls_route
+<4>[31272.175457]  cls_matchall cls_fw cls_flow cls_basic act_skbedit act_mirred ledtrig_singletimer qca_nss_macsec qca_mcs diagchar usb_f_diag crc_ccitt qca_nss_ppe_bridge_mgr qca_nss_ppe_vlan hyfi_bridging libcomposite qca_ovsmgr openvswitch nf_nat nf_conncount libcrc32c emesh_sp cryptodev xt_set ip_set_list_set ip_set_hash_netportnet ip_set_hash_netport ip_set_hash_netnet ip_set_hash_netiface ip_set_hash_net ip_set_hash_mac ip_set_hash_ipportnet ip_set_hash_ipportip ip_set_hash_ipport ip_set_hash_ipmark ip_set_hash_ip ip_set_bitmap_port ip_set_bitmap_ipmac ip_set_bitmap_ip ip_set nfnetlink ip6t_rt ip6t_mh ip6t_ipv6header ip6t_hbh ip6t_frag ip6t_eui64 ip6t_ah nf_log_ipv6 nf_log_common ip6table_mangle ip6table_filter ip6_tables ip6t_REJECT x_tables nf_reject_ipv6 msdos bonding ip6_gre ip_gre ifb nat46 sit l2tp_netlink l2tp_core ip6_tunnel qca_nss_dp tunnel6 tunnel4 ip_tunnel veth tun qca_ssdk xfrm_algo hcfg_core vfat fat ntfs extfs_drv cfg80211 nls_utf8 nls_iso8859_1 nls_cp437 vxlan udp_tunnel
+<4>[31272.262609]  ip6_udp_tunnel nsh qseecom qca_nss_sfe md5 authenc kmsg fuse ipq_cnss2 uas usb_storage leds_gpio bootconfig xhci_plat_hcd xhci_pci xhci_hcd dwc3 dwc3_qcom phy_qcom_qusb2 ahci libahci libata sd_mod scsi_mod ops_conntrack6 ops_conntrack4 nf_conntrack pptp pppox ppp_generic slhc nf_defrag_ipv6 nf_defrag_ipv4 gre gpio_button_hotplug button_hotplug input_core nandri udc_core usbcore nls_base usb_common [last unloaded: nf_nat_pptp]
+<4>[31272.388808] CPU: 1 PID: 23480 Comm: fstunnel Tainted: P    B   W         5.4.164 #0
+<4>[31272.411032] Hardware name: Qualcomm Technologies, Inc. IPQ9574/AP-AL02-C2 (DT)
+<4>[31272.418585] pstate: 40400005 (nZcv daif +PAN -UAO)
+<4>[31272.425883] pc : nf_nat_setup_info+0x174/0xb10 [nf_nat]
+<4>[31272.430653] lr : nf_nat_setup_info+0x170/0xb10 [nf_nat]
+<4>[31272.435768] sp : ffffff8001647230
+<4>[31272.440974] x29: ffffff8001647230 x28: ffffff8001a3a00c
+<4>[31272.444449] x27: ffffff8001a3a00f x26: ffffff8001a3a080
+<4>[31272.449830] x25: ffffff80016473a8 x24: 0000000000000003
+<4>[31272.455126] x23: 764271ce65995e5e x22: 0000000000000000
+<4>[31272.460421] x21: ffffffd0111f3fc0 x20: ffffff8001a3a000
+<4>[31272.465716] x19: 764271ce65995e3e x18: 0000000000000000
+<4>[31272.471011] x17: 0000000000000000 x16: 0000000000000000
+<4>[31272.476306] x15: 0000000000000000 x14: 0000000000000000
+<4>[31272.481601] x13: 0000000000000000 x12: 0000000000000000
+<4>[31272.486896] x11: ffffffca01318000 x10: 1ffffffa01318000
+<4>[31272.492191] x9 : dfffffd000000000 x8 : ffffff80016472f8
+<4>[31272.497487] x7 : 0000000000000003 x6 : 0000000000000004
+<4>[31272.502782] x5 : dfffffd000000000 x4 : ffffff800029ef98
+<4>[31272.508076] x3 : ffffffd0098b8ce4 x2 : 0000000000000000
+<4>[31272.513372] x1 : daffd4926eb87f00 x0 : 0000000000000006
+<4>[31272.518667] Call trace:
+<4>[31272.523968]  nf_nat_setup_info+0x174/0xb10 [nf_nat]
+<4>[31272.526138]  nf_nat_masquerade_ipv4+0x198/0x1d0 [nf_nat]
+<4>[31272.530997]  0xffffffd00a1400fc
+<4>[31272.536553]  ipt_do_table+0x740/0xa50 [ip_tables]
+<4>[31272.539415]  0xffffffd009d0803c
+<4>[31272.544279]  nf_nat_inet_fn+0x184/0x67c [nf_nat]
+<4>[31272.547232]  nf_nat_icmp_reply_translation+0x2e0/0x804 [nf_nat]
+<4>[31272.552092]  nf_nat_icmp_reply_translation+0x6fc/0x804 [nf_nat]
+<4>[31272.557734]  nf_hook_slow+0x54/0xdc
+<4>[31272.563634]  ip_output+0x1e0/0x23c
+<4>[31272.567107]  ip_forward_finish+0xe4/0xf8
+<4>[31272.570578]  nf_reinject+0x220/0x2b0
+<4>[31272.574658]  0xffffffd009f48188
+<4>[31272.578215]  0xffffffd009f49560
+<4>[31272.581084]  nfnetlink_unicast+0x324/0x500 [nfnetlink]
+<4>[31272.584210]  netlink_rcv_skb+0xdc/0x16c
+<4>[31272.589416]  nfnetlink_subsys_register+0xb54/0xb80 [nfnetlink]
+<4>[31272.593152]  netlink_unicast+0x1d4/0x2a4
+<4>[31272.599051]  netlink_sendmsg+0x3c8/0x460
+<4>[31272.603132]  sock_sendmsg+0x4c/0x68
+<4>[31272.607036]  __sys_sendto+0xcc/0x118
+<4>[31272.610247]  __arm64_sys_sendto+0x74/0x8c
+<4>[31272.614071]  el0_svc_common.constprop.0+0xdc/0x188
+<4>[31272.617978]  el0_svc_handler+0x2c/0x38
+<4>[31272.622663]  el0_svc+0x8/0x1b4
+<0>[31272.626400] Code: 91008277 91011a60 95a67714 39431ba0 (39409ae1)
+<4>[31272.629435] ---[ end trace 0aced04d2ccdca8b ]---
+
+Change-Id: I6570b1843e095945d3aa14704f89316158dcd506
+Signed-off-by: Tos Xu <quic_txu@quicinc.com>
+---
+ net/netfilter/nf_nat_core.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/net/netfilter/nf_nat_core.c b/net/netfilter/nf_nat_core.c
+index 517509a9b9ab..0cef9c615aa0 100644
+--- a/net/netfilter/nf_nat_core.c
++++ b/net/netfilter/nf_nat_core.c
+@@ -832,16 +832,19 @@ nf_nat_setup_info(struct nf_conn *ct,
+ 				      &ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple);
+ 		lock = &nf_nat_locks[srchash % CONNTRACK_LOCKS];
+ 		spin_lock_bh(lock);
+-		hlist_add_head_rcu(&ct->nat_bysource,
+-				   &nf_nat_bysource[srchash]);
++		/* The ct could be already in nf_nat_bysource in some race condition cases.*/
++		if (!(ct->status & IPS_SRC_NAT_DONE)) {
++			hlist_add_head_rcu(&ct->nat_bysource,
++				 &nf_nat_bysource[srchash]);
++			ct->status |= IPS_SRC_NAT_DONE;
++		}
++
+ 		spin_unlock_bh(lock);
+ 	}
+ 
+ 	/* It's done. */
+ 	if (maniptype == NF_NAT_MANIP_DST)
+ 		ct->status |= IPS_DST_NAT_DONE;
+-	else
+-		ct->status |= IPS_SRC_NAT_DONE;
+ 
+ 	return NF_ACCEPT;
+ }
+-- 
+2.34.1
+

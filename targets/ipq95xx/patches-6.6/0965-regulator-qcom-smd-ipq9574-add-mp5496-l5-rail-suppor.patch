@@ -1,0 +1,39 @@
+From ce77a4738f2806c7c2b8972afeb785a1a2071f67 Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Thu, 16 Oct 2025 20:25:44 +0530
+Subject: [PATCH] regulator: qcom: smd: ipq9574: add mp5496 l5 rail support
+
+Add support forthe MP5496 L5 regulator rail, which powers the USB QMP
+and QUSB PHYs on IPQ9574.
+
+This change resolves warnings related to missing power supplies:
+
+qcom-qmp-usb-phy 7d000.phy: supply vdda-phy not found, using dummy regulator
+qcom-qmp-usb-phy 7d000.phy: supply vdda-pll not found, using dummy regulator
+qcom-qusb2-phy 7b000.phy: supply vdd not found, using dummy regulator
+qcom-qusb2-phy 7b000.phy: supply vdda-pll not found, using dummy regulator
+qcom-qusb2-phy 7b000.phy: supply vdda-phy-dpdm not found, using dummy regulator
+
+Change-Id: I6947304f75f738c23f781850326adb06d2b79cd7
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+(cherry picked from commit ad663ce6780477177e301756ade6cf236f36ae4c)
+Link: https://lore.kernel.org/stable/20231214104052.3267039-1-quic_varada%40quicinc.com
+---
+ drivers/regulator/qcom_smd-regulator.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/regulator/qcom_smd-regulator.c b/drivers/regulator/qcom_smd-regulator.c
+index 7f212f671968..e2a7e75067fc 100644
+--- a/drivers/regulator/qcom_smd-regulator.c
++++ b/drivers/regulator/qcom_smd-regulator.c
+@@ -846,6 +846,7 @@ static const struct rpm_regulator_data rpm_mp5496_regulators[] = {
+ 	{ "s2", QCOM_SMD_RPM_SMPA, 2, &mp5496_smps, "s2", 875000 },
+ 	{ "s4", QCOM_SMD_RPM_SMPA, 4, &mp5496_corn, "s4", 5 },
+ 	{ "l2", QCOM_SMD_RPM_LDOA, 2, &mp5496_ldoa2, "l2", 2950000 },
++	{ "l5", QCOM_SMD_RPM_LDOA, 5, &mp5496_ldoa2, "l5", 1800000 },
+ 	{}
+ };
+ 
+-- 
+2.34.1
+

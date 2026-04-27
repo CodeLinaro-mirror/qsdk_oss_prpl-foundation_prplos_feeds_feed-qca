@@ -38,10 +38,10 @@ Signed-off-by: Timple Raj M <quic_timple@quicinc.com>
  samples/trace_events/trace-events-sample.h | 2 +-
  2 files changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/usb/host/xhci-trace.h b/drivers/usb/host/xhci-trace.h
-index d6b32f2ad90e..a961873a65b1 100644
---- a/drivers/usb/host/xhci-trace.h
-+++ b/drivers/usb/host/xhci-trace.h
+Index: linux-6.6.116/drivers/usb/host/xhci-trace.h
+===================================================================
+--- linux-6.6.116.orig/drivers/usb/host/xhci-trace.h	2026-01-23 23:01:10.532832978 +0530
++++ linux-6.6.116/drivers/usb/host/xhci-trace.h	2026-01-23 23:01:10.528832780 +0530
 @@ -28,7 +28,7 @@
  DECLARE_EVENT_CLASS(xhci_log_msg,
  	TP_PROTO(struct va_format *vaf),
@@ -51,19 +51,15 @@ index d6b32f2ad90e..a961873a65b1 100644
  	TP_fast_assign(
  		__assign_vstr(msg, vaf->fmt, vaf->va);
  	),
-diff --git a/samples/trace_events/trace-events-sample.h b/samples/trace_events/trace-events-sample.h
-index 1c6b843b8c4e..f2671c1a06f1 100644
---- a/samples/trace_events/trace-events-sample.h
-+++ b/samples/trace_events/trace-events-sample.h
-@@ -301,7 +301,7 @@ TRACE_EVENT(foo_bar,
+Index: linux-6.6.116/samples/trace_events/trace-events-sample.h
+===================================================================
+--- linux-6.6.116.orig/samples/trace_events/trace-events-sample.h	2026-01-23 23:01:10.532832978 +0530
++++ linux-6.6.116/samples/trace_events/trace-events-sample.h	2026-01-23 23:17:09.540704608 +0530
+@@ -301,6 +301,7 @@
  		__string(	str,	string			)
  		__bitmask(	cpus,	num_possible_cpus()	)
  		__cpumask(	cpum				)
--		__vstring(	vstr,	fmt,	va		)
-+		__dynamic_array(char,   vstr,	512		)
++		__dynamic_array(char,   vstr,   512     )
+ 		__vstring(	vstr,	fmt,	va		)
+ 		__string_len(	lstr,	foo,	bar / 2 < strlen(foo) ? bar / 2 : strlen(foo) )
  	),
- 
- 	TP_fast_assign(
--- 
-2.34.1
-

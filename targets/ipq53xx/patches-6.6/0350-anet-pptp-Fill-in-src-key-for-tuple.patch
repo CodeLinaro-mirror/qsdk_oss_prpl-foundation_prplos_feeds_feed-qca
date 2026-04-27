@@ -18,11 +18,11 @@ Change-Id: Ic7861d1e8dc61969194d17793a9d1d546029d29c
  net/netfilter/nf_conntrack_proto_gre.c | 58 +++++++++++++++++++++++++-
  3 files changed, 101 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/net/ppp/pptp.c b/drivers/net/ppp/pptp.c
-index 897c8a8a0a25..dd409af6b84e 100644
---- a/drivers/net/ppp/pptp.c
-+++ b/drivers/net/ppp/pptp.c
-@@ -93,6 +93,32 @@ static int lookup_chan_dst(u16 call_id, __be32 d_addr)
+Index: linux-6.6.116/drivers/net/ppp/pptp.c
+===================================================================
+--- linux-6.6.116.orig/drivers/net/ppp/pptp.c	2026-01-23 22:51:23.411526155 +0530
++++ linux-6.6.116/drivers/net/ppp/pptp.c	2026-01-23 22:56:33.195004369 +0530
+@@ -93,6 +93,32 @@
  	return i < MAX_CALLID;
  }
  
@@ -55,15 +55,15 @@ index 897c8a8a0a25..dd409af6b84e 100644
  /* Search a pptp session based on peer call id and peer ip address */
  static int lookup_session_dst(struct pptp_opt *opt, u16 call_id, __be32 d_addr)
  {
-@@ -209,7 +235,6 @@ static int pptp_xmit(struct ppp_channel *chan, struct sk_buff *skb)
+@@ -208,6 +234,7 @@
+ 	int len;
  	unsigned char *data;
  	__u32 seq_recv;
- 
--
++
  	struct rtable *rt;
  	struct net_device *tdev;
  	struct net_device *pptp_dev;
-@@ -735,6 +760,20 @@ int pptp_session_find(struct pptp_opt *opt, __be16 peer_call_id,
+@@ -735,6 +762,20 @@
  }
  EXPORT_SYMBOL(pptp_session_find);
  
@@ -84,11 +84,11 @@ index 897c8a8a0a25..dd409af6b84e 100644
   /* Function to change the offload mode true/false for a PPTP session */
  static int pptp_set_offload_mode(bool accel_mode,
  				 __be16 peer_call_id, __be32 peer_ip_addr)
-diff --git a/include/linux/if_pppox.h b/include/linux/if_pppox.h
-index 112b83ec8ef1..a1ec6dc1eab3 100644
---- a/include/linux/if_pppox.h
-+++ b/include/linux/if_pppox.h
-@@ -110,7 +110,11 @@ typedef int (*pptp_gre_seq_offload_callback_t)(struct sk_buff *skb,
+Index: linux-6.6.116/include/linux/if_pppox.h
+===================================================================
+--- linux-6.6.116.orig/include/linux/if_pppox.h	2026-01-23 22:51:23.411526155 +0530
++++ linux-6.6.116/include/linux/if_pppox.h	2026-01-23 22:51:23.411526155 +0530
+@@ -110,7 +110,11 @@
  extern int pppoe_channel_addressing_get(struct ppp_channel *chan,
  					 struct pppoe_opt *addressing);
  
@@ -101,10 +101,10 @@ index 112b83ec8ef1..a1ec6dc1eab3 100644
  extern int pptp_session_find(struct pptp_opt *opt, __be16 peer_call_id,
  			     __be32 peer_ip_addr);
  
-diff --git a/net/netfilter/nf_conntrack_proto_gre.c b/net/netfilter/nf_conntrack_proto_gre.c
-index af369e686fc5..0ae5ceb07924 100644
---- a/net/netfilter/nf_conntrack_proto_gre.c
-+++ b/net/netfilter/nf_conntrack_proto_gre.c
+Index: linux-6.6.116/net/netfilter/nf_conntrack_proto_gre.c
+===================================================================
+--- linux-6.6.116.orig/net/netfilter/nf_conntrack_proto_gre.c	2026-01-23 22:51:23.411526155 +0530
++++ linux-6.6.116/net/netfilter/nf_conntrack_proto_gre.c	2026-01-23 22:51:23.411526155 +0530
 @@ -41,6 +41,8 @@
  #include <net/netfilter/nf_conntrack_timeout.h>
  #include <linux/netfilter/nf_conntrack_proto_gre.h>
@@ -114,7 +114,7 @@ index af369e686fc5..0ae5ceb07924 100644
  
  static const unsigned int gre_timeouts[GRE_CT_MAX] = {
  	[GRE_CT_UNREPLIED]	= 30*HZ,
-@@ -66,15 +68,17 @@ static inline int gre_key_cmpfn(const struct nf_ct_gre_keymap *km,
+@@ -66,15 +68,17 @@
  }
  
  /* look up the source key for a given tuple */
@@ -133,7 +133,7 @@ index af369e686fc5..0ae5ceb07924 100644
  			break;
  		}
  	}
-@@ -156,6 +160,12 @@ bool gre_pkt_to_tuple(const struct sk_buff *skb, unsigned int dataoff,
+@@ -156,6 +160,12 @@
  	__be16 srckey;
  	const struct gre_base_hdr *grehdr;
  	struct gre_base_hdr _grehdr;
@@ -146,7 +146,7 @@ index af369e686fc5..0ae5ceb07924 100644
  
  	/* first only delinearize old RFC1701 GRE header */
  	grehdr = skb_header_pointer(skb, dataoff, sizeof(_grehdr), &_grehdr);
-@@ -177,10 +187,54 @@ bool gre_pkt_to_tuple(const struct sk_buff *skb, unsigned int dataoff,
+@@ -177,10 +187,54 @@
  	}
  
  	tuple->dst.u.gre.key = pgrehdr->call_id;
@@ -202,6 +202,3 @@ index af369e686fc5..0ae5ceb07924 100644
  }
  
  #ifdef CONFIG_NF_CONNTRACK_PROCFS
--- 
-2.34.1
-

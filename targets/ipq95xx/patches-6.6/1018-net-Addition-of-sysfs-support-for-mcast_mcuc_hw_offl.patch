@@ -1,0 +1,49 @@
+From 7b5b3151bc1dc9639f3635bb4bf74adbfa155d33 Mon Sep 17 00:00:00 2001
+From: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+Date: Mon, 12 Jan 2026 11:43:46 +0530
+Subject: [PATCH] net: Addition of sysfs support for mcast_mcuc_hw_offload
+
+Change-Id: I0a812b25b2710a128381a60099605266e51fa5ea
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ net/bridge/br_switchdev.c | 3 ++-
+ net/bridge/br_sysfs_if.c  | 2 ++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/net/bridge/br_switchdev.c b/net/bridge/br_switchdev.c
+index 7b41ee8740cb..66954bb8b060 100644
+--- a/net/bridge/br_switchdev.c
++++ b/net/bridge/br_switchdev.c
+@@ -73,7 +73,8 @@ bool nbp_switchdev_allowed_egress(const struct net_bridge_port *p,
+ /* Flags that can be offloaded to hardware */
+ #define BR_PORT_FLAGS_HW_OFFLOAD (BR_LEARNING | BR_FLOOD | BR_PORT_MAB | \
+ 				  BR_MCAST_FLOOD | BR_BCAST_FLOOD | BR_PORT_LOCKED | \
+-				  BR_HAIRPIN_MODE | BR_ISOLATED | BR_MULTICAST_TO_UNICAST)
++				  BR_HAIRPIN_MODE | BR_ISOLATED | BR_MULTICAST_TO_UNICAST | \
++				  BR_MCAST_MCUC_HW_OFFLOAD)
+ 
+ int br_switchdev_set_port_flag(struct net_bridge_port *p,
+ 			       unsigned long flags,
+diff --git a/net/bridge/br_sysfs_if.c b/net/bridge/br_sysfs_if.c
+index 446b4b98f6bb..63fd06694597 100644
+--- a/net/bridge/br_sysfs_if.c
++++ b/net/bridge/br_sysfs_if.c
+@@ -283,6 +283,7 @@ static BRPORT_ATTR(multicast_router, 0644, show_multicast_router,
+ 
+ BRPORT_ATTR_FLAG(multicast_fast_leave, BR_MULTICAST_FAST_LEAVE);
+ BRPORT_ATTR_FLAG(multicast_to_unicast, BR_MULTICAST_TO_UNICAST);
++BRPORT_ATTR_FLAG(mcast_mcuc_hw_offload, BR_MCAST_MCUC_HW_OFFLOAD);
+ #endif
+ 
+ static const struct brport_attribute *brport_attrs[] = {
+@@ -310,6 +311,7 @@ static const struct brport_attribute *brport_attrs[] = {
+ 	&brport_attr_multicast_router,
+ 	&brport_attr_multicast_fast_leave,
+ 	&brport_attr_multicast_to_unicast,
++	&brport_attr_mcast_mcuc_hw_offload,
+ #endif
+ 	&brport_attr_proxyarp,
+ 	&brport_attr_proxyarp_wifi,
+-- 
+2.34.1
+

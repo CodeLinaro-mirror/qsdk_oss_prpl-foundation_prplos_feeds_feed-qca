@@ -1,0 +1,50 @@
+From 3dc9b6ecd60184ecb9448865d1c08e4789c860dd Mon Sep 17 00:00:00 2001
+From: Devi Priya <devipriy@qti.qualcomm.com>
+Date: Wed, 31 Dec 2025 12:15:11 +0530
+Subject: [PATCH] drivers: remoteproc: Add makefile and kconfig changes for
+ userpd driver
+
+Add makefile and kconfig changes to enable qcom_q6v5_upd driver as a
+module.
+
+Change-Id: I7de3e7c2bbbded38a7aeab1bc7ae891b56a9514a
+Signed-off-by: Devi Priya <devipriy@qti.qualcomm.com>
+---
+ drivers/remoteproc/Kconfig  | 7 +++++++
+ drivers/remoteproc/Makefile | 2 +-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/remoteproc/Kconfig b/drivers/remoteproc/Kconfig
+index eeac77182297..ad8f91ab5245 100644
+--- a/drivers/remoteproc/Kconfig
++++ b/drivers/remoteproc/Kconfig
+@@ -254,6 +254,13 @@ config QCOM_Q6V5_MPD
+ 	  for the Hexagon based MultiPD model remote processors on e.g. IPQ5018.
+ 	  This is trustZone wireless subsystem.
+ 
++config QCOM_Q6V5_UPD
++	tristate "Qualcomm Hexagon User PD loader test driver"
++	depends on QCOM_Q6V5_WCSS_SEC
++	help
++	  Say y here to UserPD test driver for Hexagon based UserPD model
++	  remote processors.
++
+ config QCOM_NON_SECURE_PIL
+ 	tristate "Qualcomm Non secure Peripheral Image Loader"
+ 	depends on OF && ARCH_QCOM
+diff --git a/drivers/remoteproc/Makefile b/drivers/remoteproc/Makefile
+index b87717cd669e..fd78a34e8c33 100644
+--- a/drivers/remoteproc/Makefile
++++ b/drivers/remoteproc/Makefile
+@@ -30,7 +30,7 @@ obj-$(CONFIG_QCOM_Q6V5_MSS)		+= qcom_q6v5_mss.o
+ obj-$(CONFIG_QCOM_Q6V5_PAS)		+= qcom_q6v5_pas.o
+ obj-$(CONFIG_QCOM_Q6V5_WCSS)		+= qcom_q6v5_wcss.o
+ obj-$(CONFIG_QCOM_Q6V5_WCSS_SEC)	+= qcom_q6v5_wcss_sec.o
+-obj-$(CONFIG_QCOM_Q6V5_WCSS_SEC)	+= qcom_q6v5_upd.o
++obj-$(CONFIG_QCOM_Q6V5_UPD)		+= qcom_q6v5_upd.o
+ obj-$(CONFIG_QCOM_SYSMON)		+= qcom_sysmon.o
+ obj-$(CONFIG_QCOM_WCNSS_PIL)		+= qcom_wcnss_pil.o
+ qcom_wcnss_pil-y			+= qcom_wcnss.o
+-- 
+2.34.1
+

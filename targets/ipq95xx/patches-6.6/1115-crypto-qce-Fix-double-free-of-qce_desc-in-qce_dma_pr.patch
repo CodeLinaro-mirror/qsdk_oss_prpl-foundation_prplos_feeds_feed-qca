@@ -1,0 +1,27 @@
+From 83f9ed22c5f7c3626793faaee58af0ee6f3b143c Mon Sep 17 00:00:00 2001
+From: Saahil Tomar <saahtoma@qti.qualcomm.com>
+Date: Wed, 25 Mar 2026 09:13:14 +0530
+Subject: [PATCH] crypto: qce - Fix double-free of qce_desc in
+ qce_dma_prep_cmd_sg
+
+Change-Id: Ia7df96eb8401917accb339c58563be3f0935c1f7
+Signed-off-by: Saahil Tomar <saahtoma@qti.qualcomm.com>
+---
+ drivers/crypto/qce/dma.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/crypto/qce/dma.c b/drivers/crypto/qce/dma.c
+index 92014e1dc9fb..e5562a21f51b 100644
+--- a/drivers/crypto/qce/dma.c
++++ b/drivers/crypto/qce/dma.c
+@@ -54,7 +54,6 @@ static int qce_dma_prep_cmd_sg(struct qce_device *qce, struct dma_chan *chan,
+ 	if (!dma_desc) {
+ 		pr_err("%s:failure in prep cmd desc\n",__func__);
+ 		dma_unmap_sg(qce->dev, qce_bam_sgl, qce_sgl_cnt, data_dir);
+-		kfree(desc);
+ 		return -EINVAL;
+ 	}
+ 
+-- 
+2.34.1
+

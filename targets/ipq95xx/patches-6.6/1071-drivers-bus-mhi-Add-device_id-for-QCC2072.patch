@@ -1,0 +1,70 @@
+From a14773bb2b2b98577daf6ccdf7a5482e070c3e95 Mon Sep 17 00:00:00 2001
+From: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+Date: Wed, 25 Feb 2026 11:20:35 +0530
+Subject: [PATCH] drivers: bus: mhi: Add device_id for QCC2072
+
+Add device_id for QCC2072 and handle it appropriately while retrieving
+SOC_HW_VERSION and dumping Debug registers.
+
+Change-Id: I1afa77ce75b179b5730fc44e92bc59e447b34fba
+Signed-off-by: Vignesh Viswanathan <viswanat@qti.qualcomm.com>
+---
+ drivers/bus/mhi/host/init.c     | 3 ++-
+ drivers/bus/mhi/host/internal.h | 5 +----
+ drivers/bus/mhi/host/main.c     | 3 ++-
+ 3 files changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/bus/mhi/host/init.c b/drivers/bus/mhi/host/init.c
+index 57e06d183c90..32b62425e442 100644
+--- a/drivers/bus/mhi/host/init.c
++++ b/drivers/bus/mhi/host/init.c
+@@ -1064,7 +1064,8 @@ int mhi_register_controller(struct mhi_controller *mhi_cntrl,
+ 	mhi_cntrl->family_number = FIELD_GET(SOC_HW_VERSION_FAM_NUM_BMSK, soc_info);
+ 	mhi_cntrl->device_number = FIELD_GET(SOC_HW_VERSION_DEV_NUM_BMSK, soc_info);
+ 
+-	if (IS_QCN9224_DEV(mhi_cntrl)) {
++	if (mhi_cntrl->device_number == QCN9224_DEVICE_NUM ||
++	    mhi_cntrl->device_number == QCC2072_DEVICE_NUM) {
+ 		mhi_cntrl->major_version =
+ 			FIELD_GET(QCN9224_SOC_HW_VERSION_MAJOR_VER_BMSK,
+ 				  soc_info);
+diff --git a/drivers/bus/mhi/host/internal.h b/drivers/bus/mhi/host/internal.h
+index 0fff89db2db1..01e91dc1ece7 100644
+--- a/drivers/bus/mhi/host/internal.h
++++ b/drivers/bus/mhi/host/internal.h
+@@ -17,6 +17,7 @@ extern struct bus_type mhi_bus_type;
+ 
+ #define QCN9XXX_FAMILY_NUM				(0x4)
+ #define QCN9224_DEVICE_NUM				(0x1A)
++#define QCC2072_DEVICE_NUM				(0x29)
+ #define QCN9625_DEVICE_NUM				(0x2F)
+ #define QCN9589_DEVICE_NUM				(0x31)
+ #define SOC_HW_VERSION_OFFS				0x224
+@@ -27,10 +28,6 @@ extern struct bus_type mhi_bus_type;
+ #define QCN9224_SOC_HW_VERSION_MAJOR_VER_BMSK		GENMASK(11, 8)
+ #define QCN9224_SOC_HW_VERSION_MINOR_VER_BMSK		GENMASK(7, 4)
+ 
+-#define IS_QCN9224_DEV(mhi_cntrl) \
+-	((mhi_cntrl->family_number == QCN9XXX_FAMILY_NUM && \
+-	  mhi_cntrl->device_number == QCN9224_DEVICE_NUM) ? true : false)
+-
+ #define IS_LICENSE_DOWN_REQ(mhi_cntrl) \
+ 	((mhi_cntrl->family_number == QCN9XXX_FAMILY_NUM && \
+ 	  ((mhi_cntrl->device_number == QCN9224_DEVICE_NUM) || \
+diff --git a/drivers/bus/mhi/host/main.c b/drivers/bus/mhi/host/main.c
+index 9811915c2eab..87c3db9159a7 100644
+--- a/drivers/bus/mhi/host/main.c
++++ b/drivers/bus/mhi/host/main.c
+@@ -1829,7 +1829,8 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl)
+ 	}
+ 
+ 	if (mhi_cntrl->device_number == QCN9625_DEVICE_NUM ||
+-	    mhi_cntrl->device_number == QCN9589_DEVICE_NUM) {
++	    mhi_cntrl->device_number == QCN9589_DEVICE_NUM ||
++	    mhi_cntrl->device_number == QCC2072_DEVICE_NUM) {
+ 		for (i = 0; debug_reg_extended[i].name; i++) {
+ 			if (!debug_reg_extended[i].base)
+ 				continue;
+-- 
+2.34.1
+

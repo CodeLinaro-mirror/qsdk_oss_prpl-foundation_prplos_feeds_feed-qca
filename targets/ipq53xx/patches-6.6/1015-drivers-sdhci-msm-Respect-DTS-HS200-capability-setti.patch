@@ -1,0 +1,44 @@
+From 0b7b29201ac445d9473ed98d16c6cea86168ba06 Mon Sep 17 00:00:00 2001
+From: Md Sadre Alam <mdalam@qti.qualcomm.com>
+Date: Thu, 8 Jan 2026 15:38:58 +0530
+Subject: [PATCH] drivers: sdhci-msm: Respect DTS HS200 capability settings
+
+The SDHCI core driver unconditionally enables HS200 support when the
+hardware controller advertises SDR104 capability, regardless of device
+tree settings. This causes issues on boards where HS200 mode cannot be
+used due to signal integrity issues, power constraints, or eMMC chip
+compatibility problems.
+
+When the 'mmc-hs200-1_8v' property is absent from the device tree, it
+indicates that HS200 mode should not be enabled. However, the SDHCI
+core's sdhci_setup_host() function overrides this by automatically
+promoting SDR104 hardware capability to HS200 support for eMMC.
+
+Fix this by checking for the presence of 'mmc-hs200-1_8v' property in
+the device tree during probe. If the property is absent, set the
+SDHCI_QUIRK2_BROKEN_HS200 quirk to prevent the SDHCI core from
+automatically enabling HS200 support.
+
+Change-Id: I79396e0faa11be87208578adfecffa0932c24045
+Signed-off-by: Md Sadre Alam <mdalam@qti.qualcomm.com>
+---
+ drivers/mmc/host/sdhci-msm.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mmc/host/sdhci-msm.c b/drivers/mmc/host/sdhci-msm.c
+index 74ec1e36b2ec..904581ea6e78 100644
+--- a/drivers/mmc/host/sdhci-msm.c
++++ b/drivers/mmc/host/sdhci-msm.c
+@@ -2758,6 +2758,9 @@ static int sdhci_msm_probe(struct platform_device *pdev)
+ 
+ 	msm_host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_NEED_RSP_BUSY;
+ 
++	if (!device_property_read_bool(&pdev->dev, "mmc-hs200-1_8v"))
++		host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
++
+ #ifdef CONFIG_MMC_CRYPTO
+ 	host->mmc_host_ops.request = sdhci_msm_request;
+ #endif
+-- 
+2.34.1
+

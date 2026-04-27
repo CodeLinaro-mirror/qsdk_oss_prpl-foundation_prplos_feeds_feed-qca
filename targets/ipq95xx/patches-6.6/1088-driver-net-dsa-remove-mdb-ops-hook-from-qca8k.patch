@@ -1,0 +1,53 @@
+From b7cf4c00920f9647fae2d4372c948e4c4648fcd3 Mon Sep 17 00:00:00 2001
+From: qiangqiang cheng <qiangqia@qti.qualcomm.com>
+Date: Fri, 13 Mar 2026 11:04:13 +0800
+Subject: [PATCH] driver:net:dsa:remove mdb ops hook from qca8k
+
+Multicast bases on mdb (group/source ip + interface) on QSDK, so git rid
+of the dest mac based ops from qca8k
+
+Change-Id: I8f8b9b158f129a5f848adc87e3402df88743b05f
+Signed-off-by: qiangqiang cheng <qiangqia@qti.qualcomm.com>
+---
+ drivers/net/dsa/qca/qca8k-8xxx.c   | 2 --
+ drivers/net/dsa/qca/qca8k-common.c | 4 ++--
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/dsa/qca/qca8k-8xxx.c b/drivers/net/dsa/qca/qca8k-8xxx.c
+index 05c88327123b..ae4b1548686a 100644
+--- a/drivers/net/dsa/qca/qca8k-8xxx.c
++++ b/drivers/net/dsa/qca/qca8k-8xxx.c
+@@ -2214,8 +2214,6 @@ static const struct dsa_switch_ops qca8k_switch_ops = {
+ 	.port_fdb_add		= qca8k_port_fdb_add,
+ 	.port_fdb_del		= qca8k_port_fdb_del,
+ 	.port_fdb_dump		= qca8k_port_fdb_dump,
+-	.port_mdb_add		= qca8k_port_mdb_add,
+-	.port_mdb_del		= qca8k_port_mdb_del,
+ 	.port_mirror_add	= qca8k_port_mirror_add,
+ 	.port_mirror_del	= qca8k_port_mirror_del,
+ 	.port_vlan_filtering	= qca8k_port_vlan_filtering,
+diff --git a/drivers/net/dsa/qca/qca8k-common.c b/drivers/net/dsa/qca/qca8k-common.c
+index 13508b3f02fb..4da2959ecb18 100644
+--- a/drivers/net/dsa/qca/qca8k-common.c
++++ b/drivers/net/dsa/qca/qca8k-common.c
+@@ -1016,7 +1016,7 @@ int qca8k_port_fdb_dump(struct dsa_switch *ds, int port,
+ 	return 0;
+ }
+ 
+-int qca8k_port_mdb_add(struct dsa_switch *ds, int port,
++int __maybe_unused qca8k_port_mdb_add(struct dsa_switch *ds, int port,
+ 		       const struct switchdev_obj_port_mdb *mdb,
+ 		       struct dsa_db db)
+ {
+@@ -1031,7 +1031,7 @@ int qca8k_port_mdb_add(struct dsa_switch *ds, int port,
+ 					   QCA8K_ATU_STATUS_STATIC);
+ }
+ 
+-int qca8k_port_mdb_del(struct dsa_switch *ds, int port,
++int __maybe_unused qca8k_port_mdb_del(struct dsa_switch *ds, int port,
+ 		       const struct switchdev_obj_port_mdb *mdb,
+ 		       struct dsa_db db)
+ {
+-- 
+2.34.1
+

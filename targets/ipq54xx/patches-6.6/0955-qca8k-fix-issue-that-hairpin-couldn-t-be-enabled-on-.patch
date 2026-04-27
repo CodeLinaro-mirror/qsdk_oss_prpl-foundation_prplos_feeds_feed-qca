@@ -1,0 +1,81 @@
+From 8949ea583e0b2989edd28698ee1203a5a2302eaf Mon Sep 17 00:00:00 2001
+From: qiangqiang cheng <qiangqia@qti.qualcomm.com>
+Date: Tue, 9 Sep 2025 15:26:48 +0800
+Subject: [PATCH] [qca8k]: fix issue that hairpin couldn't be enabled on DSA
+ interfaces
+
+Change-Id: Id414590632b4a23053ea864c76632695db9a964a
+Signed-off-by: qiangqiang cheng <qiangqia@qti.qualcomm.com>
+---
+ drivers/net/dsa/qca/qca8k-8xxx.c   | 21 +++++++++++++--------
+ drivers/net/dsa/qca/qca8k-common.c |  2 +-
+ 2 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/dsa/qca/qca8k-8xxx.c b/drivers/net/dsa/qca/qca8k-8xxx.c
+index 76ce870d5ecc..32fe4cf47fd5 100644
+--- a/drivers/net/dsa/qca/qca8k-8xxx.c
++++ b/drivers/net/dsa/qca/qca8k-8xxx.c
+@@ -2042,11 +2042,6 @@ qca8k_setup(struct dsa_switch *ds)
+ 		if (ret)
+ 			return ret;
+ 
+-		ret = regmap_clear_bits(priv->regmap, QCA8K_PORT_LOOKUP_CTRL(port),
+-					QCA8K_PORT_LOOKUP_LEARN);
+-		if (ret)
+-			return ret;
+-
+ 		/* For port based vlans to work we need to set the
+ 		 * default egress vid
+ 		 */
+@@ -2063,15 +2058,21 @@ qca8k_setup(struct dsa_switch *ds)
+ 			return ret;
+ 	}
+ 
+-	/* For port based vlans to work we need to set the
+-	 * default egress vlan mode as untouched
+-	 */
+ 	dsa_switch_for_each_port(dp, ds) {
++		/* For port based vlans to work we need to set the
++		 * default egress vlan mode as untouched
++		 */
+ 		qca8k_rmw(priv, QCA8K_REG_PORT_VLAN_CTRL1(dp->index),
+ 			QCA8K_PORT_VLAN_EGMODE_MASK, QCA8K_PORT_VLAN_EGMODE(0x3));
+ 		qca8k_rmw(priv, QCA8K_ROUTE_EGRESS_VLAN,
+ 			QCA8K_ROUTE_EGRESS_VLAN_MASK(dp->index),
+ 			QCA8K_ROUTE_EGRESS_VLAN_VAL(dp->index, 0x3));
++
++		/* disable fdb learning on all the ports, including CPU ports */
++		ret = regmap_clear_bits(priv->regmap, QCA8K_PORT_LOOKUP_CTRL(dp->index),
++					QCA8K_PORT_LOOKUP_LEARN);
++		if (ret)
++			return ret;
+ 	}
+ 
+ 	/* The port 5 of the qca8337 have some problem in flood condition. The
+@@ -2127,6 +2128,10 @@ qca8k_teardown(struct dsa_switch *ds)
+ 		qca8k_rmw(priv, QCA8K_PORT_LOOKUP_CTRL(i),
+ 	  		QCA8K_PORT_LOOKUP_STATE_MASK, QCA8K_PORT_LOOKUP_STATE_FORWARD);
+ 
++		/* recover fdb learning on all the ports */
++		regmap_set_bits(priv->regmap, QCA8K_PORT_LOOKUP_CTRL(i),
++					QCA8K_PORT_LOOKUP_LEARN);
++
+ 		/* resume port status */
+ 		qca8k_port_set_status(priv, i, 1);
+ 
+diff --git a/drivers/net/dsa/qca/qca8k-common.c b/drivers/net/dsa/qca/qca8k-common.c
+index c7f9623b1548..13508b3f02fb 100644
+--- a/drivers/net/dsa/qca/qca8k-common.c
++++ b/drivers/net/dsa/qca/qca8k-common.c
+@@ -768,7 +768,7 @@ int qca8k_port_pre_bridge_flags(struct dsa_switch *ds, int port,
+ 				struct switchdev_brport_flags flags,
+ 				struct netlink_ext_ack *extack)
+ {
+-	if (flags.mask & ~BR_LEARNING)
++	if (flags.mask & ~(BR_LEARNING | BR_HAIRPIN_MODE))
+ 		return -EINVAL;
+ 
+ 	return 0;
+-- 
+2.34.1
+

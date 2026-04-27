@@ -1,0 +1,54 @@
+From 95e3fcfd2d425f7f97c506ed4e041500336bdef6 Mon Sep 17 00:00:00 2001
+From: Timple Raj M <timple@qti.qualcomm.com>
+Date: Fri, 26 Dec 2025 16:03:30 +0530
+Subject: [PATCH] soc: qcom: socinfo: Add SoC ID of IPQ52xx and IPQ96xx
+
+This patch adds the SoC ID's of IPQ52xx and IPQ96xx
+chipsets in the socinfo driver.
+
+Change-Id: I6d64c596707a05f49f50af594e39a3cd1f8e4a24
+Signed-off-by: Timple Raj M <timple@qti.qualcomm.com>
+---
+ drivers/soc/qcom/socinfo.c         | 7 +++++++
+ include/dt-bindings/arm/qcom,ids.h | 7 +++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/drivers/soc/qcom/socinfo.c b/drivers/soc/qcom/socinfo.c
+index 0c9ed785e76e..8b2098357d41 100644
+--- a/drivers/soc/qcom/socinfo.c
++++ b/drivers/soc/qcom/socinfo.c
+@@ -426,6 +426,13 @@ static const struct soc_id soc_id[] = {
+ 	{ qcom_board_id(IPQ5321) },
+ 	{ qcom_board_id(IPQ5424) },
+ 	{ qcom_board_id(IPQ5404) },
++	{ qcom_board_id(IPQ5200) },
++	{ qcom_board_id(IPQ5210) },
++	{ qcom_board_id(QCF2200) },
++	{ qcom_board_id(QCF3200) },
++	{ qcom_board_id(QCF3210) },
++	{ qcom_board_id(IPQ9620) },
++	{ qcom_board_id(IPQ9650) },
+ };
+ 
+ static const char *socinfo_machine(struct device *dev, unsigned int id)
+diff --git a/include/dt-bindings/arm/qcom,ids.h b/include/dt-bindings/arm/qcom,ids.h
+index b403b8974d83..103610f96b4d 100644
+--- a/include/dt-bindings/arm/qcom,ids.h
++++ b/include/dt-bindings/arm/qcom,ids.h
+@@ -263,6 +263,13 @@
+ #define QCOM_ID_IPQ5321			650
+ #define QCOM_ID_IPQ5424			651
+ #define QCOM_ID_IPQ5404			671
++#define QCOM_ID_IPQ5200			765
++#define QCOM_ID_IPQ5210			766
++#define QCOM_ID_QCF2200			767
++#define QCOM_ID_QCF3200			768
++#define QCOM_ID_QCF3210			769
++#define QCOM_ID_IPQ9620			770
++#define QCOM_ID_IPQ9650			771
+ 
+ /*
+  * The board type and revision information, used by Qualcomm bootloaders and
+-- 
+2.34.1
+

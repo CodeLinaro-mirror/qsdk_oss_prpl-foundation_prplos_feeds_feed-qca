@@ -1,0 +1,56 @@
+From b1a038f738175a7cef2e243a66d7e67634f0adb5 Mon Sep 17 00:00:00 2001
+From: Hari <hag@qti.qualcomm.com>
+Date: Tue, 25 Nov 2025 10:55:19 +0530
+Subject: [PATCH] cfg80211: Avoid reset conn_owner_nlportid when mld is active
+
+Make conn_owner_nlportid to be zero when all the links
+of the mld is inactive and not when just a link goes
+down during recovery as this is blocking the eapol
+frames on other non recovery active links.
+
+Change-Id: Ia1e2531296b15ae2f4209796150d29f287c382eb
+Signed-off-by: Hari <hag@qti.qualcomm.com>
+---
+ net/wireless/ap.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/net/wireless/ap.c b/net/wireless/ap.c
+index 1e809bba7167..22cd669c08c0 100644
+--- a/net/wireless/ap.c
++++ b/net/wireless/ap.c
+@@ -16,7 +16,7 @@ static int ___cfg80211_stop_ap(struct cfg80211_registered_device *rdev,
+ 			       bool notify, struct genl_info *info)
+ {
+ 	struct wireless_dev *wdev = dev->ieee80211_ptr;
+-	int err;
++	int err, i;
+ 	struct cfg80211_ap_settings params = {0};
+ 
+ 	ASSERT_WDEV_LOCK(wdev);
+@@ -45,6 +45,14 @@ static int ___cfg80211_stop_ap(struct cfg80211_registered_device *rdev,
+ 		memset(&wdev->links[link_id].ap.chandef, 0,
+ 		       sizeof(wdev->links[link_id].ap.chandef));
+ 
++		for (i = 0; i < IEEE80211_MLD_MAX_NUM_LINKS; i++) {
++			if (i == link_id)
++				continue;
++			if ((BIT(i) & wdev->valid_links) &&
++			    wdev->links[i].ap.beacon_interval != 0) {
++				goto dont_reset_port_id;
++			}
++		}
+ 		if (!params.reconfig) {
+ 			/* Clear this only when the stop is NOT received for
+ 			 * MLO Reconfig link removal as other link(s) will
+@@ -54,6 +62,8 @@ static int ___cfg80211_stop_ap(struct cfg80211_registered_device *rdev,
+ 			wdev->u.ap.ssid_len = 0;
+ 		}
+ 
++dont_reset_port_id:
++
+ 		rdev_set_qos_map(rdev, dev, NULL);
+ 		if (notify)
+ 			nl80211_send_ap_stopped(wdev, link_id);
+-- 
+2.34.1
+

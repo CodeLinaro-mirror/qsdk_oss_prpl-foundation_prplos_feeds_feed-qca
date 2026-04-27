@@ -1,0 +1,29 @@
+From f6c23cf766234a429fcbc25f6c2730d160138df1 Mon Sep 17 00:00:00 2001
+From: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+Date: Thu, 5 Mar 2026 21:33:52 +0530
+Subject: [PATCH] net: bridge: Fix to overcome jiffies overflow issue
+
+This change solves the jiffies overflow issue that causes the bridge from not flushing it's MDB entries within 2 seconds period when the last host leaves the group
+
+Change-Id: I9158b999be5c978c35325e9adcd45a7813789e76
+Signed-off-by: Suhas N Bhargav <sbhargav@qti.qualcomm.com>
+---
+ net/bridge/br_multicast.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
+index 9a396c2059d4..c3d9204f0a13 100644
+--- a/net/bridge/br_multicast.c
++++ b/net/bridge/br_multicast.c
+@@ -2305,7 +2305,7 @@ static void __grp_src_query_marked_and_rexmit(struct net_bridge_mcast *brmctx,
+ 	hlist_for_each_entry(ent, &pg->src_list, node) {
+ 		if (ent->flags & BR_SGRP_F_SEND) {
+ 			ent->flags &= ~BR_SGRP_F_SEND;
+-			if (ent->timer.expires > lmqt) {
++			if (time_after(ent->timer.expires, lmqt)) {
+ 				if (brmctx->multicast_querier &&
+ 				    other_query &&
+ 				    !timer_pending(&other_query->timer))
+-- 
+2.34.1
+

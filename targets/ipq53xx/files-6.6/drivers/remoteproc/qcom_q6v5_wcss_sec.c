@@ -164,10 +164,6 @@ wait_for_start:
 		}
 	}
 
-	ret = q6v5_start_user_pd(rproc);
-	if (ret)
-		dev_err(wcss->dev, "Failed to start userpd %d\n", ret);
-
 out:
 	if (ret && desc->tmelcom_support)
 		tmelcom_secboot_teardown(desc->pasid, 0);
@@ -190,10 +186,6 @@ static int q6v5_wcss_sec_stop(struct rproc *rproc)
 
 	if (!desc)
 		return -EINVAL;
-
-	ret = q6v5_stop_user_pd(rproc);
-	if (ret)
-		dev_err(wcss->dev, "Failed to stop userpd %d\n", ret);
 
 	if (wcss->textpd_fw) {
 		ret = qcom_scm_pas_shutdown(wcss->textpd_pasid);
@@ -365,6 +357,12 @@ static int share_bootargs_to_q6(struct rproc *rproc, struct device *dev)
 	if (ret) {
 		dev_err(dev, "failed to get smem id\n");
 		return ret;
+	}
+
+	/* Validate smem_id to prevent out-of-bounds TOC access */
+	if (smem_id >= 512) {
+		dev_err(dev, "smem id %u exceeds TOC size (max: 511)\n", smem_id);
+		return -EINVAL;
 	}
 
 	ret = qcom_smem_alloc(WCSS_SMEM_HOST, smem_id, Q6_BOOT_ARGS_SMEM_SIZE);

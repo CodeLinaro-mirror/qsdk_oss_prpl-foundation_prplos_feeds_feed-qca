@@ -1,0 +1,31 @@
+From 83f545ab69838cd90ea4becfcfd5d93082f33287 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+Date: Thu, 17 Apr 2025 22:46:27 +0530
+Subject: [PATCH] PCI/ERR: Remove misleading TODO regarding kernel panic
+
+A PCI device is just another peripheral in a system. So failure to
+recover it, must not result in a kernel panic. So remove the TODO which
+is quite misleading.
+
+Change-Id: I7187856a65c521abb542770f320cf6a0b5073491
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+---
+ drivers/pci/pcie/err.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/pci/pcie/err.c b/drivers/pci/pcie/err.c
+index 705893b5f7b0..286ddc8be78d 100644
+--- a/drivers/pci/pcie/err.c
++++ b/drivers/pci/pcie/err.c
+@@ -277,7 +277,6 @@ pci_ers_result_t pcie_do_recovery(struct pci_dev *dev,
+ 
+ 	pci_uevent_ers(bridge, PCI_ERS_RESULT_DISCONNECT);
+ 
+-	/* TODO: Should kernel panic here? */
+ 	pci_info(bridge, "device recovery failed\n");
+ 
+ 	return status;
+-- 
+2.34.1
+

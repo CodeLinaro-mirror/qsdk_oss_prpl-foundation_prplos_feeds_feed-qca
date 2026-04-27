@@ -50,7 +50,9 @@
 				/* i2c2 shares spi1 clock, so use spi1_clk as per gcc driver */
 				clocks = <&gcc GCC_QUPV3_SPI1_CLK>;
 				clock-names = "se";
-				clock-frequency = <400000>;
+				clock-frequency = <100000>;
+				assigned-clocks = <&gcc GCC_QUPV3_SPI1_CLK>;
+				assigned-clock-rates = <32000000>;
 				interrupts = <GIC_SPI 344 IRQ_TYPE_LEVEL_HIGH>;
 				pinctrl-0 = <&qup_i2c2_default>;
 				pinctrl-names = "default";
@@ -82,12 +84,12 @@
 				&tlmm 18 GPIO_ACTIVE_LOW
 			>;
 
-			ethernet-phy@4 {
+			phy4: ethernet-phy@4 {
 				reg = <8>;
 				compatible ="ethernet-phy-ieee802.3-c45";
 			};
 
-			ethernet-phy@5 {
+			phy5: ethernet-phy@5 {
 				reg = <12>;
 				compatible ="ethernet-phy-ieee802.3-c45";
 			};
@@ -112,11 +114,15 @@
 						port_id = <1>;
 						phy_address = <8>;
 						ethernet-phy-ieee802.3-c45;
+						phy-handle = <&phy4>;
+						phy-mode = "usxgmii";
 					};
 					port@1 {
 						port_id = <2>;
 						phy_address = <12>;
 						ethernet-phy-ieee802.3-c45;
+						phy-handle = <&phy5>;
+						phy-mode = "usxgmii";
 					};
 				};
 
@@ -155,9 +161,6 @@
 			reg = <0x3A500000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <8>;
-			qcom,link-poll = <1>;
-			phy-mode = "usxgmii";
 		};
 
 		dp2 {
@@ -170,9 +173,6 @@
 			reg = <0x3A504000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			qcom,phy-mdio-addr = <12>;
-			qcom,link-poll = <1>;
-			phy-mode = "usxgmii";
 		};
 
 		dp3 {
@@ -187,7 +187,6 @@
 			local-mac-address = [000000000000];
 			qcom,mht-dev = <1>;
 			qcom,is_switch_connected = <1>;
-			phy-mode = "sgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -429,10 +428,6 @@
 	status = "okay";
 };
 
-&userpd_1 {
-	status = "okay";
-};
-
 &tlmm {
 	qup_i2c0_default: qup-i2c0-default-state {
 		qup_i2c0_scl {
@@ -634,8 +629,13 @@
 #endif
 
 &mlo_global_mem0 {
-	reg = <0x0 0x9b300000 0x0 0x1800000>;
+#if defined(__IPQ_MEM_PROFILE_512_MB__)
+	reg = <0x0 0x96e00000 0x0 0x1800000>;
 	status = "okay";
+#else
+	reg = <0x0 0x9b500000 0x0 0x1800000>;
+	status = "okay";
+#endif
 };
 
 &wifi0 {

@@ -1,0 +1,93 @@
+From e30d0a87240813de9e8f9129fdb4064764402d0d Mon Sep 17 00:00:00 2001
+From: Etienne Carriere <etienne.carriere@foss.st.com>
+Date: Mon, 30 Oct 2023 09:48:10 +0100
+Subject: [PATCH] tee: system session
+
+Adds kernel client API function tee_client_system_session() for a client
+to request a system service entry in TEE context.
+
+This feature is needed to prevent a system deadlock when several TEE
+client applications invoke TEE, consuming all TEE thread contexts
+available in the secure world. The deadlock can happen in the OP-TEE
+driver for example if all these TEE threads issue an RPC call from TEE
+to Linux OS to access an eMMC RPMB partition (TEE secure storage) which
+device clock or regulator controller is accessed through an OP-TEE SCMI
+services. In that case, Linux SCMI driver must reach OP-TEE SCMI service
+without waiting until one of the consumed TEE threads is freed.
+
+Reviewed-by: Sumit Garg <sumit.garg@linaro.org>
+Co-developed-by: Jens Wiklander <jens.wiklander@linaro.org>
+Signed-off-by: Etienne Carriere <etienne.carriere@foss.st.com>
+Signed-off-by: Jens Wiklander <jens.wiklander@linaro.org>
+(cherry picked from commit a9214a8883ceb82df55aa90d1c49ddb85fc1e3d5)
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+
+Change-Id: Ib9c3ef9464b236a6883ded79bfbd4e9411bb1866
+---
+ drivers/tee/tee_core.c  |  8 ++++++++
+ include/linux/tee_drv.h | 16 ++++++++++++++++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/drivers/tee/tee_core.c b/drivers/tee/tee_core.c
+index a0c67f11b15b..82e07ade0bed 100644
+--- a/drivers/tee/tee_core.c
++++ b/drivers/tee/tee_core.c
+@@ -1174,6 +1174,14 @@ int tee_client_close_session(struct tee_context *ctx, u32 session)
+ }
+ EXPORT_SYMBOL_GPL(tee_client_close_session);
+ 
++int tee_client_system_session(struct tee_context *ctx, u32 session)
++{
++	if (!ctx->teedev->desc->ops->system_session)
++		return -EINVAL;
++	return ctx->teedev->desc->ops->system_session(ctx, session);
++}
++EXPORT_SYMBOL_GPL(tee_client_system_session);
++
+ int tee_client_invoke_func(struct tee_context *ctx,
+ 			   struct tee_ioctl_invoke_arg *arg,
+ 			   struct tee_param *param)
+diff --git a/include/linux/tee_drv.h b/include/linux/tee_drv.h
+index 17eb1c5205d3..911ddf92dcee 100644
+--- a/include/linux/tee_drv.h
++++ b/include/linux/tee_drv.h
+@@ -84,6 +84,7 @@ struct tee_param {
+  * @release:		release this open file
+  * @open_session:	open a new session
+  * @close_session:	close a session
++ * @system_session:	declare session as a system session
+  * @invoke_func:	invoke a trusted function
+  * @cancel_req:		request cancel of an ongoing invoke or open
+  * @supp_recv:		called for supplicant to get a command
+@@ -100,6 +101,7 @@ struct tee_driver_ops {
+ 			    struct tee_ioctl_open_session_arg *arg,
+ 			    struct tee_param *param);
+ 	int (*close_session)(struct tee_context *ctx, u32 session);
++	int (*system_session)(struct tee_context *ctx, u32 session);
+ 	int (*invoke_func)(struct tee_context *ctx,
+ 			   struct tee_ioctl_invoke_arg *arg,
+ 			   struct tee_param *param);
+@@ -429,6 +431,20 @@ int tee_client_open_session(struct tee_context *ctx,
+  */
+ int tee_client_close_session(struct tee_context *ctx, u32 session);
+ 
++/**
++ * tee_client_system_session() - Declare session as a system session
++ * @ctx:	TEE Context
++ * @session:	Session id
++ *
++ * This function requests TEE to provision an entry context ready to use for
++ * that session only. The provisioned entry context is used for command
++ * invocation and session closure, not for command cancelling requests.
++ * TEE releases the provisioned context upon session closure.
++ *
++ * Return < 0 on error else 0 if an entry context has been provisioned.
++ */
++int tee_client_system_session(struct tee_context *ctx, u32 session);
++
+ /**
+  * tee_client_invoke_func() - Invoke a function in a Trusted Application
+  * @ctx:	TEE Context
+-- 
+2.34.1
+

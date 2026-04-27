@@ -1,0 +1,83 @@
+From 952b71cf82c3774e7b5fca6e02bce5d0244d76eb Mon Sep 17 00:00:00 2001
+From: Jens Wiklander <jens.wiklander@linaro.org>
+Date: Tue, 14 Nov 2023 10:52:17 +0100
+Subject: [PATCH] optee: allocate shared memory with alloc_pages_exact()
+
+Allocate memory to share with the secure world using alloc_pages_exact()
+instead of alloc_pages() for more efficient memory usage.
+
+Reviewed-by: Sumit Garg <sumit.garg@linaro.org>
+Signed-off-by: Jens Wiklander <jens.wiklander@linaro.org>
+(cherry picked from commit 225a36b96359aceaa9a6399f2dff99627397e637)
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+
+Change-Id: Ic98c88ace041f877783590ad753224d2baeefbad
+---
+ drivers/tee/optee/core.c | 20 +++++++++-----------
+ 1 file changed, 9 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/tee/optee/core.c b/drivers/tee/optee/core.c
+index fe35b39a0c17..3aed554bc8d8 100644
+--- a/drivers/tee/optee/core.c
++++ b/drivers/tee/optee/core.c
+@@ -25,10 +25,8 @@ int optee_pool_op_alloc_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
+ 						   size_t num_pages,
+ 						   unsigned long start))
+ {
+-	unsigned int order = get_order(size);
+-	unsigned int nr_pages = 1 << order;
++	size_t nr_pages = roundup(size, PAGE_SIZE) / PAGE_SIZE;
+ 	struct page **pages;
+-	struct page *page;
+ 	unsigned int i;
+ 	int rc = 0;
+ 
+@@ -36,13 +34,13 @@ int optee_pool_op_alloc_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
+ 	 * Ignore alignment since this is already going to be page aligned
+ 	 * and there's no need for any larger alignment.
+ 	 */
+-	page = alloc_pages(GFP_KERNEL | __GFP_ZERO, order);
+-	if (!page)
++	shm->kaddr = alloc_pages_exact(nr_pages * PAGE_SIZE,
++				       GFP_KERNEL | __GFP_ZERO);
++	if (!shm->kaddr)
+ 		return -ENOMEM;
+ 
+-	shm->kaddr = page_address(page);
+-	shm->paddr = page_to_phys(page);
+-	shm->size = PAGE_SIZE << order;
++	shm->paddr = virt_to_phys(shm->kaddr);
++	shm->size = nr_pages * PAGE_SIZE;
+ 
+ 	pages = kcalloc(nr_pages, sizeof(*pages), GFP_KERNEL);
+ 	if (!pages) {
+@@ -51,7 +49,7 @@ int optee_pool_op_alloc_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
+ 	}
+ 
+ 	for (i = 0; i < nr_pages; i++)
+-		pages[i] = page + i;
++		pages[i] = virt_to_page((u8 *)shm->kaddr + i * PAGE_SIZE);
+ 
+ 	shm->pages = pages;
+ 	shm->num_pages = nr_pages;
+@@ -65,7 +63,7 @@ int optee_pool_op_alloc_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
+ 
+ 	return 0;
+ err:
+-	free_pages((unsigned long)shm->kaddr, order);
++	free_pages_exact(shm->kaddr, shm->size);
+ 	shm->kaddr = NULL;
+ 	return rc;
+ }
+@@ -76,7 +74,7 @@ void optee_pool_op_free_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
+ {
+ 	if (shm_unregister)
+ 		shm_unregister(shm->ctx, shm);
+-	free_pages((unsigned long)shm->kaddr, get_order(shm->size));
++	free_pages_exact(shm->kaddr, shm->size);
+ 	shm->kaddr = NULL;
+ 	kfree(shm->pages);
+ 	shm->pages = NULL;
+-- 
+2.34.1
+

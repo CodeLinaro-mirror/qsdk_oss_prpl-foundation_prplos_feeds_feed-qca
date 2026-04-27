@@ -142,6 +142,11 @@
 							switch_handle = <&switch1>;
 							switch_cpu_port = <0>;
 						};
+						fixed-link {
+							speed = <2500>;
+							full-duplex;
+							pause;
+						};
 					};
 					port@1 {
 						port_id = <2>;
@@ -237,7 +242,6 @@
 			reg = <0x3a500000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "sgmii";
 			qcom,mht-dev = <1>;
 		};
 
@@ -414,6 +418,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x26800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x1d>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <0>;
@@ -463,6 +473,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x58800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x15>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <1>;
@@ -525,6 +541,10 @@
 };
 
 &q6v5_wcss {
+	status = "disabled";
+};
+
+&qcom_test_userpd1 {
 	status = "disabled";
 };
 
@@ -603,7 +623,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	pcie1_default_state: pcie1-default-state {
@@ -611,7 +630,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	sfp_pins: sfp-state {

@@ -1,0 +1,67 @@
+From f14821d42079cfd8573f1da37681774be4149f66 Mon Sep 17 00:00:00 2001
+From: Karthik T S <kartikts@qti.qualcomm.com>
+Date: Mon, 7 Jul 2025 19:25:26 +0530
+Subject: [PATCH] bridge: Export helper to fetch sub-bridge ID from net_device
+
+Adds get_sub_bridge_id_from_netdev() to retrieve the sub-bridge ID
+from a bridge port's net_device, returning error if not applicable.
+
+Change-Id: Id21281c6a10e51ebee29777c2fe8f07214222b15
+Signed-off-by: Karthik T S <kartikts@qti.qualcomm.com>
+---
+ include/linux/if_bridge.h |  8 ++++++++
+ net/bridge/br_if.c        | 24 ++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/include/linux/if_bridge.h b/include/linux/if_bridge.h
+index f1fcb3bc6e16..2ff86e263f5b 100644
+--- a/include/linux/if_bridge.h
++++ b/include/linux/if_bridge.h
+@@ -318,4 +318,12 @@ extern br_get_dst_hook_t __rcu *br_get_dst_hook;
+ 
+ typedef void (br_notify_hook_t)(int group, int event, const void *ptr);
+ extern br_notify_hook_t __rcu *br_notify_hook;
++
++/**
++ * br_port_get_sub_br_id - Retrieve sub-bridge ID from a bridge port
++ * @dev: net_device pointer
++ *
++ * Returns the sub_br_id if the device is a bridge port, -ENODEV otherwise.
++ */
++int br_port_get_sub_br_id(struct net_device *dev);
+ #endif
+diff --git a/net/bridge/br_if.c b/net/bridge/br_if.c
+index ead844cb3ad0..a07e57f0e561 100644
+--- a/net/bridge/br_if.c
++++ b/net/bridge/br_if.c
+@@ -912,3 +912,27 @@ int br_port_set_mac_lrn_limit(struct net_bridge_port *p, unsigned long new_mac_l
+ 
+ 	return 0;
+ }
++
++/**
++ * br_port_get_sub_br_id - Retrieve sub-bridge ID from a bridge port
++ * @dev: net_device pointer
++ *
++ * Returns the sub_br_id if the device is a bridge port, error otherwise.
++ */
++int br_port_get_sub_br_id(struct net_device *dev)
++{
++	struct net_bridge_port *p;
++	int sub_id = -ENODEV;
++
++	if (!netif_is_bridge_port(dev))
++		return -ENODEV;
++
++	rcu_read_lock();
++	p = br_port_get_rcu(dev);
++	if (p && !(p->flags & BR_UPSTREAM_PORT))
++		sub_id = p->sub_br_id;
++	rcu_read_unlock();
++
++	return sub_id;
++}
++EXPORT_SYMBOL_GPL(br_port_get_sub_br_id);
+-- 
+2.34.1
+

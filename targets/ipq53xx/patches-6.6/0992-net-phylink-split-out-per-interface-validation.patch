@@ -1,0 +1,90 @@
+From d46dcafb751cd758258c880be9474bcae2584613 Mon Sep 17 00:00:00 2001
+From: Zhongjian Liu <zhongjia@qti.qualcomm.com>
+Date: Fri, 24 Nov 2023 12:28:19 +0000
+Subject: [PATCH] net: phylink: split out per-interface validation
+
+Split out the internals of phylink_validate_mask() to make the code
+easier to read.
+
+Tested-by: Luo Jie <quic_luoj@quicinc.com>
+Signed-off-by: Russell King (Oracle) <rmk+kernel@armlinux.org.uk>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Link: https://lore.kernel.org/r/E1r6VIB-00DDLr-7g@rmk-PC.armlinux.org.uk
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit 5f492a04506e5d93d5462238f7f899836ba3d421)
+Signed-off-by: zhongjia <zhongjia@qti.qualcomm.com>
+
+Change-Id: I0220bfcf890b41dc34d23dce2006f57169ec5b29
+Signed-off-by: zhongjia <zhongjia@qti.qualcomm.com>
+---
+ drivers/net/phy/phylink.c | 48 ++++++++++++++++++++++++++-------------
+ 1 file changed, 32 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index b5f012619e42..e9ae62cdf40f 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -704,28 +704,44 @@ static int phylink_validate_mac_and_pcs(struct phylink *pl,
+ 	return phylink_is_empty_linkmode(supported) ? -EINVAL : 0;
+ }
+ 
++static void phylink_validate_one(struct phylink *pl,
++				 const unsigned long *supported,
++				 const struct phylink_link_state *state,
++				 phy_interface_t interface,
++				 unsigned long *accum_supported,
++				 unsigned long *accum_advertising)
++{
++	__ETHTOOL_DECLARE_LINK_MODE_MASK(tmp_supported);
++	struct phylink_link_state tmp_state;
++
++	linkmode_copy(tmp_supported, supported);
++
++	tmp_state = *state;
++	tmp_state.interface = interface;
++
++	if (!phylink_validate_mac_and_pcs(pl, tmp_supported, &tmp_state)) {
++		phylink_dbg(pl, " interface %u (%s) rate match %s supports %*pbl\n",
++			    interface, phy_modes(interface),
++			    phy_rate_matching_to_str(tmp_state.rate_matching),
++			    __ETHTOOL_LINK_MODE_MASK_NBITS, tmp_supported);
++
++		linkmode_or(accum_supported, accum_supported, tmp_supported);
++		linkmode_or(accum_advertising, accum_advertising,
++			    tmp_state.advertising);
++	}
++}
++
+ static int phylink_validate_mask(struct phylink *pl, unsigned long *supported,
+ 				 struct phylink_link_state *state,
+ 				 const unsigned long *interfaces)
+ {
+ 	__ETHTOOL_DECLARE_LINK_MODE_MASK(all_adv) = { 0, };
+ 	__ETHTOOL_DECLARE_LINK_MODE_MASK(all_s) = { 0, };
+-	__ETHTOOL_DECLARE_LINK_MODE_MASK(s);
+-	struct phylink_link_state t;
+-	int intf;
+-
+-	for (intf = 0; intf < PHY_INTERFACE_MODE_MAX; intf++) {
+-		if (test_bit(intf, interfaces)) {
+-			linkmode_copy(s, supported);
+-
+-			t = *state;
+-			t.interface = intf;
+-			if (!phylink_validate_mac_and_pcs(pl, s, &t)) {
+-				linkmode_or(all_s, all_s, s);
+-				linkmode_or(all_adv, all_adv, t.advertising);
+-			}
+-		}
+-	}
++	int interface;
++
++	for_each_set_bit(interface, interfaces, PHY_INTERFACE_MODE_MAX)
++		phylink_validate_one(pl, supported, state, interface,
++				     all_s, all_adv);
+ 
+ 	linkmode_copy(supported, all_s);
+ 	linkmode_copy(state->advertising, all_adv);
+-- 
+2.34.1
+

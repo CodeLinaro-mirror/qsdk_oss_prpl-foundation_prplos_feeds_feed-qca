@@ -1,0 +1,27 @@
+From d7e03c38f06b618f3749ec56e94a26b061b30a20 Mon Sep 17 00:00:00 2001
+From: Luo Jie <luoj@qti.qualcomm.com>
+Date: Thu, 26 Mar 2026 18:31:17 +0800
+Subject: [PATCH] driver: clk: qcom: Fix the PCS clock register
+
+Change-Id: I2446aaf856b88bf9ea22c36ebf1f7677e14e0da2
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ drivers/clk/qcom/ipq-cmn-pll.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/clk/qcom/ipq-cmn-pll.c b/drivers/clk/qcom/ipq-cmn-pll.c
+index e4018a59e600..54f7c6cb218b 100644
+--- a/drivers/clk/qcom/ipq-cmn-pll.c
++++ b/drivers/clk/qcom/ipq-cmn-pll.c
+@@ -1563,7 +1563,7 @@ static int ipq_cmn_pll_register_clks(struct platform_device *pdev)
+ 							  cmn_pll->base,
+ 							  cmn_pll_hw,
+ 							  &fixed_clk[i]);
+-		} else if (!strcmp(fixed_clk[i].name, "pcs")) {
++		} else if (!strncmp(fixed_clk[i].name, "pcs", 3)) {
+ 			hw = ipq_cmn_pll_pcs_register(pdev, cmn_pll->regmap,
+ 						      cmn_pll_hw,
+ 						      fixed_clk[i].name);
+-- 
+2.34.1
+

@@ -1,0 +1,186 @@
+From 6b7d266c6ba57a19bc1b923f82d2dcfd445c7244 Mon Sep 17 00:00:00 2001
+From: Krithi D Shetty <kdshetty@qti.qualcomm.com>
+Date: Tue, 9 Dec 2025 15:41:26 +0530
+Subject: [PATCH] net: Addtion of wrapper API for ip mac mapping for multicast
+ offload
+
+Change-Id: I8e8a2e12c2c038ad5cedfb2b343fa1da4978b243
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ net/bridge/br_device.c    | 10 ++++++++++
+ net/bridge/br_input.c     | 20 +-------------------
+ net/bridge/br_multicast.c | 34 +++++++---------------------------
+ net/bridge/br_private.h   |  1 +
+ net/core/rtnetlink.c      |  7 ++++++-
+ 5 files changed, 25 insertions(+), 47 deletions(-)
+
+diff --git a/net/bridge/br_device.c b/net/bridge/br_device.c
+index aaceb3629b3e..c6a4f46cd171 100644
+--- a/net/bridge/br_device.c
++++ b/net/bridge/br_device.c
+@@ -17,6 +17,9 @@
+ 
+ #include <linux/uaccess.h>
+ #include "br_private.h"
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++#include "br_mcast_offload.h"
++#endif
+ 
+ #define COMMON_FEATURES (NETIF_F_SG | NETIF_F_FRAGLIST | NETIF_F_HIGHDMA | \
+ 			 NETIF_F_GSO_MASK | NETIF_F_HW_CSUM)
+@@ -108,6 +111,13 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+ 		}
+ 
+ 		mdst = br_mdb_get(brmctx, skb, vid);
++
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++		if (br_mcast_offload_should_force_flood(br, skb, mdst)) {
++			br_flood(br, skb, BR_PKT_MULTICAST, false, true, vid);
++			goto out;
++		}
++#endif
+ 		if ((mdst || BR_INPUT_SKB_CB_MROUTERS_ONLY(skb)) &&
+ 		    br_multicast_querier_exists(brmctx, eth_hdr(skb), mdst))
+ 			br_multicast_flood(mdst, skb, brmctx, false, true);
+diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
+index 6e62a18905e1..7aab36d438a3 100644
+--- a/net/bridge/br_input.c
++++ b/net/bridge/br_input.c
+@@ -96,9 +96,6 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+ 	struct net_bridge *br;
+ 	br_multicast_handle_hook_t *multicast_handle_hook;
+ 	struct net_bridge_port *pdst = NULL;
+-#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
+-	bool force_mcast_flood = false;
+-#endif
+ 	br_get_dst_hook_t *get_dst_hook = rcu_dereference(br_get_dst_hook);
+ 	u16 vid = 0;
+ 	u8 state;
+@@ -203,26 +200,11 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+ #if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
+ 		/*
+ 		 * Check if multicast flood rule is present
+-		 * Only apply forced flood if MDB lookup resulted in NULL (unknown multicast).
+-		 */
+-		if (!mdst) {
+-			if (skb->protocol == htons(ETH_P_IP)) {
+-				if (br_mcast_rule_check_ip4(br, ip_hdr(skb)->daddr))
+-					force_mcast_flood = true;
+-#if IS_ENABLED(CONFIG_IPV6)
+-			} else if (skb->protocol == htons(ETH_P_IPV6)) {
+-				if (br_mcast_rule_check_ip6(br, &ipv6_hdr(skb)->daddr))
+-					force_mcast_flood = true;
+-#endif
+-			}
+-		}
+-
+-		/*
+ 		 * If forced flood is requested for this group,
+ 		 * take the unknown-mcast flooding path and skip MDB-based replication.
+ 		 * We set local_rcv like the unknown path and break out to common flooding.
+ 		 */
+-		if (force_mcast_flood) {
++		if (br_mcast_offload_should_force_flood(br, skb, mdst)) {
+ 			local_rcv = true;
+ 			DEV_STATS_INC(br->dev, multicast);
+ 			break;
+diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
+index ec7fd01f8ce7..b9acfb23a995 100644
+--- a/net/bridge/br_multicast.c
++++ b/net/bridge/br_multicast.c
+@@ -3880,23 +3880,14 @@ static int br_multicast_ipv4_rcv(struct net_bridge_mcast *brmctx,
+ 	src = eth_hdr(skb)->h_source;
+ 	BR_INPUT_SKB_CB(skb)->igmp = ih->type;
+ 
++
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
+ 	/*
+ 	 * Add IP-MAC mapping for hardware offload
+ 	 */
+-#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
+-	if (pmctx && (pmctx->port->flags & BR_MCAST_MCUC_HW_OFFLOAD)) {
+-		int ifindex = pmctx->port->dev->ifindex;
+-		struct net_bridge *br = brmctx->br;
+-		struct br_ip host;
+-
+-		br_mcast_offload_get_br_ip(skb, &host);
+-		err = br_mcast_offload_map_add(&br->multicast_ctx, &host, src, ifindex, vid);
+-		if (err) {
+-			pr_debug("br_multicast: Failed to add IP-MAC mapping: %d\n", err);
+-		}
+-	}
+-
++	br_mcast_offload_map_add(pmctx, brmctx, skb, src, vid);
+ #endif
++
+ 	switch (ih->type) {
+ 	case IGMP_HOST_MEMBERSHIP_REPORT:
+ 	case IGMPV2_HOST_MEMBERSHIP_REPORT:
+@@ -3975,24 +3966,13 @@ static int br_multicast_ipv6_rcv(struct net_bridge_mcast *brmctx,
+ 	BR_INPUT_SKB_CB(skb)->igmp = mld->mld_type;
+ 
+ #if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
+-
+ 	/*
+ 	 * Add IP-MAC mapping for hardware offload
+ 	 */
+-	if (pmctx && (pmctx->port->flags & BR_MCAST_MCUC_HW_OFFLOAD)) {
+-		int ifindex = pmctx->port->dev->ifindex;
+-		struct net_bridge *br = brmctx->br;
+-		struct br_ip host;
+-
+-		src = eth_hdr(skb)->h_source;
+-		br_mcast_offload_get_br_ip(skb, &host);
+-		err = br_mcast_offload_map_add(&br->multicast_ctx, &host, src, ifindex, vid);
+-		if (err) {
+-			pr_debug("br_multicast: Failed to add IP-MAC mapping: %d\n", err);
+-		}
+-	}
+-
++	src = eth_hdr(skb)->h_source;
++	br_mcast_offload_map_add(pmctx, brmctx, skb, src, vid);
+ #endif
++
+ 	switch (mld->mld_type) {
+ 	case ICMPV6_MGM_REPORT:
+ 		src = eth_hdr(skb)->h_source;
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index 54d83fbbfce2..15914529b071 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -179,6 +179,7 @@ struct net_bridge_mcast {
+ #if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
+ 	struct hlist_head		ip_mac_map[BR_IP_MAC_HASH_SIZE];
+ 	struct hlist_head		shared_mac_state[BR_SHARED_MAC_STATE_HASH_SIZE];
++	struct timer_list		ip_mac_map_timer;
+ #endif
+ #endif /* CONFIG_BRIDGE_IGMP_SNOOPING */
+ };
+diff --git a/net/core/rtnetlink.c b/net/core/rtnetlink.c
+index 0386a4261a67..8a4ed6f551b9 100644
+--- a/net/core/rtnetlink.c
++++ b/net/core/rtnetlink.c
+@@ -6153,6 +6153,11 @@ static int rtnl_stats_set(struct sk_buff *skb, struct nlmsghdr *nlh,
+ 	return 0;
+ }
+ 
++/* Policy for MDB dump request attributes: allow only MDBA_MDB_EHT_DUMP as u32 */
++static const struct nla_policy mdb_dump_policy[MDBA_MAX + 1] = {
++	[MDBA_MDB_EHT_DUMP] = { .type = NLA_U32 },
++};
++
+ static int rtnl_mdb_valid_dump_req(const struct nlmsghdr *nlh,
+ 				   struct netlink_ext_ack *extack)
+ {
+@@ -6178,7 +6183,7 @@ static int rtnl_mdb_valid_dump_req(const struct nlmsghdr *nlh,
+ 		int err;
+ 
+ 		err = nlmsg_parse_deprecated_strict(nlh, sizeof(*bpm), tb,
+-				MDBA_MAX, NULL, extack);
++				MDBA_MAX, mdb_dump_policy, extack);
+ 		if (err)
+ 			return err;
+ 
+-- 
+2.34.1
+

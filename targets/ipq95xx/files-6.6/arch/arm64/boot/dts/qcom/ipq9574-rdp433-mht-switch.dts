@@ -31,6 +31,24 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	regulator_fixed_3p3: s3300 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_3p3";
+	};
+
+	regulator_fixed_0p925: s0925 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <925000>;
+		regulator-max-microvolt = <925000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_0p925";
+	};
+
 	soc@0 {
 		leds {
 			compatible = "gpio-leds";
@@ -67,10 +85,7 @@
 			qcom,id = <5>;
 			reg = <0x3a510000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,phy-mdio-addr = <8>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "usxgmii";
 		};
 
 		dp2 {
@@ -79,10 +94,7 @@
 			qcom,id = <6>;
 			reg = <0x3a514000 0x4000>;
 			qcom,mactype = <1>;
-			qcom,phy-mdio-addr = <0>;
-			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "usxgmii";
 		};
 
 		gmac2:dp3 {
@@ -92,7 +104,6 @@
 			reg = <0x3a001000 0x200>;
 			qcom,mactype = <0>;
 			local-mac-address = [000000000000];
-			phy-mode = "sgmii";
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -304,6 +315,9 @@
 };
 
 &qusb_phy_0 {
+	vdd-supply = <&regulator_fixed_0p925>;
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-dpdm-supply = <&regulator_fixed_3p3>;
 	status = "okay";
 };
 
@@ -350,6 +364,8 @@
 };
 
 &ssphy_0 {
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-supply = <&regulator_fixed_0p925>;
 	status = "okay";
 };
 
@@ -378,6 +394,13 @@
 			regulator-min-microvolt = <1>;
 			regulator-max-microvolt = <9>;
 			regulator-always-on;
+		};
+
+		mp5496_l5: l5 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
 		};
 	};
 };
@@ -666,16 +689,25 @@
 					switch_handle = <&switch1>;
 					switch_cpu_port = <0>;
 				};
+				fixed-link {
+					speed = <2500>;
+					full-duplex;
+					pause;
+				};
 			};
 			port@4 {
 				port_id = <5>;
 				phy_address = <8>;
 				ethernet-phy-ieee802.3-c45;
+				phy-handle = <&phy4>;
+				phy-mode = "usxgmii";
 			};
 			port@5 {
 				port_id = <6>;
 				phy_address = <0>;
 				ethernet-phy-ieee802.3-c45;
+				phy-handle = <&phy5>;
+				phy-mode = "usxgmii";
 			};
 		};
 

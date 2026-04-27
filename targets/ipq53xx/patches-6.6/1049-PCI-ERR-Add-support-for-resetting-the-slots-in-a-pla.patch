@@ -1,0 +1,77 @@
+From 5f5963de32a2aea8ce5892338cd37620b528793f Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+Date: Thu, 17 Apr 2025 22:46:28 +0530
+Subject: [PATCH] PCI/ERR: Add support for resetting the slots in a platform
+ specific way
+
+Some host bridge devices require resetting the slots in a platform specific
+way to recover them from error conditions such as Fatal AER errors, Link
+Down etc... So introduce pci_host_bridge::reset_slot callback and call it
+from pcibios_reset_secondary_bus() if available.
+
+The 'reset_slot' callback is responsible for resetting the given slot
+referenced by the 'pci_dev' pointer in a platform specific way and bring it
+back to the working state if possible. If any error occurs during the slot
+reset operation, relevant errno should be returned.
+
+Change-Id: I55dd2dea21ddfe26defd5cb71c7ce1abd8d6db5c
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+---
+ drivers/pci/pci.c      | 10 ++++++++++
+ drivers/pci/pcie/err.c |  5 -----
+ include/linux/pci.h    |  1 +
+ 3 files changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index 095fa1910d36..ea3d66196f74 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -5249,6 +5249,16 @@ void pci_reset_secondary_bus(struct pci_dev *dev)
+ 
+ void __weak pcibios_reset_secondary_bus(struct pci_dev *dev)
+ {
++	struct pci_host_bridge *host = pci_find_host_bridge(dev->bus);
++	int ret;
++
++	if (host->reset_slot) {
++		ret = host->reset_slot(host, dev);
++		if (ret)
++			pci_err(dev, "failed to reset slot: %d\n", ret);
++		return;
++	}
++
+ 	pci_reset_secondary_bus(dev);
+ }
+ 
+diff --git a/drivers/pci/pcie/err.c b/drivers/pci/pcie/err.c
+index 286ddc8be78d..ba0292801309 100644
+--- a/drivers/pci/pcie/err.c
++++ b/drivers/pci/pcie/err.c
+@@ -240,11 +240,6 @@ pci_ers_result_t pcie_do_recovery(struct pci_dev *dev,
+ 	}
+ 
+ 	if (status == PCI_ERS_RESULT_NEED_RESET) {
+-		/*
+-		 * TODO: Should call platform-specific
+-		 * functions to reset slot before calling
+-		 * drivers' slot_reset callbacks?
+-		 */
+ 		status = PCI_ERS_RESULT_RECOVERED;
+ 		pci_dbg(bridge, "broadcast slot_reset message\n");
+ 		pci_walk_bridge(bridge, report_slot_reset, &status);
+diff --git a/include/linux/pci.h b/include/linux/pci.h
+index d690608eb0fc..3296c7a73380 100644
+--- a/include/linux/pci.h
++++ b/include/linux/pci.h
+@@ -573,6 +573,7 @@ struct pci_host_bridge {
+ 	u8 (*swizzle_irq)(struct pci_dev *, u8 *); /* Platform IRQ swizzler */
+ 	int (*map_irq)(const struct pci_dev *, u8, u8);
+ 	void (*release_fn)(struct pci_host_bridge *);
++	int (*reset_slot)(struct pci_host_bridge *bridge, struct pci_dev *dev);
+ 	void		*release_data;
+ 	unsigned int	ignore_reset_delay:1;	/* For entire hierarchy */
+ 	unsigned int	no_ext_tags:1;		/* No Extended Tags */
+-- 
+2.34.1
+

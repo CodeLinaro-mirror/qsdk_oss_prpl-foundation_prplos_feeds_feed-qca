@@ -1,0 +1,29 @@
+From 524ea0296d93731307f98c83ee3f59383214cbcc Mon Sep 17 00:00:00 2001
+From: Ananya Ghosh <ananghos@qti.qualcomm.com>
+Date: Thu, 2 Apr 2026 17:02:56 +0530
+Subject: [PATCH] drivers: soc: qcom: llcc-qcom: Disable WRSC for SCID 2 and 3
+
+Change-Id: I1697ccd7a652224d8d1545bb5c588fb09a604764
+Signed-off-by: Ananya Ghosh <ananghos@qti.qualcomm.com>
+---
+ drivers/soc/qcom/llcc-qcom.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/soc/qcom/llcc-qcom.c b/drivers/soc/qcom/llcc-qcom.c
+index 2e7f8cb41047..de17188ad7a3 100644
+--- a/drivers/soc/qcom/llcc-qcom.c
++++ b/drivers/soc/qcom/llcc-qcom.c
+@@ -412,8 +412,8 @@ static const struct llcc_slice_config ipq5424_data[] =  {
+ 
+ static const struct llcc_slice_config ipq9650_data[] =  {
+ 	/* SCID 2 - SKB, SKB data (APSS Core 0,1,2) */
+-	{LLCC_APSS,       2,   768, 1, 1,  0x0FFF, 0x0,  0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, },
+-	{LLCC_AI,         3,   128, 3, 1,  0x0FFF, 0x0,  0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, },
++	{LLCC_APSS,       2,   768, 1, 1,  0x0FFF, 0x0,  0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, },
++	{LLCC_AI,         3,   128, 3, 1,  0x0FFF, 0x0,  0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, },
+ };
+ 
+ static const struct llcc_edac_reg_offset llcc_v1_edac_reg_offset = {
+-- 
+2.34.1
+

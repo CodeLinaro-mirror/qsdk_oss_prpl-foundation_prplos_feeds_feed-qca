@@ -1,0 +1,32 @@
+From 68e88ab5480dd82588ff21e36949c03183bc6041 Mon Sep 17 00:00:00 2001
+From: Luo Jie <luoj@qti.qualcomm.com>
+Date: Mon, 18 Aug 2025 14:29:11 +0800
+Subject: [PATCH] dt-bindings: clock: qcom: Add CMN PLL support for IPQ5332 SoC
+
+Add device tree bindings for the CMN PLL block in IPQ5332 SoC, which shares
+similarities with IPQ9574 but has different output clock frequencies.
+
+Add a new header file to export CMN PLL output clock specifiers for IPQ5332
+SoC.
+
+Change-Id: I4c9d6ea3a08ca6ab6de1a0991584f71bfd80c714
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ .../devicetree/bindings/clock/qcom,ipq9574-cmn-pll.yaml          | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/clock/qcom,ipq9574-cmn-pll.yaml b/Documentation/devicetree/bindings/clock/qcom,ipq9574-cmn-pll.yaml
+index 817d51135fbf..5bf29fcd8501 100644
+--- a/Documentation/devicetree/bindings/clock/qcom,ipq9574-cmn-pll.yaml
++++ b/Documentation/devicetree/bindings/clock/qcom,ipq9574-cmn-pll.yaml
+@@ -25,6 +25,7 @@ properties:
+   compatible:
+     enum:
+       - qcom,ipq5018-cmn-pll
++      - qcom,ipq5332-cmn-pll
+       - qcom,ipq5424-cmn-pll
+       - qcom,ipq9574-cmn-pll
+ 
+-- 
+2.34.1
+

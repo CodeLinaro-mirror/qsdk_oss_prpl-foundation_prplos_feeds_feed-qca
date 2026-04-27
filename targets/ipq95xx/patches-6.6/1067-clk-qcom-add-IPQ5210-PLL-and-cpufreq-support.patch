@@ -1,0 +1,90 @@
+From 2b6b94e8a2f909d4719c317d089558dd364c2af0 Mon Sep 17 00:00:00 2001
+From: Timple Raj M <timple@qti.qualcomm.com>
+Date: Tue, 10 Feb 2026 22:11:45 +0530
+Subject: [PATCH] clk: qcom: add IPQ5210 PLL and cpufreq support
+
+Add the Huayra PLL configuration and DT match entry
+for the IPQ5210 APSS clock. Extend the cpufreq
+NVMEM driver to support IPQ5210 and related SoCs
+that use the same speedbin scheme.
+
+Change-Id: I14a2e79b23534953b1fff1b3cdb1e323f354c2f7
+Signed-off-by: Timple Raj M <timple@qti.qualcomm.com>
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/clk/qcom/apss-ipq-pll.c      | 19 +++++++++++++++++++
+ drivers/cpufreq/qcom-cpufreq-nvmem.c |  8 ++++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/drivers/clk/qcom/apss-ipq-pll.c b/drivers/clk/qcom/apss-ipq-pll.c
+index ccf5275bf46e..f90c879b44ba 100644
+--- a/drivers/clk/qcom/apss-ipq-pll.c
++++ b/drivers/clk/qcom/apss-ipq-pll.c
+@@ -128,12 +128,30 @@ static const struct alpha_pll_config ipq9574_pll_config = {
+ 	.test_ctl_hi_val = 0x4000,
+ };
+ 
++static const struct alpha_pll_config ipq5210_pll_config = {
++	.l = 0x32,
++	.config_ctl_val = 0x4001075B,
++	.config_ctl_hi_val = 0x6,
++	.early_output_mask = BIT(3),
++	.aux2_output_mask = BIT(2),
++	.aux_output_mask = BIT(1),
++	.main_output_mask = BIT(0),
++	.test_ctl_val = 0x0,
++	.test_ctl_hi_val = 0x400003,
++};
++
+ struct apss_pll_data {
+ 	int pll_type;
+ 	struct clk_alpha_pll *pll;
+ 	const struct alpha_pll_config *pll_config;
+ };
+ 
++static struct apss_pll_data ipq5210_pll_data = {
++	.pll_type = CLK_ALPHA_PLL_TYPE_HUAYRA,
++	.pll = &ipq_pll_huayra,
++	.pll_config = &ipq5210_pll_config,
++};
++
+ static struct apss_pll_data ipq5332_pll_data = {
+ 	.pll_type = CLK_ALPHA_PLL_TYPE_STROMER_PLUS,
+ 	.pll = &ipq_pll_stromer_plus,
+@@ -225,6 +243,7 @@ static int apss_ipq_pll_probe(struct platform_device *pdev)
+ }
+ 
+ static const struct of_device_id apss_ipq_pll_match_table[] = {
++	{ .compatible = "qcom,ipq5210-a53pll", .data = &ipq5210_pll_data },
+ 	{ .compatible = "qcom,ipq5332-a53pll", .data = &ipq5332_pll_data },
+ 	{ .compatible = "qcom,ipq6018-a53pll", .data = &ipq6018_pll_data },
+ 	{ .compatible = "qcom,ipq8074-a53pll", .data = &ipq8074_pll_data },
+diff --git a/drivers/cpufreq/qcom-cpufreq-nvmem.c b/drivers/cpufreq/qcom-cpufreq-nvmem.c
+index 8bca2755b05b..9226a0b1c2bc 100644
+--- a/drivers/cpufreq/qcom-cpufreq-nvmem.c
++++ b/drivers/cpufreq/qcom-cpufreq-nvmem.c
+@@ -169,6 +169,13 @@ static int qcom_cpufreq_kryo_name_version(struct device *cpu_dev,
+ 	case QCOM_ID_IPQ5404:
+ 		drv->versions =  (*speedbin != 0x3b) ? BIT(0) : BIT(1);
+ 		break;
++	case QCOM_ID_IPQ5200:
++	case QCOM_ID_IPQ5210:
++	case QCOM_ID_QCF2200:
++	case QCOM_ID_QCF3200:
++	case QCOM_ID_QCF3210:
++		drv->versions =  (~(*speedbin) != 0x32) ? BIT(0) : BIT(1);
++		break;
+ 	case QCOM_ID_MSM8996SG:
+ 	case QCOM_ID_APQ8096SG:
+ 		drv->versions = 1 << ((unsigned int)(*speedbin) + 4);
+@@ -368,6 +375,7 @@ static const struct of_device_id qcom_cpufreq_match_list[] __initconst = {
+ 	{ .compatible = "qcom,apq8096", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,msm8996", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,qcs404", .data = &match_data_qcs404 },
++	{ .compatible = "qcom,ipq5210", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,ipq5332", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,ipq5424", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,ipq8064", .data = &match_data_krait },
+-- 
+2.34.1
+

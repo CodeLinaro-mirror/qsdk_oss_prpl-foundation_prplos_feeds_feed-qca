@@ -1,0 +1,37 @@
+From ec01a1866cd4b5f8a62d6c4408a258b9b7571cec Mon Sep 17 00:00:00 2001
+From: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+Date: Fri, 13 Mar 2026 11:12:46 +0530
+Subject: [PATCH] drivers: cpufreq: nvmem: add ipq9650 support
+
+Change-Id: I34b1516f59a3ee205d652d982717ac578b69ad63
+Signed-off-by: Manikanta Mylavarapu <mmanikan@qti.qualcomm.com>
+---
+ drivers/cpufreq/qcom-cpufreq-nvmem.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/cpufreq/qcom-cpufreq-nvmem.c b/drivers/cpufreq/qcom-cpufreq-nvmem.c
+index 9226a0b1c2bc..a80f55ad9152 100644
+--- a/drivers/cpufreq/qcom-cpufreq-nvmem.c
++++ b/drivers/cpufreq/qcom-cpufreq-nvmem.c
+@@ -176,6 +176,10 @@ static int qcom_cpufreq_kryo_name_version(struct device *cpu_dev,
+ 	case QCOM_ID_QCF3210:
+ 		drv->versions =  (~(*speedbin) != 0x32) ? BIT(0) : BIT(1);
+ 		break;
++	case QCOM_ID_IPQ9650:
++	case QCOM_ID_IPQ9620:
++		drv->versions =  (*speedbin != 0x4b) ? BIT(0) : BIT(1);
++		break;
+ 	case QCOM_ID_MSM8996SG:
+ 	case QCOM_ID_APQ8096SG:
+ 		drv->versions = 1 << ((unsigned int)(*speedbin) + 4);
+@@ -375,6 +379,7 @@ static const struct of_device_id qcom_cpufreq_match_list[] __initconst = {
+ 	{ .compatible = "qcom,apq8096", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,msm8996", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,qcs404", .data = &match_data_qcs404 },
++	{ .compatible = "qcom,ipq9650", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,ipq5210", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,ipq5332", .data = &match_data_kryo },
+ 	{ .compatible = "qcom,ipq5424", .data = &match_data_kryo },
+-- 
+2.34.1
+

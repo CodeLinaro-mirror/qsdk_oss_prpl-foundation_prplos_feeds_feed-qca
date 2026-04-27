@@ -1,0 +1,67 @@
+From 41d509e196413e91ec4ae33624a74faff49c7f72 Mon Sep 17 00:00:00 2001
+From: Lokitha Thangavel <lthangav@qti.qualcomm.com>
+Date: Tue, 16 Dec 2025 11:16:27 +0530
+Subject: [PATCH] net: allow driver to select valid 320 MHz center frequency on
+ 6 GHz when ccfs is not configured
+
+When an AP is configured on 6 GHz with 320 MHz bandwidth without
+a center frequency segment (ccfs) configuration, the hostapd script
+currently selects the nearest center_freq1. This can result in
+choosing a disabled channel as center_freq1 or a center_freq1 which
+belongs to a disabled channel block, causing the kernel to reject
+the start_ap request. Consequently, the AP fails to come up on the
+given primary channel. The issue occurs when the 320 MHz block of the
+selcted center_freq1 contains disabled channels.
+
+To address this issue, modify the kernel logic to allow the driver
+to select a valid 320 MHz center frequency when ccfs is not configured.
+Specifically:
+  - If bandwidth is 320 MHz and band is 6 GHz, set center_freq1 to 0.
+  - Pass this value to the driver, enabling it to choose an valid
+    center frequency for the configuration.
+
+Change-Id: Ibec7dc081fc5e02ae9634193c5491f243c55c40a
+Signed-off-by: Lokitha Thangavel <lthangav@qti.qualcomm.com>
+---
+ net/wireless/chan.c | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/net/wireless/chan.c b/net/wireless/chan.c
+index 7f11b78a2506..dda826119f1b 100644
+--- a/net/wireless/chan.c
++++ b/net/wireless/chan.c
+@@ -280,7 +280,8 @@ bool cfg80211_chandef_valid(const struct cfg80211_chan_def *chandef)
+ 		/* all checked above */
+ 		break;
+ 	case NL80211_CHAN_WIDTH_320:
+-		if (chandef->center_freq1 == control_freq + 150 ||
++		if (chandef->center_freq1 == 0 ||
++		    chandef->center_freq1 == control_freq + 150 ||
+ 		    chandef->center_freq1 == control_freq + 130 ||
+ 		    chandef->center_freq1 == control_freq + 110 ||
+ 		    chandef->center_freq1 == control_freq + 90 ||
+@@ -991,12 +992,18 @@ static bool cfg80211_secondary_chans_ok(struct wiphy *wiphy,
+ 	struct ieee80211_channel *c;
+ 	u32 freq, start_freq, end_freq;
+ 
++	if (bandwidth == 320) {
++		if (band == NL80211_BAND_5GHZ)
++			puncture_bitmap = FIXED_PUNCTURE_PATTERN;
++		else if (band == NL80211_BAND_6GHZ && center_freq == 0)
++			/* If the user does not specify a center frequency,
++			 * allow the driver to select a valid 320 MHz center frequency */
++			return true;
++	}
++
+ 	start_freq = cfg80211_get_start_freq(center_freq, bandwidth);
+ 	end_freq = cfg80211_get_end_freq(center_freq, bandwidth);
+ 
+-	if ((band == NL80211_BAND_5GHZ) && (bandwidth == 320))
+-		puncture_bitmap = FIXED_PUNCTURE_PATTERN;
+-
+ 	for (freq = start_freq; freq <= end_freq; freq += MHZ_TO_KHZ(20)) {
+ 		if (DISABLED_SUB_CHAN(freq, start_freq, puncture_bitmap))
+ 			continue;
+-- 
+2.34.1
+

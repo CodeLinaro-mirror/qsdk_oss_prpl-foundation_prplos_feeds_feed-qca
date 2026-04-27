@@ -1,0 +1,112 @@
+From 5441a9f3e2817105205d87d53be2aca66b5909cb Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Wed, 10 Dec 2025 16:14:02 +0530
+Subject: [PATCH] mm: kfence: use %px to print addresses instead of %p
+
+Pointers printed with %p are now hashed by default.
+Kfence needs the actual address. So, Use %px instead of
+%p to print addresses.
+
+Also, remove no_hash_pointers check and print the canary
+by default in memory corruption cases.
+
+Change-Id: Ief5ea7f7fb4bb509da33d033230f6f71730ed1cd
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ mm/kfence/core.c        |  2 +-
+ mm/kfence/kfence_test.c |  2 +-
+ mm/kfence/report.c      | 16 +++++++---------
+ 3 files changed, 9 insertions(+), 11 deletions(-)
+
+diff --git a/mm/kfence/core.c b/mm/kfence/core.c
+index d057ee94d80d..4721a37e3d9c 100644
+--- a/mm/kfence/core.c
++++ b/mm/kfence/core.c
+@@ -896,7 +896,7 @@ static void kfence_init_enable(void)
+ 	WRITE_ONCE(kfence_enabled, true);
+ 	queue_delayed_work(system_unbound_wq, &kfence_timer, 0);
+ 
+-	pr_info("initialized - using %lu bytes for %d objects at 0x%p-0x%p\n", KFENCE_POOL_SIZE,
++	pr_info("initialized - using %lu bytes for %d objects at 0x%px-0x%px\n", KFENCE_POOL_SIZE,
+ 		CONFIG_KFENCE_NUM_OBJECTS, (void *)__kfence_pool,
+ 		(void *)(__kfence_pool + KFENCE_POOL_SIZE));
+ }
+diff --git a/mm/kfence/kfence_test.c b/mm/kfence/kfence_test.c
+index 95b2b84c296d..446a3cda926b 100644
+--- a/mm/kfence/kfence_test.c
++++ b/mm/kfence/kfence_test.c
+@@ -162,7 +162,7 @@ static bool report_matches(const struct expect_report *r)
+ 		break;
+ 	}
+ 
+-	cur += scnprintf(cur, end - cur, " 0x%p", (void *)addr);
++	cur += scnprintf(cur, end - cur, " 0x%px", (void *)addr);
+ 
+ 	spin_lock_irqsave(&observed.lock, flags);
+ 	if (!report_available())
+diff --git a/mm/kfence/report.c b/mm/kfence/report.c
+index c509aed326ce..84cef917c98f 100644
+--- a/mm/kfence/report.c
++++ b/mm/kfence/report.c
+@@ -139,7 +139,7 @@ void kfence_print_object(struct seq_file *seq, const struct kfence_metadata *met
+ 		return;
+ 	}
+ 
+-	seq_con_printf(seq, "kfence-#%td: 0x%p-0x%p, size=%d, cache=%s\n\n",
++	seq_con_printf(seq, "kfence-#%td: 0x%px-0x%px, size=%d, cache=%s\n\n",
+ 		       meta - kfence_metadata, (void *)start, (void *)(start + size - 1),
+ 		       size, (cache && cache->name) ? cache->name : "<destroyed>");
+ 
+@@ -169,10 +169,8 @@ static void print_diff_canary(unsigned long address, size_t bytes_to_show,
+ 	for (cur = (const u8 *)address; cur < end; cur++) {
+ 		if (*cur == KFENCE_CANARY_PATTERN_U8(cur))
+ 			pr_cont(" .");
+-		else if (no_hash_pointers)
++		else
+ 			pr_cont(" 0x%02x", *cur);
+-		else /* Do not leak kernel memory in non-debug builds. */
+-			pr_cont(" !");
+ 	}
+ 	pr_cont(" ]");
+ }
+@@ -222,7 +220,7 @@ void kfence_report_error(unsigned long address, bool is_write, struct pt_regs *r
+ 
+ 		pr_err("BUG: KFENCE: out-of-bounds %s in %pS\n\n", get_access_type(is_write),
+ 		       (void *)stack_entries[skipnr]);
+-		pr_err("Out-of-bounds %s at 0x%p (%luB %s of kfence-#%td):\n",
++		pr_err("Out-of-bounds %s at 0x%px (%luB %s of kfence-#%td):\n",
+ 		       get_access_type(is_write), (void *)address,
+ 		       left_of_object ? meta->addr - address : address - meta->addr,
+ 		       left_of_object ? "left" : "right", object_index);
+@@ -231,24 +229,24 @@ void kfence_report_error(unsigned long address, bool is_write, struct pt_regs *r
+ 	case KFENCE_ERROR_UAF:
+ 		pr_err("BUG: KFENCE: use-after-free %s in %pS\n\n", get_access_type(is_write),
+ 		       (void *)stack_entries[skipnr]);
+-		pr_err("Use-after-free %s at 0x%p (in kfence-#%td):\n",
++		pr_err("Use-after-free %s at 0x%px (in kfence-#%td):\n",
+ 		       get_access_type(is_write), (void *)address, object_index);
+ 		break;
+ 	case KFENCE_ERROR_CORRUPTION:
+ 		pr_err("BUG: KFENCE: memory corruption in %pS\n\n", (void *)stack_entries[skipnr]);
+-		pr_err("Corrupted memory at 0x%p ", (void *)address);
++		pr_err("Corrupted memory at 0x%px ", (void *)address);
+ 		print_diff_canary(address, 16, meta);
+ 		pr_cont(" (in kfence-#%td):\n", object_index);
+ 		break;
+ 	case KFENCE_ERROR_INVALID:
+ 		pr_err("BUG: KFENCE: invalid %s in %pS\n\n", get_access_type(is_write),
+ 		       (void *)stack_entries[skipnr]);
+-		pr_err("Invalid %s at 0x%p:\n", get_access_type(is_write),
++		pr_err("Invalid %s at 0x%px:\n", get_access_type(is_write),
+ 		       (void *)address);
+ 		break;
+ 	case KFENCE_ERROR_INVALID_FREE:
+ 		pr_err("BUG: KFENCE: invalid free in %pS\n\n", (void *)stack_entries[skipnr]);
+-		pr_err("Invalid free of 0x%p (in kfence-#%td):\n", (void *)address,
++		pr_err("Invalid free of 0x%px (in kfence-#%td):\n", (void *)address,
+ 		       object_index);
+ 		break;
+ 	}
+-- 
+2.34.1
+

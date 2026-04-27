@@ -1,0 +1,149 @@
+From 362a1a2d7b380d9f7e655bd9cac3f090e1c94adc Mon Sep 17 00:00:00 2001
+From: Swati Singh <swasing@qti.qualcomm.com>
+Date: Wed, 18 Mar 2026 11:28:25 +0530
+Subject: [PATCH] [linux] Enable Port Isolation in Linux.
+
+Port isolation is enabled for downstream PON traffic.
+The skb_ext metadata includes the sub_br_id,
+which is referenced in the br_flood function to
+restrict packet flooding to interfaces within
+the same bridge domain.
+
+Change-Id: Id0fbbf02ba666380c12adf3fc911547768aab231
+Signed-off-by: Swati Singh <swasing@qti.qualcomm.com>
+---
+ include/linux/skbuff.h  | 12 ++++++++++++
+ net/bridge/br_forward.c | 22 ++++++++++++++++------
+ net/bridge/br_input.c   | 24 +++++++++++++++++-------
+ net/core/skbuff.c       |  3 +++
+ 4 files changed, 48 insertions(+), 13 deletions(-)
+
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 91b6f4e87ee1..fca8fcf9fcfd 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -352,6 +352,15 @@ struct sk_buff_head {
+ 	spinlock_t	lock;
+ };
+ 
++#ifdef CONFIG_IPQ_PON
++struct gem_skb_ext {
++	u32 sub_br_id;
++	u8 gem_id;
++	u8 flood;
++	u8 __pad[2];
++};
++#endif
++
+ struct sk_buff;
+ 
+ #ifndef CONFIG_MAX_SKB_FRAGS
+@@ -4806,6 +4815,9 @@ enum skb_ext_id {
+ #endif
+ #if IS_ENABLED(CONFIG_MCTP_FLOWS)
+ 	SKB_EXT_MCTP,
++#endif
++#ifdef CONFIG_IPQ_PON
++	SKB_EXT_GEM,
+ #endif
+ 	SKB_EXT_NUM, /* must be last */
+ };
+diff --git a/net/bridge/br_forward.c b/net/bridge/br_forward.c
+index 4acaa2fd3915..89a2f31864c6 100644
+--- a/net/bridge/br_forward.c
++++ b/net/bridge/br_forward.c
+@@ -213,7 +213,9 @@ void br_flood(struct net_bridge *br, struct sk_buff *skb,
+ 	struct net_bridge_port *srcp = br_port_get_rcu(skb->dev);
+ 	struct net_bridge_port *prev = NULL;
+ 	struct net_bridge_port *p;
+-
++#ifdef CONFIG_IPQ_PON
++	struct gem_skb_ext *gem_ext = skb_ext_find(skb, SKB_EXT_GEM);
++#endif
+ 	br_tc_skb_miss_set(skb, pkt_type != BR_PKT_BROADCAST);
+ 
+ 	list_for_each_entry_rcu(p, &br->port_list, list) {
+@@ -248,11 +250,19 @@ void br_flood(struct net_bridge *br, struct sk_buff *skb,
+ 			continue;
+ 
+ 		/* Do not flood to non-upstream port and to ports in different sub bridge */
+-		if (srcp &&
+-			!((p->flags & BR_UPSTREAM_PORT) || (srcp->flags & BR_UPSTREAM_PORT))
+-			&& (p->sub_br_id != srcp->sub_br_id))
+-			continue;
+-
++		if (!local_rcv && srcp) {
++			if (!((p->flags & BR_UPSTREAM_PORT) || (srcp->flags & BR_UPSTREAM_PORT))) {
++				if (p->sub_br_id != srcp->sub_br_id)
++					continue;
++			}
++#ifdef CONFIG_IPQ_PON
++			/* Flood if gemport sub bridge id is same as dest bridge id.*/
++			else if (gem_ext && !(gem_ext->flood)) {
++				if (p->sub_br_id != gem_ext->sub_br_id)
++					continue;
++			}
++#endif
++		}
+ 
+ 		prev = maybe_deliver(prev, p, skb, local_orig);
+ 		if (IS_ERR(prev))
+diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
+index 7aab36d438a3..c59df3fd87c8 100644
+--- a/net/bridge/br_input.c
++++ b/net/bridge/br_input.c
+@@ -99,6 +99,9 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+ 	br_get_dst_hook_t *get_dst_hook = rcu_dereference(br_get_dst_hook);
+ 	u16 vid = 0;
+ 	u8 state;
++#ifdef CONFIG_IPQ_PON
++	struct gem_skb_ext *gem_ext = skb_ext_find(skb, SKB_EXT_GEM);
++#endif
+ 
+ 	if (!p)
+ 		goto drop;
+@@ -231,13 +234,20 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+ 			/* TODO: Check if sub bridge concept apply to hyfi */
+ 		} else {
+ 			dst = br_fdb_find_rcu(br, eth_hdr(skb)->h_dest, vid);
+-
+-			/* Restrict forwarding to/from upstream port & within same sub bridge */
+-			if (dst && dst->dst &&
+-				!((p->flags & BR_UPSTREAM_PORT) || (dst->dst->flags & BR_UPSTREAM_PORT))
+-				&& (p->sub_br_id != dst->dst->sub_br_id))
+-				dst = NULL;
+-
++			if (!local_rcv && dst && dst->dst) {
++				/* Do not flood to non-upstream port and to ports in different sub bridge */
++				if (!((p->flags & BR_UPSTREAM_PORT) || (dst->dst->flags & BR_UPSTREAM_PORT))) {
++					if (dst->dst->sub_br_id !=  p->sub_br_id)
++						dst = NULL;
++				}
++#ifdef CONFIG_IPQ_PON
++				/*Forward if gemport sub bridge id is same as dest bridge id.*/
++				else if (gem_ext && !(gem_ext->flood)) {
++					if (dst->dst->sub_br_id != gem_ext->sub_br_id)
++						dst = NULL;
++				}
++#endif
++			}
+ 		}
+ 		break;
+ 	default:
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index d36f2ae48eb8..fb59a5365017 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -5175,6 +5175,9 @@ static const u8 skb_ext_type_len[] = {
+ #if IS_ENABLED(CONFIG_MCTP_FLOWS)
+ 	[SKB_EXT_MCTP] = SKB_EXT_CHUNKSIZEOF(struct mctp_flow),
+ #endif
++#ifdef CONFIG_IPQ_PON
++	[SKB_EXT_GEM] = SKB_EXT_CHUNKSIZEOF(struct gem_skb_ext),
++#endif
+ };
+ 
+ static __always_inline unsigned int skb_ext_total_length(void)
+-- 
+2.34.1
+

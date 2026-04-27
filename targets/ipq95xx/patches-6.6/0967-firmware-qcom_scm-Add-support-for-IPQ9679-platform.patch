@@ -1,0 +1,43 @@
+From ed6d88a4fe4790af77aacdad55a9d8f94b0de478 Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Mon, 27 Oct 2025 12:20:54 +0530
+Subject: [PATCH] firmware: qcom_scm: Add support for IPQ9679 platform
+
+Add compatible for IPQ9679 platform. While at it,
+reorder the ipq platform compatibles.
+
+Change-Id: I6ab7c61ddb025c2b9f0da10f192bd4beea105c31
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/firmware/qcom_scm.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
+index 03a8dae86518..536cf3507310 100644
+--- a/drivers/firmware/qcom_scm.c
++++ b/drivers/firmware/qcom_scm.c
+@@ -3593,6 +3593,10 @@ struct scm_priv_data ipq5424_data = {
+ 	.milestone_mask = BIT(8)
+ };
+ 
++struct scm_priv_data ipq9679_data = {
++	.milestone_mask = BIT(8)
++};
++
+ static const struct of_device_id qcom_scm_dt_match[] = {
+ 	{ .compatible = "qcom,scm" },
+ 
+@@ -3600,8 +3604,9 @@ static const struct of_device_id qcom_scm_dt_match[] = {
+ 	{ .compatible = "qcom,scm-apq8064" },
+ 	{ .compatible = "qcom,scm-apq8084" },
+ 	{ .compatible = "qcom,scm-ipq4019" },
+-	{ .compatible = "qcom,scm-ipq9574", .data = &ipq9574_data},
+ 	{ .compatible = "qcom,scm-ipq5424", .data = &ipq5424_data},
++	{ .compatible = "qcom,scm-ipq9574", .data = &ipq9574_data},
++	{ .compatible = "qcom,scm-ipq9679", .data = &ipq9679_data },
+ 	{ .compatible = "qcom,scm-msm8953" },
+ 	{ .compatible = "qcom,scm-msm8974" },
+ 	{ .compatible = "qcom,scm-msm8996" },
+-- 
+2.34.1
+

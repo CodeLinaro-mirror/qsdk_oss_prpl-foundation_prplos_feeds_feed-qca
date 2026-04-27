@@ -10,11 +10,11 @@ Signed-off-by: Murat Sezgin <msezgin@codeaurora.org>
  net/8021q/vlan_core.c   | 20 ++++++++++++++++++++
  2 files changed, 29 insertions(+)
 
-diff --git a/include/linux/if_vlan.h b/include/linux/if_vlan.h
-index 7f314301b2ab..7083bf4d1420 100644
---- a/include/linux/if_vlan.h
-+++ b/include/linux/if_vlan.h
-@@ -143,6 +143,9 @@ extern struct net_device *__vlan_find_dev_deep_rcu(struct net_device *real_dev,
+Index: linux-6.6.116/include/linux/if_vlan.h
+===================================================================
+--- linux-6.6.116.orig/include/linux/if_vlan.h	2026-01-23 21:38:51.601172077 +0530
++++ linux-6.6.116/include/linux/if_vlan.h	2026-01-23 21:51:10.206001847 +0530
+@@ -138,6 +138,9 @@
  extern int vlan_for_each(struct net_device *dev,
  			 int (*action)(struct net_device *dev, int vid,
  				       void *arg), void *arg);
@@ -24,24 +24,24 @@ index 7f314301b2ab..7083bf4d1420 100644
  extern struct net_device *vlan_dev_real_dev(const struct net_device *dev);
  extern struct net_device *vlan_dev_next_dev(const struct net_device *dev);
  extern u16 vlan_dev_vlan_id(const struct net_device *dev);
-@@ -237,6 +240,12 @@ extern void vlan_vids_del_by_dev(struct net_device *dev,
+@@ -237,6 +240,12 @@
  extern bool vlan_uses_dev(const struct net_device *dev);
  
  #else
 +static inline void __vlan_dev_update_accel_stats(struct net_device *dev,
-+					   struct rtnl_link_stats64 *stats)
++						struct rtnl_link_stats64 *stats)
 +{
 +
 +}
 +
- static inline struct net_device *
- __vlan_find_dev_deep_rcu(struct net_device *real_dev,
- 		     __be16 vlan_proto, u16 vlan_id)
-diff --git a/net/8021q/vlan_core.c b/net/8021q/vlan_core.c
-index ab4276e4a410..9e4296aabec6 100644
---- a/net/8021q/vlan_core.c
-+++ b/net/8021q/vlan_core.c
-@@ -72,6 +72,26 @@ bool vlan_do_receive(struct sk_buff **skbp)
+ static inline bool is_vlan_dev(const struct net_device *dev)
+ {
+ 	return false;
+Index: linux-6.6.116/net/8021q/vlan_core.c
+===================================================================
+--- linux-6.6.116.orig/net/8021q/vlan_core.c	2026-01-23 21:38:51.601172077 +0530
++++ linux-6.6.116/net/8021q/vlan_core.c	2026-01-23 21:38:51.601172077 +0530
+@@ -72,6 +72,26 @@
  	return true;
  }
  
@@ -68,6 +68,3 @@ index ab4276e4a410..9e4296aabec6 100644
  /* Must be invoked with rcu_read_lock. */
  struct net_device *__vlan_find_dev_deep_rcu(struct net_device *dev,
  					__be16 vlan_proto, u16 vlan_id)
--- 
-2.34.1
-

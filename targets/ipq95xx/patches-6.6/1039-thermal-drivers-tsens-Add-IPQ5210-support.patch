@@ -1,0 +1,66 @@
+From bacaf66794f799a7508d5cf1f08879fd8c33ffff Mon Sep 17 00:00:00 2001
+From: Timple Raj M <timple@qti.qualcomm.com>
+Date: Mon, 26 Jan 2026 18:59:34 +0530
+Subject: [PATCH] thermal/drivers/tsens: Add IPQ5210 support
+
+IPQ5210 uses tsens v2.3.1 IP and it is having combined interrupt.
+This SoC does not have RPM, kernel needs to take care of sensor
+enablement and calibration similar to IPQ5332. Hence reuse IPQ5332
+ops.
+
+Change-Id: I737063ffac15f51493e3a1252601cd8602bb4e45
+Signed-off-by: Timple Raj M <timple@qti.qualcomm.com>
+---
+ drivers/thermal/qcom/tsens-v2.c | 8 ++++++++
+ drivers/thermal/qcom/tsens.c    | 3 +++
+ drivers/thermal/qcom/tsens.h    | 2 +-
+ 3 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/thermal/qcom/tsens-v2.c b/drivers/thermal/qcom/tsens-v2.c
+index 7c934a11439f..535fadd0e045 100644
+--- a/drivers/thermal/qcom/tsens-v2.c
++++ b/drivers/thermal/qcom/tsens-v2.c
+@@ -281,6 +281,14 @@ static const struct tsens_ops ops_ipq5332 = {
+ 	.calibrate	= tsens_v2_calibration,
+ };
+ 
++struct tsens_plat_data data_ipq5210 = {
++	.num_sensors	= 5,
++	.ops		= &ops_ipq5332,
++	.hw_ids		= (unsigned int []){11, 12, 13, 14, 15},
++	.feat		= &ipq5332_feat,
++	.fields		= tsens_v2_regfields,
++};
++
+ struct tsens_plat_data data_ipq5332 = {
+ 	.num_sensors	= 5,
+ 	.ops		= &ops_ipq5332,
+diff --git a/drivers/thermal/qcom/tsens.c b/drivers/thermal/qcom/tsens.c
+index f003f21133f6..9eb028cb2696 100644
+--- a/drivers/thermal/qcom/tsens.c
++++ b/drivers/thermal/qcom/tsens.c
+@@ -1304,6 +1304,9 @@ static const struct of_device_id tsens_table[] = {
+ 	}, {
+ 		.compatible = "qcom,ipq8074-tsens",
+ 		.data = &data_ipq8074,
++	}, {
++		.compatible = "qcom,ipq5210-tsens",
++		.data = &data_ipq5210,
+ 	}, {
+ 		.compatible = "qcom,ipq5332-tsens",
+ 		.data = &data_ipq5332,
+diff --git a/drivers/thermal/qcom/tsens.h b/drivers/thermal/qcom/tsens.h
+index 1d3c282fe95a..5a2100db179d 100644
+--- a/drivers/thermal/qcom/tsens.h
++++ b/drivers/thermal/qcom/tsens.h
+@@ -649,6 +649,6 @@ extern struct tsens_plat_data data_8226, data_8909, data_8916, data_8939, data_8
+ extern struct tsens_plat_data data_tsens_v1, data_8937, data_8976, data_8956;
+ 
+ /* TSENS v2 targets */
+-extern struct tsens_plat_data data_8996, data_ipq8074, data_ipq5332, data_ipq5424, data_tsens_v2;
++extern struct tsens_plat_data data_8996, data_ipq8074, data_ipq5210, data_ipq5332, data_ipq5424, data_tsens_v2;
+ 
+ #endif /* __QCOM_TSENS_H__ */
+-- 
+2.34.1
+

@@ -69,43 +69,23 @@
 
 		q6_region: wcnss@4a900000 {
 			no-map;
-			reg = <0x0 0x4a900000 0x0 0x02300000>;
+			reg = <0x0 0x4a900000 0x0 0xa00000>;
 		};
 
-		q6_ipq5332_data: q6_ipq5332_data@4b500000 {
+		q6_ipq5332_data: q6_ipq5332_data@4b300000 {
 			no-map;
-			reg = <0x0 0x4b500000 0x0 0x01700000>;
+			reg = <0x0 0x4b300000 0x0 0x2000000>;
 		};
 
-		m3_dump: m3_dump@4cc00000 {
+		qcn9224_pcie0: qcn9224_pcie0@4d300000 {
 			no-map;
-			reg = <0x0 0x4CC00000 0x0 0x100000>;
-		};
-
-		q6_etr_region: q6_etr_dump@1 {
-			no-map;
-			reg = <0x0 0x4CD00000 0x0 0x100000>;
-		};
-
-		q6_caldb_region:q6_caldb_region@4ce00000 {
-			no-map;
-			reg = <0x0 0x4CE00000 0x0 0x500000>;
-		};
-
-		mlo_global_mem0: mlo_global_mem_0@0x4db00000 {
-			no-map;
-			reg = <0x0 0x4DB00000 0x0 0x01200000>;
-		};
-
-		qcn9224_pcie0: qcn9224_pcie0@4ec00000 {
-			no-map;
-			reg = <0x0 0x4ED00000 0x0 0x03200000>;
+			reg = <0x0 0x4d300000 0x0 0x03200000>;
 			status = "disabled";
 		};
 
-		qcn9224_pcie1: qcn9224_pcie1@51e00000 {
+		qcn9224_pcie1: qcn9224_pcie1@50500000 {
 			no-map;
-			reg = <0x0 0x51F00000 0x0 0x03200000>;
+			reg = <0x0 0x50500000 0x0 0x03200000>;
 			status = "disabled";
 		};
 
@@ -123,6 +103,11 @@
 			size = <0x0 0x00900000>;
 			alignment = <0x0 0x1000>;
 			status = "disabled";
+		};
+
+		mlo_global_mem0: mlo_global_mem_0@54900000 {
+			no-map;
+			reg = <0x0 0x54900000 0x0 0x01200000>;
 		};
 	};
 };

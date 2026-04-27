@@ -1,0 +1,55 @@
+From 452c21c894c77d24bf009a45f23dc8c9fd25be97 Mon Sep 17 00:00:00 2001
+From: Sridharan S N <sridsn@qti.qualcomm.com>
+Date: Mon, 8 Dec 2025 17:25:54 +0530
+Subject: [PATCH] serial: msm: add support to have maximum 6 UARTs
+
+Signed-off-by: Rajkumar Ayyasamy <arajkuma@codeaurora.org>
+(cherry picked from commit 8219fd0de5085decf37ec33119d2c8311c4fad02)
+
+Change-Id: I82af5db689d5b4103d8090359ceb7174b5e1279e
+Signed-off-by: Sridharan S N <sridsn@qti.qualcomm.com>
+---
+ drivers/tty/serial/msm_serial.c | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/drivers/tty/serial/msm_serial.c b/drivers/tty/serial/msm_serial.c
+index 8a59c5c05004..0ae579e3b2ef 100644
+--- a/drivers/tty/serial/msm_serial.c
++++ b/drivers/tty/serial/msm_serial.c
+@@ -1600,6 +1600,33 @@ static struct msm_port msm_uart_ports[] = {
+ 			.line = 2,
+ 		},
+ 	},
++	{
++		.uart = {
++			.iotype = UPIO_MEM,
++			.ops = &msm_uart_pops,
++			.flags = UPF_BOOT_AUTOCONF,
++			.fifosize = 64,
++			.line = 3,
++		},
++	},
++	{
++		.uart = {
++			.iotype = UPIO_MEM,
++			.ops = &msm_uart_pops,
++			.flags = UPF_BOOT_AUTOCONF,
++			.fifosize = 64,
++			.line = 4,
++		},
++	},
++	{
++		.uart = {
++			.iotype = UPIO_MEM,
++			.ops = &msm_uart_pops,
++			.flags = UPF_BOOT_AUTOCONF,
++			.fifosize = 64,
++			.line = 5,
++		},
++	},
+ };
+ 
+ #define MSM_UART_NR	ARRAY_SIZE(msm_uart_ports)
+-- 
+2.34.1
+

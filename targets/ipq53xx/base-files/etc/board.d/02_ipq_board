@@ -36,6 +36,7 @@ get_fw_name() {
 			;;
 		"qcom,ipq5332-db-mi02.1"|\
 		"qcom,ipq5332-ap-mi04.3"|\
+		"qcom,ipq5332-rdp441-qce2204" |\
 		"qcom,ipq5332-ap-mi01.3-c2"|\
 		"qcom,ipq5332-ap-mi04.1-c2")
 			wifi_ipq="ipq5332_qcn6432_squashfs.img"

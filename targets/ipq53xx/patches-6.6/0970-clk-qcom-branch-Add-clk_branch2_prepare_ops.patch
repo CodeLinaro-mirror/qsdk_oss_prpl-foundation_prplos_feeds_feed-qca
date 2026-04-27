@@ -1,0 +1,52 @@
+From 3e0a74a5dd507b4cef5f4294d2a6f9a99404ea11 Mon Sep 17 00:00:00 2001
+From: Luo Jie <quic_luoj@quicinc.com>
+Date: Wed, 5 Jun 2024 20:45:38 +0800
+Subject: [PATCH] clk: qcom: branch: Add clk_branch2_prepare_ops
+
+Add the clk_branch2_prepare_ops for supporting clock controller
+where the hardware register is accessed by MDIO bus, and the
+spin lock can't be used because of sleep during the MDIO
+operation.
+
+The clock is enabled by the .prepare instead of .enable when
+the clk_branch2_prepare_ops is used.
+
+Change-Id: Ic28460dd7a8be4e9a81ed9d88f494c6c713a7b24
+Acked-by: Stephen Boyd <sboyd@kernel.org>
+Signed-off-by: Luo Jie <quic_luoj@quicinc.com>
+Signed-off-by: Luo Jie <luoj@qti.qualcomm.com>
+---
+ drivers/clk/qcom/clk-branch.c | 7 +++++++
+ drivers/clk/qcom/clk-branch.h | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/drivers/clk/qcom/clk-branch.c b/drivers/clk/qcom/clk-branch.c
+index fefbfe7c42e7..cbc6d29f8206 100644
+--- a/drivers/clk/qcom/clk-branch.c
++++ b/drivers/clk/qcom/clk-branch.c
+@@ -153,3 +153,10 @@ const struct clk_ops clk_branch_simple_ops = {
+ 	.is_enabled = clk_is_enabled_regmap,
+ };
+ EXPORT_SYMBOL_GPL(clk_branch_simple_ops);
++
++const struct clk_ops clk_branch2_prepare_ops = {
++	.prepare = clk_branch2_enable,
++	.unprepare = clk_branch2_disable,
++	.is_prepared = clk_is_enabled_regmap,
++};
++EXPORT_SYMBOL_GPL(clk_branch2_prepare_ops);
+diff --git a/drivers/clk/qcom/clk-branch.h b/drivers/clk/qcom/clk-branch.h
+index 0cf800b9d08d..f6f355f28b71 100644
+--- a/drivers/clk/qcom/clk-branch.h
++++ b/drivers/clk/qcom/clk-branch.h
+@@ -85,6 +85,7 @@ extern const struct clk_ops clk_branch_ops;
+ extern const struct clk_ops clk_branch2_ops;
+ extern const struct clk_ops clk_branch_simple_ops;
+ extern const struct clk_ops clk_branch2_aon_ops;
++extern const struct clk_ops clk_branch2_prepare_ops;
+ 
+ #define to_clk_branch(_hw) \
+ 	container_of(to_clk_regmap(_hw), struct clk_branch, clkr)
+-- 
+2.34.1
+

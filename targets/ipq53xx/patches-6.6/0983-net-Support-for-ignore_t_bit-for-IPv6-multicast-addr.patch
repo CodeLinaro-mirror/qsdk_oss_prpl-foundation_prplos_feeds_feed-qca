@@ -1,0 +1,129 @@
+From fa8918cd0042a475319034a0ecdfb683dfca78d5 Mon Sep 17 00:00:00 2001
+From: Krithi D Shetty <kdshetty@qti.qualcomm.com>
+Date: Fri, 12 Sep 2025 15:44:32 +0530
+Subject: [PATCH] net: Support for ignore_t_bit for IPv6 multicast addresses
+
+Change-Id: Icc782bf9f5cbaad12322a3e1807c91358b84ed46
+Signed-off-by: KRITHI D SHETTY <kdshetty@qti.qualcomm.com>
+---
+ include/uapi/linux/if_link.h |  3 +++
+ net/bridge/br_multicast.c    | 15 +++++++++++++++
+ net/bridge/br_netlink.c      | 12 ++++++++++++
+ net/bridge/br_private.h      |  1 +
+ 4 files changed, 31 insertions(+)
+
+diff --git a/include/uapi/linux/if_link.h b/include/uapi/linux/if_link.h
+index 1e9aee5cdc54..5fd990ea8dd4 100644
+--- a/include/uapi/linux/if_link.h
++++ b/include/uapi/linux/if_link.h
+@@ -510,6 +510,9 @@ enum {
+ 	IFLA_BR_VLAN_STATS_PER_PORT,
+ 	IFLA_BR_MULTI_BOOLOPT,
+ 	IFLA_BR_MCAST_QUERIER_STATE,
++	IFLA_BR_FDB_N_LEARNED,
++	IFLA_BR_FDB_MAX_LEARNED,
++	IFLA_BR_MCAST_IGNORE_T_BIT,
+ 	__IFLA_BR_MAX,
+ };
+ 
+diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
+index 29d0a61fd34d..5f3ffbb63acf 100644
+--- a/net/bridge/br_multicast.c
++++ b/net/bridge/br_multicast.c
+@@ -1614,6 +1614,11 @@ static int br_ip6_multicast_add_group(struct net_bridge_mcast *brmctx,
+ 	if (ipv6_addr_is_ll_all_nodes(group))
+ 		return 0;
+ 
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	if (!br_mcast_offload_ip6_should_snoop_group(brmctx, group))
++		return 0;
++#endif
++
+ 	memset(&br_group, 0, sizeof(br_group));
+ 	br_group.dst.ip6 = *group;
+ 	br_group.proto = htons(ETH_P_IPV6);
+@@ -3730,6 +3735,11 @@ static void br_ip6_multicast_leave_group(struct net_bridge_mcast *brmctx,
+ 	if (ipv6_addr_is_ll_all_nodes(group))
+ 		return;
+ 
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++	if (!br_mcast_offload_ip6_should_snoop_group(brmctx, group))
++		return;
++#endif
++
+ 	own_query = pmctx ? &pmctx->ip6_own_query : &brmctx->ip6_own_query;
+ 
+ 	memset(&br_group, 0, sizeof(br_group));
+@@ -3907,8 +3917,13 @@ static int br_multicast_ipv6_rcv(struct net_bridge_mcast *brmctx,
+ 	err = ipv6_mc_check_mld(skb);
+ 
+ 	if (err == -ENOMSG || err == -ENODATA) {
++#if IS_ENABLED(CONFIG_BRIDGE_MCAST_OFFLOAD)
++		if (br_mcast_offload_ip6_should_mark_mrouters_only(brmctx, &ipv6_hdr(skb)->daddr))
++			BR_INPUT_SKB_CB(skb)->mrouters_only = 1;
++#else
+ 		if (!ipv6_addr_is_ll_all_nodes(&ipv6_hdr(skb)->daddr))
+ 			BR_INPUT_SKB_CB(skb)->mrouters_only = 1;
++#endif
+ 		if (err == -ENODATA &&
+ 		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
+ 			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
+diff --git a/net/bridge/br_netlink.c b/net/bridge/br_netlink.c
+index 29837a188ef9..6f6f3ce0ce9a 100644
+--- a/net/bridge/br_netlink.c
++++ b/net/bridge/br_netlink.c
+@@ -1278,6 +1278,7 @@ static const struct nla_policy br_policy[IFLA_BR_MAX + 1] = {
+ 	[IFLA_BR_VLAN_STATS_PER_PORT] = { .type = NLA_U8 },
+ 	[IFLA_BR_MULTI_BOOLOPT] =
+ 		NLA_POLICY_EXACT_LEN(sizeof(struct br_boolopt_multi)),
++	[IFLA_BR_MCAST_IGNORE_T_BIT] = { .type = NLA_U8 },
+ };
+ 
+ static int br_changelink(struct net_device *brdev, struct nlattr *tb[],
+@@ -1552,6 +1553,12 @@ static int br_changelink(struct net_device *brdev, struct nlattr *tb[],
+ 			return err;
+ 	}
+ 
++	if (data[IFLA_BR_MCAST_IGNORE_T_BIT]) {
++		u8 ignore_t_bit = nla_get_u8(data[IFLA_BR_MCAST_IGNORE_T_BIT]);
++
++		br_opt_toggle(br, BROPT_MCAST_IGNORE_T_BIT, !!ignore_t_bit);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -1632,6 +1639,7 @@ static size_t br_get_size(const struct net_device *brdev)
+ 	       nla_total_size(sizeof(u8)) +     /* IFLA_BR_NF_CALL_ARPTABLES */
+ #endif
+ 	       nla_total_size(sizeof(struct br_boolopt_multi)) + /* IFLA_BR_MULTI_BOOLOPT */
++	       nla_total_size(sizeof(u8)) +     /* IFLA_BR_MCAST_IGNORE_T_BIT */
+ 	       0;
+ }
+ 
+@@ -1755,6 +1763,10 @@ static int br_fill_info(struct sk_buff *skb, const struct net_device *brdev)
+ 		return -EMSGSIZE;
+ #endif
+ 
++	if (nla_put_u8(skb, IFLA_BR_MCAST_IGNORE_T_BIT,
++				br_opt_get(br, BROPT_MCAST_IGNORE_T_BIT)))
++		return -EMSGSIZE;
++
+ 	return 0;
+ }
+ 
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index 9b3c0279b156..d8047182c856 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -492,6 +492,7 @@ enum net_bridge_opts {
+ 	BROPT_VLAN_BRIDGE_BINDING,
+ 	BROPT_MCAST_VLAN_SNOOPING_ENABLED,
+ 	BROPT_MST_ENABLED,
++	BROPT_MCAST_IGNORE_T_BIT,
+ };
+ 
+ struct net_bridge {
+-- 
+2.34.1
+

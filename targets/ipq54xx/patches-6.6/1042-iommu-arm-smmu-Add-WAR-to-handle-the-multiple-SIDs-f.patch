@@ -1,0 +1,65 @@
+From e1ac614c092f9ae24f71d823734698de6f5700d7 Mon Sep 17 00:00:00 2001
+From: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+Date: Mon, 2 Feb 2026 12:08:51 +0530
+Subject: [PATCH] iommu/arm-smmu: Add WAR to handle the multiple SIDs for a
+ PCIe device
+
+In IPQ9650 1.0 SoC, there are 2 SIDs allocated for each PCIe device, so
+we need to mask the LSB bit to make sure both SIDs points to the same
+CB. But we cannot pass the mask via the iommu-map property.
+iommu-map-mask applies only for the RID but not for the SID.
+
+In IPQ9650 2.0 SoC, this will get addressed in HW. So only for 1.0 SoC,
+add a SW WAR to overcome this.
+
+Change-Id: I79f3f58c2a77356a89fa468303bd5242931e8cae
+Signed-off-by: Kathiravan Thirumoorthy <kathirav@qti.qualcomm.com>
+---
+ drivers/iommu/arm/arm-smmu/arm-smmu.c | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/iommu/arm/arm-smmu/arm-smmu.c b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+index 42c5012ba8aa..1440f59796c1 100644
+--- a/drivers/iommu/arm/arm-smmu/arm-smmu.c
++++ b/drivers/iommu/arm/arm-smmu/arm-smmu.c
+@@ -34,6 +34,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/ratelimit.h>
+ #include <linux/slab.h>
++#include <linux/soc/qcom/smem.h>
+ 
+ #include <linux/fsl/mc.h>
+ 
+@@ -1023,7 +1024,7 @@ static int arm_smmu_master_alloc_smes(struct device *dev)
+ 	struct arm_smmu_master_cfg *cfg = dev_iommu_priv_get(dev);
+ 	struct arm_smmu_device *smmu = cfg->smmu;
+ 	struct arm_smmu_smr *smrs = smmu->smrs;
+-	int i, idx, ret;
++	int i, idx, ret, ver;
+ 
+ 	mutex_lock(&smmu->stream_map_mutex);
+ 	/* Figure out a viable stream map entry allocation */
+@@ -1031,6 +1032,20 @@ static int arm_smmu_master_alloc_smes(struct device *dev)
+ 		u16 sid = FIELD_GET(ARM_SMMU_SMR_ID, fwspec->ids[i]);
+ 		u16 mask = FIELD_GET(ARM_SMMU_SMR_MASK, fwspec->ids[i]);
+ 
++		/*
++		 * For PCIe devices, 2 SIDs are allocated. So mask the LSB
++		 * to match the both the SIDs to same CB. From 2.0 onwards, we
++		 * will have only one SID. So only for 1.0, add the WAR as
++		 * below.
++		 */
++		if (dev_is_pci(dev) && of_machine_is_compatible("qcom,ipq9650")) {
++			ret = qcom_smem_get_soc_major_version(&ver);
++			if (ret)
++				dev_err(dev, "Failed to get SoC version details\n");
++			else if (ver == 1)
++				mask = 0x1;
++		}
++
+ 		if (idx != INVALID_SMENDX) {
+ 			ret = -EEXIST;
+ 			goto out_err;
+-- 
+2.34.1
+

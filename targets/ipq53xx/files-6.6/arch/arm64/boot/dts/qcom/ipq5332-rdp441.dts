@@ -249,6 +249,11 @@
 							switch_handle = <&switch1>;
 							switch_cpu_port = <0>;
 						};
+						fixed-link {
+							speed = <2500>;
+							full-duplex;
+							pause;
+						};
 					};
 					port@1 {
 						port_id = <2>;
@@ -346,7 +351,6 @@
 			reg = <0x3a500000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
-			phy-mode = "sgmii";
 			qcom,mht-dev = <1>;
 			qcom,is_switch_connected = <1>;
 			qcom,ppe-offload-disabled = <1>;
@@ -548,6 +552,12 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x26800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x15>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <1>;
@@ -602,7 +612,11 @@
 			memory-region-names = "host-ddr-mem", "mhi-region", "mlo-global-mem";
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x58800>;
+			qcom,caldb_offset = <0x1C00000>;
+#elif defined(__IPQ_MEM_PROFILE_512_MB__)
+			qcom,caldb_offset = <0x1400000>;
 #endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x16>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <2>;
@@ -630,42 +644,23 @@
 	};
 };
 
-#if !defined(__IPQ_MEM_PROFILE_256_MB__) && !defined(__IPQ_MEM_PROFILE_512_MB__)
-&q6v5_wcss {
-	q6_wcss_pd1: remoteproc_pd1 {
-		memory-region = <&q6_ipq5332_data>,
-				<&m3_dump>,
-				<&q6_etr_region>,
-				<&q6_caldb_region>;
-	};
-};
-#endif
-
 &wifi0 {
 	led-gpio = <&tlmm 36 GPIO_ACTIVE_HIGH>;
-#if defined(__RPROC_DISABLE_MPD_SUPPORT__)
 	qcom,rproc = <&q6v5_wcss>;
-	dump-region = <&q6_ipq5332_data>,
-		<&m3_dump>,
+	dump-region =
 #if !defined(__IPQ_MEM_PROFILE_256_MB__)
-		<&q6_etr_region>,
-		<&q6_caldb_region>;
+		<&q6_ipq5332_data>,
 #endif
-#else
-	qcom,rproc = <&q6_wcss_pd1>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
+		<&mlo_global_mem0>;
 	qcom,multipd_arch;
-#endif
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 
 #if defined(__IPQ_MEM_PROFILE_256_MB__)
 	memory-region = <&q6_region>, <&q6_region>, <&mlo_global_mem0>;
 	memory-region-names = "q6-region", "q6-region-1", "mlo-global-mem";
 #else
-	memory-region = <&q6_region>, <&q6_region>, <&q6_ipq5332_data>, <&m3_dump>,
-			<&mlo_global_mem0>,<&q6_etr_region>;
-	memory-region-names = "q6-region", "q6-1region-1", "host-ddr-mem", "m3-dump",
-			      "mlo-global-mem", "q6-etr-dump";
+	memory-region = <&q6_region>, <&q6_ipq5332_data>, <&mlo_global_mem0>;
+	memory-region-names = "q6-region", "host-ddr-mem", "mlo-global-mem";
 #endif
 	qcom,wsi = <&wsi>;
 	qcom,wsi_index = <0>;
@@ -835,7 +830,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	pcie1_default_state: pcie1-default-state {
@@ -843,7 +837,6 @@
 		function = "gpio";
 		drive-strength = <8>;
 		bias-pull-up;
-		output-low;
 	};
 
 	sfp_pins: sfp-state {

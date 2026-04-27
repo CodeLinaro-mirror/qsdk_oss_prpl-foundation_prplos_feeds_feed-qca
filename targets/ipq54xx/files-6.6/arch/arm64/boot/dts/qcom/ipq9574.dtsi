@@ -364,6 +364,15 @@
 		};
 	};
 
+	sysregister {
+		compatible = "qcom,sysregister";
+		reg-names = "bootcount", "force_inactive";
+		reg-access-type = "syscon", "secure";
+		reg-phandle = <&imem>, <&tcsr>;
+		reg-offset = <0xC8>, <0x6100>;
+		reg-bit-position = <0xffffffff>, <12>;
+	};
+
 	wcss: wcss-smp2p {
 		compatible = "qcom,smp2p";
 		qcom,smem = <435>, <428>;
@@ -664,6 +673,8 @@
 			interrupts = <GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
 			#dma-cells = <1>;
 			qcom,ee = <1>;
+			qcom,num-ees = <4>;
+			num-channels = <16>;
 			qcom,controlled-remotely;
 		};
 
@@ -2872,7 +2883,7 @@
 			interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
 			clocks = <&sleep_clk>;
 			timeout-sec = <30>;
-			qcom,restart-reason = <&imem 0x7a4 0x1>;
+			qcom,restart-reason = <&imem 0x7a4 0x1 0x20>;
 		};
 
 		apcs_glb: mailbox@b111000 {
@@ -3822,6 +3833,7 @@
 			"crypto_ppeclk";
 			clock-frequency = /bits/ 64 <600000000 600000000 300000000>;
 			qcom,inline-enabled;
+			qcom,outer-offload;
 			interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH>,
 				   <GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH>,
 				   <GIC_SPI 387 IRQ_TYPE_LEVEL_HIGH>,

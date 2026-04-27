@@ -1,0 +1,50 @@
+From 02b1dc1c2a5fca24a7d166edb0bfec6fe1c202f1 Mon Sep 17 00:00:00 2001
+From: Poovendhan Selvaraj <poovendh@qti.qualcomm.com>
+Date: Thu, 2 Apr 2026 10:57:26 +0530
+Subject: [PATCH] Revert "drivers: sdhci-msm: Guard ICE init code with
+ CONFIG_MMC_CRYPTO"
+
+This reverts commit 7464fabfe5351b6f488584d2c17b25116970c081.
+
+Change-Id: I6ca48b5afa3bd712913db24aa71a487936c29ee7
+Signed-off-by: Poovendhan Selvaraj <poovendh@qti.qualcomm.com>
+---
+ drivers/mmc/host/sdhci-msm.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci-msm.c b/drivers/mmc/host/sdhci-msm.c
+index 766b792285b8..cb87f1ccf421 100644
+--- a/drivers/mmc/host/sdhci-msm.c
++++ b/drivers/mmc/host/sdhci-msm.c
+@@ -2129,6 +2129,8 @@ static int sdhci_msm_cqe_add_host(struct sdhci_host *host,
+ 	struct cqhci_host *cq_host;
+ 	bool dma64;
+ 	u32 cqcfg;
++	u32 config = 0x0;
++	u32 ice_cap = 0x0;
+ 	int ret;
+ 
+ 	/*
+@@ -2183,11 +2185,7 @@ static int sdhci_msm_cqe_add_host(struct sdhci_host *host,
+ 	if (ret)
+ 		goto cleanup;
+ 
+-#ifdef CONFIG_MMC_CRYPTO
+ 	/* Initalize the ICE for NON-CMDQ eMMC devices */
+-	u32 config = 0x0;
+-	u32 ice_cap = 0x0;
+-
+ 	config = sdhci_readl(host, HC_VENDOR_SPECIFIC_FUNC4);
+ 	config &= ~DISABLE_CRYPTO;
+ 	sdhci_writel(host, config, HC_VENDOR_SPECIFIC_FUNC4);
+@@ -2199,7 +2197,6 @@ static int sdhci_msm_cqe_add_host(struct sdhci_host *host,
+ 		cqhci_writel(cq_host, config, CQHCI_CFG);
+ 	}
+ 	sdhci_msm_ice_enable(msm_host);
+-#endif
+ 
+ 	dev_info(&pdev->dev, "%s: CQE init: success\n",
+ 			mmc_hostname(host->mmc));
+-- 
+2.34.1
+
