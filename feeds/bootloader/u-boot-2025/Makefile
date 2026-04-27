@@ -16,9 +16,9 @@ PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_FILES_NAME:=uboot-ipq-files
 PKG_FILES_SOURCE_PROTO:=git
 PKG_FILES_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/uboot-ipq-files
-PKG_FILES_SOURCE_VERSION:=791a66ec30523bf00d6f3cfcecb1048e09ba6c58
-PKG_FILES_BRANCH:=win.uboot.2025.00.r30
-PKG_FILES_VERSION:=791a66ec
+PKG_FILES_SOURCE_VERSION:=eed8d4c6425b17d73ba55298314b9002c4d5eb93
+PKG_FILES_BRANCH:=win.uboot.2025.00.r37
+PKG_FILES_VERSION:=eed8d4c6
 
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_FILES_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_FILES_NAME)-$(PKG_FILES_VERSION)
@@ -78,7 +78,6 @@ define Build/Prepare
 	if [ -d "$(SRC_DIR)" ] && [ -d "$(PKG_FILES_BUILD_DIR)" ]; then \
 		cp -fpR $(BOOTLOADER_FILES_SRC) $(SRC_DIR)/ 2>/dev/null || true; \
 	fi
-	$(PATCH) -d $(PKG_BUILD_DIR) -p1 < $(CURDIR)/patch/0001-arch-arm-dts-Patch-DTs-with-Booted-bank-info.patch
 endef
 
 
