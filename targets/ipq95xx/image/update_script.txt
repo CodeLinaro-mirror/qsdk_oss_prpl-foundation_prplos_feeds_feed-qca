@@ -1,6 +1,8 @@
 echo "=== prplOS Freedom-QCA95xx UPDATE ==="
 echo "Defining helper commands..."
 
+setenv skip_gpt_checks no
+
 setenv u_boot_active_block_start     0x00004622
 setenv u_boot_active_block_size      0x00002000
 
@@ -22,6 +24,10 @@ setenv rootfs-inactive_block_size    0x00080000
 setenv mfgdata_block_start           0x00574022
 setenv mfgdata_block_size            0x00000800
 
+setenv expected_gpt_a 'name=0:SBL1,start=17k,size=1M;name=0:SBL1_1,size=1M;name=0:QSEE,size=1792k;name=0:QSEE_1,size=1792k;name=0:DEVCFG,size=256k;name=0:DEVCFG_1,size=256k;name=0:APDP,size=256k;name=0:APDP_1,size=256k;name=0:TME,size=512k;name=0:TME_1,size=512k;name=0:RPM,size=256k;name=0:RPM_1,size=256k;name=0:CDT,size=256k;name=0:CDT_1,size=256k;name=0:APPSBLENV,size=256k;name=u-boot-active,size=4M;name=u-boot-inactive,size=4M;name=0:ART,size=1M;name=0:ETHPHYFW,size=512k;name=0:LICENSE,size=256k;name=0:WIFIFW,size=10M;name=0:WIFIFW_1,size=10M;name=kernel-active,size=32M;name=kernel-inactive,size=32M;name=rootfs-active,size=256M;name=rootfs-inactive,size=256M;name=NVRAM,size=1536k;name=lcm_data,size=2G;name=rootfs_data,size=128M;name=mfgdata,size=1M;name=securestore,size=16M;name=0:CALFW,size=2M;name=0:CALFW_1,size=2M'
+
+setenv expected_gpt_b 'name=0:SBL1,start=17k,size=1M;name=0:SBL1_1,size=1M;name=0:QSEE,size=1792k;name=0:QSEE_1,size=1792k;name=0:DEVCFG,size=256k;name=0:DEVCFG_1,size=256k;name=0:APDP,size=256k;name=0:APDP_1,size=256k;name=0:TME,size=512k;name=0:TME_1,size=512k;name=0:RPM,size=256k;name=0:RPM_1,size=256k;name=0:CDT,size=256k;name=0:CDT_1,size=256k;name=0:APPSBLENV,size=256k;name=u-boot-inactive,size=4M;name=u-boot-active,size=4M;name=0:ART,size=1M;name=0:ETHPHYFW,size=512k;name=0:LICENSE,size=256k;name=0:WIFIFW,size=10M;name=0:WIFIFW_1,size=10M;name=kernel-inactive,size=32M;name=kernel-active,size=32M;name=rootfs-inactive,size=256M;name=rootfs-active,size=256M;name=NVRAM,size=1536k;name=lcm_data,size=2G;name=rootfs_data,size=128M;name=mfgdata,size=1M;name=securestore,size=16M;name=0:CALFW,size=2M;name=0:CALFW_1,size=2M'
+
 # ---------------------------------------------------------------------------
 # Generic helpers (functions) for flashing
 # ---------------------------------------------------------------------------
@@ -31,6 +37,10 @@ setenv prpl_calc_blocks '
 setexpr cur_blocks ${filesize} + 0x1ff
 setexpr cur_blocks ${cur_blocks} / 0x200
 '
+
+# Check the GPT partitioning
+setenv check_gpt_a 'gpt verify mmc 0 ${expected_gpt_a}'
+setenv check_gpt_b 'gpt verify mmc 0 ${expected_gpt_b}'
 
 # TFTP load: expects:
 #   cur_img  : image file name
@@ -132,6 +142,20 @@ if test -z "${update_rescue_bank}"; then
     setenv update_rescue_bank no
 fi
 
+# Check we have the expected GPT partitioning prior to flashing anything
+if test "${skip_gpt_checks}" = "yes"; then
+    echo "Skipping GPT checks (Dangerous)"
+    setenv gpt_valid yes
+elif run check_gpt_a; then
+    setenv gpt_valid yes
+elif run check_gpt_b; then
+    setenv gpt_valid yes
+else
+    echo "ERROR: Current GPT partitioning does not match expected layouts. Please make sure you migrated to prpl partitioning"
+    echo "More information at https://gitlab.com/prpl-foundation/prplos/prplos/-/wikis/prpl-Foundation-Freedom-board#freedom-new-flashlayout-upgrade-steps"
+    setenv gpt_valid no
+fi
+
 # Status flags for final summary
 setenv kernel_status skipped
 setenv rootfs_status skipped
@@ -145,16 +169,18 @@ echo "rootfs             : ${img_rootfs}"
 echo "U-Boot             : ${img_uboot}"
 echo "SMD image          : ${img_smd}"
 echo "Update rescue bank : ${update_rescue_bank}"
+echo "Skip GPT checks    : ${skip_gpt_checks}"
 echo "--------------------------------------------------"
 echo "Hint: set img_kernel / img_rootfs / img_uboot / img_smd before running to flash them."
 echo "      Leave a variable unset/empty to skip that component."
 echo "      Set update_rescue_bank=yes to also update inactive banks."
+echo "      Set skip_gpt_checks=yes to skip the initial GPT checks. Be careful!!!"
 echo ""
 
 # ---------------------------------------------------------------------------
 # 1. Flash kernel.itb (optional)
 # ---------------------------------------------------------------------------
-if test -n "${img_kernel}"; then
+if test -n "${img_kernel}" -a "${gpt_valid}" = "yes"; then
     setenv cur_img  ${img_kernel}
     setenv cur_desc kernel.itb
 
@@ -178,13 +204,13 @@ if test -n "${img_kernel}"; then
         setenv kernel_status ${last_status}
     fi
 else
-    echo "Skipping kernel update (img_kernel not set)."
+    test "${gpt_valid}" = "yes" && echo "Skipping kernel update (img_kernel not set)."
 fi
 
 # ---------------------------------------------------------------------------
 # 2. Flash rootfs.itb (optional)
 # ---------------------------------------------------------------------------
-if test -n "${img_rootfs}"; then
+if test -n "${img_rootfs}" -a "${gpt_valid}" = "yes"; then
     setenv cur_img  ${img_rootfs}
     setenv cur_desc rootfs.itb
 
@@ -208,13 +234,13 @@ if test -n "${img_rootfs}"; then
         setenv rootfs_status ${last_status}
     fi
 else
-    echo "Skipping rootfs update (img_rootfs not set)."
+    test "${gpt_valid}" = "yes" && echo "Skipping rootfs update (img_rootfs not set)."
 fi
 
 # ---------------------------------------------------------------------------
 # 3. Flash U-Boot → u-boot-active (optional)
 # ---------------------------------------------------------------------------
-if test -n "${img_uboot}"; then
+if test -n "${img_uboot}" -a "${gpt_valid}" = "yes"; then
     setenv cur_img  ${img_uboot}
     setenv cur_desc U-Boot
 
@@ -238,13 +264,13 @@ if test -n "${img_uboot}"; then
         setenv uboot_status ${last_status}
     fi
 else
-    echo "Skipping U-Boot update (img_uboot not set)."
+    test "${gpt_valid}" = "yes" && echo "Skipping U-Boot update (img_uboot not set)."
 fi
 
 # ---------------------------------------------------------------------------
 # 4. Flash SMD → mfgdata (optional, no rescue bank)
 # ---------------------------------------------------------------------------
-if test -n "${img_smd}"; then
+if test -n "${img_smd}" -a "${gpt_valid}" = "yes"; then
     setenv cur_img  ${img_smd}
     setenv cur_desc SMD
 
@@ -260,22 +286,24 @@ if test -n "${img_smd}"; then
         setenv smd_status ${last_status}
     fi
 else
-    echo "Skipping SMD/mfgdata update (img_smd not set)."
+    test "${gpt_valid}" = "yes" && echo "Skipping SMD/mfgdata update (img_smd not set)."
 fi
 
 # ---------------------------------------------------------------------------
 # 5. Final summary
 # ---------------------------------------------------------------------------
-echo "============================================"
-echo "          prplOS UPDATE SUMMARY             "
-echo "--------------------------------------------"
-echo "kernel (kernel-active) : ${kernel_status}"
-echo "rootfs (rootfs-active) : ${rootfs_status}"
-echo "U-Boot (u-boot-active) : ${uboot_status}"
-echo "SMD (mfgdata)          : ${smd_status}"
-echo "Update rescue bank     : ${update_rescue_bank}"
-echo "============================================"
-echo "Done. You can reset to reboot using the new FIT boot path."
+if test "${gpt_valid}" = "yes"; then
+    echo "============================================"
+    echo "          prplOS UPDATE SUMMARY             "
+    echo "--------------------------------------------"
+    echo "kernel (kernel-active) : ${kernel_status}"
+    echo "rootfs (rootfs-active) : ${rootfs_status}"
+    echo "U-Boot (u-boot-active) : ${uboot_status}"
+    echo "SMD (mfgdata)          : ${smd_status}"
+    echo "Update rescue bank     : ${update_rescue_bank}"
+    echo "============================================"
+    echo "Done. You can reset to reboot using the new FIT boot path."
+fi
 '
 
 echo "========================================================"
@@ -288,6 +316,7 @@ echo "  - img_kernel          : itb file of the kernel (optional)"
 echo "  - img_rootfs          : itb file of the rootfs (optional)"
 echo "  - img_smd             : SMD/mfgdata image (optional)"
 echo "  - update_rescue_bank  : yes | no   (default: no)"
+echo "  - skip_gpt_checks:    : yes | no   (default: no)  DANGEROUS"
 echo ""
 echo "Example:"
 echo "  setenv tftppath /images/"
