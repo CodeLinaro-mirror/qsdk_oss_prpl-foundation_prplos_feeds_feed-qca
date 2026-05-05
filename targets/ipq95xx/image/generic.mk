@@ -21,9 +21,7 @@ endef
 
 define Build/update-script
 	@echo "Running Build/update-script"
-	mkimage -A x86_64 \
-		-O linux -T script -C none -a 0 -e 0 -n "update" -d update_script.txt \
-		$(KDIR)/tmp/$(DEVICE_IMG_PREFIX)-update_script.scr
+	mkimage -f update_script.its $(KDIR)/tmp/$(DEVICE_IMG_PREFIX)-update_script.itb
 endef
 
 define Device/qcom_alxx
@@ -110,8 +108,8 @@ define Device/prpl_freedom
 				binman binman_qca_ipq95xx_freedom.dts | \
 				swugenerator sw-description_qca_ipq95xx_freedom
 
-	ARTIFACT/update_script.scr := update-script
+	ARTIFACT/update_script.itb := update-script
 
-	ARTIFACTS := image.swu update_script.scr
+	ARTIFACTS := image.swu update_script.itb
 endef
 TARGET_DEVICES += prpl_freedom
