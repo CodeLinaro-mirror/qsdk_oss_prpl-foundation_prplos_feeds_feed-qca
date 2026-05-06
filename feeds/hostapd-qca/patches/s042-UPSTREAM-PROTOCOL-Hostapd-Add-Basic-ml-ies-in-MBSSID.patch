@@ -1,0 +1,206 @@
+From 979ce704ba4ef1b3d701bc57dee88f830b0820de Mon Sep 17 00:00:00 2001
+From: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+Date: Tue, 17 Mar 2026 19:08:44 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:Hostapd: Add Basic ml ies in MBSSID ies
+ only non ml probe request
+
+Currently, Basic ml ies element added in MBSSID irrespective of ml
+or non-ml probe request, As per specfication ieee80211be section
+"AH.3.3 Management frames originating from an affiliated AP that is a member of a multiple BSSID set"
+
+Fix add Basic ml ies element inside MBSSID IEs for non ml probe request
+
+TAG: MBSSID
+
+Patch-dependency: None
+
+Signed-off-by: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+---
+ src/ap/beacon.c     | 20 ++++++++++++++------
+ src/ap/ieee802_11.c | 21 +++++++++++++--------
+ src/ap/ieee802_11.h |  4 ++--
+ 3 files changed, 29 insertions(+), 16 deletions(-)
+
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index a7e4e92c9259..0bc59cde47fb 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -608,7 +608,7 @@ ieee802_11_build_ap_params_mbssid(struct hostapd_data *hapd,
+ 	else
+ 		params->mbssid.mbssid_tx_iface_linkid = -1;
+ 	len = hostapd_eid_mbssid_len(tx_bss, WLAN_FC_STYPE_BEACON, &elem_count,
+-				     NULL, 0, &rnr_len, true);
++				     NULL, 0, &rnr_len, true, 0);
+ 
+ 	if (iface->conf->mbssid == MULTI_MBSSID_GROUP_ENABLED && !elem_count)
+ 		return 0;
+@@ -638,7 +638,7 @@ ieee802_11_build_ap_params_mbssid(struct hostapd_data *hapd,
+ 	end = hostapd_eid_mbssid(tx_bss, elem, elem + len, WLAN_FC_STYPE_BEACON,
+ 				 elem_count, elem_offset, NULL, 0, rnr_elem,
+ 				 &rnr_elem_count, rnr_elem_offset, rnr_len,
+-				 &elemid_modified_bmap, true);
++				 &elemid_modified_bmap, true, 0);
+ 
+ 	params->mbssid.mbssid_tx_iface = tx_bss->conf->iface;
+ 	params->mbssid.mbssid_index = hostapd_mbssid_get_bss_index(hapd);
+@@ -761,6 +761,9 @@ static size_t hostapd_probe_resp_elems_len(struct hostapd_data *hapd,
+ 	u8 include_ext_cap = 0;
+ 	u8 param_ext_cap = 0;
+ 	bool bcast_prb_resp = false;
++	bool is_ml_probe = params->mld_ap ? 1 : 0;
++
++	hapd = hostapd_mbssid_get_tx_bss(hapd);
+ 
+ #ifdef CONFIG_WPS
+ 	if (hapd->wps_probe_resp_ie)
+@@ -851,7 +854,8 @@ static size_t hostapd_probe_resp_elems_len(struct hostapd_data *hapd,
+ 
+ 	buflen += hostapd_eid_mbssid_len(hapd_probed, WLAN_FC_STYPE_PROBE_RESP, NULL,
+ 					 params->known_bss,
+-					 params->known_bss_len, NULL, bcast_prb_resp);
++					 params->known_bss_len, NULL, bcast_prb_resp,
++					 is_ml_probe);
+ 	buflen += hostapd_eid_rnr_len(hapd, WLAN_FC_STYPE_PROBE_RESP, true);
+ 	buflen += hostapd_mbo_ie_len(hapd);
+ 	buflen += hostapd_eid_owe_trans_len(hapd);
+@@ -875,6 +879,9 @@ static u8 * hostapd_probe_resp_fill_elems(struct hostapd_data *hapd,
+ 	u8 ext_cap = 0;
+ 	u8 p_ext_cap = 0;
+ 	bool bcast_prb_resp = false;
++	bool is_ml_probe = params->mld_ap ? 1 : 0;
++
++	hapd = hostapd_mbssid_get_tx_bss(hapd);
+ 
+ 	epos = pos + len;
+ 
+@@ -918,7 +925,8 @@ static u8 * hostapd_probe_resp_fill_elems(struct hostapd_data *hapd,
+ 
+ 	pos = hostapd_eid_mbssid(hapd_probed, pos, epos, WLAN_FC_STYPE_PROBE_RESP, 0,
+ 				 NULL, params->known_bss, params->known_bss_len,
+-				 NULL, NULL, NULL, 0, NULL, bcast_prb_resp);
++				 NULL, NULL, NULL, 0, NULL, bcast_prb_resp,
++				 is_ml_probe);
+ 	pos = hostapd_eid_rm_enabled_capab(hapd, pos, epos - pos);
+ 	pos = hostapd_get_mde(hapd, pos, epos - pos);
+ 
+@@ -1142,7 +1150,7 @@ static void hostapd_gen_probe_resp(struct hostapd_data *hapd,
+ 
+ #define MAX_PROBERESP_LEN 768
+ 	buflen = MAX_PROBERESP_LEN;
+-	buflen += hostapd_probe_resp_elems_len(hapd, params);
++	buflen += hostapd_probe_resp_elems_len(hapd_probed, params);
+ 	params->resp = os_zalloc(buflen);
+ 	if (!params->resp) {
+ 		params->resp_len = 0;
+@@ -1175,7 +1183,7 @@ static void hostapd_gen_probe_resp(struct hostapd_data *hapd,
+ 	params->resp->u.probe_resp.capab_info |=
+ 		host_to_le16(hostapd_critical_update_capab(hapd));
+ 
+-	pos = hostapd_probe_resp_fill_elems(hapd, params,
++	pos = hostapd_probe_resp_fill_elems(hapd_probed, params,
+ 					    params->resp->u.probe_resp.variable,
+ 					    buflen);
+ 
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 1e6e5d8df6ed..b44bae92fbc1 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -11176,7 +11176,8 @@ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 					  u32 frame_type, size_t *bss_index,
+ 					  const u8 *known_bss,
+ 					  size_t known_bss_len, size_t num_bss,
+-					  bool bcast_prb_resp)
++					  bool bcast_prb_resp,
++					  bool is_ml_probe)
+ {
+ 	struct hostapd_data *tx_bss = hostapd_mbssid_get_tx_bss(hapd);
+ 	struct ttlm_context *tx_bss_ttlm_ctx;
+@@ -11276,7 +11277,8 @@ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 			ie_count++;
+ 
+ 		/* For ML Probe resp, solicited hapd's MLE will be in the frame body */
+-		if (bss->conf->mld_ap && (bss != hapd || frame_type != WLAN_FC_STYPE_PROBE_RESP)) {
++		if (bss->conf->mld_ap && (bss != hapd || frame_type != WLAN_FC_STYPE_PROBE_RESP ||
++					  !is_ml_probe)) {
+ 			ext_cap = 0;
+ 			/* RMSL value sent in broadcast Probe response case and beacon */
+ 			if (bss->conf->enable_aal &&
+@@ -11334,7 +11336,7 @@ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ size_t hostapd_eid_mbssid_len(struct hostapd_data *hapd_probed, u32 frame_type,
+ 			      u8 *elem_count, const u8 *known_bss,
+ 			      size_t known_bss_len, size_t *rnr_len,
+-			      bool bcast_prb_resp)
++			      bool bcast_prb_resp, bool is_ml_probe)
+ {
+ 	size_t len = 0, bss_index = 1;
+ 	size_t num_bss;
+@@ -11367,7 +11369,7 @@ size_t hostapd_eid_mbssid_len(struct hostapd_data *hapd_probed, u32 frame_type,
+ 		len += hostapd_eid_mbssid_elem_len(hapd_probed, frame_type,
+ 						   &bss_index, known_bss,
+ 						   known_bss_len, num_bss,
+-						   bcast_prb_resp);
++						   bcast_prb_resp, is_ml_probe);
+ 
+ 		if (frame_type == WLAN_FC_STYPE_BEACON)
+ 			*elem_count += 1;
+@@ -11422,7 +11424,7 @@ static u8 * hostapd_eid_mbssid_elem(struct hostapd_data *hapd, u8 *eid, u8 *end,
+ 				    size_t *bss_index, u8 elem_count,
+ 				    const u8 *known_bss, size_t known_bss_len,
+ 				    u32 *elemid_modified_bmap, size_t num_bss,
+-				    bool bcast_prb_resp)
++				    bool bcast_prb_resp, bool is_ml_probe)
+ {
+ 	struct hostapd_data *tx_bss = hostapd_mbssid_get_tx_bss(hapd);
+ 	struct ttlm_context *tx_bss_ttlm_ctx;
+@@ -11585,7 +11587,9 @@ static u8 * hostapd_eid_mbssid_elem(struct hostapd_data *hapd, u8 *eid, u8 *end,
+ 			non_inherit_ie[ie_count++] = WLAN_EID_RSNX;
+ 
+ 		/* For ML Probe resp, solicited hapd's MLE will be in the frame body */
+-		if (bss->conf->mld_ap && (bss != hapd || frame_type != WLAN_FC_STYPE_PROBE_RESP)) {
++		if (bss->conf->mld_ap &&
++		    (bss != hapd || frame_type != WLAN_FC_STYPE_PROBE_RESP ||
++		     !is_ml_probe)) {
+ 			ext_cap = 0;
+ 			if (bss->conf->enable_aal &&
+ 			    (((frame_type == WLAN_FC_STYPE_PROBE_RESP) &&
+@@ -11643,7 +11647,8 @@ u8 * hostapd_eid_mbssid(struct hostapd_data *hapd_probed, u8 *eid, u8 *end,
+ 			u8 **elem_offset,
+ 			const u8 *known_bss, size_t known_bss_len, u8 *rnr_eid,
+ 			u8 *rnr_count, u8 **rnr_offset, size_t rnr_len,
+-			u32 *elemid_modified_bmap, bool bcast_prb_resp)
++			u32 *elemid_modified_bmap, bool bcast_prb_resp,
++			bool is_ml_probe)
+ {
+ 	size_t bss_index = 1, cur_len = 0;
+ 	u8 elem_index = 0, *rnr_start_eid = rnr_eid;
+@@ -11689,7 +11694,7 @@ u8 * hostapd_eid_mbssid(struct hostapd_data *hapd_probed, u8 *eid, u8 *end,
+ 					      &bss_index, elem_count,
+ 					      known_bss, known_bss_len,
+ 					      elemid_modified_bmap, num_bss,
+-					      bcast_prb_resp);
++					      bcast_prb_resp, is_ml_probe);
+ 
+ 		if (add_rnr) {
+ 			struct mbssid_ie_profiles skip_profiles = {
+diff --git a/src/ap/ieee802_11.h b/src/ap/ieee802_11.h
+index a49c623f506d..f84e6e1fdfcc 100644
+--- a/src/ap/ieee802_11.h
++++ b/src/ap/ieee802_11.h
+@@ -310,13 +310,13 @@ u16 copy_sta_eht_capab(struct hostapd_data *hapd, struct sta_info *sta,
+ size_t hostapd_eid_mbssid_len(struct hostapd_data *hapd, u32 frame_type,
+ 			      u8 *elem_count, const u8 *known_bss,
+ 			      size_t known_bss_len, size_t *rnr_len,
+-			      bool bcast_prb_resp);
++			      bool bcast_prb_resp, bool is_ml_probe);
+ u8 * hostapd_eid_mbssid(struct hostapd_data *hapd, u8 *eid, u8 *end,
+ 			unsigned int frame_stype, u8 elem_count,
+ 			u8 **elem_offset,
+ 			const u8 *known_bss, size_t known_bss_len, u8 *rnr_eid,
+ 			u8 *rnr_count, u8 **rnr_offset, size_t rnr_len,
+-			u32 *elemid_modified_bmap, bool bcast_prb_resp);
++			u32 *elemid_modified_bmap, bool bcast_prb_resp, bool is_ml_probe);
+ #define INVALID_EDGE 0xFFF
+ #define INVALID_DBR    100
+ #define INVALID_PSD (-1270) /* -127 multiplied by 10 */
+-- 
+2.34.1
