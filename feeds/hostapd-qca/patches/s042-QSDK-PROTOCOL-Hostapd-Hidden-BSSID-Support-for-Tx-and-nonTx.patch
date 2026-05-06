@@ -1,0 +1,71 @@
+From f48e19011f0e10b0d4bb96f4f1b73442cc0d9613 Mon Sep 17 00:00:00 2001
+From: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+Date: Fri, 1 May 2026 17:53:08 +0530
+Subject: [PATCH] QSDK:PROTOCOL: Hostapd: Hidden BSSID Support for Tx and
+ Non-Tx BSS
+
+Hidden BSSID profiles will be included in beacon and probe responses.
+The SSID value will either be omitted or set to all zeros, based on
+the configured value of ignore_broadcast_ssid.
+
+Currently, Few issues have been identified where the SSID is not
+included in unicast probe responses for requests targeting a hidden,
+non-transmitted BSS, and where sending a probe request to a
+non-transmitted BSS may unintentionally expose the SSID if the
+transmitted BSS is hidden.
+
+Add support to include the SSID in unicast probe responses for such
+requests, depending on the ignore_broadcast_ssid configuration for
+transmitted or non-transmitted BSS profiles
+
+TAG: Hidden
+
+Patch-dependency: None
+
+Signed-off-by: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+---
+ src/ap/beacon.c | 21 ++++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index 0bc59cde47fb..881bc286d962 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -886,10 +886,21 @@ static u8 * hostapd_probe_resp_fill_elems(struct hostapd_data *hapd,
+ 	epos = pos + len;
+ 
+ 	*pos++ = WLAN_EID_SSID;
+-	*pos++ = hapd->conf->ssid.ssid_len;
+-	os_memcpy(pos, hapd->conf->ssid.ssid,
+-		  hapd->conf->ssid.ssid_len);
+-	pos += hapd->conf->ssid.ssid_len;
++
++	if (hapd->conf->ignore_broadcast_ssid && hapd != hapd_probed) {
++		if (hapd->conf->ignore_broadcast_ssid == 2) {
++			*pos++ = hapd->conf->ssid.ssid_len;
++			os_memset(pos, 0, hapd->conf->ssid.ssid_len);
++			pos += hapd->conf->ssid.ssid_len;
++		} else {
++			*pos++ = 0; /* empty SSID */
++		}
++	} else {
++		*pos++ = hapd->conf->ssid.ssid_len;
++		os_memcpy(pos, hapd->conf->ssid.ssid,
++				hapd->conf->ssid.ssid_len);
++		pos += hapd->conf->ssid.ssid_len;
++	}
+ 
+ 	/* Supported rates */
+ 	pos = hostapd_eid_supp_rates(hapd, pos);
+@@ -1300,7 +1311,7 @@ static enum ssid_match_result ssid_match(struct hostapd_data *hapd,
+ 		}
+ 	}
+ 
+-	if (short_ssid_list) {
++	if (short_ssid_list && !hapd->conf->ignore_broadcast_ssid) {
+ 		pos = short_ssid_list;
+ 		end = short_ssid_list + short_ssid_list_len;
+ 		while (end - pos >= 4) {
+-- 
+2.34.1
+
