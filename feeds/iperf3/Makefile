@@ -57,6 +57,8 @@ define Package/libiperf3
   DEPENDS+=+libatomic +kmod-qca-nss-netfn-sk-offload
 endef
 
+EXTERNAL_PATCH_DIR:=$(CURDIR)
+
 define Build/Patch
 	$(if $(QUILT),rm -rf $(PKG_BUILD_DIR)/patches; mkdir -p $(PKG_BUILD_DIR)/patches)
 	$(call PatchDir,$(PKG_BUILD_DIR),$(EXTERNAL_PATCH_DIR)/patches,)
