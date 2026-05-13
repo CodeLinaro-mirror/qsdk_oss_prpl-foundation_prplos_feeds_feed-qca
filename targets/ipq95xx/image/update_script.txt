@@ -3,6 +3,12 @@ echo "Defining helper commands..."
 
 setenv skip_gpt_checks no
 
+setenv xbl_active_block_start        0x00000022
+setenv xbl_active_block_size         0x00000800
+
+setenv xbl_inactive_block_start      0x00000822
+setenv xbl_inactive_block_size       0x00000800
+
 setenv u_boot_active_block_start     0x00004622
 setenv u_boot_active_block_size      0x00002000
 
@@ -160,6 +166,7 @@ fi
 setenv kernel_status skipped
 setenv rootfs_status skipped
 setenv uboot_status  skipped
+setenv xbl_status    skipped
 setenv smd_status    skipped
 
 echo "--------------------------------------------------"
@@ -167,11 +174,12 @@ echo "TFTP path          : ${tftppath}"
 echo "Kernel             : ${img_kernel}"
 echo "rootfs             : ${img_rootfs}"
 echo "U-Boot             : ${img_uboot}"
+echo "XBL                : ${img_xbl}"
 echo "SMD image          : ${img_smd}"
 echo "Update rescue bank : ${update_rescue_bank}"
 echo "Skip GPT checks    : ${skip_gpt_checks}"
 echo "--------------------------------------------------"
-echo "Hint: set img_kernel / img_rootfs / img_uboot / img_smd before running to flash them."
+echo "Hint: set img_kernel / img_rootfs / img_uboot / img_xbl / img_smd before running to flash them."
 echo "      Leave a variable unset/empty to skip that component."
 echo "      Set update_rescue_bank=yes to also update inactive banks."
 echo "      Set skip_gpt_checks=yes to skip the initial GPT checks. Be careful!!!"
@@ -268,7 +276,34 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Flash SMD → mfgdata (optional, no rescue bank)
+# 4. Flash Qualcomm XBL → 0:SBL1 and 0:SBL1_1 (optional)
+# ---------------------------------------------------------------------------
+if test -n "${img_xbl}" -a "${gpt_valid}" = "yes"; then
+    setenv cur_img  ${img_xbl}
+    setenv cur_desc XBL
+
+    setenv cur_active_name        0:SBL1
+    setenv cur_active_block_start ${xbl_active_block_start}
+    setenv cur_active_block_size  ${xbl_active_block_size}
+
+    setenv cur_inactive_name         0:SBL1_1
+    setenv cur_inactive_block_start  ${xbl_inactive_block_start}
+    setenv cur_inactive_block_size   ${xbl_inactive_block_size}
+
+    run prpl_tftp_load
+    if test "${tftp_ok}" = "yes"; then
+        run prpl_flash_active
+	run prpl_flash_rescue
+	setenv xbl_status ${last_status}
+    else
+        setenv xbl_status ${last_status}
+    fi
+else
+    test "${gpt_valid}" = "yes" && echo "Skipping XBL update (img_xbl not set)."
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Flash SMD → mfgdata (optional, no rescue bank)
 # ---------------------------------------------------------------------------
 if test -n "${img_smd}" -a "${gpt_valid}" = "yes"; then
     setenv cur_img  ${img_smd}
@@ -290,7 +325,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Final summary
+# 6. Final summary
 # ---------------------------------------------------------------------------
 if test "${gpt_valid}" = "yes"; then
     echo "============================================"
@@ -299,6 +334,7 @@ if test "${gpt_valid}" = "yes"; then
     echo "kernel (kernel-active) : ${kernel_status}"
     echo "rootfs (rootfs-active) : ${rootfs_status}"
     echo "U-Boot (u-boot-active) : ${uboot_status}"
+    echo "XBL                    : ${xbl_status}"
     echo "SMD (mfgdata)          : ${smd_status}"
     echo "Update rescue bank     : ${update_rescue_bank}"
     echo "============================================"
@@ -311,6 +347,7 @@ echo "update_prpl command has been defined."
 echo ""
 echo "Before running, you may set:"
 echo "  - tftppath            : TFTP directory (optional, default: root)"
+echo "  - img_xbl             : XBL image (optional)"
 echo "  - img_uboot           : U-Boot image (optional)"
 echo "  - img_kernel          : itb file of the kernel (optional)"
 echo "  - img_rootfs          : itb file of the rootfs (optional)"
@@ -320,6 +357,7 @@ echo "  - skip_gpt_checks:    : yes | no   (default: no)  DANGEROUS"
 echo ""
 echo "Example:"
 echo "  setenv tftppath /images/"
+echo "  setenv img_xbl xbl.elf"
 echo "  setenv img_uboot u-boot.itb"
 echo "  setenv img_kernel kernel.itb"
 echo "  setenv img_rootfs rootfs.itb"

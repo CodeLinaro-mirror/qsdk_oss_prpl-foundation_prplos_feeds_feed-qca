@@ -1,6 +1,8 @@
 # prplOS – U-Boot Update Script
 
 This script updates **U-Boot, Kernel, RootFS, and mfgdata (SMD)** from **TFTP** directly inside **U-Boot**, with optional **A/B (rescue bank) support**.
+Qualcomm's XBL (BL2) can also be flashed with this script but care should be taken when flashing the XBL due to risks of bricking the board.
+The script performs a check of the GPT partition prior to flashing any image. This check can be disabled but care should be taken if the script reports an error with the partitioning.
 
 ---
 
@@ -53,9 +55,11 @@ setenv tftppath /images/       # optional
 setenv img_kernel kernel.itb   # optional
 setenv img_rootfs rootfs.itb   # optional
 setenv img_uboot  u-boot.itb   # optional
+setenv img_xbl    xbl.elf      # optional (DANGEROUS)
 setenv img_smd    smd.bin      # optional
 
-setenv update_rescue_bank yes # yes | no (default: no)
+setenv update_rescue_bank yes  # yes | no (default: no)
+setenv skip_gpt_checks no      # yes | no (default: no)  (Use with caution)
 ```
 
 Unset any variable to **skip** that component.
