@@ -1,0 +1,60 @@
+From 715cf39d3356ed4f5a05db45f463e4e303105fde Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Fri, 22 May 2026 14:56:16 +0530
+Subject: [PATCH] wpa_supplicant: default disable_reconfig to enabled
+
+Set disable_reconfig to 1 by default for new network profiles by adding
+a DEFAULT_DISABLE_RECONFIG value and applying it in
+wpa_config_set_network_defaults(). This is to disable the wpa_s retry
+scan and association logic causing instability.
+
+Update config file writing to use INT_DEF() with the new default so the
+field is only serialized when it differs from the default behavior.
+
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+ wpa_supplicant/config.c      | 1 +
+ wpa_supplicant/config_file.c | 2 +-
+ wpa_supplicant/config_ssid.h | 1 +
+ 3 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/wpa_supplicant/config.c b/wpa_supplicant/config.c
+index 0c1c95f246e2..e2cc0d438444 100644
+--- a/wpa_supplicant/config.c
++++ b/wpa_supplicant/config.c
+@@ -3439,6 +3439,7 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
+ 	ssid->rsn_overriding = RSN_OVERRIDING_NOT_SET;
+ 	ssid->beacon_tx_mode = DEFAULT_BEACON_TX_MODE;
+ 	ssid->punct_bitmap = 0;
++	ssid->disable_reconfig = DEFAULT_DISABLE_RECONFIG;
+ }
+ 
+ 
+diff --git a/wpa_supplicant/config_file.c b/wpa_supplicant/config_file.c
+index 27209ce39a5c..b656208da8fd 100644
+--- a/wpa_supplicant/config_file.c
++++ b/wpa_supplicant/config_file.c
+@@ -1007,7 +1007,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
+ 	INT(max_idle);
+ 	INT(ssid_protection);
+ 	INT_DEF(rsn_overriding, RSN_OVERRIDING_NOT_SET);
+-	INT(disable_reconfig);
++	INT_DEF(disable_reconfig, DEFAULT_DISABLE_RECONFIG);
+ 
+ #undef STR
+ #undef INT
+diff --git a/wpa_supplicant/config_ssid.h b/wpa_supplicant/config_ssid.h
+index 10b313cfeed1..e95e39793e3b 100644
+--- a/wpa_supplicant/config_ssid.h
++++ b/wpa_supplicant/config_ssid.h
+@@ -46,6 +46,7 @@
+ #define DEFAULT_USER_SELECTED_SIM 1
+ #define DEFAULT_MAX_OPER_CHWIDTH -1
+ #define DEFAULT_BEACON_TX_MODE 0
++#define DEFAULT_DISABLE_RECONFIG 1
+ 
+ /* Consider global sae_pwe for SAE mechanism for PWE derivation */
+ #define DEFAULT_SAE_PWE SAE_PWE_NOT_SET
+-- 
+2.34.1
+
