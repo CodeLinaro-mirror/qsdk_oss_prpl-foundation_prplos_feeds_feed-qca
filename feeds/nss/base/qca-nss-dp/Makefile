@@ -36,8 +36,8 @@ This package contains a NSS data plane driver for QCA chipset
 endef
 
 define Build/InstallDev
-	mkdir -p $(1)/usr/include/qca-nss-dp
-	$(CP) $(PKG_BUILD_DIR)/exports/* $(1)/usr/include/qca-nss-dp/
+	$(INSTALL_DIR) $(1)/usr/include/qca-nss-dp
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/exports/* $(1)/usr/include/qca-nss-dp/
 endef
 
 EXTRA_CFLAGS+= \
