@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Volodymyr Pavlenko <volodymyr.pavlenko@mind.be>
+Date: Thu, 28 May 2026 16:00:00 +0300
+Subject: [PATCH] UPSTREAM:PROTOCOL:hostapd:wpa_supplicant: Emit Multi-AP assoc response event
+
+The Multi-AP profile and primary VLAN ID are parsed from the association
+response before the WPA 4-way handshake starts, but these values were only
+reported later in CTRL-EVENT-CONNECTED. That event is emitted after the
+connection reaches WPA_COMPLETED, so it is too late for upper layers that need
+to configure the backhaul STA VLAN path before tagged EAPOL is exchanged.
+
+Emit a dedicated CTRL-EVENT-ASSOC-RESP message as soon as the association
+response Multi-AP IE has been parsed. This lets pWHM learn the primary VLAN ID
+before the connected event.
+
+Patch-dependency: z011-Multi-AP-Add-wpa-supp.patch
+
+Signed-off-by: Volodymyr Pavlenko <volodymyr.pavlenko@mind.be>
+---
+ src/common/wpa_ctrl.h   | 2 ++
+ wpa_supplicant/events.c | 6 ++++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/src/common/wpa_ctrl.h b/src/common/wpa_ctrl.h
+index 5ff02dc..06e7b4b 100644
+--- a/src/common/wpa_ctrl.h
++++ b/src/common/wpa_ctrl.h
+@@ -26,0 +27,2 @@ extern "C" {
++/** Association response parsed during connection attempt */
++#define WPA_EVENT_ASSOC_RESP "CTRL-EVENT-ASSOC-RESP "
+diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
+index aa5954e..837c7ac 100644
+--- a/wpa_supplicant/events.c
++++ b/wpa_supplicant/events.c
+@@ -3121,0 +3122,6 @@ static void multi_ap_process_assoc_resp(struct wpa_supplicant *wpa_s,
++	wpa_msg(wpa_s, MSG_INFO,
++		WPA_EVENT_ASSOC_RESP "multi_ap_profile=%u"
++		" multi_ap_primary_vlanid=%u",
++		(unsigned int) wpa_s->multi_ap_profile,
++		(unsigned int) wpa_s->multi_ap_primary_vlanid);
++
