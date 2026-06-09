@@ -1,0 +1,244 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+Date: Mon, 8 Jun 2026 15:00:00 +0300
+Subject: [PATCH] UPSTREAM:PROTOCOL:wifi:mac80211: handle VLAN EAPOL control port
+
+Multi-AP onboarding can exchange EAPOL-Key frames with an 802.1Q header when the backhaul BSS uses a primary VLAN. Treat VLAN-encapsulated EAPOL as control-port traffic on RX and allow control-port TX with an 802.1Q outer EtherType only when the VLAN inner protocol is EAPOL.
+
+Signed-off-by: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+---
+diff --git a/net/mac80211/rx.c b/net/mac80211/rx.c
+index 995f141..bc643bc 100644
+--- a/net/mac80211/rx.c
++++ b/net/mac80211/rx.c
+@@ -15,6 +15,7 @@
+ #include <linux/skbuff.h>
+ #include <linux/netdevice.h>
+ #include <linux/etherdevice.h>
++#include <linux/if_vlan.h>
+ #include <linux/rcupdate.h>
+ #include <linux/export.h>
+ #include <linux/kcov.h>
+@@ -2837,13 +2838,57 @@ ieee80211_drop_unencrypted_mgmt(struct ieee80211_rx_data *rx)
+ }
+ EXPORT_SYMBOL_IF_MAC80211_KUNIT(ieee80211_drop_unencrypted_mgmt);
+ 
++static bool
++ieee80211_is_control_port_protocol(struct ieee80211_sub_if_data *sdata,
++				   struct sk_buff *skb)
++{
++	const struct ethhdr *ehdr;
++	const struct vlan_ethhdr *veth;
++
++	if (skb->len < sizeof(*ehdr))
++		return false;
++
++	ehdr = (const void *)skb->data;
++	if (ehdr->h_proto == sdata->control_port_protocol)
++		return true;
++
++	if (ehdr->h_proto != cpu_to_be16(ETH_P_8021Q) ||
++	    skb->len < sizeof(*veth))
++		return false;
++
++	veth = (const void *)skb->data;
++
++	return veth->h_vlan_encapsulated_proto ==
++	       sdata->control_port_protocol;
++}
++
++static bool
++ieee80211_skb_protocol_is_control_port(struct ieee80211_sub_if_data *sdata,
++				       struct sk_buff *skb)
++{
++	const struct vlan_hdr *vhdr;
++
++	if (skb->protocol == sdata->control_port_protocol)
++		return true;
++
++	if (skb->protocol != cpu_to_be16(ETH_P_8021Q))
++		return false;
++
++	if (!pskb_may_pull(skb, sizeof(*vhdr)))
++		return false;
++
++	vhdr = (const void *)skb->data;
++
++	return vhdr->h_vlan_encapsulated_proto ==
++	       sdata->control_port_protocol;
++}
++
+ static ieee80211_rx_result
+ __ieee80211_data_to_8023(struct ieee80211_rx_data *rx, bool *port_control)
+ {
+ 	struct ieee80211_sub_if_data *sdata = rx->sdata;
+ 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)rx->skb->data;
+ 	bool check_port_control = false;
+-	struct ethhdr *ehdr;
+ 	int ret;
+ 
+ 	*port_control = false;
+@@ -2867,8 +2912,7 @@ __ieee80211_data_to_8023(struct ieee80211_rx_data *rx, bool *port_control)
+ 	if (ret < 0)
+ 		return RX_DROP_U_INVALID_8023;
+ 
+-	ehdr = (struct ethhdr *) rx->skb->data;
+-	if (ehdr->h_proto == rx->sdata->control_port_protocol)
++	if (ieee80211_is_control_port_protocol(rx->sdata, rx->skb))
+ 		*port_control = true;
+ 	else if (check_port_control)
+ 		return RX_DROP_U_NOT_PORT_CONTROL;
+@@ -2919,7 +2963,7 @@ static bool ieee80211_frame_allowed(struct ieee80211_rx_data *rx, __le16 fc)
+ 	 * whether the frame was encrypted or not, and always disallow
+ 	 * all other destination addresses for them.
+ 	 */
+-	if (unlikely(ehdr->h_proto == rx->sdata->control_port_protocol))
++	if (unlikely(ieee80211_is_control_port_protocol(rx->sdata, rx->skb)))
+ 		return ieee80211_is_our_addr(rx->sdata, ehdr->h_dest, NULL) ||
+ 		       ether_addr_equal(ehdr->h_dest, pae_group_addr);
+ 
+@@ -3010,8 +3054,11 @@ static void ieee80211_deliver_skb_to_local_stack(struct sk_buff *skb,
+ 	struct ieee80211_sub_if_data *sdata = rx->sdata;
+ 	struct net_device *dev = sdata->dev;
+ 	struct sta_info *sta = rx->sta;
++	bool control_port_protocol;
+ 
+-	if (unlikely((skb->protocol == sdata->control_port_protocol ||
++	control_port_protocol =
++		ieee80211_skb_protocol_is_control_port(sdata, skb);
++	if (unlikely((control_port_protocol ||
+ 		     (skb->protocol == cpu_to_be16(ETH_P_PREAUTH) &&
+ 		      !sdata->control_port_no_preauth)) &&
+ 		     sdata->control_port_over_nl80211)) {
+@@ -3040,7 +3087,7 @@ static void ieee80211_deliver_skb_to_local_stack(struct sk_buff *skb,
+ 		 * be the PAE group address, unless the hardware allowed them
+ 		 * through in 802.3 offloaded mode.
+ 		 */
+-		if (unlikely(skb->protocol == sdata->control_port_protocol &&
++		if (unlikely(control_port_protocol &&
+ 			     !ether_addr_equal(ehdr->h_dest, sdata->vif.addr)))
+ 			ether_addr_copy(ehdr->h_dest, sdata->vif.addr);
+ 
+@@ -3097,7 +3144,7 @@ ieee80211_deliver_skb(struct ieee80211_rx_data *rx)
+ 	if ((sdata->vif.type == NL80211_IFTYPE_AP ||
+ 	     sdata->vif.type == NL80211_IFTYPE_AP_VLAN) &&
+ 	    !(sdata->flags & IEEE80211_SDATA_DONT_BRIDGE_PACKETS) &&
+-	    ehdr->h_proto != rx->sdata->control_port_protocol &&
++	    !ieee80211_is_control_port_protocol(rx->sdata, rx->skb) &&
+ 	    (sdata->vif.type != NL80211_IFTYPE_AP_VLAN || !sdata->u.vlan.sta)) {
+ 		if (is_multicast_ether_addr(ehdr->h_dest) &&
+ 		    ieee80211_vif_get_num_mcast_if(sdata) != 0) {
+diff --git a/net/mac80211/tx.c b/net/mac80211/tx.c
+index ad0400f..1c08a6b 100644
+--- a/net/mac80211/tx.c
++++ b/net/mac80211/tx.c
+@@ -5006,6 +5006,30 @@ static bool __ieee80211_tx_8023(struct ieee80211_sub_if_data *sdata,
+ 	return true;
+ }
+ 
++static bool
++ieee80211_tx_8023_is_control_port_protocol(struct ieee80211_sub_if_data *sdata,
++					   struct sk_buff *skb)
++{
++	const struct ethhdr *ehdr;
++	const struct vlan_ethhdr *veth;
++
++	if (skb->len < sizeof(*ehdr))
++		return false;
++
++	ehdr = (const void *)skb->data;
++	if (ehdr->h_proto == sdata->control_port_protocol)
++		return true;
++
++	if (ehdr->h_proto != cpu_to_be16(ETH_P_8021Q) ||
++	    skb->len < sizeof(*veth))
++		return false;
++
++	veth = (const void *)skb->data;
++
++	return veth->h_vlan_encapsulated_proto ==
++	       sdata->control_port_protocol;
++}
++
+ static bool ieee80211_tx_8023(struct ieee80211_sub_if_data *sdata,
+ 			      struct sk_buff *skb, struct sta_info *sta,
+ 			      bool txpending)
+@@ -5014,10 +5038,9 @@ static bool ieee80211_tx_8023(struct ieee80211_sub_if_data *sdata,
+ 	struct sk_buff *next;
+ 	struct ieee80211_tx_control control = {};
+ 	struct ieee80211_sta *pubsta = NULL;
+-	struct ethhdr *ehdr = (struct ethhdr *)skb->data;
+ 	bool ret = true, is_eapol;
+ 
+-	is_eapol = (sdata->control_port_protocol == ehdr->h_proto);
++	is_eapol = ieee80211_tx_8023_is_control_port_protocol(sdata, skb);
+ 	if (sta && is_eapol) {
+ 		if (sta->uploaded)
+ 			pubsta = &sta->sta;
+@@ -5306,7 +5329,6 @@ netdev_tx_t __ieee80211_subif_start_xmit_8023(struct sk_buff *skb,
+ {
+ 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+ 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+-	struct ethhdr *ehdr = (struct ethhdr *)skb->data;
+ 	struct ieee80211_key *key = NULL;
+ 	struct sta_info *sta;
+ 	bool is_eapol;
+@@ -5331,7 +5353,7 @@ netdev_tx_t __ieee80211_subif_start_xmit_8023(struct sk_buff *skb,
+ 		goto out;
+ 	}
+ 
+-	is_eapol = (sdata->control_port_protocol == ehdr->h_proto);
++	is_eapol = ieee80211_tx_8023_is_control_port_protocol(sdata, skb);
+ 	if (ieee80211_hw_check(&sdata->local->hw, SUPPORTS_NSS_OFFLOAD)) {
+ 		if (unlikely(IS_ERR_OR_NULL(sta) || !sta->uploaded))
+ 			sta = NULL;
+@@ -6814,6 +6836,25 @@ void ieee80211_tx_skb_tid(struct ieee80211_sub_if_data *sdata,
+ 	rcu_read_unlock();
+ }
+ 
++static bool
++ieee80211_tx_control_port_is_ctrl_proto(struct ieee80211_sub_if_data *sdata,
++					const u8 *buf, size_t len,
++					__be16 proto)
++{
++	const struct vlan_hdr *vhdr;
++
++	if (proto == sdata->control_port_protocol)
++		return true;
++
++	if (proto != cpu_to_be16(ETH_P_8021Q) || len < sizeof(*vhdr))
++		return false;
++
++	vhdr = (const void *)buf;
++
++	return vhdr->h_vlan_encapsulated_proto ==
++	       sdata->control_port_protocol;
++}
++
+ int ieee80211_tx_control_port(struct wiphy *wiphy, struct net_device *dev,
+ 			      const u8 *buf, size_t len,
+ 			      const u8 *dest, __be16 proto, bool unencrypted,
+@@ -6826,6 +6867,7 @@ int ieee80211_tx_control_port(struct wiphy *wiphy, struct net_device *dev,
+ 	struct ethhdr *ehdr;
+ 	u32 ctrl_flags = 0;
+ 	u32 flags = 0;
++	bool control_port_protocol;
+ 	int err;
+ 
+ 	/* mutex lock is only needed for incrementing the cookie counter */
+@@ -6834,11 +6876,12 @@ int ieee80211_tx_control_port(struct wiphy *wiphy, struct net_device *dev,
+ 	/* Only accept CONTROL_PORT_PROTOCOL configured in CONNECT/ASSOCIATE
+ 	 * or Pre-Authentication
+ 	 */
+-	if (proto != sdata->control_port_protocol &&
+-	    proto != cpu_to_be16(ETH_P_PREAUTH))
++	control_port_protocol =
++		ieee80211_tx_control_port_is_ctrl_proto(sdata, buf, len, proto);
++	if (!control_port_protocol && proto != cpu_to_be16(ETH_P_PREAUTH))
+ 		return -EINVAL;
+ 
+-	if (proto == sdata->control_port_protocol)
++	if (control_port_protocol)
+ 		ctrl_flags |= IEEE80211_TX_CTRL_PORT_CTRL_PROTO |
+ 			      IEEE80211_TX_CTRL_SKIP_MPATH_LOOKUP;
+ 

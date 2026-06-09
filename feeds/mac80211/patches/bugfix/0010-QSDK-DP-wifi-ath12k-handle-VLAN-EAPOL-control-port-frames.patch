@@ -1,0 +1,273 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+Date: Mon, 8 Jun 2026 15:05:00 +0300
+Subject: [PATCH] QSDK:DP:wifi:ath12k: handle VLAN EAPOL control port frames
+
+QCA wifi7 RX/TX paths special-case EAPOL by checking only direct ETH_P_PAE. VLAN-tagged Multi-AP EAPOL has outer ETH_P_8021Q and inner ETH_P_PAE, so unauthenticated M1 can be dropped as data and tagged M2 can miss the EAPOL encap path.
+
+Recognize VLAN-encapsulated EAPOL in the Ethernet decap slow-path decision, unauthenticated WDS error handling, WBM error EAPOL stats, and TX EAPOL encap/accounting.
+
+Signed-off-by: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+---
+diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
+index a01b91d..ef4c0e4 100644
+--- a/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
++++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_rx.c
+@@ -6,6 +6,7 @@
+ #include <linux/ieee80211.h>
+ #include <linux/kernel.h>
+ #include <linux/skbuff.h>
++#include <linux/if_vlan.h>
+ #include <crypto/hash.h>
+ #include "../core.h"
+ #include "hal.h"
+@@ -36,6 +37,49 @@ static int ath12k_wifi7_peer_rx_tid_delete_handler(struct ath12k_base *ab,
+ 						   u8 tid);
+ void ath12k_wifi7_peer_rx_tid_qref_reset(struct ath12k_base *ab, u16 peer_id, u16 tid);
+ 
++static bool ath12k_wifi7_dp_rx_eth_is_eapol(struct sk_buff *msdu)
++{
++	const struct ethhdr *ehdr;
++	const struct vlan_ethhdr *veth;
++
++	if (msdu->len < sizeof(*ehdr))
++		return false;
++
++	ehdr = (const void *)msdu->data;
++	if (ehdr->h_proto == cpu_to_be16(ETH_P_PAE))
++		return true;
++
++	if (ehdr->h_proto != cpu_to_be16(ETH_P_8021Q) ||
++	    msdu->len < sizeof(*veth))
++		return false;
++
++	veth = (const void *)msdu->data;
++
++	return veth->h_vlan_encapsulated_proto == cpu_to_be16(ETH_P_PAE);
++}
++
++static bool ath12k_wifi7_dp_rx_llc_is_eapol(struct sk_buff *msdu,
++					    size_t offset)
++{
++	const struct ath12k_dp_rx_rfc1042_hdr *llc;
++	const struct vlan_hdr *vhdr;
++
++	if (msdu->len < offset + sizeof(*llc))
++		return false;
++
++	llc = (const void *)(msdu->data + offset);
++	if (llc->snap_type == cpu_to_be16(ETH_P_PAE))
++		return true;
++
++	if (llc->snap_type != cpu_to_be16(ETH_P_8021Q) ||
++	    msdu->len < offset + sizeof(*llc) + sizeof(*vhdr))
++		return false;
++
++	vhdr = (const void *)(llc + 1);
++
++	return vhdr->h_vlan_encapsulated_proto == cpu_to_be16(ETH_P_PAE);
++}
++
+ static inline u8 ath12k_wifi7_dp_rx_get_msdu_src_link(struct ath12k_dp *dp,
+ 						      struct hal_rx_desc *desc)
+ {
+@@ -830,7 +874,7 @@ static int ath12k_wifi7_dp_rx_h_undecap(struct ath12k_pdev_dp *dp_pdev,
+ 
+ 		is_mcbc = rx_msdu_info->ra_is_mcbc;
+ 		/* mac80211 allows fast path only for authorized STA */
+-		if (ehdr->h_proto == cpu_to_be16(ETH_P_PAE) ||
++		if (ath12k_wifi7_dp_rx_eth_is_eapol(msdu) ||
+ 		    enctype == HAL_ENCRYPT_TYPE_TKIP_MIC) {
+ 			ath12k_wifi7_dp_rx_h_undecap_eth(dp_pdev, msdu, enctype, status,
+ 							 tlv_info->mesh_ctrl_present,
+@@ -3015,7 +3059,6 @@ static int ath12k_wifi7_dp_rx_h_unauth_wds_err(struct ath12k_pdev_dp *dp_pdev,
+ 	u16 msdu_len = rx_desc_data->msdu_len;
+ 	struct rx_msdu_desc_info rx_msdu_info;
+ 	struct rx_mpdu_desc_info rx_mpdu_info;
+-	struct ath12k_dp_rx_rfc1042_hdr *llc;
+ 	struct ath12k_dp_peer *peer = NULL;
+ 	struct rx_tlv_info_1 tlv_info;
+ 	struct ieee80211_hdr *hdr;
+@@ -3084,10 +3127,9 @@ static int ath12k_wifi7_dp_rx_h_unauth_wds_err(struct ath12k_pdev_dp *dp_pdev,
+ 
+ 	hdr = (struct ieee80211_hdr *)msdu->data;
+ 	hdr_len = ieee80211_hdrlen(hdr->frame_control);
+-	llc = (struct ath12k_dp_rx_rfc1042_hdr *)(msdu->data + hdr_len);
+ 
+-	if (!(llc->snap_type == cpu_to_be16(ETH_P_PAE) ||
+-	    ieee80211_is_qos_nullfunc(hdr->frame_control)))
++	if (!(ath12k_wifi7_dp_rx_llc_is_eapol(msdu, hdr_len) ||
++	      ieee80211_is_qos_nullfunc(hdr->frame_control)))
+ 		drop = true;
+ 
+ exit:
+@@ -3175,7 +3217,6 @@ static void ath12k_wifi7_dp_rx_wbm_err(struct ath12k_pdev_dp *dp_pdev,
+ 	struct ieee80211_rx_status rxs = {0};
+ 	bool drop = true;
+ 	struct ieee80211_hdr *hdr;
+-	struct ath12k_dp_rx_rfc1042_hdr *llc;
+ 	enum ath12k_dp_eapol_key_type subtype;
+ 	size_t hdr_len;
+ 	struct hal_rx_desc *rx_desc = (struct hal_rx_desc *)msdu->data;
+@@ -3205,8 +3246,7 @@ static void ath12k_wifi7_dp_rx_wbm_err(struct ath12k_pdev_dp *dp_pdev,
+ 
+ 	hdr = (struct ieee80211_hdr *)msdu->data;
+ 	hdr_len = ieee80211_hdrlen(hdr->frame_control);
+-	llc = (struct ath12k_dp_rx_rfc1042_hdr *)(msdu->data + hdr_len);
+-	if (llc->snap_type == cpu_to_be16(ETH_P_PAE)) {
++	if (ath12k_wifi7_dp_rx_llc_is_eapol(msdu, hdr_len)) {
+ 		dp->device_stats.rx_eapol[ab->device_id]++;
+ 		subtype = ath12k_dp_get_eapol_subtype(msdu->data + hdr_len + LLC_SNAP_HDR_LEN);
+ 		if (subtype != DP_EAPOL_KEY_TYPE_MAX && subtype > 0) {
+diff --git a/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c b/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
+index d7c7e26..a8b62a2 100644
+--- a/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
++++ b/drivers/net/wireless/ath/ath12k/wifi7/dp_tx.c
+@@ -17,6 +17,7 @@
+ #include "../dp_peer.h"
+ #include "../telemetry.h"
+ #include "../telemetry_agent_if.h"
++#include <linux/if_vlan.h>
+ 
+ struct ath12k_tx_sw_metadata {
+ 	struct sk_buff *skb;
+@@ -42,6 +43,42 @@ struct ath12k_wifi7_tx_status_entry {
+ 
+ static_assert(sizeof(struct ath12k_wifi7_tx_status_entry) == 64, "size of struct ath12k_wifi7_tx_status_entry is not 64 bytes!");
+ 
++static bool ath12k_wifi7_dp_tx_skb_is_eapol(struct sk_buff *skb,
++					    struct ethhdr *eth,
++					    struct ieee80211_hdr *hdr)
++{
++	const struct vlan_ethhdr *veth;
++	const struct vlan_hdr *vhdr;
++	size_t hdrlen;
++
++	if (skb->protocol == cpu_to_be16(ETH_P_PAE))
++		return true;
++
++	if (skb->protocol != cpu_to_be16(ETH_P_8021Q))
++		return false;
++
++	if (eth) {
++		if (skb->len < sizeof(*veth))
++			return false;
++
++		veth = (const void *)skb->data;
++
++		return veth->h_vlan_encapsulated_proto ==
++		       cpu_to_be16(ETH_P_PAE);
++	}
++
++	if (!hdr)
++		return false;
++
++	hdrlen = ieee80211_get_hdrlen_from_skb(skb);
++	if (skb->len < hdrlen + LLC_SNAP_HDR_LEN + sizeof(*vhdr))
++		return false;
++
++	vhdr = (const void *)(skb->data + hdrlen + LLC_SNAP_HDR_LEN);
++
++	return vhdr->h_vlan_encapsulated_proto == cpu_to_be16(ETH_P_PAE);
++}
++
+ static enum hal_tcl_encap_type
+ ath12k_dp_tx_get_encap_type(struct ath12k_base *ab, struct sk_buff *skb)
+ {
+@@ -1070,6 +1107,7 @@ ath12k_wifi7_dp_tx(struct ath12k_pdev_dp *dp_pdev,
+ 	bool add_htt_metadata = false;
+ 	u32 iova_mask = dp->hw_params->iova_mask;
+ 	bool is_diff_encap = false, is_null = false;
++	bool is_eapol = false;
+ 	u8 qos_tag;
+ 	enum ath12k_dp_tx_enq_error err = DP_TX_ENQ_SUCCESS;
+ 
+@@ -1088,6 +1126,8 @@ ath12k_wifi7_dp_tx(struct ath12k_pdev_dp *dp_pdev,
+ 	else
+ 		hdr = (void *)skb->data;
+ 
++	is_eapol = ath12k_wifi7_dp_tx_skb_is_eapol(skb, eth, hdr);
++
+ 	if (!(skb_cb->flags & ATH12K_SKB_HW_80211_ENCAP) &&
+ 	    !ieee80211_is_data(hdr->frame_control))
+ 		return DP_TX_ENQ_DROP_NON_DATA_FRAME;
+@@ -1171,7 +1211,7 @@ ath12k_wifi7_dp_tx(struct ath12k_pdev_dp *dp_pdev,
+ 	case HAL_TCL_ENCAP_TYPE_NATIVE_WIFI:
+ 		is_null = ieee80211_is_nullfunc(hdr->frame_control);
+ 		if ((ahvif->vif->offload_flags & IEEE80211_OFFLOAD_ENCAP_ENABLED) &&
+-		    (skb->protocol == cpu_to_be16(ETH_P_PAE) || is_null))
++		    (is_eapol || is_null))
+ 			is_diff_encap = true;
+ 		else
+ 			ath12k_dp_tx_encap_nwifi(skb);
+@@ -1201,7 +1241,7 @@ ath12k_wifi7_dp_tx(struct ath12k_pdev_dp *dp_pdev,
+ 	if (unlikely(dp_vif->tx_encap_type == HAL_TCL_ENCAP_TYPE_ETHERNET &&
+ 		     !(skb_cb->flags & ATH12K_SKB_HW_80211_ENCAP))) {
+ 		msdu_ext_desc = true;
+-		if (skb->protocol == cpu_to_be16(ETH_P_PAE)) {
++		if (is_eapol) {
+ 			ti.encap_type = HAL_TCL_ENCAP_TYPE_RAW;
+ 			ti.encrypt_type = HAL_ENCRYPT_TYPE_OPEN;
+ 		}
+@@ -1357,7 +1397,7 @@ skip_htt_metadata:
+ 	if (is_mcast) {
+ 		reason = ATH_TX_MCAST_PKTS;
+ 		ab->dp->device_stats.tx_mcast[ti.ring_id]++;
+-	} else if (skb->protocol == cpu_to_be16(ETH_P_PAE)) {
++	} else if (is_eapol) {
+ 		ab->dp->device_stats.tx_eapol[ti.ring_id]++;
+ 		reason = ATH_TX_EAPOL_PKTS;
+ 		if (ti.encap_type == HAL_TCL_ENCAP_TYPE_NATIVE_WIFI) {
+@@ -1534,8 +1574,8 @@ ath12k_wifi7_dp_tx_htt_tx_complete_buf(struct ath12k_dp *dp,
+ 	struct ath12k_base *ab = dp->ab;
+ 	struct sk_buff *skb_ext_desc = sw_metadata->skb_ext_desc;
+ 	struct ath12k_pdev_dp *dp_pdev;
+-	struct ethhdr *eth;
+-	struct ieee80211_hdr *hdr;
++	struct ethhdr *eth = NULL;
++	struct ieee80211_hdr *hdr = NULL;
+ 	size_t hdrlen;
+ 	enum ath12k_dp_eapol_key_type subtype;
+ 	u8 pdev_id;
+@@ -1582,21 +1622,33 @@ ath12k_wifi7_dp_tx_htt_tx_complete_buf(struct ath12k_dp *dp,
+ 		}
+ 	}
+ 
+-	if (msdu->protocol == cpu_to_be16(ETH_P_PAE)) {
+-		if (skb_cb->flags & ATH12K_SKB_HW_80211_ENCAP) {
+-			eth = (struct ethhdr *)msdu->data;
+-			subtype = ath12k_dp_get_eapol_subtype(msdu->data + ETH_HLEN);
++	if (skb_cb->flags & ATH12K_SKB_HW_80211_ENCAP)
++		eth = (struct ethhdr *)msdu->data;
++	else
++		hdr = (struct ieee80211_hdr *)msdu->data;
++
++	if (ath12k_wifi7_dp_tx_skb_is_eapol(msdu, eth, hdr)) {
++		if (eth) {
++			size_t eapol_offset = ETH_HLEN;
++
++			if (msdu->protocol == cpu_to_be16(ETH_P_8021Q))
++				eapol_offset += VLAN_HLEN;
++
++			subtype = ath12k_dp_get_eapol_subtype(msdu->data + eapol_offset);
+ 			if (subtype != DP_EAPOL_KEY_TYPE_MAX)
+ 				ath12k_dbg(ab, ATH12K_DBG_EAPOL, "Tx completion success for"
+ 					   " %s%d EAPOL frame to STA %pM\n",
+ 					   subtype <= 4 ? "M" : "G",
+ 					   subtype <= 4 ? subtype : (subtype - 4),
+ 					   eth->h_dest);
+-		} else {
+-			hdr = (struct ieee80211_hdr *)msdu->data;
++		} else if (hdr) {
+ 			hdrlen = ieee80211_get_hdrlen_from_skb(msdu);
+-			subtype = ath12k_dp_get_eapol_subtype(msdu->data
+-					+ hdrlen + LLC_SNAP_HDR_LEN);
++			if (msdu->protocol == cpu_to_be16(ETH_P_8021Q))
++				hdrlen += VLAN_HLEN;
++
++			subtype = ath12k_dp_get_eapol_subtype(msdu->data +
++							      hdrlen +
++							      LLC_SNAP_HDR_LEN);
+ 			if (subtype != DP_EAPOL_KEY_TYPE_MAX)
+ 				ath12k_dbg(ab, ATH12K_DBG_EAPOL, "Tx completion success for"
+ 					   " %s%d EAPOL frame to STA %pM\n",
