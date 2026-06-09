@@ -1,0 +1,426 @@
+From 522dd4b1a6baf12dc30e302797a20bac0c3c753e Mon Sep 17 00:00:00 2001
+From: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+Date: Fri, 29 May 2026 11:52:44 +0300
+Subject: [PATCH] UPSTREAM:PROTOCOL:hostapd:wpa_supplicant: Handle Multi-AP
+ VLAN EAPOL
+
+Multi-AP backhaul onboarding can exchange EAPOL frames with an
+802.1Q header when the association response advertises a primary
+VLAN. Handle this in the control-port path, matching the MaxLinear
+implementation style instead of learning the VID in the raw L2 socket
+code.
+
+Carry the control-port VLAN ID into EVENT_EAPOL_RX, unwrap 802.1Q
+control-port payloads before the WPA state machine sees them, validate
+tagged frames against the expected Multi-AP VLAN on AP and supplicant
+RX, and wrap outgoing EAPOL payloads with a VLAN header when the
+expected VLAN is configured. Untagged EAPOL remains accepted so both
+peer behaviours continue to work.
+
+Patch-dependency: z011-Multi-AP-Add-wpa-supp.patch
+
+Signed-off-by: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+---
+diff --git a/src/ap/ap_drv_ops.c b/src/ap/ap_drv_ops.c
+index 14e6ba9..aba4091 100644
+--- a/src/ap/ap_drv_ops.c
++++ b/src/ap/ap_drv_ops.c
+@@ -51,6 +51,8 @@ u32 hostapd_sta_flags_to_drv(u32 flags)
+ 		res |= WPA_STA_SPP_AMSDU;
+ 	if (flags & WLAN_STA_FT_AUTH)
+ 		res |= WPA_STA_FT_AUTH;
++	if (flags & WLAN_STA_MULTI_AP)
++		res |= WPA_STA_MULTI_AP;
+ 
+ 	return res;
+ }
+diff --git a/src/ap/drv_callbacks.c b/src/ap/drv_callbacks.c
+index 637cc87..b01630b 100644
+--- a/src/ap/drv_callbacks.c
++++ b/src/ap/drv_callbacks.c
+@@ -2156,9 +2156,10 @@ static int hostapd_event_new_sta(struct hostapd_data *hapd, const u8 *addr)
+ static void hostapd_event_eapol_rx(struct hostapd_data *hapd, const u8 *src,
+ 				   const u8 *data, size_t data_len,
+ 				   enum frame_encryption encrypted,
+-				   int link_id)
++				   int link_id, u16 vlan_id)
+ {
+ 	struct hostapd_data *orig_hapd = hapd;
++	struct sta_info *sta;
+ 
+ #ifdef CONFIG_IEEE80211BE
+ 	hapd = switch_link_hapd(hapd, link_id);
+@@ -2178,6 +2179,18 @@ static void hostapd_event_eapol_rx(struct hostapd_data *hapd, const u8 *src,
+ 		hapd = orig_hapd;
+ 	}
+ 
++	sta = ap_get_sta(hapd, src);
++	if (sta && (sta->flags & WLAN_STA_MULTI_AP) &&
++	    hapd->conf->multi_ap == BACKHAUL_BSS &&
++	    hapd->conf->multi_ap_vlanid && vlan_id &&
++	    hapd->conf->multi_ap_vlanid != vlan_id) {
++		wpa_printf(MSG_ERROR,
++			   "Dropping EAPOL frame(vlan:%u) from " MACSTR
++			   " vlan_id mismatch(%u)",
++			   vlan_id, MAC2STR(src), hapd->conf->multi_ap_vlanid);
++		return;
++	}
++
+ 	ieee802_1x_receive(hapd, src, data, data_len, encrypted);
+ }
+ 
+@@ -3331,7 +3344,8 @@ void hostapd_wpa_event(void *ctx, enum wpa_event_type event,
+ 				       data->eapol_rx.data,
+ 				       data->eapol_rx.data_len,
+ 				       data->eapol_rx.encrypted,
+-				       data->eapol_rx.link_id);
++				       data->eapol_rx.link_id,
++				       data->eapol_rx.vlan_id);
+ 		break;
+ 	case EVENT_ASSOC:
+ 		if (!data)
+diff --git a/src/common/ieee802_11_common.c b/src/common/ieee802_11_common.c
+index cb1d02d..a1a78fa 100644
+--- a/src/common/ieee802_11_common.c
++++ b/src/common/ieee802_11_common.c
+@@ -3729,3 +3729,48 @@ u8 get_link_id(const u8 *ml_ie)
+        link_id = ml_ie[link_id_pos] & 0x0f;
+        return link_id;
+ }
++
++
++struct vlan_hdr {
++	be16 h_vlan_TCI;
++	be16 h_vlan_encapsulated_proto;
++} STRUCT_PACKED;
++
++
++u16 ieee802_11_add_vlan_hdr(u8 **buffer, u16 vlan_id, u16 encap_proto,
++			    const u8 *data, size_t *len)
++{
++	struct vlan_hdr *vlan_hdr;
++
++	*buffer = os_zalloc(sizeof(*vlan_hdr) + *len);
++	if (!*buffer) {
++		wpa_printf(MSG_ERROR, "%s: Failed to allocate VLAN header",
++			   __func__);
++		return encap_proto;
++	}
++
++	vlan_hdr = (struct vlan_hdr *) *buffer;
++	vlan_hdr->h_vlan_TCI = host_to_be16(vlan_id);
++	vlan_hdr->h_vlan_encapsulated_proto = host_to_be16(encap_proto);
++	os_memcpy(vlan_hdr + 1, data, *len);
++	*len += sizeof(*vlan_hdr);
++
++	return ETH_P_8021Q;
++}
++
++
++const u8 * ieee802_11_parse_vlan_hdr(const u8 *data, size_t *len,
++				     u16 *vlan_id, u16 *encap_proto)
++{
++	const struct vlan_hdr *vlan_hdr;
++
++	if (*len < sizeof(*vlan_hdr))
++		return NULL;
++
++	vlan_hdr = (const struct vlan_hdr *) data;
++	*vlan_id = be_to_host16(vlan_hdr->h_vlan_TCI) & 0x0fff;
++	*encap_proto = be_to_host16(vlan_hdr->h_vlan_encapsulated_proto);
++	*len -= sizeof(*vlan_hdr);
++
++	return data + sizeof(*vlan_hdr);
++}
+diff --git a/src/common/ieee802_11_common.h b/src/common/ieee802_11_common.h
+index 5e4bc61..53f3f19 100644
+--- a/src/common/ieee802_11_common.h
++++ b/src/common/ieee802_11_common.h
+@@ -405,6 +405,10 @@ size_t ieee802_11_defrag_mle_subelem(struct wpabuf *mlbuf,
+ const u8 * get_ml_ie(const u8 *ies, size_t len, u8 type);
+ const u8 * get_basic_mle_mld_addr(const u8 *buf, size_t len);
+ u8 get_link_id(const u8 *ml_ie);
++u16 ieee802_11_add_vlan_hdr(u8 **buffer, u16 vlan_id, u16 encap_proto,
++			    const u8 *data, size_t *len);
++const u8 * ieee802_11_parse_vlan_hdr(const u8 *data, size_t *len,
++				     u16 *vlan_id, u16 *encap_proto);
+ 
+ /**
+  * struct hostapd_multi_mbssid_group: hostapd per group MBSSID info
+diff --git a/src/drivers/driver.h b/src/drivers/driver.h
+index bdf33ae..e5eb288 100644
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -3100,6 +3100,7 @@ struct wpa_bss_params {
+ #define WPA_STA_ASSOCIATED BIT(6)
+ #define WPA_STA_SPP_AMSDU BIT(7)
+ #define WPA_STA_FT_AUTH BIT(8)
++#define WPA_STA_MULTI_AP BIT(9)
+ 
+ enum tdls_oper {
+ 	TDLS_DISCOVERY_REQ,
+@@ -7509,6 +7510,7 @@ union wpa_event_data {
+ 		size_t data_len;
+ 		enum frame_encryption encrypted;
+ 		int link_id;
++		u16 vlan_id;
+ 	} eapol_rx;
+ 
+ 	/**
+@@ -8047,6 +8049,22 @@ static inline void drv_event_eapol_rx2(void *ctx, const u8 *src, const u8 *data,
+ 	wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
+ }
+ 
++static inline void drv_event_eapol_rx_vlan(void *ctx, const u8 *src,
++					   const u8 *data, size_t data_len,
++					   enum frame_encryption encrypted,
++					   int link_id, u16 vlan_id)
++{
++	union wpa_event_data event;
++	os_memset(&event, 0, sizeof(event));
++	event.eapol_rx.src = src;
++	event.eapol_rx.data = data;
++	event.eapol_rx.data_len = data_len;
++	event.eapol_rx.encrypted = encrypted;
++	event.eapol_rx.link_id = link_id;
++	event.eapol_rx.vlan_id = vlan_id;
++	wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
++}
++
+ /* driver_common.c */
+ void wpa_scan_results_free(struct wpa_scan_results *res);
+ 
+diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+index 1d292b8..73028a1 100644
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -30,6 +30,10 @@
+ #include "common/ieee802_11_defs.h"
+ #include "common/ieee802_11_common.h"
+ #include "common/wpa_common.h"
++#ifdef CONFIG_AP
++#include "ap/hostapd.h"
++#include "ap/ap_config.h"
++#endif /* CONFIG_AP */
+ #include "common/nan.h"
+ #include "common/nan_de.h"
+ #include "crypto/sha256.h"
+@@ -6864,10 +6868,32 @@ static int wpa_driver_nl80211_hapd_send_eapol(
+ 	/* For now, disable EAPOL TX over control port in AP mode by default
+ 	 * since it does not provide TX status notifications. */
+ 	if (drv->control_port_ap &&
+-	    (drv->capa.flags & WPA_DRIVER_FLAGS_CONTROL_PORT))
++	    (drv->capa.flags & WPA_DRIVER_FLAGS_CONTROL_PORT)) {
++#ifdef CONFIG_AP
++		struct hostapd_data *hapd = bss->ctx;
++		u8 *vlan_data = NULL;
++		size_t len = data_len;
++		u16 proto = ETH_P_EAPOL;
++		int ret;
++
++		if ((flags & WPA_STA_MULTI_AP) &&
++		    hapd->conf->multi_ap == BACKHAUL_BSS &&
++		    hapd->conf->multi_ap_vlanid)
++			proto = ieee802_11_add_vlan_hdr(
++				&vlan_data, hapd->conf->multi_ap_vlanid,
++				proto, data, &len);
++
++		ret = nl80211_tx_control_port(bss, addr, proto,
++					      vlan_data ? vlan_data : data,
++					      len, !encrypt, link_id);
++		os_free(vlan_data);
++		return ret;
++#else /* CONFIG_AP */
+ 		return nl80211_tx_control_port(bss, addr, ETH_P_EAPOL,
+ 					       data, data_len, !encrypt,
+ 					       link_id);
++#endif /* CONFIG_AP */
++	}
+ 
+ 	return nl80211_send_eapol_data(bss, addr, data, data_len);
+ }
+diff --git a/src/drivers/driver_nl80211_event.c b/src/drivers/driver_nl80211_event.c
+index 8a6d755..28ac518 100644
+--- a/src/drivers/driver_nl80211_event.c
++++ b/src/drivers/driver_nl80211_event.c
+@@ -4985,35 +4985,74 @@ static void nl80211_control_port_frame(struct i802_bss *bss, struct nlattr **tb)
+ {
+ 	u8 *src_addr;
++	const u8 *frame;
++	size_t frame_len;
+ 	u16 ethertype;
++	u16 inner_proto;
++	u16 vlan_id;
+ 	enum frame_encryption encrypted;
+ 	int link_id;
+ 
+ 	if (!tb[NL80211_ATTR_MAC] ||
+ 	    !tb[NL80211_ATTR_FRAME] ||
+ 	    !tb[NL80211_ATTR_CONTROL_PORT_ETHERTYPE])
+ 		return;
+ 
+ 	src_addr = nla_data(tb[NL80211_ATTR_MAC]);
++	frame = nla_data(tb[NL80211_ATTR_FRAME]);
++	frame_len = nla_len(tb[NL80211_ATTR_FRAME]);
+ 	ethertype = nla_get_u16(tb[NL80211_ATTR_CONTROL_PORT_ETHERTYPE]);
++	vlan_id = tb[NL80211_ATTR_VLAN_ID] ?
++		nla_get_u16(tb[NL80211_ATTR_VLAN_ID]) : 0;
+ 	encrypted = nla_get_flag(tb[NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT]) ?
+ 		FRAME_NOT_ENCRYPTED : FRAME_ENCRYPTED;
+ 
+ 	if (tb[NL80211_ATTR_MLO_LINK_ID])
+ 		link_id = nla_get_u8(tb[NL80211_ATTR_MLO_LINK_ID]);
+ 	else
+ 		link_id = -1;
+ 
+ 	switch (ethertype) {
+ 	case ETH_P_RSN_PREAUTH:
+ 		wpa_printf(MSG_INFO, "nl80211: Got pre-auth frame from "
+ 			   MACSTR " over control port unexpectedly",
+ 			   MAC2STR(src_addr));
+ 		break;
+ 	case ETH_P_PAE:
+-		drv_event_eapol_rx2(bss->ctx, src_addr,
+-				    nla_data(tb[NL80211_ATTR_FRAME]),
+-				    nla_len(tb[NL80211_ATTR_FRAME]),
+-				    encrypted, link_id);
++		if (frame_len >= 4 && WPA_GET_BE16(frame + 2) == ETH_P_PAE) {
++			frame = ieee802_11_parse_vlan_hdr(frame, &frame_len,
++							  &vlan_id,
++							  &inner_proto);
++			if (!frame)
++				break;
++		}
++
++		drv_event_eapol_rx_vlan(bss->ctx, src_addr,
++					 frame, frame_len, encrypted, link_id,
++					 vlan_id);
++		break;
++	case ETH_P_8021Q:
++		frame = ieee802_11_parse_vlan_hdr(frame, &frame_len, &vlan_id,
++						  &inner_proto);
++		if (!frame) {
++			wpa_printf(MSG_INFO,
++				   "nl80211: Too short VLAN frame from "
++				   MACSTR " over control port",
++				   MAC2STR(src_addr));
++			break;
++		}
++
++		if (inner_proto != ETH_P_PAE) {
++			wpa_printf(MSG_INFO,
++				   "nl80211: Unexpected VLAN inner ethertype "
++				   "0x%04x from " MACSTR
++				   " over control port",
++				   inner_proto, MAC2STR(src_addr));
++			break;
++		}
++
++		drv_event_eapol_rx_vlan(bss->ctx, src_addr,
++					 frame, frame_len, encrypted, link_id,
++					 vlan_id);
+ 		break;
+ 	default:
+ 		wpa_printf(MSG_INFO,
+diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
+index 5d86249..800f1cd 100644
+--- a/wpa_supplicant/events.c
++++ b/wpa_supplicant/events.c
+@@ -6299,6 +6299,32 @@ static int wpas_pasn_auth(struct wpa_supplicant *wpa_s,
+ #endif /* CONFIG_PASN */
+ 
+ 
++static bool multi_ap_eapol_vlan_id_check(struct wpa_supplicant *wpa_s,
++					 const u8 *src, u16 vlan_id)
++{
++	u16 multi_ap_primary_vlanid = wpa_s->multi_ap_primary_vlanid;
++
++	if (wpa_s->multi_ap_backhaul && vlan_id && !multi_ap_primary_vlanid) {
++		wpa_s->multi_ap_primary_vlanid = vlan_id;
++		multi_ap_primary_vlanid = vlan_id;
++		wpa_printf(MSG_DEBUG,
++			   "Multi-AP: learned primary_vlan_id=%u from EAPOL",
++			   vlan_id);
++	}
++
++	if (src && multi_ap_primary_vlanid && vlan_id &&
++	    multi_ap_primary_vlanid != vlan_id) {
++		wpa_printf(MSG_ERROR,
++			   "Dropping EAPOL frame(vlan:%u) from " MACSTR
++			   " vlan_id mismatch(%u)",
++			   vlan_id, MAC2STR(src), multi_ap_primary_vlanid);
++		return false;
++	}
++
++	return true;
++}
++
++
+ void supplicant_event(void *ctx, enum wpa_event_type event,
+ 		      union wpa_event_data *data)
+ {
+@@ -6937,6 +6963,10 @@ void supplicant_event(void *ctx, enum wpa_event_type event,
+ #endif /* CONFIG_NAN_USD */
+ 		break;
+ 	case EVENT_EAPOL_RX:
++		if (!multi_ap_eapol_vlan_id_check(wpa_s, data->eapol_rx.src,
++						   data->eapol_rx.vlan_id))
++			return;
++
+ 		wpa_supplicant_rx_eapol(wpa_s, data->eapol_rx.src,
+ 					data->eapol_rx.data,
+ 					data->eapol_rx.data_len,
+diff --git a/wpa_supplicant/wpas_glue.c b/wpa_supplicant/wpas_glue.c
+index a192737..5ff5aad 100644
+--- a/wpa_supplicant/wpas_glue.c
++++ b/wpa_supplicant/wpas_glue.c
+@@ -22,6 +22,7 @@
+ #include "rsn_supp/pmksa_cache.h"
+ #include "sme.h"
+ #include "common/ieee802_11_defs.h"
++#include "common/ieee802_11_common.h"
+ #include "common/wpa_ctrl.h"
+ #include "wpas_glue.h"
+ #include "wps_supplicant.h"
+@@ -59,6 +60,30 @@ wpa_supplicant_get_config_blob(void *ctx, const char *name)
+ 
+ 
+ #if defined(IEEE8021X_EAPOL) || !defined(CONFIG_NO_WPA)
++static int wpa_supplicant_tx_control_port(struct wpa_supplicant *wpa_s,
++					  const u8 *dest, u16 proto,
++					  const u8 *buf, size_t len,
++					  int no_encrypt)
++{
++	u8 *vlan_buf = NULL;
++	size_t tx_len = len;
++	u16 tx_proto = proto;
++	int ret;
++
++	if (proto == ETH_P_EAPOL && wpa_s->multi_ap_primary_vlanid)
++		tx_proto = ieee802_11_add_vlan_hdr(
++			&vlan_buf, wpa_s->multi_ap_primary_vlanid, proto, buf,
++			&tx_len);
++
++	ret = wpa_drv_tx_control_port(wpa_s, dest, tx_proto,
++				      vlan_buf ? vlan_buf : buf, tx_len,
++				      no_encrypt);
++	os_free(vlan_buf);
++
++	return ret;
++}
++
++
+ static u8 * wpa_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
+ 			    const void *data, u16 data_len,
+ 			    size_t *msg_len, void **data_pos)
+@@ -117,8 +142,8 @@ int wpa_ether_send(struct wpa_supplicant *wpa_s, const u8 *dest,
+ 		int encrypt = wpa_s->wpa &&
+ 			wpa_sm_has_ptk_installed(wpa_s->wpa);
+ 
+-		return wpa_drv_tx_control_port(wpa_s, dest, proto, buf, len,
+-					       !encrypt);
++		return wpa_supplicant_tx_control_port(wpa_s, dest, proto,
++						      buf, len, !encrypt);
+ 	}
+ 
+ 	if (wpa_s->l2) {
