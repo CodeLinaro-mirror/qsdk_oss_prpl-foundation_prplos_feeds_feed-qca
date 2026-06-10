@@ -1,0 +1,27 @@
+From cb4e5a81999dfe5d0339ef9200d0acb6a2cb6a8f Mon Sep 17 00:00:00 2001
+From: Nikhil Gurram <nikhgurr@qti.qualcomm.com>
+Date: Wed, 10 Jun 2026 13:04:16 +0530
+Subject: [PATCH 1/1] UPSTREAM:PROTOCOL:hostapd: fix out-of-bounds access in
+ MBSSID TTLM link removal path
+
+Signed-off-by: Nikhil Gurram <nikhgurr@qti.qualcomm.com>
+---
+ src/ap/hostapd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index b4671b6..b38c201 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -792,7 +792,7 @@ static bool hostapd_validate_link_removal_ttlm(struct hostapd_data *hapd)
+ 				/* check for negotiated mapping as well */
+ 			}
+ 		} else {
+-			for (i = 1; hapd->iface->num_bss; i++) {
++			for (i = 1; i < hapd->iface->num_bss; i++) {
+ 				bss = hapd->iface->bss[i];
+ 				if (!hostapd_validate_link_removal_ttlm_global(bss))
+ 					return false;
+-- 
+2.34.1
+
