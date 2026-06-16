@@ -51,6 +51,7 @@ define Build/Compile
 	HOSTCFLAGS="$(HOST_CFLAGS)" \
 	DTC=${LINUX_DIR}/scripts/dtc/dtc \
 	QCA_ELF=1 \
+	LOCALVERSION=-g$(shell echo "$(PKG_MIRROR_HASH)" | cut -c1-12) \
 	all
 endef
 
