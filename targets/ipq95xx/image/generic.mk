@@ -87,7 +87,12 @@ endef
 # TARGET_DEVICES += qcom_rdp476
 
 define Device/prpl_freedom
+ifneq ($(strip $(CONFIG_PACKAGE_imagegenerator)),)
 	$(call Device/Image)
+else
+	$(call Device/FitImage)
+	$(call Device/EmmcImage)
+endif
         DEVICE_VENDOR := Prpl
         DEVICE_MODEL := Freedom
         DEVICE_DTS := ipq9574-freedom
@@ -96,6 +101,7 @@ define Device/prpl_freedom
         DEVICE_PACKAGES += ath12k-firmware-qcn92xx ath12k-wifi-qcom-qcn92xx kmod-ath12k \
                 mkf2fs f2fsck kmod-fs-f2fs
 
+ifneq ($(strip $(CONFIG_PACKAGE_imagegenerator)),)
 	CONFIG_DIR := $$(wildcard $$(BUILD_DIR)/imagegenerator-*)
 	BINMAN_INPUT := $$(CONFIG_DIR)/build/binman_qca_ipq95xx_freedom.dts \
 			$$(BUILD_DIR)/u-boot-freedom-*/u-boot.mbn \
@@ -111,5 +117,6 @@ define Device/prpl_freedom
 	ARTIFACT/update_script.itb := update-script
 
 	ARTIFACTS := image.swu update_script.itb
+endif
 endef
 TARGET_DEVICES += prpl_freedom
