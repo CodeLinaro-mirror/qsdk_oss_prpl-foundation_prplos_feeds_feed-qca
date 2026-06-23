@@ -1,0 +1,188 @@
+Author: Karthik Prasanna N <kartn@qti.qualcomm.com>
+Date:   Thu Jul 4 10:44:40 2024 +0530
+
+    Openwrt: added a new option to CLASSIFY target in iptables
+
+    added the option set-int-pri to the CLASSIFY target in iptables
+    to set the int_pri field in the sk buffer for the network packets.
+
+    Change-Id: I9cd07ec9f2f1c128125731c34baba34f322497bf
+    Signed-off-by: Karthik Prasanna N <kartn@qti.qualcomm.com>
+---
+Index: iptables-1.8.8/extensions/libxt_CLASSIFY.c
+===================================================================
+--- iptables-1.8.8.orig/extensions/libxt_CLASSIFY.c
++++ iptables-1.8.8/extensions/libxt_CLASSIFY.c
+@@ -9,6 +9,7 @@
+ 
+ enum {
+ 	O_SET_CLASS = 0,
++	O_SET_INT_PRI
+ };
+ 
+ static void
+@@ -16,12 +17,13 @@ CLASSIFY_help(void)
+ {
+ 	printf(
+ "CLASSIFY target options:\n"
+-"--set-class MAJOR:MINOR    Set skb->priority value (always hexadecimal!)\n");
++"--set-class MAJOR:MINOR    Set skb->priority value (always hexadecimal!)\n"
++"--set-int-pri value	Set skb->int_pri value\n");
+ }
+ 
+ static const struct xt_option_entry CLASSIFY_opts[] = {
+-	{.name = "set-class", .id = O_SET_CLASS, .type = XTTYPE_STRING,
+-	 .flags = XTOPT_MAND},
++	{.name = "set-class", .id = O_SET_CLASS, .type = XTTYPE_STRING},
++	{.name = "set-int-pri", .id = O_SET_INT_PRI, .type = XTTYPE_UINT8},
+ 	XTOPT_TABLEEND,
+ };
+ 
+@@ -41,9 +43,33 @@ static void CLASSIFY_parse(struct xt_opt
+ 	struct xt_classify_target_info *clinfo = cb->data;
+ 
+ 	xtables_option_parse(cb);
+-	if (CLASSIFY_string_to_priority(cb->arg, &clinfo->priority))
+-		xtables_error(PARAMETER_PROBLEM,
+-			   "Bad class value \"%s\"", cb->arg);
++
++	switch(cb->entry->id) {
++		case O_SET_CLASS:
++			if (CLASSIFY_string_to_priority(cb->arg, &clinfo->priority)) {
++				xtables_error(PARAMETER_PROBLEM,
++					"Bad class value \"%s\"", cb->arg);
++				break;
++			}
++			clinfo->set_flags |= XT_SET_PRIORITY;
++			break;
++		case O_SET_INT_PRI:
++			if(sscanf(cb->arg, "%d", &clinfo->int_pri) != 1) {
++				xtables_error(PARAMETER_PROBLEM,
++					"Bad int_pri value \"%s\"", cb->arg);
++				break;
++			}
++			else if(clinfo->int_pri < 0 || clinfo->int_pri > 15) {
++				xtables_error(PARAMETER_PROBLEM,
++					"Bad int_pri value. int_pri is a 4 bit integer. \"%s\"", cb->arg);
++				break;
++			}
++			clinfo->set_flags |= XT_SET_INT_PRI;
++			break;
++		default:
++			break;
++
++	}
+ }
+ 
+ static void
+@@ -59,8 +85,15 @@ CLASSIFY_print(const void *ip,
+ {
+ 	const struct xt_classify_target_info *clinfo =
+ 		(const struct xt_classify_target_info *)target->data;
+-	printf(" CLASSIFY set");
+-	CLASSIFY_print_class(clinfo->priority, numeric);
++
++	if (XT_SET_PRIORITY & clinfo->set_flags) {
++		printf(" PRIORITY set");
++		CLASSIFY_print_class(clinfo->priority, numeric);
++	}
++
++	if (XT_SET_INT_PRI & clinfo->set_flags) {
++		printf(" INT_PRI set %d", clinfo->int_pri);
++	}
+ }
+ 
+ static void
+@@ -69,8 +102,12 @@ CLASSIFY_save(const void *ip, const stru
+ 	const struct xt_classify_target_info *clinfo =
+ 		(const struct xt_classify_target_info *)target->data;
+ 
+-	printf(" --set-class %.4x:%.4x",
+-	       TC_H_MAJ(clinfo->priority)>>16, TC_H_MIN(clinfo->priority));
++	if (XT_SET_PRIORITY & clinfo->set_flags)
++		printf(" --set-class %.4x:%.4x",
++			TC_H_MAJ(clinfo->priority)>>16, TC_H_MIN(clinfo->priority));
++
++	if (XT_SET_INT_PRI & clinfo->set_flags)
++		printf(" --set-int-pri %d", clinfo->int_pri);
+ }
+ 
+ static void
+@@ -79,8 +116,12 @@ CLASSIFY_arp_save(const void *ip, const
+ 	const struct xt_classify_target_info *clinfo =
+ 		(const struct xt_classify_target_info *)target->data;
+ 
+-	printf(" --set-class %x:%x",
++	if (XT_SET_PRIORITY & clinfo->set_flags)
++		printf(" --set-class %x:%x",
+ 	       TC_H_MAJ(clinfo->priority)>>16, TC_H_MIN(clinfo->priority));
++
++	if (XT_SET_INT_PRI & clinfo->set_flags)
++		printf(" --set-int-pri %d", clinfo->int_pri);
+ }
+ 
+ static void
+@@ -98,19 +139,26 @@ static int CLASSIFY_xlate(struct xt_xlat
+ 		(const struct xt_classify_target_info *)params->target->data;
+ 	__u32 handle = clinfo->priority;
+ 
+-	xt_xlate_add(xl, "meta priority set ");
++	if (XT_SET_PRIORITY & clinfo->set_flags) {
++
++		xt_xlate_add(xl, "meta priority set ");
+ 
+-	switch (handle) {
+-	case TC_H_ROOT:
+-		xt_xlate_add(xl, "root");
+-		break;
+-	case TC_H_UNSPEC:
+-		xt_xlate_add(xl, "none");
+-		break;
+-	default:
+-		xt_xlate_add(xl, "%0x:%0x", TC_H_MAJ(handle) >> 16,
+-			     TC_H_MIN(handle));
+-		break;
++		switch (handle) {
++		case TC_H_ROOT:
++			xt_xlate_add(xl, "root");
++			break;
++		case TC_H_UNSPEC:
++			xt_xlate_add(xl, "none");
++			break;
++		default:
++			xt_xlate_add(xl, "%0x:%0x", TC_H_MAJ(handle) >> 16,
++					TC_H_MIN(handle));
++			break;
++		}
++	}
++
++	if (XT_SET_INT_PRI & clinfo->set_flags) {
++		xt_xlate_add(xl, "meta int_pri set %d", clinfo->int_pri);
+ 	}
+ 
+ 	return 1;
+@@ -149,3 +197,4 @@ void _init(void)
+ {
+ 	xtables_register_targets(classify_tg_reg, ARRAY_SIZE(classify_tg_reg));
+ }
++
+Index: iptables-1.8.8/include/linux/netfilter/xt_CLASSIFY.h
+===================================================================
+--- iptables-1.8.8.orig/include/linux/netfilter/xt_CLASSIFY.h
++++ iptables-1.8.8/include/linux/netfilter/xt_CLASSIFY.h
+@@ -3,8 +3,15 @@
+ 
+ #include <linux/types.h>
+ 
++enum {
++	XT_SET_PRIORITY = 1 << 0,
++	XT_SET_INT_PRI = 1 << 1
++};
++
+ struct xt_classify_target_info {
+ 	__u32 priority;
++	__u8 int_pri;
++	__u8 set_flags;
+ };
+ 
+ #endif /*_XT_CLASSIFY_H */
