@@ -3,7 +3,7 @@
  * IPQ9574 AL02-C4 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -44,13 +44,31 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	regulator_fixed_3p3: s3300 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_3p3";
+	};
+
+	regulator_fixed_0p925: s0925 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <925000>;
+		regulator-max-microvolt = <925000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-name = "fixed_0p925";
+	};
+
 	reg_bmp_1v8: regulator-bmp-1v8 {
-	compatible = "regulator-fixed";
-	regulator-name = "bmp-supply";
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-	regulator-always-on;
-	regulator-boot-on;
+		compatible = "regulator-fixed";
+		regulator-name = "bmp-supply";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+		regulator-boot-on;
 	};
 
 	reserved-memory {
@@ -118,18 +136,26 @@
 					port@0 {
 						port_id = <1>;
 						phy_address = <1>;
+						phy-handle = <&phy0>;
+						phy-mode = "qusgmii";
 					};
 					port@1 {
 						port_id = <2>;
 						phy_address = <2>;
+						phy-handle = <&phy1>;
+						phy-mode = "qusgmii";
 					};
 					port@2 {
 						port_id = <3>;
 						phy_address = <3>;
+						phy-handle = <&phy2>;
+						phy-mode = "qusgmii";
 					};
 					port@3 {
 						port_id = <4>;
 						phy_address = <4>;
+						phy-handle = <&phy3>;
+						phy-mode = "qusgmii";
 					};
 					port@4 {
 						port_id = <5>;
@@ -137,11 +163,15 @@
 						phy_i2c_address = <30>;
 						phy-i2c-mode;
 						media-type = "sfp";
+						phy-handle = <&phy4>;
+						phy-mode = "sgmii";
 					};
 					port@5 {
 						port_id = <6>;
 						phy_address = <8>;
 						ethernet-phy-ieee802.3-c45;
+						phy-handle = <&phy5>;
+						phy-mode = "sgmii";
 					};
 				};
 
@@ -195,7 +225,6 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <1>;
 			label = "lan1";
-			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -209,7 +238,6 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <2>;
 			label = "lan2";
-			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -223,7 +251,6 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <3>;
 			label = "lan3";
-			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -237,7 +264,6 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <4>;
 			label = "lan4";
-			phy-mode = "qusgmii";
 			qcom,ppe-offload-disabled = <1>;
 		};
 
@@ -247,7 +273,6 @@
 			qcom,link-poll = <1>;
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <30>;
-			phy-mode = "sgmii";
 		};
 
 		dp6 {
@@ -260,7 +285,6 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <8>;
 			label = "wan";
-			phy-mode = "sgmii";
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -362,6 +386,14 @@
 		};
 
 	};
+
+	sysregister: sysregister {
+		compatible = "sysregister";
+		reg-names = "bootcount", "force-inactive";
+		reg = <0x0 0xC8 0x0 0x4>, <0x0 0xCC 0x0 0x4>;
+		bitmask = <0xFFFFFFFF>, <0xFFFFFFFF>;
+		syscon = <&imem>, <&imem>;
+        };
 };
 
 &blsp1_uart2 {
@@ -388,7 +420,7 @@
 	perst-gpios = <&tlmm 23 GPIO_ACTIVE_LOW>;
 	pwr_on-gpios = <&tlmm 55 GPIO_ACTIVE_HIGH>;
 
-	status = "disabled";
+	status = "okay";
 
 	pcie0_rp {
 		reg = <0 0 0 0 0>;
@@ -440,6 +472,12 @@
 			reg = <0x0 0x0 0x0 0x0 0x0>;
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x58800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x01>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <2>;
@@ -498,6 +536,12 @@
 			reg = <0x0 0x0 0x0 0x0 0x0>;
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0x8A800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,board_id = <0x04>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <0>;
@@ -549,6 +593,12 @@
 			reg = <0x0 0x0 0x0 0x0 0x0>;
 			qcom,early_cal_enabled = "supported";
 			qcom,caldata_offset = <0xBC800>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+			qcom,caldb_offset = <0x1400000>;
+#else
+			qcom,caldb_offset = <0x1C00000>;
+#endif
+			qcom,caldb_size = <0x800000>;
 			qcom,wsi = <&wsi>;
 			qcom,wsi_index = <1>;
 			qcom,board_id = <0x02>;
@@ -599,6 +649,9 @@
 };
 
 &qusb_phy_0 {
+	vdd-supply = <&regulator_fixed_0p925>;
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-dpdm-supply = <&regulator_fixed_3p3>;
 	status = "okay";
 };
 
@@ -634,6 +687,7 @@
 };
 
 &blsp1_i2c3 {
+	clock-frequency = <400000>;
 	pinctrl-0 = <&i2c_3_pins>;
 	pinctrl-names = "default";
 	status = "okay";
@@ -653,7 +707,7 @@
 				compatible = "bosch,bmp580";
 				reg = <0x46>;
 				vddd-supply = <&reg_bmp_1v8>;
-				vdda-supply = <&reg_bmp_1v8>;
+                vdda-supply = <&reg_bmp_1v8>;
 			};
 		};
 
@@ -724,6 +778,8 @@
 };
 
 &ssphy_0 {
+	vdda-pll-supply = <&mp5496_l5>;
+	vdda-phy-supply = <&regulator_fixed_0p925>;
 	status = "okay";
 };
 
@@ -752,6 +808,13 @@
 			regulator-min-microvolt = <1>;
 			regulator-max-microvolt = <9>;
 			regulator-always-on;
+		};
+
+		mp5496_l5: l5 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
 		};
 	};
 };
@@ -1016,35 +1079,35 @@
 };
 
 &nss0 {
-	npu-supply = <&npu_vreg>;
-	mx-supply = <&ipq9574_s4>;
-	status = "okay";
+       npu-supply = <&npu_vreg>;
+       mx-supply = <&ipq9574_s4>;
+       status = "okay";
 };
 
 &wifi0 {
-	led-gpio = <&tlmm 64 GPIO_ACTIVE_LOW>;
-	status = "disabled";
+       led-gpio = <&tlmm 64 GPIO_ACTIVE_LOW>;
+       status = "disabled";
 };
 
 &wifi5 {
-	hremote_node = <&qcn9224_pcie1>;
-	board_id = <0x01>;
+        hremote_node = <&qcn9224_pcie1>;
+        board_id = <0x01>;
 	hw_link_id = <0 0>;
-	status = "okay";
+        status = "okay";
 };
 
 &wifi6 {
-	hremote_node = <&qcn9224_pcie2>;
-	board_id = <0x04>;
+        hremote_node = <&qcn9224_pcie2>;
+        board_id = <0x04>;
 	hw_link_id = <1 0>;
-	status = "okay";
+        status = "okay";
 };
 
 &wifi7 {
-	hremote_node = <&qcn9224_pcie3>;
-	board_id = <0x02>;
+        hremote_node = <&qcn9224_pcie3>;
+        board_id = <0x02>;
 	hw_link_id = <2 0>;
-	status = "okay";
+        status = "okay";
 };
 
 &qcn9224_pcie1 {
