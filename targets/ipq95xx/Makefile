@@ -55,13 +55,6 @@ DEFAULT_PACKAGES += \
 	kmod-qca-nss-eip-ipsec qca-ssdk-shell wifi-helper-scripts kmod-telemetry-agent wifi-scripts ethtool tcpdump \
 	kmod-usb-storage kmod-usb-storage-extras kmod-usb-storage-uas kmod-fs-vfat hostapd-utils wpa-cli kmod-ath11k
 
-GENERIC_LINUX_CONFIG = $(PLATFORM_DIR)/generic/config-$(KERNEL_PATCHVER)-platform
-
-override GENERIC_BACKPORT_DIR :=
-override GENERIC_PATCH_DIR :=
-override GENERIC_HACK_DIR :=
-override GENERIC_FILES_DIR :=
-
 define Kernel/Prepare
 	$(LINUX_CAT) $(DL_DIR)/$(LINUX_SOURCE) | $(TAR) -C $(KERNEL_BUILD_DIR) $(TAR_OPTIONS)
 
