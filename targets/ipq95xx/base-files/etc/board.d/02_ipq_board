@@ -68,5 +68,18 @@ ipq_board_update() {
 	json_add_string wififw_name "$(get_fw_name $name)"
 }
 
-ipq_board_update
-board_config_flush
+# Check board name and decide whether to run IPQ board update
+board_name="$(cat /tmp/sysinfo/board_name 2>/dev/null || echo '')"
+
+case "$board_name" in
+	"prpl,freedom")
+		# Skip IPQ board update for prpl,freedom board
+		# This prevents early /etc/board.json creation that would
+		# interfere with proper network configuration generation
+		;;
+	*)
+		# Run IPQ board update for all other boards
+		ipq_board_update
+		board_config_flush
+		;;
+esac
