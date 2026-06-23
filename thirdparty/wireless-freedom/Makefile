@@ -22,7 +22,8 @@ endef
 
 define Package/wireless-freedom/install
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/wireless-freedom $(1)/etc/uci-defaults/50-wireless-freedom
+	# $(INSTALL_BIN) ./files/wireless-freedom $(1)/etc/uci-defaults/10-wireless-freedom
+	$(INSTALL_BIN) ./files/wireless-ext-freedom $(1)/etc/uci-defaults/50-wireless-ext-freedom
 endef
 
 $(eval $(call BuildPackage,wireless-freedom))
