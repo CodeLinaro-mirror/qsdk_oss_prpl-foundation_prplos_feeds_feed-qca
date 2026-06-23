@@ -14,6 +14,8 @@ PKG_LICENSE:=GPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
 
+include nat46.mk
+
 define KernelPackage/nat46
   DEPENDS:=@IPV6 +kmod-nf-conntrack6
   TITLE:=Stateless NAT46 translation kernel module
