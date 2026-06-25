@@ -9,7 +9,7 @@ PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-ssdk
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=fcd8245b16ce17c0b9f18c357245079fceb44fb69d3e61c43587cf24c9bf99c7
 PKG_VERSION:=16f3f5a82d1cf8c22d96efa7255251ef1f4c435e
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

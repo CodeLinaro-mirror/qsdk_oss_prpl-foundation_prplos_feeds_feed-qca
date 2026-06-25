@@ -7,7 +7,7 @@ PKG_BRANCH:=win.wlan_host_opensource.4.2.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/wifi/qca-telemetry-agent-oss
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=4f439be61f4fcc7fc561a96133f95f29c5fedcea67275b71d7879f3689e66fc2
 PKG_VERSION:=7f913647d4fc597f1ebbe5138d04b39c4a003606
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

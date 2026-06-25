@@ -7,7 +7,7 @@ PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=2
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-wifi-plugins
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=e5ab78965b60e1b91c68dfed1f17546164d3276a1ec027abef641a414072e8ac
 PKG_VERSION:=e06e7b603bb70e7c8f9ba1e8a67a1aa25a4fbcdc
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

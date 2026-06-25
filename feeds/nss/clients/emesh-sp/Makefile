@@ -7,7 +7,7 @@ PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/emesh-sp
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=ef4b4e863493a0bdb84a312740aad19ce357d3c4508d7fc7c0d7a98f8649b10c
 PKG_VERSION:=df14b1c189ff3e4ca199083bdeaf02ebc21cd1df
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

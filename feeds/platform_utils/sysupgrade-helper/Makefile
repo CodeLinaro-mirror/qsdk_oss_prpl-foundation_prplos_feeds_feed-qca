@@ -5,6 +5,7 @@ PKG_NAME:=u-boot
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/boot/u-boot
 PKG_SOURCE_VERSION:=2450c5cf9a228aabc43bc06db24e996d16aa8c7d
+PKG_MIRROR_HASH:=f4794f43e0bfae49397c40a4035afa33e9d2a9f124a4eab7f93e5440ef007cd9
 PKG_BRANCH:=win.coretech.3.0.r37
 PKG_RELEASE:=1
 PKG_VERSION:=2450c5cf

@@ -8,7 +8,7 @@ PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/qca-mmap-telemetry
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=1729b0bface25b904acabe1e64130a03369bfe6e9baeec79c1467db7249770bd
 PKG_VERSION:=4a6fa633afa309274422bce8686f52201776e34e
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

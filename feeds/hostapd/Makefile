@@ -26,7 +26,7 @@ PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/src/network/services/hos
 PKG_BRANCH:=win.wlan_host_opensource.4.0.r37
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_VERSION:=711be1b1f2c2f40cf94eee820b0c50060cd4257d
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=6601aa1bb464c51d8fa7d9b8dcc67f5dd96e272445a938635654905cde4afcb8
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_DATE)~$(PKG_VERSION).tar.bz2
 

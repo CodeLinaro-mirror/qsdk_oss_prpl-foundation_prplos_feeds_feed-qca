@@ -7,7 +7,7 @@ PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-speedtest
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=9d85ee2e28cd0221c21364e8b48c69b568f505a5cfcc7208f008865ace3de948
 PKG_VERSION:=9bfe0b78892bd14be99af26e4895585b3f6cd75e
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz

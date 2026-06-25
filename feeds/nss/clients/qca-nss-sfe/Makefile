@@ -7,7 +7,7 @@ PKG_BRANCH:=win.nss.1.0.r37
 PKG_RELEASE:=1
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/shortcut-fe
-PKG_MIRROR_HASH:=skip
+PKG_MIRROR_HASH:=70c34adad26e8cf6ff52c609e1927de26b95e893515cbdf3cf186ad2d9b4b1c4
 PKG_VERSION:=c0fb732c887ffca15422a43dadaf5893b8ad1143
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
