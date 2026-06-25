@@ -1,0 +1,35 @@
+Index: hostapd-qca-2025.03.10~95ad7115/src/ap/beacon.c
+===================================================================
+--- hostapd-qca-2025.03.10~95ad7115.orig/src/ap/beacon.c
++++ hostapd-qca-2025.03.10~95ad7115/src/ap/beacon.c
+@@ -1580,7 +1580,7 @@ void handle_probe_req(struct hostapd_dat
+ 		ret = hostapd_allowed_address(hapd, mgmt->sa, (const u8 *) mgmt, len,
+ 				      &rad_info, 1);
+ 		if (ret == HOSTAPD_ACL_REJECT) {
+-			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
++			wpa_msg(hapd->msg_ctx, MSG_INFO,
+ 				"Ignore Probe Request frame from " MACSTR
+ 				" due to ACL reject ", MAC2STR(mgmt->sa));
+ 			return;
+Index: hostapd-qca-2025.03.10~95ad7115/src/ap/ieee802_11.c
+===================================================================
+--- hostapd-qca-2025.03.10~95ad7115.orig/src/ap/ieee802_11.c
++++ hostapd-qca-2025.03.10~95ad7115/src/ap/ieee802_11.c
+@@ -3455,7 +3455,7 @@ static void handle_auth(struct hostapd_d
+ 	res = ieee802_11_allowed_address(hapd, sa, (const u8 *) mgmt, len,
+ 					 &rad_info);
+ 	if (res == HOSTAPD_ACL_REJECT && !skip_acl) {
+-		wpa_msg(hapd->msg_ctx, MSG_DEBUG,
++		wpa_msg(hapd->msg_ctx, MSG_INFO,
+ 			"Ignore Authentication frame from " MACSTR
+ 			" due to ACL reject", MAC2STR(sa));
+ 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+@@ -3482,7 +3482,7 @@ static void handle_auth(struct hostapd_d
+ 						 (const u8 *) mgmt, len,
+ 						 &rad_info);
+ 		if (res == HOSTAPD_ACL_REJECT && !skip_acl) {
+-			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
++			wpa_msg(hapd->msg_ctx, MSG_INFO,
+ 				"Ignore Authentication frame from " MACSTR
+ 				" due to ACL reject", MAC2STR(mgmt->sa));
+ 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
