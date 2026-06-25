@@ -43,6 +43,8 @@ HOSTAPD_SRC_DIR:=$(TOPDIR)/qca/src/network/services/hostapd/
 EXTENSIONS_DIR:=$(CURDIR)/wlan-app-extns/hostapd
 QCN_APP_EXTNS_DIR:=$(TOPDIR)/qca/src/qcn-app-extns
 
+PRPL_PATCH_DIR:=$(CURDIR)/patches-prpl
+
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_hostapd \
 	CONFIG_PACKAGE_hostapd-basic \
@@ -618,6 +620,7 @@ endif
 
 define Build/Patch
 #	$(CP) -r $(HOSTAPD_SRC_DIR)/* $(PKG_BUILD_DIR)/
+	$(call PatchDir,$(PKG_BUILD_DIR),$(PRPL_PATCH_DIR),patches/)
 ifdef CONFIG_PACKAGE_QCN_EXTN
 	$(CP) $(EXTENSIONS_DIR)/src $(PKG_BUILD_DIR)/qcn_extns
 	$(if $(wildcard $(QCN_APP_EXTNS_DIR)/qacs/qacs.c), \
