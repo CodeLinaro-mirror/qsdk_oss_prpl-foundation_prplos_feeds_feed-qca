@@ -1,0 +1,36 @@
+From bec0149d77b9ad80bd9319aad66e33073789b47b Mon Sep 17 00:00:00 2001
+From: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+Date: Fri, 26 Jun 2026 16:41:42 +0530
+Subject: [PATCH] UPSTREAM:PROTOCOL:hostapd: Clean up unused MLDs after BSS
+ removal
+
+When removing the last BSS of an AP MLD, the associated MLD
+control interface may be left unused, leaving its control
+socket lingering.
+
+Invoke hostapd_cleanup_unused_mlds() after BSS removal to
+clean up unused MLD objects. This ensures that stale MLD
+state and control sockets are properly release
+
+Signed-off-by: Ramasamy Kaliappan <rkaliapp@qti.qualcomm.com>
+---
+ src/ap/hostapd.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index e2e328b1011b..59ea4d2f0a11 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -5159,6 +5159,13 @@ int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx,
+ 	for (i = idx; i < iface->conf->num_bss; i++)
+ 		iface->conf->bss[i] = iface->conf->bss[i + 1];
+ 
++#ifdef CONFIG_IEEE80211BE
++	/* BSS REMOVE can drop the last reference to an AP MLD.
++	 * Clean up unused MLD objects so their ctrl socket is removed.
++	 */
++	if (iface->interfaces)
++		hostapd_cleanup_unused_mlds(iface->interfaces);
++#endif /* CONFIG_IEEE80211BE */
+ 	return 0;
+ }
