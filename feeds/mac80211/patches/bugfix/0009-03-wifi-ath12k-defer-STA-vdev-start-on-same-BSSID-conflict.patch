@@ -1,0 +1,209 @@
+From cf3f2fb095bca6ce8d41eedacfeafb1541769779 Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Wed, 8 Jul 2026 19:27:53 +0530
+Subject: [PATCH] wifi: ath12k: defer STA vdev start on same-BSSID conflict
+
+Reset ar->last_wmi_vdev_start_status before every vdev start/restart
+and monitor/vdev stop path so a stale status from a prior attempt is
+never mistaken for the current one's result.
+
+Add ath12k_mac_sta_vdev_conflict() to detect when a STA link vdev for
+the same BSSID is still created on this radio, and defer the new
+vdev's start via ath12k_mac_assign_vif_chanctx_handle() instead of
+racing it. ath12k_mac_start_pending_sta_vdevs() resumes the deferred
+vdev once the conflicting link is torn down in
+ath12k_mac_unassign_vif_chanctx_handle().
+
+In ath12k_mac_op_change_vif_links(), a link can legitimately have
+already been removed by the time the to_remove bitmap is processed;
+continue instead of returning with WARN_ON().
+
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+ drivers/net/wireless/ath/ath12k/mac.c | 100 +++++++++++++++++++++++++-
+ drivers/net/wireless/ath/ath12k/wmi.c |   2 +-
+ 2 files changed, 99 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index 79ffae20b6ff..33107062ff66 100644
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -1808,6 +1808,7 @@ static int ath12k_mac_monitor_vdev_stop(struct ath12k *ar)
+ 	lockdep_assert_wiphy(ath12k_ar_to_hw(ar)->wiphy);
+ 
+ 	reinit_completion(&ar->vdev_setup_done);
++	ar->last_wmi_vdev_start_status = 0;
+ 
+ 	ret = ath12k_wmi_vdev_stop(ar, ar->monitor_vdev_id);
+ 	if (ret)
+@@ -2021,6 +2022,7 @@ int ath12k_mac_vdev_stop(struct ath12k_link_vif *arvif)
+ 	lockdep_assert_wiphy(ath12k_ar_to_hw(ar)->wiphy);
+ 
+ 	reinit_completion(&ar->vdev_setup_done);
++	ar->last_wmi_vdev_start_status = 0;
+ 
+ 	rcu_read_lock();
+ 
+@@ -5729,8 +5731,12 @@ ath12k_mac_op_change_vif_links(struct ieee80211_hw *hw,
+ 
+ 	for_each_set_bit(link_id, &to_remove, IEEE80211_MLD_MAX_NUM_LINKS) {
+ 		arvif = wiphy_dereference(hw->wiphy, ahvif->link[link_id]);
+-		if (WARN_ON(!arvif))
+-			return -EINVAL;
++		if (!arvif) {
++			ath12k_generic_dbg(ATH12K_DBG_MAC,
++					   "mac vif link %u already removed for MLD %pM\n",
++					   link_id, vif->addr);
++			continue;
++		}
+ 
+ 		if (arvif->is_scan_vif && arvif->is_started) {
+ 			if (ath12k_mac_vdev_stop(arvif)) {
+@@ -17655,6 +17661,48 @@ ath12k_mac_mlo_get_vdev_args(struct ath12k_link_vif *arvif,
+ 	}
+ }
+ 
++static bool
++ath12k_mac_sta_vdev_conflict(struct ath12k_link_vif *arvif,
++				     u32 *vdev_id, u8 *link_id,
++				     bool *is_started, bool *is_up)
++{
++	struct ath12k *ar = arvif->ar;
++	struct ath12k_link_vif *tmp_arvif;
++	struct ath12k_vif *tmp_ahvif;
++
++	lockdep_assert_wiphy(ath12k_ar_to_hw(ar)->wiphy);
++
++	if (arvif->ahvif->vdev_type != WMI_VDEV_TYPE_STA ||
++	    arvif->is_scan_vif || is_zero_ether_addr(arvif->bssid))
++		return false;
++
++	spin_lock_bh(&ar->data_lock);
++	list_for_each_entry(tmp_arvif, &ar->arvifs, list) {
++		if (tmp_arvif == arvif || tmp_arvif->is_scan_vif ||
++		    !tmp_arvif->is_created ||
++		    ath12k_mac_is_bridge_vdev(tmp_arvif))
++			continue;
++
++		tmp_ahvif = tmp_arvif->ahvif;
++		if (tmp_ahvif->vdev_type != WMI_VDEV_TYPE_STA)
++			continue;
++
++		if (!ether_addr_equal(tmp_arvif->bssid, arvif->bssid))
++			continue;
++
++		*vdev_id = tmp_arvif->vdev_id;
++		*link_id = tmp_arvif->link_id;
++		*is_started = tmp_arvif->is_started;
++		*is_up = tmp_arvif->is_up;
++
++		spin_unlock_bh(&ar->data_lock);
++		return true;
++	}
++	spin_unlock_bh(&ar->data_lock);
++
++	return false;
++}
++
+ static bool
+ ath12k_mac_check_fixed_rate_settings_for_mumimo(struct ath12k_link_vif *arvif,
+ 						const u16 *vht_mcs_mask,
+@@ -17914,6 +17962,7 @@ ath12k_mac_vdev_start_restart(struct ath12k_link_vif *arvif,
+ 	}
+ 
+ 	reinit_completion(&ar->vdev_setup_done);
++	ar->last_wmi_vdev_start_status = 0;
+ 
+ 	arg.vdev_id = arvif->vdev_id;
+ 	arg.dtim_period = arvif->dtim_period;
+@@ -19025,6 +19074,10 @@ ath12k_mac_assign_vif_chanctx_handle(struct ieee80211_hw *hw,
+ 	int ret;
+ 	bool is_bridge_vdev;
+ 	enum ieee80211_ap_reg_power power_type;
++	u32 conflict_vdev_id;
++	u8 conflict_link_id;
++	bool conflict_started;
++	bool conflict_up;
+ 
+ 	lockdep_assert_wiphy(hw->wiphy);
+ 
+@@ -19152,6 +19205,18 @@ ath12k_mac_assign_vif_chanctx_handle(struct ieee80211_hw *hw,
+ 						ATH12K_VENDOR_LINK_STATE_ASSIGNED);
+ 		}
+ 
++		if (ahvif->vdev_type == WMI_VDEV_TYPE_STA &&
++		    ath12k_mac_sta_vdev_conflict(arvif, &conflict_vdev_id,
++						 &conflict_link_id,
++						 &conflict_started,
++						 &conflict_up)) {
++			ath12k_warn(ab,
++				    "defer STA vdev %d start for bssid %pM while vdev %d link %u is still created started %d up %d\n",
++				    arvif->vdev_id, arvif->bssid, conflict_vdev_id,
++				    conflict_link_id, conflict_started, conflict_up);
++			goto out;
++		}
++
+ 		ret = ath12k_mac_vdev_start(arvif, ctx);
+ 		if (ret) {
+ 			ath12k_warn(ab, "failed to start vdev %i addr %pM on freq %d: %d\n",
+@@ -19179,6 +19244,33 @@ out:
+ 	return ret;
+ }
+ 
++static void
++ath12k_mac_start_pending_sta_vdevs(struct ath12k *ar, const u8 *bssid)
++{
++	struct ath12k_link_vif *tmp_arvif;
++	int ret;
++
++	lockdep_assert_wiphy(ath12k_ar_to_hw(ar)->wiphy);
++
++	list_for_each_entry(tmp_arvif, &ar->arvifs, list) {
++		if (tmp_arvif->is_started || !tmp_arvif->is_created ||
++		    tmp_arvif->is_scan_vif ||
++		    tmp_arvif->ahvif->vdev_type != WMI_VDEV_TYPE_STA ||
++		    is_zero_ether_addr(tmp_arvif->bssid) ||
++		    !ether_addr_equal(tmp_arvif->bssid, bssid))
++			continue;
++
++		ret = ath12k_mac_vdev_start(tmp_arvif, &tmp_arvif->chanctx);
++		if (ret) {
++			ath12k_warn(ar->ab,
++				    "failed to start deferred STA vdev %d bssid %pM: %d\n",
++				    tmp_arvif->vdev_id, tmp_arvif->bssid, ret);
++			continue;
++		}
++		tmp_arvif->is_started = true;
++	}
++}
++
+ void
+ ath12k_mac_unassign_vif_chanctx_handle(struct ieee80211_hw *hw,
+ 				       struct ieee80211_vif *vif,
+@@ -19267,6 +19359,10 @@ ath12k_mac_unassign_vif_chanctx_handle(struct ieee80211_hw *hw,
+ 	if (ahvif->vdev_type != WMI_VDEV_TYPE_STA)
+ 		arvif->is_started = false;
+ 
++	if (ahvif->vdev_type == WMI_VDEV_TYPE_STA && !arvif->is_started &&
++	    !is_zero_ether_addr(arvif->bssid))
++		ath12k_mac_start_pending_sta_vdevs(ar, arvif->bssid);
++
+ 	if (ar->scan.arvif == arvif && ar->scan.state == ATH12K_SCAN_RUNNING) {
+ 		ath12k_scan_abort(ar);
+ 		ar->scan.arvif = NULL;
+diff --git a/drivers/net/wireless/ath/ath12k/wmi.c b/drivers/net/wireless/ath/ath12k/wmi.c
+index d7c439bb2bb7..f7ca9a446635 100644
+--- a/drivers/net/wireless/ath/ath12k/wmi.c
++++ b/drivers/net/wireless/ath/ath12k/wmi.c
+@@ -9997,7 +9997,7 @@ static void ath12k_vdev_start_resp_event(struct ath12k_base *ab, struct sk_buff
+ 
+ 	status = le32_to_cpu(vdev_start_resp.status);
+ 
+-	if (WARN_ON_ONCE(status)) {
++	if (status) {
+ 		ath12k_warn(ab, "vdev start resp error status %d (%s)\n",
+ 			    status, ath12k_wmi_vdev_resp_print(status));
+ 		ar->last_wmi_vdev_start_status = status;
+-- 
+2.34.1
+
