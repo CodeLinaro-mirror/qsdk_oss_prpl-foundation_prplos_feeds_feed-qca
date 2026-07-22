@@ -1,0 +1,56 @@
+From b8fa036e3a64ffee2c52a52aa18fab31c7ae7ec3 Mon Sep 17 00:00:00 2001
+From: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+Date: Tue, 2 Jun 2026 16:42:18 +0530
+Subject: [PATCH 1/2] wifi: ath12k: clean up failed MLO STA vdev start
+
+During MLO STA authentication, mac80211 sets vif->valid_links before the
+STA vdev is successfully started. If firmware rejects WMI_VDEV_START,
+ath12k leaves the created link vdev around because chanctx unassign only
+removes link interfaces when vif->valid_links is zero.
+
+This leaves stale created-but-not-started vdevs after failed auth
+attempts, causing retries to allocate new vdev IDs and repeatedly fail
+vdev start.
+
+Clean up STA link vdevs that were created but never started, even when
+vif->valid_links is still set.
+
+Signed-off-by: Sathishkumar Muruganandam <murugana@qti.qualcomm.com>
+---
+ drivers/net/wireless/ath/ath12k/mac.c | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath12k/mac.c b/drivers/net/wireless/ath/ath12k/mac.c
+index b804d0342ff2..79ffae20b6ff 100644
+--- a/drivers/net/wireless/ath/ath12k/mac.c
++++ b/drivers/net/wireless/ath/ath12k/mac.c
+@@ -19280,14 +19280,19 @@ ath12k_mac_unassign_vif_chanctx_handle(struct ieee80211_hw *hw,
+ 		ar->state_11d = ATH12K_11D_PREPARING;
+ 	}
+ 
+-	/* In legacy station association with the AP,
+-	 * arvif is created during channel context assignment.
+-	 * However, since mac80211 is unaware of this link,
+-	 * it is not deleted automatically. To prevent stale arvif
+-	 * entries in ahvif, this link must be explicitly removed
+-	 * during channel context unassignment.
++	/* In legacy station association with the AP, arvif is created during
++	 * channel context assignment. However, since mac80211 is unaware of this
++	 * link, it is not deleted automatically. To prevent stale arvif entries
++	 * in ahvif, this link must be explicitly removed during channel context
++	 * unassignment.
++	 *
++	 * For MLO station association failures, mac80211 may still have
++	 * vif->valid_links set when the link vdev was created but never started.
++	 * Remove it here as well, otherwise failed auth retries leak stale vdevs.
+ 	 */
+-	if (!vif->valid_links) {
++	if (!vif->valid_links ||
++	    (ahvif->vdev_type == WMI_VDEV_TYPE_STA &&
++	     arvif->is_created && !arvif->is_started)) {
+ 		ath12k_mac_remove_link_interface(hw, arvif);
+ 		ath12k_mac_unassign_link_vif(arvif);
+ 	}
+-- 
+2.34.1
+
