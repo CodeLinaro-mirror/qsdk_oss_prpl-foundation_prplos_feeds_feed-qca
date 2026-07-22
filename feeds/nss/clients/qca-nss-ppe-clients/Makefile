@@ -4,7 +4,7 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=qca-nss-ppe-clients
 PKG_SOURCE_PROTO:=git
 PKG_BRANCH:=win.nss.1.0.r30
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_LICENSE:=ISC
 PKG_SOURCE_URL:=https://git.codelinaro.org/clo/qsdk/oss/lklm/nss-ppe
 PKG_MIRROR_HASH:=ec91095647c499523b4b846f772d54063a22c8d5caa13d5eb84ebbc2a14b38d5

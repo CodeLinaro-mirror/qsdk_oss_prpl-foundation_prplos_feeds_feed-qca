@@ -1,0 +1,40 @@
+From: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+Date: Wed, 22 Jul 2026 21:30:00 +0300
+Subject: [PATCH] ath_client: ignore VLAN lifecycle events
+
+VLAN netdevices emit their own register and unregister notifications. The
+ATH client currently replaces the VLAN device with its WLAN real device
+before dispatching the unchanged notification. As a result, registering a
+VLAN tries to allocate the WLAN parent's VP again, while unregistering the
+VLAN can free the still-active parent's VP.
+
+VLAN lifecycle is handled by the PPE VLAN manager. Ignore VLAN register and
+unregister notifications in the ATH client before resolving the real
+device.
+
+Signed-off-by: Volodymyr Pavlenko <pavlenko.vv@pm.me>
+---
+ clients/ath_client/nss_ppe_ath_client.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/clients/ath_client/nss_ppe_ath_client.c b/clients/ath_client/nss_ppe_ath_client.c
+--- a/clients/ath_client/nss_ppe_ath_client.c
++++ b/clients/ath_client/nss_ppe_ath_client.c
+@@ -130,6 +130,15 @@ static int nss_ppe_ath_client_netdevice_event(struct notifier_block *unused,
+ 	struct netdev_notifier_info *info = (struct netdev_notifier_info *)ptr;
+ 	struct net_device *dev = netdev_notifier_info_to_dev(info);
+ 
++	/*
++	 * VLAN interfaces are handled by the PPE VLAN manager. Do not turn a
++	 * VLAN lifecycle event into a lifecycle event for its WLAN real device.
++	 */
++	if (is_vlan_dev(dev) &&
++		(event == NETDEV_REGISTER || event == NETDEV_UNREGISTER)) {
++		return NOTIFY_DONE;
++	}
++
+ 	dev = is_vlan_dev(dev) ? vlan_dev_real_dev(dev) : dev;
+ 	if (!dev->ieee80211_ptr) {
+ 		nss_ppe_ath_client_info("Dev: %s not a WLAN dev\n", dev->name);
+-- 
+2.43.0
