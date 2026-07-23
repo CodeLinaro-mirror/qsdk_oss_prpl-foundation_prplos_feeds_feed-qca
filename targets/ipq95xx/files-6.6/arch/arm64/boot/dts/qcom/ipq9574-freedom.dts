@@ -165,8 +165,24 @@
 
 		gpio_keys {
 			compatible = "gpio-keys";
-			pinctrl-0 = <&button_pins>;
+			pinctrl-0 = <&reset_button_pins>;
 			pinctrl-names = "default";
+			status = "okay";
+
+			button@2 {
+				label = "reset";
+				linux,code = <KEY_RESTART>;
+				gpios = <&tlmm 56 GPIO_ACTIVE_LOW>;
+				linux,input-type = <1>;
+				debounce-interval = <60>;
+			};
+		};
+
+		gpio_keys_polled {
+			compatible = "gpio-keys-polled";
+			pinctrl-0 = <&wps_button_pins>;
+			pinctrl-names = "default";
+			poll-interval = <100>;
 			status = "okay";
 
 			button@1 {
@@ -174,14 +190,6 @@
 				linux,code = <KEY_WPS_BUTTON>;
 				gpios = <&tlmm 12 GPIO_ACTIVE_LOW>;
 				linux,input-type = <1>;
-				debounce-interval = <60>;
-			};
-			button@2 {
-				label = "reset";
-				linux,code = <KEY_RESTART>;
-				gpios = <&tlmm 56 GPIO_ACTIVE_LOW>;
-				linux,input-type = <1>;
-				debounce-interval = <60>;
 			};
 		};
 
@@ -898,14 +906,16 @@
 		bias-pull-up;
 	};
 
-	button_pins: button-state {
+	wps_button_pins: wps-button-state {
 		wps_button {
 			pins = "gpio12";
 			function = "gpio";
 			drive-strength = <8>;
 			bias-pull-up;
 		};
+	};
 
+	reset_button_pins: reset-button-state {
 		reset_button {
 			pins = "gpio56";
 			function = "gpio";
