@@ -1,0 +1,75 @@
+From 129c5e2104b89a5e5f6820d542e760f69b378314 Mon Sep 17 00:00:00 2001
+From: Timple Raj M <timple@qti.qualcomm.com>
+Date: Mon, 27 Jul 2026 19:09:02 +0530
+Subject: [PATCH] kernel: reboot: Dump IMEM before system restart
+
+Map the IMEM region in kernel_restart() and dump its
+contents before invoking machine_restart().
+
+Print the dump at KERN_EMERG level and add a short delay
+to improve log capture reliability during reboot
+debugging.
+
+Change-Id: I3e7d7228e8ac5952c3430aff76e0020eb6c18558
+Signed-off-by: Timple Raj M <timple@qti.qualcomm.com>
+---
+
+diff --git a/kernel/reboot.c b/kernel/reboot.c
+index 6ebef11..136898a 100644
+--- a/kernel/reboot.c
++++ b/kernel/reboot.c
+@@ -18,6 +18,13 @@
+ #include <linux/syscalls.h>
+ #include <linux/syscore_ops.h>
+ #include <linux/uaccess.h>
++#include <linux/io.h>
++#include <linux/delay.h>
++
++/* IMEM region to dump before reboot */
++#define IMEM_PHYS_BASE    0x08600000
++#define IMEM_SIZE         0x1000
++
+ 
+ /*
+  * this indicates whether you can reboot with ctrl-alt-del: the default is yes
+@@ -265,14 +272,40 @@ static void do_kernel_restart_prepare(void)
+  */
+ void kernel_restart(char *cmd)
+ {
++	void __iomem *imem;
+ 	kernel_restart_prepare(cmd);
+ 	do_kernel_restart_prepare();
+ 	migrate_to_reboot_cpu();
+ 	syscore_shutdown();
++
++       imem = ioremap(IMEM_PHYS_BASE, IMEM_SIZE);
++       if (!imem) {
++               pr_emerg("IMEM: failed to map phys 0x%08x\n",
++                        IMEM_PHYS_BASE);
++       } else {
++               pr_emerg("========== IMEM DUMP START ==========\n");
++
++               print_hex_dump(KERN_EMERG,
++                              "IMEM: ",
++                              DUMP_PREFIX_OFFSET,
++                              16,
++                              4,
++                              imem,
++                              IMEM_SIZE,
++                              false);
++
++               pr_emerg("========== IMEM DUMP END ==========\n");
++
++               iounmap(imem);
++       }
++
+ 	if (!cmd)
+ 		pr_emerg("Restarting system\n");
+ 	else
+ 		pr_emerg("Restarting system with command '%s'\n", cmd);
++
++	mdelay(500);
++
+ 	kmsg_dump(KMSG_DUMP_SHUTDOWN);
+ 	machine_restart(cmd);
+ }
